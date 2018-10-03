@@ -1,0 +1,16 @@
+# .hgignore - List of filenames hg should ignore
+
+# Filenames that should be ignored wherever they appear
+~$
+\.py(c|o)$
+(?i)(^|/)TAGS$
+(^|/)ID$
+(^|/)\.DS_Store$
+
+# Emacs directory variable files.
+\.dir-locals\.el
+
+# Build directories
+^build
+^dist
+^src/taskgraph.egg-info
