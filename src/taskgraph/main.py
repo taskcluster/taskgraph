@@ -209,6 +209,43 @@ def load_image(args):
         sys.exit(1)
 
 
+@command("decision", description="Run the decision task")
+@argument("--root", "-r", help="root of the taskgraph definition relative to topsrcdir")
+@argument(
+    "--message",
+    required=True,
+    help='Commit message to be parsed. Example: "try: -b do -p all -u all"',
+)
+@argument(
+    "--project",
+    required=True,
+    help="Project to use for creating task graph. Example: --project=try",
+)
+@argument("--pushlog-id", dest="pushlog_id", required=True, default=0)
+@argument("--pushdate", dest="pushdate", required=True, type=int, default=0)
+@argument("--owner", required=True, help="email address of who owns this graph")
+@argument("--level", required=True, help="SCM level of this repository")
+@argument(
+    "--target-tasks-method", help="method for selecting the target tasks to generate"
+)
+@argument("--base-repository", required=True, help='URL for "base" repository to clone')
+@argument(
+    "--head-repository",
+    required=True,
+    help='URL for "head" repository to fetch revision from',
+)
+@argument(
+    "--head-ref", required=True, help="Reference (this is same as rev usually for hg)"
+)
+@argument(
+    "--head-rev", required=True, help="Commit revision to use from head repository"
+)
+def decision(options):
+    from taskgraph.decision import taskgraph_decision
+
+    taskgraph_decision(options)
+
+
 def create_parser():
     parser = argparse.ArgumentParser(description="Interact with taskgraph")
     subparsers = parser.add_subparsers()
