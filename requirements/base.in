@@ -1,0 +1,10 @@
+attrs
+futures
+json-e
+PyYAML
+redo
+requests
+requests_unixsocket
+taskcluster-urls
+slugid
+voluptuous

@@ -1,0 +1,4 @@
+-r base.in
+flake8==3.5.0
+mock
+pytest
