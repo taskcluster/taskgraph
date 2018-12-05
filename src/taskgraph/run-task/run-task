@@ -851,6 +851,9 @@ def main(args):
     vcs_checkout_from_args(args, 'vcs')
 
     try:
+        if 'VCS_PATH' in os.environ:
+            os.environ['VCS_PATH'] = os.path.abspath(os.environ['VCS_PATH'])
+
         if 'MOZ_FETCHES' in os.environ:
             fetch_artifacts()
 
