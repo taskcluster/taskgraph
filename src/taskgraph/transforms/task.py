@@ -10,11 +10,14 @@ complexities of worker implementations, scopes, and treeherder annotations.
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import hashlib
 import os
 import re
 import time
 from copy import deepcopy
 
+from taskgraph.util.hash import hash_path
+from taskgraph.util.memoize import memoize
 from taskgraph.util.treeherder import split_symbol
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.taskcluster import get_root_url
@@ -28,6 +31,16 @@ from taskgraph.util.schema import (
 )
 from voluptuous import Any, Required, Optional, Extra
 from taskgraph import MAX_DEPENDENCIES
+from ..util import docker as dockerutil
+
+RUN_TASK = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'run-task', 'run-task')
+
+
+@memoize
+def _run_task_suffix():
+    """String to append to cache names under control of run-task."""
+    return hash_path(RUN_TASK)[0:20]
+
 
 # A task description is a general description of a TaskCluster task
 task_description_schema = Schema({
@@ -251,6 +264,18 @@ def verify_index(config, index):
     Required('docker-in-docker'): bool,  # (aka 'dind')
     Required('privileged'): bool,
 
+    # Paths to Docker volumes.
+    #
+    # For in-tree Docker images, volumes can be parsed from Dockerfile.
+    # This only works for the Dockerfile itself: if a volume is defined in
+    # a base image, it will need to be declared here. Out-of-tree Docker
+    # images will also require explicit volume annotation.
+    #
+    # Caches are often mounted to the same path as Docker volumes. In this
+    # case, they take precedence over a Docker volume. But a volume still
+    # needs to be declared for the path.
+    Optional('volumes'): [basestring],
+
     # caches to set up for the task
     Optional('caches'): [{
         # only one type is supported by any of the workers right now
@@ -317,6 +342,17 @@ def build_docker_worker_payload(config, task, task_def):
                 "taskId": {"task-reference": "<docker-image>"},
                 "type": "task-image",
             }
+
+            # Find VOLUME in Dockerfile.
+            volumes = dockerutil.parse_volumes(name)
+            for v in sorted(volumes):
+                if v in worker['volumes']:
+                    raise Exception('volume %s already defined; '
+                                    'if it is defined in a Dockerfile, '
+                                    'it does not need to be specified in the '
+                                    'worker definition' % v)
+
+                worker['volumes'].append(v)
 
         elif 'indexed' in image:
             image = {
@@ -392,6 +428,17 @@ def build_docker_worker_payload(config, task, task_def):
     if 'max-run-time' in worker:
         payload['maxRunTime'] = worker['max-run-time']
 
+    run_task = payload.get('command', [''])[0].endswith('run-task')
+
+    # run-task exits EXIT_PURGE_CACHES if there is a problem with caches.
+    # Automatically retry the tasks and purge caches if we see this exit
+    # code.
+    # TODO move this closer to code adding run-task once bug 1469697 is
+    # addressed.
+    if run_task:
+        worker.setdefault('retry-exit-status', []).append(72)
+        worker.setdefault('purge-caches-exit-status', []).append(72)
+
     payload['onExitStatus'] = {}
     if 'retry-exit-status' in worker:
         payload['onExitStatus']['retry'] = worker['retry-exit-status']
@@ -407,6 +454,15 @@ def build_docker_worker_payload(config, task, task_def):
                 'expires': task_def['expires'],  # always expire with the task
             }
         payload['artifacts'] = artifacts
+
+    if isinstance(worker.get('docker-image'), basestring):
+        out_of_tree_image = worker['docker-image']
+        run_task = run_task or out_of_tree_image.startswith(
+            'taskcluster/image_builder')
+    else:
+        out_of_tree_image = None
+        image = worker.get('docker-image', {}).get('in-tree')
+        run_task = run_task or image == 'image_builder'
 
     if 'caches' in worker:
         caches = {}
@@ -438,7 +494,15 @@ def build_docker_worker_payload(config, task, task_def):
         # to be rebuilt.
         cache_version = 'v3'
 
-        suffix = '-%s' % cache_version
+        if run_task:
+            suffix = '-%s-%s' % (cache_version, _run_task_suffix())
+
+            if out_of_tree_image:
+                name_hash = hashlib.sha256(out_of_tree_image).hexdigest()
+                suffix += name_hash[0:12]
+
+        else:
+            suffix = '-%s' % cache_version
 
         skip_untrusted = config.params.is_try() or level == 1
 
@@ -452,7 +516,17 @@ def build_docker_worker_payload(config, task, task_def):
             caches[name] = cache['mount-point']
             task_def['scopes'].append('docker-worker:cache:%s' % name)
 
+        # Assertion: only run-task is interested in this.
+        if run_task:
+            payload['env']['TASKCLUSTER_CACHES'] = ';'.join(sorted(
+                caches.values()))
+
         payload['cache'] = caches
+
+    # And send down volumes information to run-task as well.
+    if run_task and worker.get('volumes'):
+        payload['env']['TASKCLUSTER_VOLUMES'] = ';'.join(
+            sorted(worker['volumes']))
 
     if payload.get('cache') and skip_untrusted:
         payload['env']['TASKCLUSTER_UNTRUSTED_CACHES'] = '1'
@@ -461,6 +535,8 @@ def build_docker_worker_payload(config, task, task_def):
         payload['features'] = features
     if capabilities:
         payload['capabilities'] = capabilities
+
+    check_caches_are_volumes(task)
 
 
 @payload_builder('invalid', schema={
@@ -499,6 +575,7 @@ def set_defaults(config, tasks):
             worker.setdefault('loopback-audio', False)
             worker.setdefault('docker-in-docker', False)
             worker.setdefault('privileged', False)
+            worker.setdefault('volumes', [])
             worker.setdefault('env', {})
             if 'caches' in worker:
                 for c in worker['caches']:
@@ -758,4 +835,74 @@ def check_task_dependencies(config, tasks):
                     'task {}/{} has too many dependencies ({} > {})'.format(
                         config.kind, task['label'], len(task['dependencies']),
                         MAX_DEPENDENCIES))
+        yield task
+
+
+def check_caches_are_volumes(task):
+    """Ensures that all cache paths are defined as volumes.
+
+    Caches and volumes are the only filesystem locations whose content
+    isn't defined by the Docker image itself. Some caches are optional
+    depending on the job environment. We want paths that are potentially
+    caches to have as similar behavior regardless of whether a cache is
+    used. To help enforce this, we require that all paths used as caches
+    to be declared as Docker volumes. This check won't catch all offenders.
+    But it is better than nothing.
+    """
+    volumes = set(task['worker']['volumes'])
+    paths = set(c['mount-point'] for c in task['worker'].get('caches', []))
+    missing = paths - volumes
+
+    if not missing:
+        return
+
+    raise Exception('task %s (image %s) has caches that are not declared as '
+                    'Docker volumes: %s '
+                    '(have you added them as VOLUMEs in the Dockerfile?)'
+                    % (task['label'], task['worker']['docker-image'],
+                       ', '.join(sorted(missing))))
+
+
+@transforms.add
+def check_run_task_caches(config, tasks):
+    """Audit for caches requiring run-task.
+
+    run-task manages caches in certain ways. If a cache managed by run-task
+    is used by a non run-task task, it could cause problems. So we audit for
+    that and make sure certain cache names are exclusive to run-task.
+
+    IF YOU ARE TEMPTED TO MAKE EXCLUSIONS TO THIS POLICY, YOU ARE LIKELY
+    CONTRIBUTING TECHNICAL DEBT AND WILL HAVE TO SOLVE MANY OF THE PROBLEMS
+    THAT RUN-TASK ALREADY SOLVES. THINK LONG AND HARD BEFORE DOING THAT.
+    """
+    re_reserved_caches = re.compile('''^
+        (level-\d+-checkouts|level-\d+-tooltool-cache)
+    ''', re.VERBOSE)
+
+    suffix = _run_task_suffix()
+
+    for task in tasks:
+        payload = task['task'].get('payload', {})
+        command = payload.get('command') or ['']
+
+        main_command = command[0] if isinstance(command[0], basestring) else ''
+        run_task = main_command.endswith('run-task')
+
+        for cache in payload.get('cache', {}):
+            if not re_reserved_caches.match(cache):
+                continue
+
+            if not run_task:
+                raise Exception(
+                    '%s is using a cache (%s) reserved for run-task '
+                    'change the task to use run-task or use a different '
+                    'cache name' % (task['label'], cache))
+
+            if not cache.endswith(suffix):
+                raise Exception(
+                    '%s is using a cache (%s) reserved for run-task '
+                    'but the cache name is not dependent on the contents '
+                    'of run-task; change the cache name to conform to the '
+                    'naming requirements' % (task['label'], cache))
+
         yield task

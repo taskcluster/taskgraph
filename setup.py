@@ -13,4 +13,11 @@ setup(
     install_requires=requirements,
     classifiers=("Programming Language :: Python :: 2",),
     entry_points={"console_scripts": ["taskgraph = taskgraph.main:main"]},
+    package_data={
+        "taskgraph": [
+            "run-task/run-task",
+            "run-task/hgrc",
+            "run-task/robustcheckout.py",
+        ]
+    },
 )
