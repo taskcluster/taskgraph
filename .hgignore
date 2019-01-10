@@ -14,3 +14,5 @@
 ^build
 ^dist
 ^src/taskgraph.egg-info
+
+^\.pytest_cache/
