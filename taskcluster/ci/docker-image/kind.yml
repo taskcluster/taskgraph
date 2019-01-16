@@ -20,6 +20,9 @@ jobs:
         symbol: I(ib)
     decision:
         symbol: I(d)
+    decision-user:
+        symbol: I(d-u)
+        parent: decision
     python2.7:
         symbol: I(py2.7)
         definition: python
