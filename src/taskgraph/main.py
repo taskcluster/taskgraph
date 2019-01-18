@@ -4,6 +4,7 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import os
 import sys
 import traceback
 import argparse
@@ -141,6 +142,68 @@ def show_taskgraph(options):
         show_method = SHOW_METHODS.get(options["format"] or "labels")
         # tg = get_filtered_taskgraph(tg, options["tasks_regex"])
         show_method(tg)
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)
+
+
+@command("build-image", description="Build a Docker image")
+@argument("image_name", help="Name of the image to build")
+@argument(
+    "-t", "--tag", help="tag that the image should be built as.", metavar="name:tag"
+)
+@argument(
+    "--context-only",
+    help="File name the context tarball should be written to."
+    "with this option it will only build the context.tar.",
+    metavar="context.tar",
+)
+def build_image(args):
+    from taskgraph.docker import build_image, build_context
+
+    if args["context_only"] is None:
+        build_image(args["image_name"], args["tag"], os.environ)
+    else:
+        build_context(args["image_name"], args["context_only"], os.environ)
+
+
+@command(
+    "load-image",
+    help="Load a pre-built Docker image. Note that you need to "
+    "have docker installed and running for this to work.",
+)
+@argument(
+    "--task-id",
+    help="Load the image at public/image.tar.zst in this task, "
+    "rather than searching the index",
+)
+@argument(
+    "-t",
+    "--tag",
+    help="tag that the image should be loaded as. If not "
+    "image will be loaded with tag from the tarball",
+    metavar="name:tag",
+)
+@argument(
+    "image_name",
+    nargs="?",
+    help="Load the image of this name based on the current "
+    "contents of the tree (as built for mozilla-central "
+    "or mozilla-inbound)",
+)
+def load_image(args):
+    from taskgraph.docker import load_image_by_name, load_image_by_task_id
+
+    if not args.get("image_name") and not args.get("task_id"):
+        print("Specify either IMAGE-NAME or TASK-ID")
+        sys.exit(1)
+    try:
+        if args["task_id"]:
+            ok = load_image_by_task_id(args["task_id"], args.get("tag"))
+        else:
+            ok = load_image_by_name(args["image_name"], args.get("tag"))
+        if not ok:
+            sys.exit(1)
     except Exception:
         traceback.print_exc()
         sys.exit(1)
