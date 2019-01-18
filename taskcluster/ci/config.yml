@@ -1,0 +1,7 @@
+---
+trust-domain: taskgraph
+treeherder:
+    group-names:
+        'I': 'Docker Image Builds'
+
+task-priority: low

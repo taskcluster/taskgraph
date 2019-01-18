@@ -1,0 +1,52 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+---
+
+loader: taskgraph.loader.transform:loader
+
+transforms:
+    - taskgraph.transforms.job:transforms
+    - taskgraph.transforms.task:transforms
+
+job-defaults:
+    attributes: {}
+    worker-type: aws-provisioner-v1/gecko-misc
+    worker:
+        docker-image: {in-tree: python2.7}
+        max-run-time: 3600
+    treeherder:
+        kind: test
+        platform: tests/opt
+        tier: 1
+    run:
+        using: run-task
+        cache-dotcache: true
+
+jobs:
+    unit:
+        description: "Run `unit tests` to validate the latest changes"
+        treeherder:
+            symbol: unit
+        run:
+            command:
+                - /bin/bash
+                - '-c'
+                - >-
+                    cd /builds/worker/checkouts/src &&
+                    pip install --user -r requirements/test.txt &&
+                    pip install --user --no-deps -e . &&
+                    pytest --pyargs taskgraph
+
+    flake8:
+        description: "Run `unit tests` to validate the latest changes"
+        treeherder:
+            symbol: flake8
+        run:
+            command:
+                - /bin/bash
+                - '-c'
+                - >-
+                    cd /builds/worker/checkouts/src &&
+                    pip install --user -r requirements/test.txt &&
+                    flake8
