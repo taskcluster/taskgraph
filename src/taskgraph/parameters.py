@@ -11,7 +11,7 @@ import time
 import yaml
 from datetime import datetime
 
-from taskgraph.util.hg import calculate_head_rev
+from taskgraph.util.hg import calculate_head_rev, get_repo_path
 from taskgraph.util.memoize import memoize
 from taskgraph.util.readonlydict import ReadOnlyDict
 
@@ -21,28 +21,33 @@ class ParameterMismatch(Exception):
 
 
 @memoize
-def get_head_ref():
+def _get_head_ref():
     return calculate_head_rev(None)
+
+
+@memoize
+def _get_repo_path():
+    return get_repo_path(None)
 
 
 # Please keep this list sorted and in sync with taskcluster/docs/parameters.rst
 # Parameters are of the form: {name: default}
 PARAMETERS = {
-    'base_repository': 'https://hg.mozilla.org/mozilla-unified',
+    'base_repository': _get_repo_path,
     'build_date': lambda: int(time.time()),
     'do_not_optimize': [],
     'existing_tasks': {},
     'filters': ['target_tasks_method'],
-    'head_ref': get_head_ref,
-    'head_repository': 'https://hg.mozilla.org/mozilla-central',
-    'head_rev': get_head_ref,
+    'head_ref': _get_head_ref,
+    'head_repository': _get_repo_path,
+    'head_rev': _get_head_ref,
     'hg_branch': 'default',
     'level': '3',
     'message': '',
     'moz_build_date': lambda: datetime.now().strftime("%Y%m%d%H%M%S"),
     'optimize_target_tasks': True,
     'owner': 'nobody@mozilla.com',
-    'project': 'mozilla-central',
+    'project': lambda: _get_repo_path().rsplit('/', 1)[1],
     'pushdate': lambda: int(time.time()),
     'pushlog_id': '0',
     'target_tasks_method': 'default',

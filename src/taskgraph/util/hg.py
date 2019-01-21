@@ -56,3 +56,7 @@ def calculate_head_rev(root):
     # VCS_HEAD_REF, so all that remains is to see what the current revision is.
     # Mercurial refers to that as `.`.
     return subprocess.check_output(['hg', 'log', '-r', '.', '-T', '{node}'], cwd=root)
+
+
+def get_repo_path(root):
+    return subprocess.check_output(['hg', 'path', '-T', '{url}', 'default'], cwd=root)
