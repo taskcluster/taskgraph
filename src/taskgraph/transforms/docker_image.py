@@ -23,11 +23,8 @@ from voluptuous import (
 
 DIGEST_RE = re.compile('^[0-9a-f]{64}$')
 
-IMAGE_BUILDER_BOOSTRAP_IMAGE = (
-    'mozillareleases/taskgraph'
-    ':image_builder-a5420944d2e1b279e4e13ef63aad8f1622e564d9ba9b0b281ccfe9703420073a'
-    '@sha256:42915add118bcea7b9abc504aa6cde13350fc9619ca1cdec54722cd1195c3255'
-)
+IMAGE_BUILDER_INDEX = 'taskgraph.cache.level-3.docker-images.v2.image_builder.hash'
+IMAGE_BUILDER_HASH = '9044f09919d89a1d8c1a69aaac451b0b6a85e64ebe4dcbd6509e221ab50169ba'
 
 transforms = TransformSequence()
 
@@ -189,7 +186,9 @@ def fill_template(config, tasks):
         # obviously. So we fall back to the last snapshot of the image that
         # was uploaded to docker hub.
         if image_name == 'image_builder' or not has_image_builder:
-            worker['docker-image'] = IMAGE_BUILDER_BOOSTRAP_IMAGE
+            worker['docker-image'] = {
+                'indexed': '{}.{}'.format(IMAGE_BUILDER_INDEX, IMAGE_BUILDER_HASH)
+            }
             # Keep in sync with the Dockerfile used to generate the
             # docker image whose digest is referenced above.
             worker['volumes'] = [
