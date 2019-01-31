@@ -1,0 +1,8 @@
+---
+extends: default
+
+rules:
+    document-end:
+        present: false
+    line-length: disable
+    indentation: {spaces: 4}

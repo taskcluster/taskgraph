@@ -39,7 +39,7 @@ jobs:
                     pytest --pyargs taskgraph
 
     flake8:
-        description: "Run `unit tests` to validate the latest changes"
+        description: "Run `flake8` to validate the latest changes"
         treeherder:
             symbol: flake8
         run:
@@ -50,3 +50,16 @@ jobs:
                     cd /builds/worker/checkouts/src &&
                     pip install --user -r requirements/test.txt &&
                     flake8
+
+    yamllint:
+        description: "Run `yamllint` to validate the latest changes"
+        treeherder:
+            symbol: yaml
+        run:
+            command:
+                - /bin/bash
+                - '-c'
+                - >-
+                    cd /builds/worker/checkouts/src &&
+                    pip install --user -r requirements/test.txt &&
+                    yamllint .
