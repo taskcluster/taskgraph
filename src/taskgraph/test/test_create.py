@@ -9,9 +9,12 @@ import os
 import mock
 
 from taskgraph import create
+from taskgraph.config import GraphConfig
 from taskgraph.graph import Graph
 from taskgraph.taskgraph import TaskGraph
 from taskgraph.task import Task
+
+GRAPH_CONFIG = GraphConfig({'trust-domain': 'domain'}, '/var/empty')
 
 
 class TestCreate(unittest.TestCase):
@@ -43,11 +46,11 @@ class TestCreate(unittest.TestCase):
         graph = Graph(nodes={'tid-a', 'tid-b'}, edges={('tid-a', 'tid-b', 'edge')})
         taskgraph = TaskGraph(tasks, graph)
 
-        create.create_tasks(taskgraph, label_to_taskid, {'level': '4'})
+        create.create_tasks(GRAPH_CONFIG, taskgraph, label_to_taskid, {'level': '4'})
 
         for tid, task in self.created_tasks.iteritems():
             self.assertEqual(task['payload'], 'hello world')
-            self.assertEqual(task['schedulerId'], 'gecko-level-4')
+            self.assertEqual(task['schedulerId'], 'domain-level-4')
             # make sure the dependencies exist, at least
             for depid in task.get('dependencies', []):
                 if depid is 'decisiontask':
@@ -65,7 +68,7 @@ class TestCreate(unittest.TestCase):
         graph = Graph(nodes={'tid-a'}, edges=set())
         taskgraph = TaskGraph(tasks, graph)
 
-        create.create_tasks(taskgraph, label_to_taskid, {'level': '4'})
+        create.create_tasks(GRAPH_CONFIG, taskgraph, label_to_taskid, {'level': '4'})
 
         for tid, task in self.created_tasks.iteritems():
             self.assertEqual(task.get('dependencies'), [os.environ['TASK_ID']])
@@ -87,4 +90,4 @@ class TestCreate(unittest.TestCase):
         create_task.side_effect = fail
 
         with self.assertRaises(RuntimeError):
-            create.create_tasks(taskgraph, label_to_taskid, {'level': '4'})
+            create.create_tasks(GRAPH_CONFIG, taskgraph, label_to_taskid, {'level': '4'})
