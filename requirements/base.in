@@ -5,6 +5,7 @@ PyYAML
 redo
 requests
 requests_unixsocket
-taskcluster-urls
+six
 slugid
+taskcluster-urls
 voluptuous
