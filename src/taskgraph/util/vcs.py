@@ -63,6 +63,19 @@ def get_repository_type(root):
         raise RuntimeError('Current directory is neither a git or hg repository')
 
 
+# For these functions, we assume that run-task has correctly checked out the
+# revision indicated by GECKO_HEAD_REF, so all that remains is to see what the
+# current revision is.  Mercurial refers to that as `.`.
+def get_commit_message(repository_type, root):
+    if repository_type == 'hg':
+        return subprocess.check_output(['hg', 'log', '-r', '.', '-T', '{desc}'], cwd=root)
+    elif repository_type == 'git':
+        return subprocess.check_output(['git', 'log', '-n1', '--format=%B'], cwd=root)
+    else:
+        raise RuntimeError('Only the "git" and "hg" repository types are supported for using '
+                           'get_commit_message()')
+
+
 def calculate_head_rev(repository_type, root):
     # we assume that run-task has correctly checked out the revision indicated by
     # VCS_HEAD_REF, so all that remains is to see what the current revision is.

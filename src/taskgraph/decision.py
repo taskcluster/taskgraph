@@ -108,7 +108,6 @@ def get_decision_parameters(config, options):
         'head_repository',
         'head_rev',
         'head_ref',
-        'message',
         'project',
         'pushlog_id',
         'pushdate',

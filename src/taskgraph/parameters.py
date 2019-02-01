@@ -47,7 +47,6 @@ PARAMETERS = {
     'head_rev': _get_head_ref,
     'hg_branch': 'default',
     'level': '3',
-    'message': '',
     'moz_build_date': lambda: datetime.now().strftime("%Y%m%d%H%M%S"),
     'optimize_target_tasks': True,
     'owner': 'nobody@mozilla.com',
