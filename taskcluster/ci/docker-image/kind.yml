@@ -23,6 +23,10 @@ jobs:
     decision-user:
         symbol: I(d-u)
         parent: decision
+        index:
+            product: 'taskgraph'
+            job-name: 'decision-image'
+        cache: false
     python2.7:
         symbol: I(py2.7)
         definition: python

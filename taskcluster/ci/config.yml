@@ -4,4 +4,8 @@ treeherder:
     group-names:
         'I': 'Docker Image Builds'
 
+index:
+    products:
+        - taskgraph
+
 task-priority: low
