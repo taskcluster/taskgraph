@@ -8,7 +8,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import json
 import time
-import yaml
 from datetime import datetime
 
 from taskgraph.util.hg import calculate_head_rev, get_repo_path
@@ -132,6 +131,7 @@ def load_parameters_file(filename, strict=True, overrides=None):
     """
     import urllib
     from taskgraph.util.taskcluster import get_artifact_url, find_task_id
+    from taskgraph.util import yaml
 
     if overrides is None:
         overrides = {}
@@ -158,7 +158,7 @@ def load_parameters_file(filename, strict=True, overrides=None):
         f = urllib.urlopen(filename)
 
     if filename.endswith('.yml'):
-        kwargs = yaml.safe_load(f)
+        kwargs = yaml.load_stream(f)
     elif filename.endswith('.json'):
         kwargs = json.load(f)
     else:
