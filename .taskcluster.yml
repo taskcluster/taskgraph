@@ -15,13 +15,13 @@ tasks:
               # ensure there's no trailing `/` on the repo URL
               repoUrl: {$if: 'repository.url[-1] == "/"', then: {$eval: 'repository.url[:-1]'}, else: {$eval: 'repository.url'}}
           in:
-              taskId: {$if: 'tasks_for != "action"', then: '${as_slugid("decision")}'}
+              taskId: {$if: 'tasks_for != "action"', then: '${ownTaskId}'}
               taskGroupId:
                   $if: 'tasks_for == "action"'
                   then:
                       '${action.taskGroupId}'
                   else:
-                      '${as_slugid("decision")}'  # same as taskId; this is how automation identifies a decision tsak
+                      '${ownTaskId}'  # same as taskId; this is how automation identifies a decision tsak
               schedulerId: 'taskgraph-level-${repository.level}'
 
               created: {$fromNow: ''}
@@ -119,7 +119,6 @@ tasks:
                             VCS_HEAD_REPOSITORY: '${repoUrl}'
                             VCS_HEAD_REF: '${push.revision}'
                             VCS_HEAD_REV: '${push.revision}'
-                            COMMIT_MSG: '${push.comment}'
                             HG_STORE_PATH: /builds/worker/checkouts/hg-store
                           - $if: 'tasks_for == "action"'
                             then:
