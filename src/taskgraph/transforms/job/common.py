@@ -23,6 +23,9 @@ def add_cache(job, taskdesc, name, mount_point, skip_untrusted=False):
         skip_untrusted (bool): Whether cache is used in untrusted environments
             (default: False). Only applies to docker-worker.
     """
+    if not job['run'].get('use-caches', True):
+        return
+
     worker = job['worker']
 
     if worker['implementation'] == 'docker-worker':
