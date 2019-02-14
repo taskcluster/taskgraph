@@ -128,10 +128,9 @@ def show_taskgraph(options):
         taskgraph.fast = True
 
     try:
-        parameters = taskgraph.parameters.load_parameters_file(
+        parameters = taskgraph.parameters.parameters_loader(
             options["parameters"], strict=False
         )
-        parameters.check()
 
         tgg = taskgraph.generator.TaskGraphGenerator(
             root_dir=options.get("root"), parameters=parameters
