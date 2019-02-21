@@ -54,8 +54,8 @@ def docker_worker_add_workspace_cache(config, job, taskdesc, extra=None):
         extra (str): Optional context passed in that supports extending the cache
             key name to avoid undesired conflicts with other caches.
     """
-    cache_name = 'level-{}-{}-build-{}-{}-workspace'.format(
-        config.params['level'], config.params['project'],
+    cache_name = '{}-build-{}-{}-workspace'.format(
+        config.params['project'],
         taskdesc['attributes']['build_platform'],
         taskdesc['attributes']['build_type'],
     )
@@ -110,7 +110,7 @@ def support_vcs_checkout(config, job, taskdesc, sparse=False):
         vcsdir = '{}/src'.format(checkoutdir)
         hgstore = '{}/hg-store'.format(checkoutdir)
 
-    cache_name = 'level-{}-checkouts'.format(config.params['level'])
+    cache_name = 'checkouts'
 
     # Sparse checkouts need their own cache because they can interfere
     # with clients that aren't sparse aware.

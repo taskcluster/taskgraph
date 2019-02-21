@@ -483,14 +483,14 @@ def build_docker_worker_payload(config, task, task_def):
         cache_version = 'v3'
 
         if run_task:
-            suffix = '-%s-%s' % (cache_version, _run_task_suffix())
+            suffix = '{}-{}'.format(cache_version, _run_task_suffix())
 
             if out_of_tree_image:
                 name_hash = hashlib.sha256(out_of_tree_image).hexdigest()
                 suffix += name_hash[0:12]
 
         else:
-            suffix = '-%s' % cache_version
+            suffix = cache_version
 
         skip_untrusted = config.params.is_try() or level == 1
 
@@ -500,7 +500,12 @@ def build_docker_worker_payload(config, task, task_def):
             if cache.get('skip-untrusted') and skip_untrusted:
                 continue
 
-            name = '{}-{}{}'.format(config.graph_config['trust-domain'], cache['name'], suffix)
+            name = '{trust_domain}-level-{level}-{name}-{suffix}'.format(
+                trust_domain=config.graph_config['trust-domain'],
+                level=config.params['level'],
+                name=cache['name'],
+                suffix=suffix,
+            )
             caches[name] = cache['mount-point']
             task_def['scopes'].append('docker-worker:cache:%s' % name)
 
@@ -864,8 +869,13 @@ def check_run_task_caches(config, tasks):
     THAT RUN-TASK ALREADY SOLVES. THINK LONG AND HARD BEFORE DOING THAT.
     """
     re_reserved_caches = re.compile('''^
-        (level-\d+-checkouts|level-\d+-tooltool-cache)
+        (checkouts|tooltool-cache)
     ''', re.VERBOSE)
+
+    cache_prefix = '{trust_domain}-level-{level}-'.format(
+        trust_domain=config.graph_config['trust-domain'],
+        level=config.params['level'],
+    )
 
     suffix = _run_task_suffix()
 
@@ -877,6 +887,15 @@ def check_run_task_caches(config, tasks):
         run_task = main_command.endswith('run-task')
 
         for cache in payload.get('cache', {}):
+            if not cache.startswith(cache_prefix):
+                raise Exception(
+                    '{} is using a cache ({}) which is not appropriate '
+                    'for its trust-domain and level. It should start with {}.'
+                    .format(task['label'], cache, cache_prefix)
+                )
+
+            cache = cache[len(cache_prefix):]
+
             if not re_reserved_caches.match(cache):
                 continue
 

@@ -217,7 +217,7 @@ def fill_template(config, tasks):
 
         worker['caches'] = [{
             'type': 'persistent',
-            'name': 'level-{}-imagebuilder'.format(config.params['level']),
+            'name': 'imagebuilder',
             'mount-point': '/builds/worker/checkouts',
         }]
 
