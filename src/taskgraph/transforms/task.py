@@ -60,6 +60,9 @@ task_description_schema = Schema({
     # method.
     Optional('dependencies'): {basestring: object},
 
+    # Soft dependencies of this task, as a list of tasks labels
+    Optional('soft-dependencies'): [basestring],
+
     Optional('requires'): Any('all-completed', 'all-resolved'),
 
     # expiration and deadline times, relative to task creation, with units
@@ -786,6 +789,7 @@ def build_task(config, tasks):
             'label': task['label'],
             'task': task_def,
             'dependencies': task.get('dependencies', {}),
+            'soft-dependencies': task.get('soft-dependencies', []),
             'attributes': attributes,
             'optimization': task.get('optimization', None),
         }
