@@ -14,9 +14,9 @@ import hashlib
 import os
 import re
 import time
-from copy import deepcopy
 
 from taskgraph.util.hash import hash_path
+from taskgraph.util.keyed_by import evaluate_keyed_by
 from taskgraph.util.memoize import memoize
 from taskgraph.util.treeherder import split_symbol
 from taskgraph.transforms.base import TransformSequence
@@ -199,9 +199,11 @@ def get_branch_rev(config):
 
 @memoize
 def get_default_priority(graph_config, project):
-    data = {'task-priority': deepcopy(graph_config['task-priority'])}
-    resolve_keyed_by(data, 'task-priority', "Graph Config", project=project)
-    return data['task-priority']
+    return evaluate_keyed_by(
+        graph_config['task-priority'],
+        "Graph Config",
+        {'project': project}
+    )
 
 
 # define a collection of payload builders, depending on the worker implementation
