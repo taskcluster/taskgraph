@@ -19,8 +19,7 @@ def command(*args, **kwargs):
     defaults = kwargs.pop("defaults", {})
 
     def decorator(func):
-        func.command = (args, kwargs, defaults)
-        _commands.append(func)
+        _commands.append((func, args, kwargs, defaults))
         return func
 
     return decorator
@@ -61,6 +60,10 @@ SHOW_METHODS = {
 
 
 @command("full", description="", defaults={"graph_attr": "full_task_graph"})
+@command("target", description="", defaults={"graph_attr": "target_task_set"})
+@command("target-graph", description="", defaults={"graph_attr": "target_task_graph"})
+@command("optimized", description="", defaults={"graph_attr": "optimized_task_graph"})
+@command("morphed", description="", defaults={"graph_attr": "morphed_task_graph"})
 @argument("--root", "-r", help="root of the taskgraph definition relative to topsrcdir")
 @argument("--quiet", "-q", action="store_true", help="suppress all logging output")
 @argument(
@@ -248,11 +251,11 @@ def decision(options):
 def create_parser():
     parser = argparse.ArgumentParser(description="Interact with taskgraph")
     subparsers = parser.add_subparsers()
-    for func in _commands:
-        subparser = subparsers.add_parser(*func.command[0], **func.command[1])
+    for (func, args, kwargs, defaults) in _commands:
+        subparser = subparsers.add_parser(*args, **kwargs)
         for arg in func.args:
             subparser.add_argument(*arg[0], **arg[1])
-        subparser.set_defaults(command=func, **func.command[2])
+        subparser.set_defaults(command=func, **defaults)
     return parser
 
 
