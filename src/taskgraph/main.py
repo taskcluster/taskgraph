@@ -5,6 +5,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
+import re
 import sys
 import traceback
 import argparse
@@ -50,6 +51,35 @@ def show_taskgraph_json(taskgraph):
 
 def show_taskgraph_yaml(taskgraph):
     print(yaml.safe_dump(taskgraph.to_json()))
+
+
+def get_filtered_taskgraph(taskgraph, tasksregex):
+    """
+    Filter all the tasks on basis of a regular expression
+    and returns a new TaskGraph object
+    """
+    from taskgraph.graph import Graph
+    from taskgraph.taskgraph import TaskGraph
+
+    # return original taskgraph if no regular expression is passed
+    if not tasksregex:
+        return taskgraph
+    named_links_dict = taskgraph.graph.named_links_dict()
+    filteredtasks = {}
+    filterededges = set()
+    regexprogram = re.compile(tasksregex)
+
+    for key in taskgraph.graph.visit_postorder():
+        task = taskgraph.tasks[key]
+        if regexprogram.match(task.label):
+            filteredtasks[key] = task
+            for depname, dep in named_links_dict[key].iteritems():
+                if regexprogram.match(dep):
+                    filterededges.add((key, dep, depname))
+    filtered_taskgraph = TaskGraph(
+        filteredtasks, Graph(set(filteredtasks), filterededges)
+    )
+    return filtered_taskgraph
 
 
 SHOW_METHODS = {
@@ -142,7 +172,7 @@ def show_taskgraph(options):
         tg = getattr(tgg, options["graph_attr"])
 
         show_method = SHOW_METHODS.get(options["format"] or "labels")
-        # tg = get_filtered_taskgraph(tg, options["tasks_regex"])
+        tg = get_filtered_taskgraph(tg, options["tasks_regex"])
         show_method(tg)
     except Exception:
         traceback.print_exc()
