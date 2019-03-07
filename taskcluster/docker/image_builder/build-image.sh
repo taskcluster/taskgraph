@@ -43,8 +43,12 @@ run-task \
   sh -x -c "cd /builds/worker/checkouts/src && \
   $LOAD_COMMAND \
   taskgraph build-image \
-  -t \"$IMAGE_NAME:$HASH\" \
+  -t \"$IMAGE_NAME:$HASH-pre\" \
   \"$IMAGE_NAME\""
+
+# Squash the image
+export DOCKER_HOST=unix:/$DOCKER_SOCKET
+/usr/local/bin/docker-squash -v -t "${IMAGE_NAME}:${HASH}" "${IMAGE_NAME}:${HASH}-pre"
 
 # Create artifact folder (note that this must occur after run-task)
 mkdir -p /builds/worker/workspace/artifacts

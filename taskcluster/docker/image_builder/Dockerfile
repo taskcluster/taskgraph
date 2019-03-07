@@ -32,6 +32,8 @@ ADD topsrcdir /setup/src/
 ADD build-image.sh      /usr/local/bin/build-image.sh
 ADD download-and-compress /usr/local/bin/download-and-compress
 ADD setup.sh            /setup/setup.sh
+ADD requirements/py2.txt /setup/requirements-py2.txt
+ADD requirements/py3.txt /setup/requirements-py3.txt
 RUN bash /setup/setup.sh
 
 
