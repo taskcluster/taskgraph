@@ -59,3 +59,9 @@ def target_tasks_default(full_task_graph, parameters, graph_config):
     via the `run_on_projects` attributes."""
     return [l for l, t in full_task_graph.tasks.iteritems()
             if standard_filter(t, parameters)]
+
+
+@_target_task('nothing')
+def target_tasks_nothing(full_task_graph, parameters, graph_config):
+    """Select nothing, for DONTBUILD pushes"""
+    return []

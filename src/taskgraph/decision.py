@@ -16,7 +16,7 @@ from .create import create_tasks
 from .generator import TaskGraphGenerator
 from .parameters import Parameters
 from .taskgraph import TaskGraph
-from taskgraph.util.vcs import get_hg_revision_branch
+from taskgraph.util.vcs import get_hg_revision_branch, get_commit_message
 from taskgraph.util.yaml import load_yaml
 
 
@@ -118,6 +118,8 @@ def get_decision_parameters(config, options):
         'tasks_for',
     ] if n in options}
 
+    commit_message = get_commit_message(parameters['repository_type'], os.getcwd())
+
     # Define default filter list, as most configurations shouldn't need
     # custom filters.
     parameters['filters'] = [
@@ -156,6 +158,12 @@ def get_decision_parameters(config, options):
     # `target_tasks_method` has higher precedence than `project` parameters
     if options.get('target_tasks_method'):
         parameters['target_tasks_method'] = options['target_tasks_method']
+
+    # ..but can be overridden by the commit message: if it contains the special
+    # string "DONTBUILD" and this is an on-push decision task, then use the
+    # special 'nothing' target task method.
+    if 'DONTBUILD' in commit_message and options['tasks_for'] == 'hg-push':
+        parameters['target_tasks_method'] = 'nothing'
 
     if options.get('optimize_target_tasks') is not None:
         parameters['optimize_target_tasks'] = options['optimize_target_tasks']
