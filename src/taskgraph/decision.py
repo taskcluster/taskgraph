@@ -115,6 +115,7 @@ def get_decision_parameters(config, options):
         'owner',
         'level',
         'target_tasks_method',
+        'tasks_for',
     ] if n in options}
 
     # Define default filter list, as most configurations shouldn't need

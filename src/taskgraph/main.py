@@ -272,6 +272,9 @@ def load_image(args):
 @argument(
     "--head-rev", required=True, help="Commit revision to use from head repository"
 )
+@argument(
+    "--tasks-for", required=True, help='the tasks_for value used to generate this task',
+)
 def decision(options):
     from taskgraph.decision import taskgraph_decision
 

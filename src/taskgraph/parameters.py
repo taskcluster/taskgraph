@@ -50,6 +50,7 @@ PARAMETERS = {
     'pushdate': lambda: int(time.time()),
     'pushlog_id': '0',
     'target_tasks_method': 'default',
+    'tasks_for': 'hg-push',
 }
 
 

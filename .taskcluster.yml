@@ -169,6 +169,7 @@ tasks:
                                 --message="$COMMIT_MSG"
                                 --owner='${ownerEmail}'
                                 --level='${repository.level}'
+                                --tasks-for='${tasks_for}'
                                 --base-repository="${repoUrl}"
                                 --head-repository="${repoUrl}"
                                 --head-ref="${push.revision}"
