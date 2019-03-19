@@ -7,6 +7,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 import attr
+from six import text_type
 from .util import path
 
 from .util.schema import validate_schema, Schema, optionally_keyed_by
@@ -28,6 +29,16 @@ graph_config_schema = Schema({
         'very-low',
         'lowest',
     )),
+    Required('workers'): {
+        Required('aliases'): {
+            text_type: {
+                Required('provisioner'): text_type,
+                Required('implementation'): text_type,
+                Required('os'): text_type,
+                Required('worker-type'): optionally_keyed_by('level', text_type),
+            }
+        },
+    },
     Extra: object,
 })
 

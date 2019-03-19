@@ -57,8 +57,9 @@ def transform(monkeypatch, config):
 
         monkeypatch.setattr(job, 'configure_taskdesc_for_run', _configure_taskdesc_for_run)
 
-        for func in job.transforms._transforms:
-            task = list(func(config, [task]))[0]
+        for _ in job.transforms(config, [task]):
+            # This forces the generator to be evaluated
+            pass
 
         return frozen_args
 

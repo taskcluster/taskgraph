@@ -11,7 +11,7 @@ transforms:
 
 job-defaults:
     attributes: {}
-    worker-type: aws-provisioner-v1/gecko-misc
+    worker-type: misc
     worker:
         docker-image: {in-tree: python2.7}
         max-run-time: 3600
