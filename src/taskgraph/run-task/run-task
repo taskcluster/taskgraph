@@ -14,7 +14,7 @@ current time to improve log usefulness.
 """
 
 import sys
-
+from typing import Optional
 
 if sys.version_info[0:2] < (3, 5):
     print('run-task requires Python 3.5+')
@@ -101,7 +101,13 @@ def print_line(prefix, m):
     sys.stdout.buffer.flush()
 
 
-def run_and_prefix_output(prefix, args, extra_env=None):
+def run_required_command(prefix, args, extra_env=None, cwd='/'):
+    res = run_command(prefix, args, extra_env, cwd)
+    if res:
+        sys.exit(res)
+
+
+def run_command(prefix, args, extra_env=None, cwd='/'):
     """Runs a process and prefixes its output with the time.
 
     Returns the process exit code.
@@ -130,7 +136,7 @@ def run_and_prefix_output(prefix, args, extra_env=None):
                          stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT,
                          stdin=sys.stdin.fileno(),
-                         cwd='/',
+                         cwd=cwd,
                          env=env)
 
     stdout = io.TextIOWrapper(p.stdout, encoding='latin1')
@@ -383,22 +389,97 @@ def configure_volume_posix(volume, user, group, running_as_root):
         set_dir_permissions(volume, user.pw_uid, group.gr_gid)
 
 
-def vcs_checkout(source_repo, dest, store_path,
-                 base_repo=None, revision=None, branch=None,
-                 fetch_hgfingerprint=False, sparse_profile=None):
-    # Specify method to checkout a revision. This defaults to revisions as
-    # SHA-1 strings, but also supports symbolic revisions like `tip` via the
-    # branch flag.
-    if revision:
-        revision_flag = '--revision'
-        revision_value = revision
-    elif branch:
-        revision_flag = '--branch'
-        revision_value = branch
-    else:
-        print('revision is not specified for checkout')
-        sys.exit(1)
+def git_checkout(
+    destination_path: str,
+    head_repo: str,
+    base_repo: Optional[str],
+    ref: Optional[str],
+    commit: Optional[str]
+):
+    if not IS_POSIX:
+        raise RuntimeError('git checkout only supported on POSIX')
 
+    destination_path = os.path.abspath(destination_path)
+
+    if not os.path.exists(destination_path):
+        # Repository doesn't already exist, needs to be cloned
+        args = [
+            'git',
+            'clone',
+            base_repo if base_repo else head_repo,
+            destination_path,
+        ]
+
+        run_required_command(b'vcs', args, extra_env={'PYTHONUNBUFFERED': '1'})
+
+    # If a ref isn't provided, we fetch all refs from head_repo, which may be slow
+    args = [
+        'git',
+        'fetch',
+        head_repo,
+        ref if ref else '+refs/heads/*:refs/remotes/work/*'
+    ]
+
+    run_required_command(b'vcs', args, cwd=destination_path)
+
+    args = [
+        'git',
+        'checkout',
+        '-f',
+        'FETCH_HEAD' if ref else commit
+    ]
+
+    run_required_command(b'vcs', args, cwd=destination_path)
+
+    args = [
+        'git',
+        'clean',
+        '-xdf',
+    ]
+
+    run_required_command(b'vcs', args, cwd=destination_path)
+
+    args = [
+        'git',
+        'rev-parse',
+        '--verify',
+        'HEAD'
+    ]
+
+    commit_hash = subprocess.check_output(args, cwd=destination_path, universal_newlines=True)
+    assert re.match('^[a-f0-9]{40}$', commit_hash)
+
+    if head_repo.startswith('https://github.com'):
+        if head_repo.endswith('/'):
+            head_repo = head_repo[:-1]
+
+        tinderbox_link = '{}/commit/{}'.format(head_repo, commit_hash)
+        repo_name = head_repo.split('/')[-1]
+    else:
+        tinderbox_link = head_repo
+        repo_name = head_repo
+
+    msg = ("TinderboxPrint:<a href='{link}' "
+           "title='Built from {name} commit {commit_hash}'>"
+           "{commit_hash}</a>\n".format(commit_hash=commit_hash,
+                                        link=tinderbox_link,
+                                        name=repo_name))
+
+    print_line(b'vcs', msg.encode('utf-8'))
+
+    return commit_hash
+
+
+def hg_checkout(
+    destination_path: str,
+    head_repo: str,
+    base_repo: Optional[str],
+    store_path: str,
+    fetch_hgfingerprint: bool,
+    sparse_profile: Optional[str],
+    branch: Optional[str],
+    revision: Optional[str]
+):
     if IS_MACOSX:
         hg_bin = '/tools/python27-mercurial/bin/hg'
     elif IS_POSIX:
@@ -409,6 +490,8 @@ def vcs_checkout(source_repo, dest, store_path,
         if not os.path.exists(hg_bin):
             print('could not find Mercurial executable: %s' % hg_bin)
             sys.exit(1)
+    else:
+        raise RuntimeError('Must be running on mac, posix or windows')
 
     store_path = os.path.abspath(store_path)
     args = [
@@ -448,38 +531,39 @@ def vcs_checkout(source_repo, dest, store_path,
     if sparse_profile:
         args.extend(['--sparseprofile', sparse_profile])
 
-    dest = os.path.abspath(dest)
+    destination_path = os.path.abspath(destination_path)
+
+    # Specify method to checkout a revision. This defaults to revisions as
+    # SHA-1 strings, but also supports symbolic revisions like `tip` via the
+    # branch flag.
     args.extend([
-        revision_flag, revision_value,
-        source_repo, dest,
+        '--branch' if branch else '--revision',
+        branch or revision,
+        head_repo, destination_path,
     ])
 
-    res = run_and_prefix_output(b'vcs', args,
-                                extra_env={'PYTHONUNBUFFERED': '1'})
-    if res:
-        sys.exit(res)
+    run_required_command(b'vcs', args, extra_env={'PYTHONUNBUFFERED': '1'})
 
     # Update the current revision hash and ensure that it is well formed.
     revision = subprocess.check_output(
         [hg_bin, 'log',
          '--rev', '.',
          '--template', '{node}'],
-        cwd=dest,
+        cwd=destination_path,
         # Triggers text mode on Python 3.
         universal_newlines=True)
 
     assert re.match('^[a-f0-9]{40}$', revision)
 
-    msg = ("TinderboxPrint:<a href={source_repo}/rev/{revision} "
+    msg = ("TinderboxPrint:<a href={head_repo}/rev/{revision} "
            "title='Built from {repo_name} revision {revision}'>"
            "{revision}</a>\n".format(revision=revision,
-                                     source_repo=source_repo,
-                                     repo_name=source_repo.split('/')[-1]))
+                                     head_repo=head_repo,
+                                     repo_name=head_repo.split('/')[-1]))
 
     print_line(b'vcs', msg.encode('utf-8'))
 
     return revision
-
 
 def fetch_artifacts():
     print_line(b'fetches', b'fetching artifacts\n')
@@ -511,10 +595,11 @@ def collect_vcs_options(args, project):
 
     env_prefix = project.upper()
 
+    repo_type = os.environ.get('%s_REPOSITORY_TYPE' % env_prefix)
     base_repo = os.environ.get('%s_BASE_REPOSITORY' % env_prefix)
     head_repo = os.environ.get('%s_HEAD_REPOSITORY' % env_prefix)
     revision = os.environ.get('%s_HEAD_REV' % env_prefix)
-    branch = os.environ.get('%s_HEAD_REF' % env_prefix)
+    ref = os.environ.get('%s_HEAD_REF' % env_prefix)
 
     store_path = os.environ.get('HG_STORE_PATH')
 
@@ -539,7 +624,8 @@ def collect_vcs_options(args, project):
         'base-repo': base_repo,
         'head-repo': head_repo,
         'revision': revision,
-        'branch': branch,
+        'ref': ref,
+        'repo_type': repo_type,
     }
 
 
@@ -547,20 +633,47 @@ def vcs_checkout_from_args(args, project):
     options = collect_vcs_options(args, project)
 
     if not options['checkout']:
-        if options['branch'] and not options['revision']:
+        if options['ref'] and not options['revision']:
             print('task should be defined in terms of non-symbolic revision')
             sys.exit(1)
         return
 
-    os.environ['%s_HEAD_REV' % options['env-prefix']] = vcs_checkout(
-        options['head-repo'],
-        options['checkout'],
-        options['store-path'],
-        base_repo=options['base-repo'],
-        revision=options['revision'],
-        fetch_hgfingerprint=args.fetch_hgfingerprint,
-        branch=options['branch'],
-        sparse_profile=options['sparse-profile'])
+    revision = options['revision']
+    ref = options['ref']
+
+    if options['repo_type'] == 'git':
+        if not revision and not ref:
+            raise RuntimeError('Git requires that either a ref, a revision, or both are provided')
+
+        if not ref:
+            print('Providing a ref will improve the performance of this checkout')
+
+        revision = git_checkout(
+            options['checkout'],
+            options['head-repo'],
+            options['base-repo'],
+            ref,
+            revision
+        )
+    elif options['repo_type'] == 'hg':
+        if (revision and ref) or (not revision and not ref):
+            raise RuntimeError('Hg requires that either a ref or revision '
+                               'is provided (but not both)')
+
+        revision = hg_checkout(
+            options['checkout'],
+            options['head-repo'],
+            options['base-repo'],
+            options['store-path'],
+            args.fetch_hgfingerprint,
+            options['sparse-profile'],
+            ref,
+            revision
+        )
+    else:
+        raise RuntimeError('Type of VCS must be either "git" or "hg"')
+
+    os.environ['%s_HEAD_REV' % options['env-prefix']] = revision
 
 
 def main(args):
@@ -582,7 +695,6 @@ def main(args):
     parser.add_argument('--group', default='worker', help='group to run as')
 
     add_vcs_arguments(parser, 'vcs', 'Firefox')
-    add_vcs_arguments(parser, 'comm', 'Comm')
 
     parser.add_argument('--fetch-hgfingerprint', action='store_true',
                         help='Fetch the latest hgfingerprint from the secrets store, '
@@ -720,7 +832,7 @@ def main(args):
             os.chown(store_path, uid, gid)
 
     prepare_checkout_dir(args.vcs_checkout)
-    if args.vcs_checkout:
+    if args.vcs_checkout and os.environ.get('VCS_REPOSITORY_TYPE') == 'hg':
         prepare_hg_store_path()
 
     if IS_POSIX and running_as_root:
@@ -742,7 +854,7 @@ def main(args):
         if 'MOZ_FETCHES' in os.environ:
             fetch_artifacts()
 
-        return run_and_prefix_output(b'task', task_args)
+        return run_command(b'task', task_args)
     finally:
         fetches_dir = os.environ.get('MOZ_FETCHES_DIR')
         if fetches_dir and os.path.isdir(fetches_dir):

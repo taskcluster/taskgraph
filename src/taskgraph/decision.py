@@ -16,7 +16,7 @@ from .create import create_tasks
 from .generator import TaskGraphGenerator
 from .parameters import Parameters
 from .taskgraph import TaskGraph
-from taskgraph.util.hg import get_hg_revision_branch
+from taskgraph.util.vcs import get_hg_revision_branch
 from taskgraph.util.yaml import load_yaml
 
 
@@ -112,6 +112,7 @@ def get_decision_parameters(config, options):
         'project',
         'pushlog_id',
         'pushdate',
+        'repository_type',
         'owner',
         'level',
         'target_tasks_method',
@@ -126,7 +127,12 @@ def get_decision_parameters(config, options):
     parameters['optimize_target_tasks'] = True
     parameters['existing_tasks'] = {}
     parameters['do_not_optimize'] = []
-    parameters['hg_branch'] = get_hg_revision_branch(os.getcwd(), revision=parameters['head_rev'])
+
+    if parameters['repository_type'] == 'hg':
+        parameters['hg_branch'] = get_hg_revision_branch(os.getcwd(),
+                                                         revision=parameters['head_rev'])
+    else:
+        parameters['hg_branch'] = None
 
     # owner must be an email, but sometimes (e.g., for ffxbld) it is not, in which
     # case, fake it

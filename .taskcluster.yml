@@ -119,6 +119,7 @@ tasks:
                             VCS_HEAD_REPOSITORY: '${repoUrl}'
                             VCS_HEAD_REF: '${push.revision}'
                             VCS_HEAD_REV: '${push.revision}'
+                            VCS_TYPE: hg
                             HG_STORE_PATH: /builds/worker/checkouts/hg-store
                           - $if: 'tasks_for == "action"'
                             then:
@@ -169,6 +170,7 @@ tasks:
                                 --message="$COMMIT_MSG"
                                 --owner='${ownerEmail}'
                                 --level='${repository.level}'
+                                --repository-type=hg
                                 --tasks-for='${tasks_for}'
                                 --base-repository="${repoUrl}"
                                 --head-repository="${repoUrl}"

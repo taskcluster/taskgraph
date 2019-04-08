@@ -12,7 +12,8 @@ apt-get install -y --force-yes --no-install-recommends \
     python-pip \
     python-setuptools \
     python-wheel \
-    sudo
+    sudo \
+    git
 
 BUILD=/root/build
 mkdir "$BUILD"

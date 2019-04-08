@@ -39,6 +39,9 @@ def filter_for_project(task, parameters):
 def filter_for_hg_branch(task, parameters):
     """Filter tasks by hg branch.
     If `run_on_hg_branch` is not defined, then task runs on all branches"""
+    if parameters.get('repository_type') != 'hg':
+        return True
+
     run_on_hg_branches = set(task.attributes.get('run_on_hg_branches', ['all']))
     return match_run_on_hg_branches(parameters['hg_branch'], run_on_hg_branches)
 

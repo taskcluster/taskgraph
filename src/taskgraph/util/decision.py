@@ -15,7 +15,7 @@ import yaml
 import os
 import slugid
 
-from .hg import find_hg_revision_push_info
+from .vcs import find_hg_revision_push_info
 from .templates import merge
 from .time import current_json_time
 
@@ -27,9 +27,19 @@ def make_decision_task(params, root, context, head_rev=None):
 
     if not head_rev:
         head_rev = params['head_rev']
-    pushlog = find_hg_revision_push_info(
-        params['repository_url'],
-        head_rev)
+
+    if params['repository_type'] == 'hg':
+        pushlog = find_hg_revision_push_info(
+            params['repository_url'],
+            head_rev)
+
+        hg_push_context = {
+            'pushlog_id': pushlog['pushid'],
+            'pushdate': pushlog['pushdate'],
+            'owner': pushlog['user'],
+        }
+    else:
+        hg_push_context = {}
 
     slugids = {}
 
@@ -49,14 +59,11 @@ def make_decision_task(params, root, context, head_rev=None):
             'project': params['project'],
             'level': params['level'],
         },
-        'push': {
+        'push': merge({
             'revision': params['head_rev'],
-            'pushlog_id': pushlog['pushid'],
-            'pushdate': pushlog['pushdate'],
-            'owner': pushlog['user'],
             # remainder are fake values, but the decision task expects them anyway
             'comment': ' ',
-        },
+        }, hg_push_context),
         'now': current_json_time(),
         'as_slugid': as_slugid,
     }, context)

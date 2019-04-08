@@ -60,7 +60,7 @@ worker_defaults = {
 
 def run_task_url(config):
     return '{}/raw-file/{}/taskcluster/scripts/run-task'.format(
-                config.params['head_repository'], config.params['head_rev'])
+        config.params['head_repository'], config.params['head_rev'])
 
 
 @run_job_using("docker-worker", "run-task", schema=run_task_schema, defaults=worker_defaults)

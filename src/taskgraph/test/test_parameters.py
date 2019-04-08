@@ -58,6 +58,24 @@ class TestParameters(unittest.TestCase):
         p = Parameters(strict=False, xyz=10, **self.vals)
         p.check()  # should not raise
 
+    def test_Parameters_file_url_git_remote(self):
+        vals = self.vals.copy()
+        vals['repository_type'] = 'git'
+
+        vals['head_repository'] = 'git@github.com:owner/repo.git'
+        p = Parameters(**vals)
+        self.assertRaises(ParameterMismatch, lambda: p.file_url(''))
+
+        vals['head_repository'] = 'https://github.com/mozilla-mobile/reference-browser'
+        p = Parameters(**vals)
+        self.assertTrue(p.file_url('').startswith(
+            'https://github.com/mozilla-mobile/reference-browser/blob/'))
+
+        vals['head_repository'] = 'https://github.com/mozilla-mobile/reference-browser/'
+        p = Parameters(**vals)
+        self.assertTrue(p.file_url('').startswith(
+            'https://github.com/mozilla-mobile/reference-browser/blob/'))
+
     def test_load_parameters_file_yaml(self):
         with MockedOpen({"params.yml": "some: data\n"}):
             self.assertEqual(

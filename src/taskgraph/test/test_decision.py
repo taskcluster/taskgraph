@@ -58,6 +58,7 @@ class TestGetDecisionParameters(unittest.TestCase):
             'project': 'mozilla-central',
             'pushlog_id': 143,
             'pushdate': 1503691511,
+            'repository_type': 'hg',
             'owner': 'nobody@mozilla.com',
             'tasks_for': 'hg-push',
             'level': 3,

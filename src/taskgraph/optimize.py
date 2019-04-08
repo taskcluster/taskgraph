@@ -312,6 +312,10 @@ class IndexSearch(OptimizationStrategy):
 
 class SkipUnlessChanged(OptimizationStrategy):
     def should_remove_task(self, task, params, file_patterns):
+        if params.get('repository_type') != 'hg':
+            raise RuntimeError(
+                'SkipUnlessChanged optimization only works with mercurial repositories')
+
         # pushlog_id == -1 - this is the case when run from a cron.yml job
         if params.get('pushlog_id') == -1:
             return False

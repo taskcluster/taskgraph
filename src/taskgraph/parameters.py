@@ -10,7 +10,7 @@ import json
 import time
 from datetime import datetime
 
-from taskgraph.util.hg import calculate_head_rev, get_repo_path
+from taskgraph.util.vcs import calculate_head_rev, get_repo_path, get_repository_type
 from taskgraph.util.memoize import memoize
 from taskgraph.util.readonlydict import ReadOnlyDict
 
@@ -20,13 +20,18 @@ class ParameterMismatch(Exception):
 
 
 @memoize
+def _get_repository_type():
+    return get_repository_type(None)
+
+
+@memoize
 def _get_head_ref():
-    return calculate_head_rev(None)
+    return calculate_head_rev(_get_repository_type(), None)
 
 
 @memoize
 def _get_repo_path():
-    return get_repo_path(None)
+    return get_repo_path(_get_repository_type(), None)
 
 
 # Please keep this list sorted and in sync with taskcluster/docs/parameters.rst
@@ -46,6 +51,7 @@ PARAMETERS = {
     'moz_build_date': lambda: datetime.now().strftime("%Y%m%d%H%M%S"),
     'optimize_target_tasks': True,
     'owner': 'nobody@mozilla.com',
+    'repository_type': _get_repository_type,
     'project': lambda: _get_repo_path().rsplit('/', 1)[1],
     'pushdate': lambda: int(time.time()),
     'pushlog_id': '0',
@@ -111,15 +117,30 @@ class Parameters(ReadOnlyDict):
 
         :return basestring: The URL displaying the given path.
         """
-        if path.startswith('comm/'):
-            path = path[len('comm/'):]
-            repo = self['comm_head_repository']
-            rev = self['comm_head_rev']
-        else:
+        if self['repository_type'] == 'hg':
+            if path.startswith('comm/'):
+                path = path[len('comm/'):]
+                repo = self['comm_head_repository']
+                rev = self['comm_head_rev']
+            else:
+                repo = self['head_repository']
+                rev = self['head_rev']
+            return '{}/file/{}/{}'.format(repo, rev, path)
+        elif self['repository_type'] == 'git':
+            # For getting the file URL for git repositories, we only support a Github HTTPS remote
             repo = self['head_repository']
-            rev = self['head_rev']
+            if repo.startswith('https://github.com/'):
+                if repo.endswith('/'):
+                    repo = repo[:-1]
 
-        return '{}/file/{}/{}'.format(repo, rev, path)
+                rev = self['head_rev']
+                return '{}/blob/{}/{}'.format(repo, rev, path)
+            else:
+                raise ParameterMismatch("Don't know how to determine file URL for non-github"
+                                        "repo: {}".format(repo))
+        else:
+            raise RuntimeError(
+                'Only the "git" and "hg" repository types are supported for using file_url()')
 
 
 def load_parameters_file(filename, strict=True, overrides=None, trust_domain=None):

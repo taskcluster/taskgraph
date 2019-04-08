@@ -124,6 +124,7 @@ def support_vcs_checkout(config, job, taskdesc, sparse=False):
         'VCS_HEAD_REPOSITORY': config.params['head_repository'],
         'VCS_HEAD_REV': config.params['head_rev'],
         'VCS_PATH': vcsdir,
+        'VCS_REPOSITORY_TYPE': config.params['repository_type'],
         'HG_STORE_PATH': hgstore,
     })
 

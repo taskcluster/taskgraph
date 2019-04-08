@@ -6,6 +6,8 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import os
+
 import requests
 import subprocess
 from redo import retry
@@ -51,12 +53,36 @@ def get_hg_revision_branch(root, revision):
     ], cwd=root)
 
 
-def calculate_head_rev(root):
+def get_repository_type(root):
+    root = root or '.'
+    if os.path.isdir(os.path.join(root, '.git')):
+        return 'git'
+    elif os.path.isdir(os.path.join(root, '.hg')):
+        return 'hg'
+    else:
+        raise RuntimeError('Current directory is neither a git or hg repository')
+
+
+def calculate_head_rev(repository_type, root):
     # we assume that run-task has correctly checked out the revision indicated by
     # VCS_HEAD_REF, so all that remains is to see what the current revision is.
-    # Mercurial refers to that as `.`.
-    return subprocess.check_output(['hg', 'log', '-r', '.', '-T', '{node}'], cwd=root)
+
+    if repository_type == 'hg':
+        # Mercurial refers to the current revision as `.`.
+        return subprocess.check_output(['hg', 'log', '-r', '.', '-T', '{node}'], cwd=root)
+    elif repository_type == 'git':
+        # Git refers to the current revision as HEAD
+        return subprocess.check_output(['git', 'rev-parse', '--verify', 'HEAD'], cwd=root)
+    else:
+        raise RuntimeError('Only the "git" and "hg" repository types are supported for using '
+                           'calculate_head_rev()')
 
 
-def get_repo_path(root):
-    return subprocess.check_output(['hg', 'path', '-T', '{url}', 'default'], cwd=root)
+def get_repo_path(repository_type, root):
+    if repository_type == 'hg':
+        return subprocess.check_output(['hg', 'path', '-T', '{url}', 'default'], cwd=root)
+    elif repository_type == 'git':
+        return subprocess.check_output(['git', 'remote', 'get-url', 'origin'], cwd=root)
+    else:
+        raise RuntimeError('Only the "git" and "hg" repository types are supported for using '
+                           'calculate_head_rev()')

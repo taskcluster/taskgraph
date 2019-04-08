@@ -14,7 +14,8 @@ apt-get install -y --no-install-recommends \
     python3.5 \
     python3-minimal \
     python3-requests \
-    python3-requests-unixsocket
+    python3-requests-unixsocket \
+    git
 
 # Extra dependencies only needed for image building. Will be removed at
 # end of script.

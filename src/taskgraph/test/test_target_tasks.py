@@ -35,6 +35,7 @@ class TestTargetTasks(unittest.TestCase):
             parameters={
                 'project': 'mozilla-central',
                 'hg_branch': hg_branch,
+                'repository_type': 'hg',
             },
         )
 
