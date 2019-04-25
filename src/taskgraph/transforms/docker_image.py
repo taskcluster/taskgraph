@@ -37,7 +37,7 @@ docker_image_schema = Schema({
     Optional('parent'): basestring,
 
     # Treeherder symbol.
-    Required('symbol'): basestring,
+    Optional('symbol'): basestring,
 
     # relative path (from config.path) to the file the docker image was defined
     # in.
@@ -105,7 +105,7 @@ def fill_template(config, tasks):
 
     for task in order_image_tasks(config, tasks):
         image_name = task.pop('name')
-        job_symbol = task.pop('symbol')
+        job_symbol = task.pop('symbol', None)
         args = task.pop('args', {})
         definition = task.pop('definition', image_name)
         packages = task.pop('packages', [])
@@ -153,13 +153,7 @@ def fill_template(config, tasks):
             'description': description,
             'attributes': {'image_name': image_name},
             'expires-after': '28 days' if config.params.is_try() else '1 year',
-            'scopes': ['secrets:get:project/taskcluster/gecko/hgfingerprint'],
-            'treeherder': {
-                'symbol': job_symbol,
-                'platform': 'taskcluster-images/opt',
-                'kind': 'other',
-                'tier': 1,
-            },
+            'scopes': [],
             'run-on-projects': [],
             'worker-type': 'images',
             'worker': {
@@ -191,6 +185,10 @@ def fill_template(config, tasks):
         }
         if 'index' in task:
             taskdesc['index'] = task['index']
+        if config.params['repository_type'] == 'hg':
+            # Give task access to hgfingerprint secret so it can pin the certificate
+            # for hg.mozilla.org.
+            taskdesc['scopes'].append('secrets:get:project/taskcluster/gecko/hgfingerprint')
 
         worker = taskdesc['worker']
 

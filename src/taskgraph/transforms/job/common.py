@@ -131,9 +131,10 @@ def support_vcs_checkout(config, job, taskdesc, sparse=False):
         'HG_STORE_PATH': hgstore,
     })
 
-    # Give task access to hgfingerprint secret so it can pin the certificate
-    # for hg.mozilla.org.
-    taskdesc['scopes'].append('secrets:get:project/taskcluster/gecko/hgfingerprint')
+    if config.params['repository_type'] == 'hg':
+        # Give task access to hgfingerprint secret so it can pin the certificate
+        # for hg.mozilla.org.
+        taskdesc['scopes'].append('secrets:get:project/taskcluster/gecko/hgfingerprint')
 
     # only some worker platforms have taskcluster-proxy enabled
     if job['worker']['implementation'] in ('docker-worker',):
