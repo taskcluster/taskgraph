@@ -446,7 +446,7 @@ def git_checkout(
         'HEAD'
     ]
 
-    commit_hash = subprocess.check_output(args, cwd=destination_path, universal_newlines=True)
+    commit_hash = subprocess.check_output(args, cwd=destination_path, universal_newlines=True).strip()
     assert re.match('^[a-f0-9]{40}$', commit_hash)
 
     if head_repo.startswith('https://github.com'):

@@ -85,7 +85,7 @@ def calculate_head_rev(repository_type, root):
         return subprocess.check_output(['hg', 'log', '-r', '.', '-T', '{node}'], cwd=root)
     elif repository_type == 'git':
         # Git refers to the current revision as HEAD
-        return subprocess.check_output(['git', 'rev-parse', '--verify', 'HEAD'], cwd=root)
+        return subprocess.check_output(['git', 'rev-parse', '--verify', 'HEAD'], cwd=root).strip()
     else:
         raise RuntimeError('Only the "git" and "hg" repository types are supported for using '
                            'calculate_head_rev()')
@@ -95,7 +95,7 @@ def get_repo_path(repository_type, root):
     if repository_type == 'hg':
         return subprocess.check_output(['hg', 'path', '-T', '{url}', 'default'], cwd=root)
     elif repository_type == 'git':
-        return subprocess.check_output(['git', 'remote', 'get-url', 'origin'], cwd=root)
+        return subprocess.check_output(['git', 'remote', 'get-url', 'origin'], cwd=root).strip()
     else:
         raise RuntimeError('Only the "git" and "hg" repository types are supported for using '
                            'calculate_head_rev()')
