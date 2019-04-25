@@ -37,7 +37,7 @@ docker_image_schema = Schema({
     Optional('parent'): basestring,
 
     # Treeherder symbol.
-    Optional('symbol'): basestring,
+    Required('symbol'): basestring,
 
     # relative path (from config.path) to the file the docker image was defined
     # in.
@@ -105,7 +105,7 @@ def fill_template(config, tasks):
 
     for task in order_image_tasks(config, tasks):
         image_name = task.pop('name')
-        job_symbol = task.pop('symbol', None)
+        job_symbol = task.pop('symbol')
         args = task.pop('args', {})
         definition = task.pop('definition', image_name)
         packages = task.pop('packages', [])
@@ -154,6 +154,12 @@ def fill_template(config, tasks):
             'attributes': {'image_name': image_name},
             'expires-after': '28 days' if config.params.is_try() else '1 year',
             'scopes': [],
+            'treeherder': {
+                'symbol': job_symbol,
+                'platform': 'taskcluster-images/opt',
+                'kind': 'other',
+                'tier': 1,
+            },
             'run-on-projects': [],
             'worker-type': 'images',
             'worker': {
