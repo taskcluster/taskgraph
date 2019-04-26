@@ -14,6 +14,7 @@ import hashlib
 import os
 import re
 import time
+from six import text_type
 
 from taskgraph.util.hash import hash_path
 from taskgraph.util.keyed_by import evaluate_keyed_by
@@ -28,6 +29,7 @@ from taskgraph.util.schema import (
     OptimizationSchema,
     taskref_or_string,
 )
+from taskgraph.util.workertypes import worker_type_implementation
 from voluptuous import Any, Required, Optional, Extra
 from taskgraph import MAX_DEPENDENCIES
 from ..util import docker as dockerutil
@@ -211,7 +213,7 @@ payload_builders = {}
 
 
 def payload_builder(name, schema):
-    schema = Schema({Required('implementation'): name}).extend(schema)
+    schema = Schema({Required('implementation'): name, Optional('os'): text_type}).extend(schema)
 
     def wrap(func):
         payload_builders[name] = func
@@ -555,6 +557,30 @@ def build_always_optimized_payload(config, task, task_def):
 
 
 transforms = TransformSequence()
+
+
+@transforms.add
+def set_implementation(config, tasks):
+    """
+    Set the worker implementation based on the worker-type alias.
+    """
+    for task in tasks:
+        if 'implementation' in task['worker']:
+            yield task
+            continue
+
+        impl, os = worker_type_implementation(config.graph_config, task['worker-type'])
+
+        tags = task.setdefault('tags', {})
+        tags['worker-implementation'] = impl
+        if os:
+            task['tags']['os'] = os
+        worker = task.setdefault('worker', {})
+        worker['implementation'] = impl
+        if os:
+            worker['os'] = os
+
+        yield task
 
 
 @transforms.add

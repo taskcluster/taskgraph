@@ -18,7 +18,7 @@ def worker_type_implementation(graph_config, worker_type):
         "worker-types.yml",
         {'worker-type': worker_type},
     )
-    return worker_config['implementation'], worker_config['os']
+    return worker_config['implementation'], worker_config.get('os')
 
 
 @memoize
