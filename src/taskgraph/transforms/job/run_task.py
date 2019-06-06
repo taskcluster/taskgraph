@@ -47,6 +47,9 @@ run_task_schema = Schema({
 
     # Base work directory used to set up the task.
     Required('workdir'): basestring,
+
+    # Whether to run as root. (defaults to False)
+    Optional('run-as-root'): bool,
 })
 
 
@@ -68,6 +71,7 @@ worker_defaults = {
     'cache-dotcache': False,
     'checkout': True,
     'sparse-profile': None,
+    'run-as-root': False,
 }
 
 
@@ -107,6 +111,8 @@ def docker_worker_run_task(config, job, taskdesc):
     if isinstance(run_command, (basestring, dict)):
         run_command = ['bash', '-cx', run_command]
     command.append('--fetch-hgfingerprint')
+    if run['run-as-root']:
+        command.extend(('--user', 'root', '--group', 'root'))
     if run_cwd:
         command.extend(('--task-cwd', run_cwd))
     command.append('--')
@@ -160,6 +166,8 @@ def generic_worker_run_task(config, job, taskdesc):
             run_command = '"{}"'.format(run_command)
         run_command = ['bash', '-cx', run_command]
 
+    if run['run-as-root']:
+        command.extend(('--user', 'root', '--group', 'root'))
     if run_cwd:
         command.extend(('--task-cwd', run_cwd))
     command.append('--')
