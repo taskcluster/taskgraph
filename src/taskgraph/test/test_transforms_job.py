@@ -83,5 +83,5 @@ def test_worker_caches(task, transform):
     assert len(taskdesc['worker'][key]) == 2
 
     # Create a new schema object with just the part relevant to caches.
-    partial_schema = Schema(payload_builders[impl].schema.schema.schema[key])
+    partial_schema = Schema(payload_builders[impl].schema.schema[key])
     validate_schema(partial_schema, taskdesc['worker'][key], "validation error")
