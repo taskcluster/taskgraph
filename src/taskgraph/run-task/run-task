@@ -656,9 +656,9 @@ def vcs_checkout_from_args(args, project):
             revision
         )
     elif options['repo_type'] == 'hg':
-        if (revision and ref) or (not revision and not ref):
-            raise RuntimeError('Hg requires that either a ref or revision '
-                               'is provided (but not both)')
+        if not revision and not ref:
+            raise RuntimeError('Hg requires that at least one of a ref or revision '
+                               'is provided')
 
         revision = hg_checkout(
             options['checkout'],
