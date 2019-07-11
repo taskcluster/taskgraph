@@ -87,12 +87,12 @@ class TestParameters(unittest.TestCase):
 
         vals['head_repository'] = 'https://github.com/mozilla-mobile/reference-browser'
         p = Parameters(**vals)
-        self.assertTrue(p.file_url('').startswith(
+        self.assertTrue(p.file_url('', pretty=True).startswith(
             'https://github.com/mozilla-mobile/reference-browser/blob/'))
 
         vals['head_repository'] = 'https://github.com/mozilla-mobile/reference-browser/'
         p = Parameters(**vals)
-        self.assertTrue(p.file_url('').startswith(
+        self.assertTrue(p.file_url('', pretty=True).startswith(
             'https://github.com/mozilla-mobile/reference-browser/blob/'))
 
     def test_load_parameters_file_yaml(self):

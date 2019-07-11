@@ -126,12 +126,14 @@ class Parameters(ReadOnlyDict):
         """
         return 'try' in self['project']
 
-    def file_url(self, path):
+    def file_url(self, path, pretty=False):
         """
         Determine the VCS URL for viewing a file in the tree, suitable for
         viewing by a human.
 
         :param basestring path: The path, relative to the root of the repository.
+        :param bool pretty: Whether to return a link to a formatted version of the
+            file, or the raw file version.
 
         :return basestring: The URL displaying the given path.
         """
@@ -143,7 +145,8 @@ class Parameters(ReadOnlyDict):
             else:
                 repo = self['head_repository']
                 rev = self['head_rev']
-            return '{}/file/{}/{}'.format(repo, rev, path)
+            endpoint = 'file' if pretty else 'raw-file'
+            return '{}/{}/{}/{}'.format(repo, endpoint, rev, path)
         elif self['repository_type'] == 'git':
             # For getting the file URL for git repositories, we only support a Github HTTPS remote
             repo = self['head_repository']
@@ -152,7 +155,8 @@ class Parameters(ReadOnlyDict):
                     repo = repo[:-1]
 
                 rev = self['head_rev']
-                return '{}/blob/{}/{}'.format(repo, rev, path)
+                endpoint = 'blob' if pretty else 'raw'
+                return '{}/{}/{}/{}'.format(repo, endpoint, rev, path)
             else:
                 raise ParameterMismatch("Don't know how to determine file URL for non-github"
                                         "repo: {}".format(repo))
