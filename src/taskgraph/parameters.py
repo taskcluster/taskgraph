@@ -10,9 +10,17 @@ import json
 import time
 from datetime import datetime
 
+from taskgraph.util.schema import validate_schema
 from taskgraph.util.vcs import calculate_head_rev, get_repo_path, get_repository_type
 from taskgraph.util.memoize import memoize
 from taskgraph.util.readonlydict import ReadOnlyDict
+from voluptuous import (
+    ALLOW_EXTRA,
+    MultipleInvalid,
+    PREVENT_EXTRA,
+    Required,
+    Schema,
+)
 
 
 class ParameterMismatch(Exception):
@@ -35,27 +43,26 @@ def _get_repo_path():
 
 
 # Please keep this list sorted and in sync with taskcluster/docs/parameters.rst
-# Parameters are of the form: {name: default}
-PARAMETERS = {
-    'base_repository': _get_repo_path,
-    'build_date': lambda: int(time.time()),
-    'do_not_optimize': [],
-    'existing_tasks': {},
-    'filters': ['target_tasks_method'],
-    'head_ref': _get_head_ref,
-    'head_repository': _get_repo_path,
-    'head_rev': _get_head_ref,
-    'hg_branch': 'default',
-    'level': '3',
-    'moz_build_date': lambda: datetime.now().strftime("%Y%m%d%H%M%S"),
-    'optimize_target_tasks': True,
-    'owner': 'nobody@mozilla.com',
-    'repository_type': _get_repository_type,
-    'project': lambda: _get_repo_path().rsplit('/', 1)[1],
-    'pushdate': lambda: int(time.time()),
-    'pushlog_id': '0',
-    'target_tasks_method': 'default',
-    'tasks_for': 'hg-push',
+base_schema = {
+    Required('base_repository'): basestring,
+    Required('build_date'): int,
+    Required('do_not_optimize'): [int],
+    Required('existing_tasks'): {basestring: basestring},
+    Required('filters'): [basestring],
+    Required('head_ref'): basestring,
+    Required('head_repository'): basestring,
+    Required('head_rev'): basestring,
+    Required('hg_branch'): basestring,
+    Required('level'): basestring,
+    Required('moz_build_date'): basestring,
+    Required('optimize_target_tasks'): bool,
+    Required('owner'): basestring,
+    Required('project'): basestring,
+    Required('pushdate'): int,
+    Required('pushlog_id'): basestring,
+    Required('repository_type'): basestring,
+    Required('target_tasks_method'): basestring,
+    Required('tasks_for'): basestring,
 }
 
 
@@ -67,34 +74,47 @@ class Parameters(ReadOnlyDict):
 
         if not self.strict:
             # apply defaults to missing parameters
-            for name, default in PARAMETERS.items():
-                if name not in kwargs:
-                    if callable(default):
-                        default = default()
-                    kwargs[name] = default
+            kwargs = Parameters._fill_defaults(**kwargs)
 
         ReadOnlyDict.__init__(self, **kwargs)
 
+    @staticmethod
+    def _fill_defaults(**kwargs):
+        defaults = {
+            'base_repository': _get_repo_path(),
+            'build_date': int(time.time()),
+            'do_not_optimize': [],
+            'existing_tasks': {},
+            'filters': ['target_tasks_method'],
+            'head_ref': _get_head_ref(),
+            'head_repository': _get_repo_path(),
+            'head_rev': _get_head_ref(),
+            'hg_branch': 'default',
+            'level': '3',
+            'moz_build_date': datetime.now().strftime("%Y%m%d%H%M%S"),
+            'optimize_target_tasks': True,
+            'owner': 'nobody@mozilla.com',
+            'project': _get_repo_path().rsplit('/', 1)[1],
+            'pushdate': int(time.time()),
+            'pushlog_id': '0',
+            'repository_type': _get_repository_type(),
+            'target_tasks_method': 'default',
+            'tasks_for': '',
+        }
+
+        for name, default in defaults.items():
+            if name not in kwargs:
+                kwargs[name] = default
+        return kwargs
+
     def check(self):
-        names = set(self)
-        valid = set(PARAMETERS.keys())
-        msg = []
-
-        missing = valid - names
-        if missing:
-            msg.append("missing parameters: " + ", ".join(missing))
-
-        extra = names - valid
-
-        if extra and self.strict:
-            msg.append("extra parameters: " + ", ".join(extra))
-
-        if msg:
-            raise ParameterMismatch("; ".join(msg))
+        schema = Schema(base_schema, extra=PREVENT_EXTRA if self.strict else ALLOW_EXTRA)
+        try:
+            validate_schema(schema, self.copy(), 'Invalid parameters:')
+        except Exception as e:
+            raise ParameterMismatch(e.message)
 
     def __getitem__(self, k):
-        if k not in PARAMETERS.keys():
-            raise KeyError("no such parameter {!r}".format(k))
         try:
             return super(Parameters, self).__getitem__(k)
         except KeyError:

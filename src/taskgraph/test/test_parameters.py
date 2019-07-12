@@ -10,7 +10,6 @@ from taskgraph.parameters import (
     Parameters,
     ParameterMismatch,
     load_parameters_file,
-    PARAMETERS,
 )
 
 from .mockedopen import MockedOpen
@@ -18,7 +17,27 @@ from .mockedopen import MockedOpen
 
 class TestParameters(unittest.TestCase):
 
-    vals = {n: n for n in PARAMETERS.keys()}
+    vals = {
+        'base_repository': 'repository',
+        'build_date': 0,
+        'do_not_optimize': [],
+        'existing_tasks': {},
+        'filters': ['target_tasks_method'],
+        'head_ref': 'ref',
+        'head_repository': 'repository',
+        'head_rev': 'rev',
+        'hg_branch': 'default',
+        'level': '3',
+        'moz_build_date': 'time',
+        'optimize_target_tasks': True,
+        'owner': 'nobody@mozilla.com',
+        'project': 'project',
+        'pushdate': 0,
+        'pushlog_id': '0',
+        'repository_type': 'hg',
+        'target_tasks_method': 'default',
+        'tasks_for': 'github-push',
+    }
 
     def test_Parameters_immutable(self):
         p = Parameters(**self.vals)
@@ -33,8 +52,8 @@ class TestParameters(unittest.TestCase):
 
     def test_Parameters_invalid_KeyError(self):
         """even if the value is present, if it's not a valid property, raise KeyError"""
-        p = Parameters(xyz=10, **self.vals)
-        self.assertRaises(KeyError, lambda: p['xyz'])
+        p = Parameters(xyz=10, strict=True, **self.vals)
+        self.assertRaises(ParameterMismatch, lambda: p.check())
 
     def test_Parameters_get(self):
         p = Parameters(owner='nobody@example.test', level=20)

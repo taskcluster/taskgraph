@@ -56,25 +56,25 @@ class TestGetDecisionParameters(unittest.TestCase):
             'head_ref': 'ef01',
             'message': '',
             'project': 'mozilla-central',
-            'pushlog_id': 143,
+            'pushlog_id': '143',
             'pushdate': 1503691511,
             'repository_type': 'hg',
             'owner': 'nobody@mozilla.com',
             'tasks_for': 'hg-push',
-            'level': 3,
+            'level': '3',
         }
 
     @patch('taskgraph.decision.get_hg_revision_branch')
     def test_simple_options(self, mock_get_hg_revision_branch):
         mock_get_hg_revision_branch.return_value = 'default'
         params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
-        self.assertEqual(params['pushlog_id'], 143)
+        self.assertEqual(params['pushlog_id'], '143')
         self.assertEqual(params['build_date'], 1503691511)
         self.assertEqual(params['hg_branch'], 'default')
         self.assertEqual(params['moz_build_date'], '20170825200511')
 
-    @patch('taskgraph.decision.get_hg_revision_branch')
-    def test_no_email_owner(self, _):
+    @patch('taskgraph.decision.get_hg_revision_branch', new=lambda *args, **kwargs: 'default')
+    def test_no_email_owner(self):
         self.options['owner'] = 'ffxbld'
         params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
         self.assertEqual(params['owner'], 'ffxbld@noreply.mozilla.org')
