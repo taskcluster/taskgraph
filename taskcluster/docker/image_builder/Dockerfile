@@ -23,7 +23,12 @@ COPY topsrcdir/src/taskgraph/run-task/hgrc /etc/mercurial/hgrc.d/mozilla.rc
 # %include src/taskgraph/docker.py
 # %include src/taskgraph/main.py
 # %include src/taskgraph/task.py
-# %include src/taskgraph/util/
+# %include src/taskgraph/util/__init__.py
+# %include src/taskgraph/util/docker.py
+# %include src/taskgraph/util/taskcluster.py
+# %include src/taskgraph/util/archive.py
+# %include src/taskgraph/util/memoize.py
+# %include src/taskgraph/util/yaml.py
 # %include requirements/base.in
 # %include requirements/base.txt
 ADD topsrcdir /setup/src/
