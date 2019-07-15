@@ -25,7 +25,7 @@ from .task import task_description_schema
 DIGEST_RE = re.compile('^[0-9a-f]{64}$')
 
 IMAGE_BUILDER_INDEX = 'taskgraph.cache.level-3.docker-images.v2.image_builder.hash'
-IMAGE_BUILDER_HASH = '0325ee2b6a9f5bd42bbdbb0a8028d16d816bc726bad2b30b4aebf664ca6b1210'
+IMAGE_BUILDER_HASH = '2e2ceb3796b19a4af487006ff466c503d19e2c2f93b816d8203fb508e4501577'
 
 transforms = TransformSequence()
 
