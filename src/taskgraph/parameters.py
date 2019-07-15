@@ -16,7 +16,6 @@ from taskgraph.util.memoize import memoize
 from taskgraph.util.readonlydict import ReadOnlyDict
 from voluptuous import (
     ALLOW_EXTRA,
-    MultipleInvalid,
     PREVENT_EXTRA,
     Required,
     Schema,
