@@ -19,6 +19,7 @@ from voluptuous import (
     PREVENT_EXTRA,
     Required,
     Schema,
+    Any,
 )
 
 
@@ -51,7 +52,7 @@ base_schema = {
     Required('head_ref'): basestring,
     Required('head_repository'): basestring,
     Required('head_rev'): basestring,
-    Required('hg_branch'): basestring,
+    Required('hg_branch'): Any(basestring, None),
     Required('level'): basestring,
     Required('moz_build_date'): basestring,
     Required('optimize_target_tasks'): bool,
@@ -88,7 +89,7 @@ class Parameters(ReadOnlyDict):
             'head_ref': _get_head_ref(),
             'head_repository': _get_repo_path(),
             'head_rev': _get_head_ref(),
-            'hg_branch': 'default',
+            'hg_branch': 'default' if _get_repository_type() == 'hg' else None,
             'level': '3',
             'moz_build_date': datetime.now().strftime("%Y%m%d%H%M%S"),
             'optimize_target_tasks': True,
