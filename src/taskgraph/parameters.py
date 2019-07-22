@@ -124,7 +124,7 @@ class Parameters(ReadOnlyDict):
         Determine whether this graph is being built on a try project or for
         `mach try fuzzy`.
         """
-        return 'try' in self['project']
+        return 'try' in self['project'] or self['tasks_for'] == 'github-pull-request'
 
     def file_url(self, path, pretty=False):
         """
