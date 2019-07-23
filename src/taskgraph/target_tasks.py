@@ -6,7 +6,7 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-from taskgraph.util.attributes import match_run_on_projects, match_run_on_hg_branches
+from taskgraph.util.attributes import match_run_on_projects, match_run_on_tasks_for
 
 _target_task_methods = {}
 
@@ -36,20 +36,15 @@ def filter_for_project(task, parameters):
     return match_run_on_projects(parameters['project'], run_on_projects)
 
 
-def filter_for_hg_branch(task, parameters):
-    """Filter tasks by hg branch.
-    If `run_on_hg_branch` is not defined, then task runs on all branches"""
-    if parameters.get('repository_type') != 'hg':
-        return True
-
-    run_on_hg_branches = set(task.attributes.get('run_on_hg_branches', ['all']))
-    return match_run_on_hg_branches(parameters['hg_branch'], run_on_hg_branches)
+def filter_for_tasks_for(task, parameters):
+    run_on_tasks_for = set(task.attributes.get('run_on_tasks_for', ['all']))
+    return match_run_on_tasks_for(parameters['tasks_for'], run_on_tasks_for)
 
 
 def standard_filter(task, parameters):
     return all(
         filter_func(task, parameters) for filter_func in
-        (filter_out_cron, filter_for_project, filter_for_hg_branch)
+        (filter_out_cron, filter_for_project, filter_for_tasks_for)
     )
 
 

@@ -51,26 +51,17 @@ def keymatch(attributes, target):
     return []
 
 
-def match_run_on_projects(project, run_on_projects):
-    """Determine whether the given project is included in the `run-on-projects`
-    parameter, applying expansions for things like "integration" mentioned in
-    the attribute documentation."""
-    if 'all' in run_on_projects:
+def _match_run_on(key, run_on):
+    """
+    Determine whether the given parameter is included in the corresponding `run-on-attribute`.
+    """
+    if 'all' in run_on:
         return True
-    return project in run_on_projects
+    return key in run_on
 
 
-def match_run_on_hg_branches(hg_branch, run_on_hg_branches):
-    """Determine whether the given project is included in the `run-on-hg-branches`
-    parameter. Allows 'all'."""
-    if 'all' in run_on_hg_branches:
-        return True
-
-    for expected_hg_branch_pattern in run_on_hg_branches:
-        if re.match(expected_hg_branch_pattern, hg_branch):
-            return True
-
-    return False
+match_run_on_projects = _match_run_on
+match_run_on_tasks_for = _match_run_on
 
 
 def sorted_unique_list(*args):

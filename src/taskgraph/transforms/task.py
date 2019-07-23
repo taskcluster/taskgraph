@@ -150,8 +150,7 @@ task_description_schema = Schema({
     # See the attributes documentation for details.
     Optional('run-on-projects'): optionally_keyed_by('build-platform', [basestring]),
 
-    # Like `run_on_projects`, `run-on-hg-branches` defaults to "all".
-    Optional('run-on-hg-branches'): optionally_keyed_by('project', [basestring]),
+    Optional('run-on-tasks-for'): [text_type],
 
     # The `always-target` attribute will cause the task to be included in the
     # target_task_graph regardless of filtering. Tasks included in this manner
@@ -816,6 +815,7 @@ def build_task(config, tasks):
         resolve_keyed_by(task, 'run-on-projects', item_name=task['label'],
                          **{'build-platform': build_platform})
         attributes['run_on_projects'] = task.get('run-on-projects', ['all'])
+        attributes['run_on_tasks_for'] = task.get('run-on-tasks-for', ['all'])
         attributes['always_target'] = task['always-target']
 
         # Set MOZ_AUTOMATION on all jobs.

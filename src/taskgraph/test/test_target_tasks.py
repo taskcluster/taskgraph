@@ -21,21 +21,21 @@ class TestTargetTasks(unittest.TestCase):
             },
             parameters={
                 'project': project,
-                'hg_branch': 'default',
+                'tasks_for': 'hg-push',
             },
         )
 
-    def default_matches_hg_branch(self, run_on_hg_branches, hg_branch):
+    def default_matches_tasks_for(self, run_on_tasks_for, tasks_for):
         attributes = {'run_on_projects': ['all']}
-        if run_on_hg_branches is not None:
-            attributes['run_on_hg_branches'] = run_on_hg_branches
+        if run_on_tasks_for is not None:
+            attributes['run_on_tasks_for'] = run_on_tasks_for
 
         return self.default_matches(
             attributes=attributes,
             parameters={
                 'project': 'mozilla-central',
-                'hg_branch': hg_branch,
                 'repository_type': 'hg',
+                'tasks_for': tasks_for,
             },
         )
 
@@ -60,30 +60,23 @@ class TestTargetTasks(unittest.TestCase):
         self.assertFalse(self.default_matches_project([], 'mozilla-inbound'))
         self.assertFalse(self.default_matches_project([], 'baobab'))
 
-    def test_default_hg_branch(self):
-        self.assertTrue(self.default_matches_hg_branch(None, 'default'))
-        self.assertTrue(self.default_matches_hg_branch(None, 'GECKOVIEW_62_RELBRANCH'))
+    def test_default_tasks_for(self):
+        self.assertTrue(self.default_matches_tasks_for(None, 'hg-push'))
+        self.assertTrue(self.default_matches_tasks_for(None, 'github-pull-request'))
 
-        self.assertFalse(self.default_matches_hg_branch([], 'default'))
-        self.assertFalse(self.default_matches_hg_branch([], 'GECKOVIEW_62_RELBRANCH'))
+        self.assertFalse(self.default_matches_tasks_for([], 'hg-push'))
+        self.assertFalse(self.default_matches_tasks_for([], 'github-pull-request'))
 
-        self.assertTrue(self.default_matches_hg_branch(['all'], 'default'))
-        self.assertTrue(self.default_matches_hg_branch(['all'], 'GECKOVIEW_62_RELBRANCH'))
+        self.assertTrue(self.default_matches_tasks_for(['all'], 'hg-push'))
+        self.assertTrue(self.default_matches_tasks_for(['all'], 'github-pull-request'))
 
-        self.assertTrue(self.default_matches_hg_branch(['default'], 'default'))
-        self.assertTrue(self.default_matches_hg_branch([r'default'], 'default'))
-        self.assertFalse(self.default_matches_hg_branch([r'default'], 'GECKOVIEW_62_RELBRANCH'))
+        self.assertTrue(self.default_matches_tasks_for(['hg-push'], 'hg-push'))
+        self.assertFalse(self.default_matches_tasks_for(['hg-push'], 'github-pull-request'))
 
         self.assertTrue(
-            self.default_matches_hg_branch(['GECKOVIEW_62_RELBRANCH'], 'GECKOVIEW_62_RELBRANCH')
+            self.default_matches_tasks_for(['github-pull-request'], 'github-pull-request')
         )
-        self.assertTrue(
-            self.default_matches_hg_branch(['GECKOVIEW_\d+_RELBRANCH'], 'GECKOVIEW_62_RELBRANCH')
-        )
-        self.assertTrue(
-            self.default_matches_hg_branch([r'GECKOVIEW_\d+_RELBRANCH'], 'GECKOVIEW_62_RELBRANCH')
-        )
-        self.assertFalse(self.default_matches_hg_branch([r'GECKOVIEW_\d+_RELBRANCH'], 'default'))
+        self.assertFalse(self.default_matches_tasks_for([r'github-pull-request'], 'hg-pull'))
 
     def make_task_graph(self):
         tasks = {
