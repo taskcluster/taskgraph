@@ -4,8 +4,32 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import attr
+from six import text_type
+
 from .keyed_by import evaluate_keyed_by
 from .memoize import memoize
+
+
+@attr.s
+class _BuiltinWorkerType(object):
+    provisioner = attr.ib(text_type)
+    worker_type = attr.ib(text_type)
+
+    @property
+    def implementation(self):
+        """
+        Since the list of built-in worker-types is small and fixed, we can get
+        away with punning the implementation name (in
+        `taskgraph.transforms.task`) and the worker_type.
+        """
+        return self.worker_type
+
+
+_BUILTIN_TYPES = {
+    'always-optimized': _BuiltinWorkerType('invalid', 'always-optimized'),
+    'succeed': _BuiltinWorkerType('built-in', 'succeed'),
+}
 
 
 @memoize
@@ -13,6 +37,10 @@ def worker_type_implementation(graph_config, worker_type):
     """Get the worker implementation and OS for the given workerType, where the
     OS represents the host system, not the target OS, in the case of
     cross-compiles."""
+    if worker_type in _BUILTIN_TYPES:
+        # For the built-in worker-types, we use an `implementation that matches
+        # the worker-type.
+        return _BUILTIN_TYPES[worker_type].implementation, None
     worker_config = evaluate_keyed_by(
         {"by-worker-type": graph_config["workers"]["aliases"]},
         "worker-types.yml",
@@ -26,6 +54,10 @@ def get_worker_type(graph_config, worker_type, level):
     """
     Get the worker type based, evaluating aliases from the graph config.
     """
+    if worker_type in _BUILTIN_TYPES:
+        builtin_type = _BUILTIN_TYPES[worker_type]
+        return builtin_type.provisioner, builtin_type.worker_type
+
     level = str(level)
     worker_config = evaluate_keyed_by(
         {"by-worker-type": graph_config["workers"]["aliases"]},

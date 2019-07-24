@@ -574,6 +574,7 @@ def set_implementation(config, tasks):
     Set the worker implementation based on the worker-type alias.
     """
     for task in tasks:
+        worker = task.setdefault('worker', {})
         if 'implementation' in task['worker']:
             yield task
             continue
@@ -584,7 +585,6 @@ def set_implementation(config, tasks):
         tags['worker-implementation'] = impl
         if os:
             task['tags']['os'] = os
-        worker = task.setdefault('worker', {})
         worker['implementation'] = impl
         if os:
             worker['os'] = os
