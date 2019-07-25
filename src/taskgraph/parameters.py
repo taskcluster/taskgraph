@@ -16,7 +16,6 @@ from taskgraph.util.memoize import memoize
 from taskgraph.util.readonlydict import ReadOnlyDict
 from voluptuous import (
     ALLOW_EXTRA,
-    PREVENT_EXTRA,
     Required,
     Schema,
     Any,
@@ -43,7 +42,7 @@ def _get_repo_path():
 
 
 # Please keep this list sorted and in sync with taskcluster/docs/parameters.rst
-base_schema = {
+base_schema = Schema({
     Required('base_repository'): basestring,
     Required('build_date'): int,
     Required('do_not_optimize'): [int],
@@ -63,7 +62,7 @@ base_schema = {
     Required('repository_type'): basestring,
     Required('target_tasks_method'): basestring,
     Required('tasks_for'): basestring,
-}
+})
 
 
 class Parameters(ReadOnlyDict):
@@ -108,7 +107,7 @@ class Parameters(ReadOnlyDict):
         return kwargs
 
     def check(self):
-        schema = Schema(base_schema, extra=PREVENT_EXTRA if self.strict else ALLOW_EXTRA)
+        schema = base_schema if self.strict else base_schema.extend({}, extra=ALLOW_EXTRA)
         try:
             validate_schema(schema, self.copy(), 'Invalid parameters:')
         except Exception as e:
