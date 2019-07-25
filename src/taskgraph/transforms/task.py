@@ -122,7 +122,7 @@ task_description_schema = Schema({
         'job-name': basestring,
 
         # Type of gecko v2 index to use
-        'type': Any('generic'),
+        'type': basestring,
 
         # The rank that the task will receive in the TaskCluster
         # index.  A newly completed task supercedes the currently
@@ -700,6 +700,8 @@ def add_index_routes(config, tasks):
             continue
 
         index_type = index.get('type', 'generic')
+        if index_type not in index_builders:
+            raise ValueError("Unknown index-type {}".format(index_type))
         task = index_builders[index_type](config, task)
 
         del task['index']
