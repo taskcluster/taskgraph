@@ -101,13 +101,13 @@ def print_line(prefix, m):
     sys.stdout.buffer.flush()
 
 
-def run_required_command(prefix, args, extra_env=None, cwd='/'):
-    res = run_command(prefix, args, extra_env, cwd)
+def run_required_command(prefix, args, *, extra_env=None, cwd=None):
+    res = run_command(prefix, args, extra_env=extra_env, cwd=cwd)
     if res:
         sys.exit(res)
 
 
-def run_command(prefix, args, extra_env=None, cwd='/'):
+def run_command(prefix, args, *, extra_env=None, cwd=None):
     """Runs a process and prefixes its output with the time.
 
     Returns the process exit code.
@@ -693,6 +693,7 @@ def main(args):
     parser = argparse.ArgumentParser()
     parser.add_argument('--user', default='worker', help='user to run as')
     parser.add_argument('--group', default='worker', help='group to run as')
+    parser.add_argument('--task-cwd', help='directory to run the provided command in')
 
     add_vcs_arguments(parser, 'vcs', 'Firefox')
 
@@ -861,7 +862,7 @@ def main(args):
         if 'MOZ_FETCHES' in os.environ:
             fetch_artifacts()
 
-        return run_command(b'task', task_args)
+        return run_command(b'task', task_args, cwd=args.task_cwd)
     finally:
         fetches_dir = os.environ.get('MOZ_FETCHES_DIR')
         if fetches_dir and os.path.isdir(fetches_dir):
