@@ -13,7 +13,9 @@ ADD topsrcdir/taskcluster/docker/recipes/install-mercurial.sh /setup/install-mer
 # %include src/taskgraph/run-task/run-task
 # %include src/taskgraph/run-task/robustcheckout.py
 # %include src/taskgraph/run-task/hgrc
+# %include src/taskgraph/run-task/fetch-content
 COPY topsrcdir/src/taskgraph/run-task/run-task /usr/local/bin/run-task
+COPY topsrcdir/src/taskgraph/run-task/fetch-content /usr/local/bin/fetch-content
 COPY topsrcdir/src/taskgraph/run-task/robustcheckout.py /usr/local/mercurial/robustcheckout.py
 COPY topsrcdir/src/taskgraph/run-task/hgrc /etc/mercurial/hgrc.d/mozilla.rc
 
