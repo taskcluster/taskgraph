@@ -7,8 +7,11 @@ Support for running jobs that are invoked via the `run-task` script.
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+from six import text_type
+
 from taskgraph.transforms.task import taskref_or_string
 from taskgraph.transforms.job import run_job_using
+from taskgraph.util import path
 from taskgraph.util.schema import Schema
 from taskgraph.transforms.job.common import support_vcs_checkout
 from voluptuous import Required, Any, Optional
@@ -26,6 +29,12 @@ run_task_schema = Schema({
 
     # if true (the default), perform a checkout on the worker
     Required('checkout'): bool,
+
+    Optional(
+        "cwd",
+        description="Path to run command in. If a checkout is present, the path "
+        "to the checkout will be interpolated with the key `checkout`",
+    ): text_type,
 
     # The sparse checkout profile to use. Value is the filename relative to the
     # directory where sparse profiles are defined (build/sparse-profiles/).
@@ -83,10 +92,23 @@ def docker_worker_run_task(config, job, taskdesc):
         })
 
     run_command = run['command']
+    run_cwd = run.get('cwd')
+    if run_cwd and run['checkout']:
+        run_cwd = path.normpath(run_cwd.format(checkout=taskdesc['worker']['env']['GECKO_PATH']))
+    elif run_cwd and "{checkout}" in run_cwd:
+        raise Exception(
+            "Found `{{checkout}}` interpolation in `cwd` for task {name} "
+            "but the task doesn't have a checkout: {cwd}".format(
+                cwd=run_cwd, name=job.get("name", job.get("label"))
+            )
+        )
+
     # dict is for the case of `{'task-reference': basestring}`.
     if isinstance(run_command, (basestring, dict)):
         run_command = ['bash', '-cx', run_command]
     command.append('--fetch-hgfingerprint')
+    if run_cwd:
+        command.extend(('--task-cwd', run_cwd))
     command.append('--')
     command.extend(run_command)
     worker['command'] = command
@@ -142,11 +164,24 @@ def generic_worker_run_task(config, job, taskdesc):
     })
 
     run_command = run['command']
+    run_cwd = run.get('cwd')
+    if run_cwd and run['checkout']:
+        run_cwd = path.normpath(run_cwd.format(checkout=taskdesc['worker']['env']['GECKO_PATH']))
+    elif run_cwd and "{checkout}" in run_cwd:
+        raise Exception(
+            "Found `{{checkout}}` interpolation in `cwd` for task {name} "
+            "but the task doesn't have a checkout: {cwd}".format(
+                cwd=run_cwd, name=job.get("name", job.get("label"))
+            )
+        )
+
     if isinstance(run_command, basestring):
         if is_win:
             run_command = '"{}"'.format(run_command)
         run_command = ['bash', '-cx', run_command]
 
+    if run_cwd:
+        command.extend(('--task-cwd', run_cwd))
     command.append('--')
     command.extend(run_command)
 
