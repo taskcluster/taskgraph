@@ -155,6 +155,7 @@ def get_attribute(dict, key, attributes, attribute_name):
 @transforms.add
 def use_fetches(config, jobs):
     artifact_names = {}
+    aliases = {}
 
     for task in config.kind_dependencies_tasks:
         if task.kind in ('fetch', 'toolchain'):
@@ -162,6 +163,9 @@ def use_fetches(config, jobs):
                 artifact_names, task.label, task.attributes,
                 '{kind}-artifact'.format(kind=task.kind),
             )
+            value = task.attributes.get('{}-alias'.format(task.kind))
+            if value:
+                aliases['{}-{}'.format(task.kind, value)] = task.label
 
     for job in jobs:
         fetches = job.pop('fetches', None)
@@ -178,6 +182,7 @@ def use_fetches(config, jobs):
             if kind in ('fetch', 'toolchain'):
                 for fetch_name in artifacts:
                     label = '{kind}-{name}'.format(kind=kind, name=fetch_name)
+                    label = aliases.get(label, label)
                     if label not in artifact_names:
                         raise Exception('Missing fetch job for {kind}-{name}: {fetch}'.format(
                             kind=config.kind, name=name, fetch=fetch_name))
@@ -189,7 +194,7 @@ def use_fetches(config, jobs):
                         worker['taskcluster-proxy'] = True
                         dirname = mozpath.dirname(path)
                         scope = 'queue:get-artifact:{}/*'.format(dirname)
-                        if scope not in job['scopes']:
+                        if scope not in job.setdefault('scopes', []):
                             job['scopes'].append(scope)
 
                     dependencies[label] = label
