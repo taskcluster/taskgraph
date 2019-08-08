@@ -11,11 +11,25 @@ import os
 import tarfile
 from io import BytesIO
 
+# The imports here need to be minimal, as this module is used by the
+# image_builder image, which has a stripped down taskgraph pacakge.
 from taskgraph.util import docker
 from taskgraph.util.taskcluster import (
     get_artifact_url,
     get_session,
 )
+
+
+def get_image_digest(image_name):
+    from taskgraph.generator import load_tasks_for_kind
+    from taskgraph.parameters import Parameters
+    params = Parameters(
+        level=os.environ.get('MOZ_SCM_LEVEL', '3'),
+        strict=False,
+    )
+    tasks = load_tasks_for_kind(params, 'docker-image')
+    task = tasks['build-docker-image-{}'.format(image_name)]
+    return task.attributes['cached_task']['digest']
 
 
 def load_image_by_name(image_name, tag=None):

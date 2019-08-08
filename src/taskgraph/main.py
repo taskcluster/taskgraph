@@ -241,6 +241,23 @@ def load_image(args):
         sys.exit(1)
 
 
+@command("image-digest", help="Print the digest of a docker image.")
+@argument(
+    "image_name",
+    help="Print the digest of the image of this name based on the current "
+    "contents of the tree.",
+)
+def image_digest(args):
+    from taskgraph.docker import get_image_digest
+
+    try:
+        digest = get_image_digest(args["image_name"])
+        print(digest)
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)
+
+
 @command("decision", description="Run the decision task")
 @argument("--root", "-r", help="root of the taskgraph definition relative to topsrcdir")
 @argument(
