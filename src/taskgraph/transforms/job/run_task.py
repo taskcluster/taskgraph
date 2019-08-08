@@ -94,7 +94,7 @@ def docker_worker_run_task(config, job, taskdesc):
     run_command = run['command']
     run_cwd = run.get('cwd')
     if run_cwd and run['checkout']:
-        run_cwd = path.normpath(run_cwd.format(checkout=taskdesc['worker']['env']['GECKO_PATH']))
+        run_cwd = path.normpath(run_cwd.format(checkout=taskdesc['worker']['env']['VCS_PATH']))
     elif run_cwd and "{checkout}" in run_cwd:
         raise Exception(
             "Found `{{checkout}}` interpolation in `cwd` for task {name} "
@@ -146,7 +146,7 @@ def generic_worker_run_task(config, job, taskdesc):
     run_command = run['command']
     run_cwd = run.get('cwd')
     if run_cwd and run['checkout']:
-        run_cwd = path.normpath(run_cwd.format(checkout=taskdesc['worker']['env']['GECKO_PATH']))
+        run_cwd = path.normpath(run_cwd.format(checkout=taskdesc['worker']['env']['VCS_PATH']))
     elif run_cwd and "{checkout}" in run_cwd:
         raise Exception(
             "Found `{{checkout}}` interpolation in `cwd` for task {name} "

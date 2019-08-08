@@ -21,6 +21,7 @@ job-defaults:
         tier: 1
     run:
         using: run-task
+        cwd: '{checkout}'
         cache-dotcache: true
 
 jobs:
@@ -33,7 +34,6 @@ jobs:
                 - /bin/bash
                 - '-c'
                 - >-
-                    cd /builds/worker/checkouts/src &&
                     pip install --user -r requirements/test.txt &&
                     pip install --user --no-deps -e . &&
                     pytest --pyargs taskgraph
@@ -47,7 +47,6 @@ jobs:
                 - /bin/bash
                 - '-c'
                 - >-
-                    cd /builds/worker/checkouts/src &&
                     pip install --user -r requirements/test.txt &&
                     flake8
 
@@ -60,6 +59,5 @@ jobs:
                 - /bin/bash
                 - '-c'
                 - >-
-                    cd /builds/worker/checkouts/src &&
                     pip install --user -r requirements/test.txt &&
                     yamllint .
