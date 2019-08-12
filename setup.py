@@ -19,6 +19,7 @@ setup(
             "run-task/fetch-content",
             "run-task/hgrc",
             "run-task/robustcheckout.py",
-        ]
+        ],
+        "taskgraph.test": ["automationrelevance.json"],
     },
 )

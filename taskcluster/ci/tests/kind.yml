@@ -30,34 +30,25 @@ jobs:
         treeherder:
             symbol: unit
         run:
-            command:
-                - /bin/bash
-                - '-c'
-                - >-
-                    pip install --user -r requirements/test.txt &&
-                    pip install --user --no-deps -e . &&
-                    pytest --pyargs taskgraph
+            command: >-
+                pip install --user -r requirements/test.txt &&
+                pip install --user --no-deps . &&
+                pytest --pyargs taskgraph
 
     flake8:
         description: "Run `flake8` to validate the latest changes"
         treeherder:
             symbol: flake8
         run:
-            command:
-                - /bin/bash
-                - '-c'
-                - >-
-                    pip install --user -r requirements/test.txt &&
-                    flake8
+            command: >-
+                pip install --user -r requirements/test.txt &&
+                flake8
 
     yamllint:
         description: "Run `yamllint` to validate the latest changes"
         treeherder:
             symbol: yaml
         run:
-            command:
-                - /bin/bash
-                - '-c'
-                - >-
-                    pip install --user -r requirements/test.txt &&
-                    yamllint .
+            command: >-
+                pip install --user -r requirements/test.txt &&
+                yamllint .
