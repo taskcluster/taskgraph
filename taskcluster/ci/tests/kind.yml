@@ -44,6 +44,17 @@ jobs:
                 pip install --user -r requirements/test.txt &&
                 flake8
 
+    black:
+        description: "Run `black` to validate the latest changes"
+        treeherder:
+            symbol: black
+        worker:
+            docker-image: {in-tree: python3.7}
+        run:
+            command: >-
+                pip install --user black &&
+                black --check .
+
     yamllint:
         description: "Run `yamllint` to validate the latest changes"
         treeherder:

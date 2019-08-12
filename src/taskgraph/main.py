@@ -277,7 +277,9 @@ def image_digest(args):
 @argument(
     "--target-tasks-method", help="method for selecting the target tasks to generate"
 )
-@argument("--repository-type", required=True, help='Type of repository, either "hg" or "git"')
+@argument(
+    "--repository-type", required=True, help='Type of repository, either "hg" or "git"'
+)
 @argument("--base-repository", required=True, help='URL for "base" repository to clone')
 @argument(
     "--head-repository",
@@ -291,7 +293,7 @@ def image_digest(args):
     "--head-rev", required=True, help="Commit revision to use from head repository"
 )
 @argument(
-    "--tasks-for", required=True, help='the tasks_for value used to generate this task',
+    "--tasks-for", required=True, help="the tasks_for value used to generate this task"
 )
 def decision(options):
     from taskgraph.decision import taskgraph_decision
