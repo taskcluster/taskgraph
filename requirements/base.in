@@ -1,6 +1,7 @@
 attrs
 futures
 json-e
+pathlib2
 PyYAML
 redo
 requests

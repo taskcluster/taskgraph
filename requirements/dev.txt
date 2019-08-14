@@ -10,12 +10,12 @@ click==7.0 \
     --hash=sha256:2335065e6395b9e67ca716de5f7526736bfa6ceead690adf616d925bdc622b13 \
     --hash=sha256:5b94b49521f6456670fdb30cd82a4eca9412788a93fa6dd6df72c94d5a8ff2d7 \
     # via pip-compile-multi, pip-tools
-pip-compile-multi==1.3.1 \
-    --hash=sha256:14ccf45e2f63db5a434ef33a0d26573686b039ec0079b4ab3044486d82c1853d \
-    --hash=sha256:6f8d5395528ee0947cf8b40e6578fa7d0b55fee99e6f3c549a411781170b70fb
-pip-tools==3.2.0 \
-    --hash=sha256:9da527db744c79c5eb1d3d7e2794fef3a426fd50ef60ff1d0fc6c49931252f1e \
-    --hash=sha256:c1bac40f4de607c69a64e60d5f4deb0d1cbda00d890dcd7cb80c7e3108d1acc4 \
+pip-compile-multi==1.5.0 \
+    --hash=sha256:b7e4125969f4464f6e12caed17cbc88fdef71d8d6d1ae6cbff85a028f389b3b4 \
+    --hash=sha256:e94336a1f8efafba3b1c0550eefa53beceb325d9791ba02c99573e5e05146bb7
+pip-tools==4.0.0 \
+    --hash=sha256:3b9fb8948340eff5869ac83dc85e3a7c62b837cec33609c45c48c2e5aa740ba5 \
+    --hash=sha256:44469037863c3587b4c565caf258e2c752d4235c508cf8410a69164bb65ffc78 \
     # via pip-compile-multi
 toposort==1.5 \
     --hash=sha256:d80128b83b411d503b0cdb4a8f172998bc1d3b434b6402a349b8ebd734d51a80 \
