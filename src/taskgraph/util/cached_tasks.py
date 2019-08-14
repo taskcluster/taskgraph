@@ -9,11 +9,11 @@ import time
 
 
 TARGET_CACHE_INDEX = (
-    '{trust_domain}.cache.level-{level}.{type}.{name}.hash.{digest}'
+    '{cache_prefix}.cache.level-{level}.{type}.{name}.hash.{digest}'
 )
 EXTRA_CACHE_INDEXES = [
-    '{trust_domain}.cache.level-{level}.{type}.{name}.latest',
-    '{trust_domain}.cache.level-{level}.{type}.{name}.pushdate.{build_date_long}',
+    '{cache_prefix}.cache.level-{level}.{type}.{name}.latest',
+    '{cache_prefix}.cache.level-{level}.{type}.{name}.pushdate.{build_date_long}',
 ]
 
 
@@ -41,8 +41,13 @@ def add_optimization(config, taskdesc, cache_type, cache_name, digest=None, dige
     if digest is None:
         digest = hashlib.sha256('\n'.join(digest_data)).hexdigest()
 
+    if 'cached-task-prefix' in config.graph_config['taskgraph']:
+        cache_prefix = config.graph_config['taskgraph']['cached-task-prefix']
+    else:
+        cache_prefix = config.graph_config['trust-domain']
+
     subs = {
-        'trust_domain': config.graph_config['trust-domain'],
+        'cache_prefix': cache_prefix,
         'type': cache_type,
         'name': cache_name,
         'digest': digest,
