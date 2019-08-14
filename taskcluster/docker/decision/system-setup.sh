@@ -13,6 +13,8 @@ apt-get install -y --force-yes --no-install-recommends \
     python-setuptools \
     python-wheel \
     sudo \
+    unzip \
+    curl \
     git
 
 BUILD=/root/build

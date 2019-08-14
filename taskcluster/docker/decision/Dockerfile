@@ -1,4 +1,4 @@
-FROM          ubuntu:16.04
+FROM          ubuntu:18.04
 MAINTAINER Tom Prince <mozilla@hocat.ca>
 
 # Add worker user
