@@ -27,6 +27,7 @@ import errno
 import io
 import json
 import os
+from pathlib import Path
 import re
 import shutil
 import socket
@@ -399,8 +400,6 @@ def git_checkout(
     if not IS_POSIX:
         raise RuntimeError('git checkout only supported on POSIX')
 
-    destination_path = os.path.abspath(destination_path)
-
     if not os.path.exists(destination_path):
         # Repository doesn't already exist, needs to be cloned
         args = [
@@ -446,7 +445,9 @@ def git_checkout(
         'HEAD'
     ]
 
-    commit_hash = subprocess.check_output(args, cwd=destination_path, universal_newlines=True).strip()
+    commit_hash = subprocess.check_output(
+        args, cwd=destination_path, universal_newlines=True
+    ).strip()
     assert re.match('^[a-f0-9]{40}$', commit_hash)
 
     if head_repo.startswith('https://github.com'):
@@ -470,12 +471,33 @@ def git_checkout(
     return commit_hash
 
 
+def fetch_hgfingerprint():
+    try:
+        print_line(b'vcs', b'fetching hg.mozilla.org fingerprint from %s\n' %
+                   FINGERPRINT_URL.encode('utf-8'))
+        res = urllib.request.urlopen(FINGERPRINT_URL, timeout=10)
+        secret = res.read()
+        try:
+            secret = json.loads(secret.decode('utf-8'))
+        except ValueError:
+            print_line(b'vcs', b'invalid JSON in hg fingerprint secret')
+            sys.exit(1)
+    except (urllib.error.URLError, socket.timeout):
+        print_line(b'vcs', b'Unable to retrieve current hg.mozilla.org fingerprint'
+                           b'using the secret service, using fallback instead.')
+        # XXX This fingerprint will not be accurate if running on an old
+        #     revision after the server fingerprint has changed.
+        secret = {'secret': FALLBACK_FINGERPRINT}
+
+    return secret['secret']['fingerprints']
+
+
 def hg_checkout(
     destination_path: str,
     head_repo: str,
     base_repo: Optional[str],
     store_path: str,
-    fetch_hgfingerprint: bool,
+    hgmo_fingerprint: str,
     sparse_profile: Optional[str],
     branch: Optional[str],
     revision: Optional[str]
@@ -493,7 +515,6 @@ def hg_checkout(
     else:
         raise RuntimeError('Must be running on mac, posix or windows')
 
-    store_path = os.path.abspath(store_path)
     args = [
         hg_bin,
         'robustcheckout',
@@ -503,7 +524,7 @@ def hg_checkout(
 
     # Obtain certificate fingerprints.  Without this, the checkout will use the fingerprint
     # on the system, which is managed some other way (such as puppet)
-    if fetch_hgfingerprint:
+    if hgmo_fingerprint:
         try:
             print_line(b'vcs', b'fetching hg.mozilla.org fingerprint from %s\n' %
                        FINGERPRINT_URL.encode('utf-8'))
@@ -530,8 +551,6 @@ def hg_checkout(
         args.extend(['--upstream', base_repo])
     if sparse_profile:
         args.extend(['--sparseprofile', sparse_profile])
-
-    destination_path = os.path.abspath(destination_path)
 
     # Specify method to checkout a revision. This defaults to revisions as
     # SHA-1 strings, but also supports symbolic revisions like `tip` via the
@@ -565,6 +584,7 @@ def hg_checkout(
 
     return revision
 
+
 def fetch_artifacts():
     print_line(b'fetches', b'fetching artifacts\n')
 
@@ -589,7 +609,7 @@ def add_vcs_arguments(parser, project, name):
                         help='Path to sparse profile for %s checkout' % name)
 
 
-def collect_vcs_options(args, project):
+def collect_vcs_options(args, project, name):
     checkout = getattr(args, '%s_checkout' % project)
     sparse_profile = getattr(args, '%s_sparse_profile' % project)
 
@@ -605,9 +625,9 @@ def collect_vcs_options(args, project):
 
     # Expand ~ in some paths.
     if checkout:
-        checkout = os.path.expanduser(checkout)
+        checkout = os.path.abspath(os.path.expanduser(checkout))
     if store_path:
-        store_path = os.path.expanduser(store_path)
+        store_path = os.path.abspath(os.path.expanduser(store_path))
 
     # Some callers set the base repository to mozilla-central for historical
     # reasons. Switch to mozilla-unified because robustcheckout works best
@@ -618,6 +638,7 @@ def collect_vcs_options(args, project):
     return {
         'store-path': store_path,
         'project': project,
+        'name': name,
         'env-prefix': env_prefix,
         'checkout': checkout,
         'sparse-profile': sparse_profile,
@@ -625,12 +646,11 @@ def collect_vcs_options(args, project):
         'head-repo': head_repo,
         'revision': revision,
         'ref': ref,
-        'repo_type': repo_type,
+        'repo-type': repo_type,
     }
 
 
-def vcs_checkout_from_args(args, project):
-    options = collect_vcs_options(args, project)
+def vcs_checkout_from_args(options, *, hgmo_fingerprint):
 
     if not options['checkout']:
         if options['ref'] and not options['revision']:
@@ -641,7 +661,7 @@ def vcs_checkout_from_args(args, project):
     revision = options['revision']
     ref = options['ref']
 
-    if options['repo_type'] == 'git':
+    if options['repo-type'] == 'git':
         if not revision and not ref:
             raise RuntimeError('Git requires that either a ref, a revision, or both are provided')
 
@@ -655,7 +675,7 @@ def vcs_checkout_from_args(args, project):
             ref,
             revision
         )
-    elif options['repo_type'] == 'hg':
+    elif options['repo-type'] == 'hg':
         if not revision and not ref:
             raise RuntimeError('Hg requires that at least one of a ref or revision '
                                'is provided')
@@ -665,7 +685,7 @@ def vcs_checkout_from_args(args, project):
             options['head-repo'],
             options['base-repo'],
             options['store-path'],
-            args.fetch_hgfingerprint,
+            hgmo_fingerprint,
             options['sparse-profile'],
             ref,
             revision
@@ -695,13 +715,26 @@ def main(args):
     parser.add_argument('--group', default='worker', help='group to run as')
     parser.add_argument('--task-cwd', help='directory to run the provided command in')
 
-    add_vcs_arguments(parser, 'vcs', 'Firefox')
+    repositories = os.environ.get('REPOSITORIES')
+    if repositories:
+        repositories = json.loads(repositories)
+    else:
+        repositories = {'vcs': "repository"}
+
+    for repository, name in repositories.items():
+        add_vcs_arguments(parser, repository, name)
 
     parser.add_argument('--fetch-hgfingerprint', action='store_true',
                         help='Fetch the latest hgfingerprint from the secrets store, '
                         'using the taskclsuerProxy')
 
     args = parser.parse_args(our_args)
+
+    repositories = [
+        collect_vcs_options(args, repository, name) for (repository, name) in repositories.items()
+    ]
+    # Sort repositories so that parent checkout paths come before children
+    repositories.sort(key=lambda repo: Path(repo['checkout'] or "/").parts)
 
     uid = gid = gids = None
     if IS_POSIX and running_as_root:
@@ -832,9 +865,16 @@ def main(args):
         if running_as_root:
             os.chown(store_path, uid, gid)
 
-    prepare_checkout_dir(args.vcs_checkout)
-    if args.vcs_checkout and os.environ.get('VCS_REPOSITORY_TYPE') == 'hg':
+    for repo in repositories:
+        prepare_checkout_dir(repo['checkout'])
+
+    hgmo_fingerprint = None
+    if any(
+        repo['checkout'] and repo['repo-type'] == 'hg' for repo in repositories
+    ):
         prepare_hg_store_path()
+        if args.fetch_hgfingerprint:
+            hgmo_fingerprint = fetch_hgfingerprint()
 
     if IS_POSIX and running_as_root:
         # Drop permissions to requested user.
@@ -849,10 +889,13 @@ def main(args):
         os.setresgid(gid, gid, gid)
         os.setresuid(uid, uid, uid)
 
-    vcs_checkout_from_args(args, 'vcs')
+    for repo in repositories:
+        vcs_checkout_from_args(repo, hgmo_fingerprint=hgmo_fingerprint)
 
     try:
-        for k in ('VCS_PATH', 'MOZ_FETCHES_DIR', 'UPLOAD_DIR'):
+        for k in ['MOZ_FETCHES_DIR', 'UPLOAD_DIR'] + [
+            '%_PATH'.format(repository['project'].upper()) for repository in repositories
+        ]:
             if k in os.environ:
                 os.environ[k] = os.path.abspath(os.environ[k])
                 print_line(b'setup', b'%s is %s\n' % (
