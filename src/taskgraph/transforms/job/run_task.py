@@ -7,6 +7,7 @@ Support for running jobs that are invoked via the `run-task` script.
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import os
 from six import text_type
 
 from taskgraph.transforms.task import taskref_or_string
@@ -94,9 +95,29 @@ worker_defaults = {
 }
 
 
-def run_task_url(config):
-    return '{}/raw-file/{}/taskcluster/scripts/run-task'.format(
-        config.params['head_repository'], config.params['head_rev'])
+def script_url(config, script):
+    # This logic is a bit of a hack, and should be replaced by something better.
+    # TASK_ID is used as a proxy for running in automation.  In that case, we
+    # want to use the run-task/fetch-content corresponding to the taskgraph
+    # version we are running, and otherwise, we aren't going to run the task we
+    # generate, so the exact version doesn't matter.
+    # If we checked out the taskgraph code with run-task in the decision task,
+    # we can use TASKGRAPH_* to find the right version, which covers the
+    # existing use case.
+    if 'TASK_ID' in os.environ:
+        if (
+            'TASKGRAPH_HEAD_REPOSITORY' not in os.environ
+            or 'TASKGRAPH_HEAD_REV' not in os.environ
+        ):
+            raise Exception(
+                "Must specify 'TASKGRAPH_HEAD_REPOSITORY' and 'TASKGRAPH_HEAD_REV' "
+                "to use run-task on generic-worker."
+            )
+    taskgraph_repo = os.environ.get(
+        'TASKGRAPH_HEAD_REPOSITORY', 'https://hg.mozilla.org/ci/taskgraph'
+    )
+    taskgraph_rev = os.environ.get('TASKGRAPH_HEAD_REV', 'default')
+    return '{}/raw-file/{}/src/taskgraph/run-task/{}'.format(taskgraph_repo, taskgraph_rev, script)
 
 
 @run_job_using("docker-worker", "run-task", schema=run_task_schema, defaults=worker_defaults)
@@ -133,11 +154,12 @@ def generic_worker_run_task(config, job, taskdesc):
     worker = taskdesc['worker'] = job['worker']
     is_win = worker['os'] == 'windows'
     is_mac = worker['os'] == 'macosx'
+    is_bitbar = worker['os'] == 'linux-bitbar'
 
     if is_win:
         command = ['C:/mozilla-build/python3/python3.exe', 'run-task']
     elif is_mac:
-        command = ['/tools/python36/bin/python3.6', 'run-task']
+        command = ['/tools/python36/bin/python3', 'run-task']
     else:
         command = ['./run-task']
 
@@ -151,10 +173,17 @@ def generic_worker_run_task(config, job, taskdesc):
         })
     worker['mounts'].append({
         'content': {
-            'url': run_task_url(config),
+            'url': script_url(config, 'run-task'),
         },
         'file': './run-task',
     })
+    if worker.get('env', {}).get('MOZ_FETCHES'):
+        worker['mounts'].append({
+            'content': {
+                'url': script_url(config, 'fetch-content'),
+            },
+            'file': './fetch-content',
+        })
 
     run_command = run['command']
 
@@ -166,6 +195,10 @@ def generic_worker_run_task(config, job, taskdesc):
     if run['run-as-root']:
         command.extend(('--user', 'root', '--group', 'root'))
     command.append('--')
+    if is_bitbar:
+        # Use the bitbar wrapper script which sets up the device and adb
+        # environment variables
+        command.append('/builds/taskcluster/script.py')
     command.extend(run_command)
 
     if is_win:

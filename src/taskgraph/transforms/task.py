@@ -15,6 +15,7 @@ import os
 import re
 import time
 from six import text_type
+from copy import deepcopy
 
 import attr
 
@@ -544,6 +545,184 @@ def build_docker_worker_payload(config, task, task_def):
         payload['capabilities'] = capabilities
 
     check_caches_are_volumes(task)
+
+
+@payload_builder('generic-worker', schema={
+    Required('os'): Any('windows', 'macosx', 'linux', 'linux-bitbar'),
+    # see http://schemas.taskcluster.net/generic-worker/v1/payload.json
+    # and https://docs.taskcluster.net/reference/workers/generic-worker/payload
+
+    # command is a list of commands to run, sequentially
+    # on Windows, each command is a string, on OS X and Linux, each command is
+    # a string array
+    Required('command'): Any(
+        [taskref_or_string],   # Windows
+        [[taskref_or_string]]  # Linux / OS X
+    ),
+
+    # artifacts to extract from the task image after completion; note that artifacts
+    # for the generic worker cannot have names
+    Optional('artifacts'): [{
+        # type of artifact -- simple file, or recursive directory
+        'type': Any('file', 'directory'),
+
+        # filesystem path from which to read artifact
+        'path': basestring,
+
+        # if not specified, path is used for artifact name
+        Optional('name'): basestring
+    }],
+
+    # Directories and/or files to be mounted.
+    # The actual allowed combinations are stricter than the model below,
+    # but this provides a simple starting point.
+    # See https://docs.taskcluster.net/reference/workers/generic-worker/payload
+    Optional('mounts'): [{
+        # A unique name for the cache volume, implies writable cache directory
+        # (otherwise mount is a read-only file or directory).
+        Optional('cache-name'): basestring,
+        # Optional content for pre-loading cache, or mandatory content for
+        # read-only file or directory. Pre-loaded content can come from either
+        # a task artifact or from a URL.
+        Optional('content'): {
+
+            # *** Either (artifact and task-id) or url must be specified. ***
+
+            # Artifact name that contains the content.
+            Optional('artifact'): basestring,
+            # Task ID that has the artifact that contains the content.
+            Optional('task-id'): taskref_or_string,
+            # URL that supplies the content in response to an unauthenticated
+            # GET request.
+            Optional('url'): basestring
+        },
+
+        # *** Either file or directory must be specified. ***
+
+        # If mounting a cache or read-only directory, the filesystem location of
+        # the directory should be specified as a relative path to the task
+        # directory here.
+        Optional('directory'): basestring,
+        # If mounting a file, specify the relative path within the task
+        # directory to mount the file (the file will be read only).
+        Optional('file'): basestring,
+        # Required if and only if `content` is specified and mounting a
+        # directory (not a file). This should be the archive format of the
+        # content (either pre-loaded cache or read-only directory).
+        Optional('format'): Any('rar', 'tar.bz2', 'tar.gz', 'zip')
+    }],
+
+    # environment variables
+    Required('env'): {basestring: taskref_or_string},
+
+    # the maximum time to run, in seconds
+    Required('max-run-time'): int,
+
+    # os user groups for test task workers
+    Optional('os-groups'): [basestring],
+
+    # feature for test task to run as administarotr
+    Optional('run-as-administrator'): bool,
+
+    # optional features
+    Required('chain-of-trust'): bool,
+    Optional('taskcluster-proxy'): bool,
+
+    # Wether any artifacts are assigned to this worker
+    Optional('skip-artifacts'): bool,
+})
+def build_generic_worker_payload(config, task, task_def):
+    worker = task['worker']
+
+    task_def['payload'] = {
+        'command': worker['command'],
+        'maxRunTime': worker['max-run-time'],
+    }
+
+    if worker['os'] == 'windows':
+        task_def['payload']['onExitStatus'] = {
+            'retry': [
+                # These codes (on windows) indicate a process interruption,
+                # rather than a task run failure. See bug 1544403.
+                1073807364,  # process force-killed due to system shutdown
+                3221225786,  # sigint (any interrupt)
+            ]
+        }
+
+    env = worker.get('env', {})
+
+    if task.get('needs-sccache'):
+        env['USE_SCCACHE'] = '1'
+        # Disable sccache idle shutdown.
+        env['SCCACHE_IDLE_TIMEOUT'] = '0'
+    else:
+        env['SCCACHE_DISABLE'] = '1'
+
+    if env:
+        task_def['payload']['env'] = env
+
+    artifacts = []
+
+    for artifact in worker.get('artifacts', []):
+        a = {
+            'path': artifact['path'],
+            'type': artifact['type'],
+        }
+        if 'name' in artifact:
+            a['name'] = artifact['name']
+        artifacts.append(a)
+
+    if artifacts:
+        task_def['payload']['artifacts'] = artifacts
+
+    # Need to copy over mounts, but rename keys to respect naming convention
+    #   * 'cache-name' -> 'cacheName'
+    #   * 'task-id'    -> 'taskId'
+    # All other key names are already suitable, and don't need renaming.
+    mounts = deepcopy(worker.get('mounts', []))
+    for mount in mounts:
+        if 'cache-name' in mount:
+            mount['cacheName'] = '{trust_domain}-level-{level}-{name}'.format(
+                trust_domain=config.graph_config['trust-domain'],
+                level=config.params['level'],
+                name=mount.pop('cache-name'),
+            )
+            task_def['scopes'].append('generic-worker:cache:{}'.format(mount['cacheName']))
+        if 'content' in mount:
+            if 'task-id' in mount['content']:
+                mount['content']['taskId'] = mount['content'].pop('task-id')
+            if 'artifact' in mount['content']:
+                if not mount['content']['artifact'].startswith('public/'):
+                    task_def['scopes'].append(
+                        'queue:get-artifact:{}'.format(mount['content']['artifact']))
+
+    if mounts:
+        task_def['payload']['mounts'] = mounts
+
+    if worker.get('os-groups'):
+        task_def['payload']['osGroups'] = worker['os-groups']
+        task_def['scopes'].extend(
+            ['generic-worker:os-group:{}/{}'.format(
+                task['worker-type'],
+                group
+            ) for group in worker['os-groups']])
+
+    features = {}
+
+    if worker.get('chain-of-trust'):
+        features['chainOfTrust'] = True
+
+    if worker.get('taskcluster-proxy'):
+        features['taskclusterProxy'] = True
+
+    if worker.get('run-as-administrator', False):
+        features['runAsAdministrator'] = True
+        task_def['scopes'].append(
+            'generic-worker:run-as-administrator:{}'.format(task['worker-type']),
+        )
+
+    if features:
+        task_def['payload']['features'] = features
 
 
 @payload_builder('invalid', schema={
