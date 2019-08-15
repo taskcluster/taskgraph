@@ -27,7 +27,7 @@ DIGEST_RE = re.compile('^[0-9a-f]{64}$')
 IMAGE_BUILDER_BOOSTRAP_IMAGE = (
     'mozillareleases/taskgraph'
     ':image_builder-19e0076d8238e9398db04369692def2237ee2e6019a9616cf80be2408bd9bb5e'
-    '@sha256:35c89ce2c6245209ad789a10e9989ad80ea6c4d56c3bac5a27a5fe5b055eab23'
+    '@sha256:ced5cd043ec5111940ff2138324c177d2f89627a5e814b1d5f628aca16d4c0ff'
 )
 
 transforms = TransformSequence()
