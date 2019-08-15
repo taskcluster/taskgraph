@@ -10,7 +10,10 @@ index:
 
 task-priority: low
 
-taskgraph: {}
+taskgraph:
+    repositories:
+        ci:
+            name: Taskgraph
 
 workers:
     aliases:

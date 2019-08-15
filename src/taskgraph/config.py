@@ -13,7 +13,7 @@ from .util import path
 
 from .util.python_path import find_object
 from .util.schema import validate_schema, Schema, optionally_keyed_by
-from voluptuous import Required, Extra, Any, Optional
+from voluptuous import Required, Extra, Any, Optional, Length, All
 from .util.yaml import load_yaml
 
 logger = logging.getLogger(__name__)
@@ -52,6 +52,10 @@ graph_config_schema = Schema({
             description="The taskcluster index prefix to use for caching tasks. "
             "Defaults to `trust-domain`."
         ): text_type,
+        Required('repositories'): All(
+            {text_type: {Required('name'): text_type}},
+            Length(1),
+        ),
     },
     Extra: object,
 })

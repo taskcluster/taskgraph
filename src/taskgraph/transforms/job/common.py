@@ -9,6 +9,8 @@ consistency.
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import json
+
 from taskgraph.util.taskcluster import get_artifact_prefix
 
 
@@ -124,13 +126,22 @@ def support_vcs_checkout(config, job, taskdesc, sparse=False):
 
     add_cache(job, taskdesc, cache_name, checkoutdir)
 
+    repositories = config.graph_config['taskgraph']['repositories']
     taskdesc['worker'].setdefault('env', {}).update({
-        'VCS_BASE_REPOSITORY': config.params['base_repository'],
-        'VCS_HEAD_REPOSITORY': config.params['head_repository'],
-        'VCS_HEAD_REV': config.params['head_rev'],
-        'VCS_PATH': vcsdir,
-        'VCS_REPOSITORY_TYPE': config.params['repository_type'],
         'HG_STORE_PATH': hgstore,
+        'REPOSITORIES': json.dumps({
+            repo: repo_config['name'] for repo, repo_config in repositories.items()
+        }),
+    })
+    repo_prefix = next(repositories.iterkeys())
+    taskdesc['worker'].setdefault('env', {}).update({
+        '{}_{}'.format(repo_prefix.upper(), key): value for key, value in {
+            'BASE_REPOSITORY'.format(repo_prefix): config.params['base_repository'],
+            'HEAD_REPOSITORY'.format(repo_prefix): config.params['head_repository'],
+            'HEAD_REV': config.params['head_rev'],
+            'PATH': vcsdir,
+            'REPOSITORY_TYPE': config.params['repository_type'],
+        }.items()
     })
 
     if config.params['repository_type'] == 'hg':

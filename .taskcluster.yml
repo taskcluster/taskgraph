@@ -115,11 +115,12 @@ tasks:
                       # run-task uses these to check out the source; the inputs
                       # to `mach taskgraph decision` are all on the command line.
                       $merge:
-                          - VCS_BASE_REPOSITORY: '${repoUrl}'
-                            VCS_HEAD_REPOSITORY: '${repoUrl}'
-                            VCS_HEAD_REF: '${push.revision}'
-                            VCS_HEAD_REV: '${push.revision}'
-                            VCS_REPOSITORY_TYPE: hg
+                          - TASKGRAPH_BASE_REPOSITORY: '${repoUrl}'
+                            TASKGRAPH_HEAD_REPOSITORY: '${repoUrl}'
+                            TASKGRAPH_HEAD_REF: '${push.revision}'
+                            TASKGRAPH_HEAD_REV: '${push.revision}'
+                            TASKGRAPH_REPOSITORY_TYPE: hg
+                            REPOSITORIES: {$json: {taskgraph: Taskgraph}}
                             HG_STORE_PATH: /builds/worker/checkouts/hg-store
                           - $if: 'tasks_for == "action"'
                             then:
@@ -138,14 +139,14 @@ tasks:
 
                   image:
                       type: indexed-image
-                      namespace: taskgraph.cache.level-3.docker-images.v2.decision.hash.6df0ecee939de6889f2480ef5a792abead53715ba576369b402e2dbfa5e00d82
+                      namespace: taskgraph.cache.level-3.docker-images.v2.decision.hash.bd477b55732fc5f5d55a78e6162355af8bc81805b415a9ea8dbe42c020f840db
                       path: public/image.tar.zst
 
                   maxRunTime: 1800
 
                   command:
-                      - /usr/local/bin/run-task
-                      - '--vcs-checkout=/builds/worker/checkouts/src'
+                      - run-task
+                      - '--taskgraph-checkout=/builds/worker/checkouts/src'
                       - '--'
                       - bash
                       - -cx

@@ -58,11 +58,30 @@ def common_setup(config, job, taskdesc, command):
     if run['checkout']:
         support_vcs_checkout(config, job, taskdesc,
                              sparse=bool(run['sparse-profile']))
-        command.append('--vcs-checkout={}'.format(taskdesc['worker']['env']['VCS_PATH']))
+        repositories = config.graph_config['taskgraph']['repositories']
+        repo_prefix = repositories.keys()[0]
 
-    if run['sparse-profile']:
-        command.append('--vcs-sparse-profile=build/sparse-profiles/%s' %
-                       run['sparse-profile'])
+        vcs_path = taskdesc['worker']['env']['{}_PATH'.format(repo_prefix.upper())]
+        command.append('--{}-checkout={}'.format(repo_prefix, vcs_path))
+
+        if run['sparse-profile']:
+            command.append('--{}-sparse-profile=build/sparse-profiles/{}'.format(
+                repo_prefix,
+                run['sparse-profile'],
+            ))
+
+        if 'cwd' in run:
+            run['cwd'] = path.normpath(run['cwd'].format(checkout=vcs_path))
+    elif 'cwd' in run and "{checkout}" in run['cwd']:
+        raise Exception(
+            "Found `{{checkout}}` interpolation in `cwd` for task {name} "
+            "but the task doesn't have a checkout: {cwd}".format(
+                cwd=run['cwd'], name=job.get("name", job.get("label"))
+            )
+        )
+
+    if 'cwd' in run:
+        command.extend(('--task-cwd', run['cwd']))
 
     taskdesc['worker'].setdefault('env', {})['MOZ_SCM_LEVEL'] = config.params['level']
 
@@ -96,16 +115,6 @@ def docker_worker_run_task(config, job, taskdesc):
         })
 
     run_command = run['command']
-    run_cwd = run.get('cwd')
-    if run_cwd and run['checkout']:
-        run_cwd = path.normpath(run_cwd.format(checkout=taskdesc['worker']['env']['VCS_PATH']))
-    elif run_cwd and "{checkout}" in run_cwd:
-        raise Exception(
-            "Found `{{checkout}}` interpolation in `cwd` for task {name} "
-            "but the task doesn't have a checkout: {cwd}".format(
-                cwd=run_cwd, name=job.get("name", job.get("label"))
-            )
-        )
 
     # dict is for the case of `{'task-reference': basestring}`.
     if isinstance(run_command, (basestring, dict)):
@@ -113,8 +122,6 @@ def docker_worker_run_task(config, job, taskdesc):
     command.append('--fetch-hgfingerprint')
     if run['run-as-root']:
         command.extend(('--user', 'root', '--group', 'root'))
-    if run_cwd:
-        command.extend(('--task-cwd', run_cwd))
     command.append('--')
     command.extend(run_command)
     worker['command'] = command
@@ -150,16 +157,6 @@ def generic_worker_run_task(config, job, taskdesc):
     })
 
     run_command = run['command']
-    run_cwd = run.get('cwd')
-    if run_cwd and run['checkout']:
-        run_cwd = path.normpath(run_cwd.format(checkout=taskdesc['worker']['env']['VCS_PATH']))
-    elif run_cwd and "{checkout}" in run_cwd:
-        raise Exception(
-            "Found `{{checkout}}` interpolation in `cwd` for task {name} "
-            "but the task doesn't have a checkout: {cwd}".format(
-                cwd=run_cwd, name=job.get("name", job.get("label"))
-            )
-        )
 
     if isinstance(run_command, basestring):
         if is_win:
@@ -168,8 +165,6 @@ def generic_worker_run_task(config, job, taskdesc):
 
     if run['run-as-root']:
         command.extend(('--user', 'root', '--group', 'root'))
-    if run_cwd:
-        command.extend(('--task-cwd', run_cwd))
     command.append('--')
     command.extend(run_command)
 
