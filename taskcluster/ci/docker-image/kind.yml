@@ -27,6 +27,10 @@ jobs:
             product: 'taskgraph'
             job-name: 'decision-image'
         cache: false
+    # This image should be moved to a mobile-taskgraph project
+    decision-mobile:
+        symbol: I(d-m)
+        parent: decision
     python2.7:
         symbol: I(py2.7)
         definition: python
