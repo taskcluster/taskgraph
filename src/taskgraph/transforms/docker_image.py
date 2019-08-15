@@ -24,8 +24,11 @@ from .task import task_description_schema
 
 DIGEST_RE = re.compile('^[0-9a-f]{64}$')
 
-IMAGE_BUILDER_INDEX = 'taskgraph.cache.level-3.docker-images.v2.image_builder.hash'
-IMAGE_BUILDER_HASH = '19e0076d8238e9398db04369692def2237ee2e6019a9616cf80be2408bd9bb5e'
+IMAGE_BUILDER_BOOSTRAP_IMAGE = (
+    'mozillareleases/taskgraph'
+    ':image_builder-19e0076d8238e9398db04369692def2237ee2e6019a9616cf80be2408bd9bb5e'
+    '@sha256:35c89ce2c6245209ad789a10e9989ad80ea6c4d56c3bac5a27a5fe5b055eab23'
+)
 
 transforms = TransformSequence()
 
@@ -204,9 +207,7 @@ def fill_template(config, tasks):
         # obviously. So we fall back to the last snapshot of the image that
         # was uploaded to docker hub.
         if image_name == 'image_builder' or not has_image_builder:
-            worker['docker-image'] = {
-                'indexed': '{}.{}'.format(IMAGE_BUILDER_INDEX, IMAGE_BUILDER_HASH)
-            }
+            worker['docker-image'] = IMAGE_BUILDER_BOOSTRAP_IMAGE
             # Keep in sync with the Dockerfile used to generate the
             # docker image whose digest is referenced above.
             worker['volumes'] = [
