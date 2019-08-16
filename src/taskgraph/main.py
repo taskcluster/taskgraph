@@ -301,6 +301,42 @@ def decision(options):
     taskgraph_decision(options)
 
 
+@command("cron", description="Run the cron task")
+@argument("--head-repository", required=True, help='URL for "head" repository to fetch')
+@argument("--head-ref", required=False, help="Reference, this is required for git")
+@argument(
+    "--repository-type", required=True, help='Type of repository, either "hg" or "git"'
+)
+@argument(
+    "--project",
+    required=True,
+    help="Project to use for creating tasks. Example: --project=mozilla-central",
+)
+@argument("--level", required=True, help="SCM level of this repository")
+@argument(
+    "--force-run",
+    required=False,
+    help="If given, force this cronjob to run regardless of time, " "and run no others",
+)
+@argument(
+    "--no-create",
+    required=False,
+    action="store_true",
+    help="Do not actually create tasks",
+)
+@argument(
+    "--root",
+    "-r",
+    required=False,
+    help="root of the repository to get cron task definitions from",
+)
+def taskgraph_cron(options):
+    """Run the cron task; this task creates zero or more decision tasks.  It is run
+    from the hooks service on a regular basis."""
+    import taskgraph.cron
+    return taskgraph.cron.taskgraph_cron(options)
+
+
 def create_parser():
     parser = argparse.ArgumentParser(description="Interact with taskgraph")
     subparsers = parser.add_subparsers()
