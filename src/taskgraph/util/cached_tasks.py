@@ -53,15 +53,22 @@ def add_optimization(config, taskdesc, cache_type, cache_name, digest=None, dige
         'digest': digest,
     }
 
-    # We'll try to find a cached version of the toolchain at levels above
-    # and including the current level, starting at the highest level.
+    # We'll try to find a cached version of the toolchain at levels above and
+    # including the current level, starting at the highest level.
+    # Chain-of-trust doesn't handle tasks not built on the tip of a
+    # pull-request, so don't look for level-1 tasks if building a pull-request.
     index_routes = []
-    for level in reversed(range(int(config.params['level']), 4)):
+    min_level = int(config.params['level'])
+    if config.params['tasks_for'] != 'github-pull-request':
+        min_level = max(min_level, 3)
+    for level in reversed(range(min_level, 4)):
         subs['level'] = level
         index_routes.append(TARGET_CACHE_INDEX.format(**subs))
-    taskdesc['optimization'] = {'index-search': index_routes}
+
+        taskdesc['optimization'] = {'index-search': index_routes}
 
     # ... and cache at the lowest level.
+    subs['level'] = config.params['level']
     taskdesc.setdefault('routes', []).append(
         'index.{}'.format(TARGET_CACHE_INDEX.format(**subs)))
 
