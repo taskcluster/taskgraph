@@ -59,8 +59,9 @@ def add_optimization(config, taskdesc, cache_type, cache_name, digest=None, dige
     # pull-request, so don't look for level-1 tasks if building a pull-request.
     index_routes = []
     min_level = int(config.params['level'])
-    if config.params['tasks_for'] != 'github-pull-request':
+    if config.params['tasks_for'] == 'github-pull-request':
         min_level = max(min_level, 3)
+    print(min_level)
     for level in reversed(range(min_level, 4)):
         subs['level'] = level
         index_routes.append(TARGET_CACHE_INDEX.format(**subs))
