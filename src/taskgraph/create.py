@@ -122,7 +122,7 @@ def create_task(session, task_id, label, task_def):
         print("")
         return
 
-    logger.debug("Creating task with taskId {} for {}".format(task_id, label))
+    logger.info("Creating task with taskId {} for {}".format(task_id, label))
     res = session.put('http://taskcluster/queue/v1/task/{}'.format(task_id),
                       data=json.dumps(task_def))
     if res.status_code != 200:
