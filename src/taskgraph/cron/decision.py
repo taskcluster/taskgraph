@@ -77,7 +77,7 @@ def make_decision_task(params, root, symbol, arguments=[]):
             'pushdate': push_info['pushdate'],
         })
     if 'head_ref' in params:
-        context['push']['branch'] = params['head_rev']
+        context['push']['branch'] = params['head_ref']
 
     rendered = jsone.render(taskcluster_yml, context)
     if len(rendered['tasks']) != 1:
