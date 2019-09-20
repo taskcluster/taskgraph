@@ -89,11 +89,11 @@ SHOW_METHODS = {
 }
 
 
-@command("full", description="", defaults={"graph_attr": "full_task_graph"})
-@command("target", description="", defaults={"graph_attr": "target_task_set"})
-@command("target-graph", description="", defaults={"graph_attr": "target_task_graph"})
-@command("optimized", description="", defaults={"graph_attr": "optimized_task_graph"})
-@command("morphed", description="", defaults={"graph_attr": "morphed_task_graph"})
+@command("full", help="Show the full taskgraph.", defaults={"graph_attr": "full_task_graph"})
+@command("target", help="Show the set of target tasks.", defaults={"graph_attr": "target_task_set"})
+@command("target-graph", help="Show the target graph.", defaults={"graph_attr": "target_task_graph"})
+@command("optimized", help="Show the optimized graph.", defaults={"graph_attr": "optimized_task_graph"})
+@command("morphed", help="Show the morphed graph.", defaults={"graph_attr": "morphed_task_graph"})
 @argument("--root", "-r", help="root of the taskgraph definition relative to topsrcdir")
 @argument("--quiet", "-q", action="store_true", help="suppress all logging output")
 @argument(
@@ -179,7 +179,7 @@ def show_taskgraph(options):
         sys.exit(1)
 
 
-@command("build-image", description="Build a Docker image")
+@command("build-image", help="Build a Docker image")
 @argument("image_name", help="Name of the image to build")
 @argument(
     "-t", "--tag", help="tag that the image should be built as.", metavar="name:tag"
@@ -258,7 +258,7 @@ def image_digest(args):
         sys.exit(1)
 
 
-@command("decision", description="Run the decision task")
+@command("decision", help="Run the decision task")
 @argument("--root", "-r", help="root of the taskgraph definition relative to topsrcdir")
 @argument(
     "--message",
@@ -301,7 +301,7 @@ def decision(options):
     taskgraph_decision(options)
 
 
-@command("cron", description="Run the cron task")
+@command("cron", help="Run the cron task")
 @argument("--head-repository", required=True, help='URL for "head" repository to fetch')
 @argument("--head-ref", required=False, help="Reference, this is required for git")
 @argument(
