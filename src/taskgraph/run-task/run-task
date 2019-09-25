@@ -38,7 +38,8 @@ import urllib.error
 import urllib.request
 
 
-FINGERPRINT_URL = 'http://taskcluster/secrets/v1/secret/project/taskcluster/gecko/hgfingerprint'
+SECRET_BASEURL_TPL = 'http://taskcluster/secrets/v1/secret/{}'
+FINGERPRINT_URL = SECRET_BASEURL_TPL.format('project/taskcluster/gecko/hgfingerprint')
 FALLBACK_FINGERPRINT = {
     'fingerprints':
         "sha256:17:38:aa:92:0b:84:3e:aa:8e:52:52:e9:4c:2f:98:a9:0e:bf:6c:3e:e9"
@@ -395,10 +396,17 @@ def git_checkout(
     head_repo: str,
     base_repo: Optional[str],
     ref: Optional[str],
-    commit: Optional[str]
+    commit: Optional[str],
+    ssh_key_file: Optional[str]
 ):
     if not IS_POSIX:
         raise RuntimeError('git checkout only supported on POSIX')
+
+    env = {'PYTHONUNBUFFERED': '1'}
+
+    if ssh_key_file:
+        assert os.path.exists(ssh_key_file)
+        env['GIT_SSH_COMMAND'] = "ssh -i {}".format(ssh_key_file)
 
     if not os.path.exists(destination_path):
         # Repository doesn't already exist, needs to be cloned
@@ -409,7 +417,7 @@ def git_checkout(
             destination_path,
         ]
 
-        run_required_command(b'vcs', args, extra_env={'PYTHONUNBUFFERED': '1'})
+        run_required_command(b'vcs', args, extra_env=env)
 
     # If a ref isn't provided, we fetch all refs from head_repo, which may be slow
     args = [
@@ -419,7 +427,7 @@ def git_checkout(
         ref if ref else '+refs/heads/*:refs/remotes/work/*'
     ]
 
-    run_required_command(b'vcs', args, cwd=destination_path)
+    run_required_command(b'vcs', args, cwd=destination_path, extra_env=env)
 
     args = [
         'git',
@@ -490,6 +498,27 @@ def fetch_hgfingerprint():
         secret = {'secret': FALLBACK_FINGERPRINT}
 
     return secret['secret']['fingerprints']
+
+
+def fetch_ssh_secret(secret_name):
+    """ Retrieves the private ssh key, and returns it as a StringIO object
+    """
+    secret_url = SECRET_BASEURL_TPL.format(secret_name)
+    try:
+        print_line(b'vcs', b'fetching secret %s from %s\n' %
+                   (secret_name.encode('utf-8'), secret_url.encode('utf-8')))
+        res = urllib.request.urlopen(secret_url, timeout=10)
+        secret = res.read()
+        try:
+            secret = json.loads(secret.decode('utf-8'))
+        except ValueError:
+            print_line(b'vcs', b'invalid JSON in secret')
+            sys.exit(1)
+    except (urllib.error.URLError, socket.timeout):
+        print_line(b'vcs', b'Unable to retrieve ssh secret. aborting...')
+        sys.exit(1)
+
+    return secret['secret']['ssh_privkey']
 
 
 def hg_checkout(
@@ -620,6 +649,7 @@ def collect_vcs_options(args, project, name):
     head_repo = os.environ.get('%s_HEAD_REPOSITORY' % env_prefix)
     revision = os.environ.get('%s_HEAD_REV' % env_prefix)
     ref = os.environ.get('%s_HEAD_REF' % env_prefix)
+    private_key_secret = os.environ.get('%s_SSH_SECRET_NAME' % env_prefix)
 
     store_path = os.environ.get('HG_STORE_PATH')
 
@@ -647,6 +677,7 @@ def collect_vcs_options(args, project, name):
         'revision': revision,
         'ref': ref,
         'repo-type': repo_type,
+        'ssh-secret-name': private_key_secret,
     }
 
 
@@ -660,38 +691,55 @@ def vcs_checkout_from_args(options, *, hgmo_fingerprint):
 
     revision = options['revision']
     ref = options['ref']
+    ssh_key_file = None
+    ssh_dir = None
 
-    if options['repo-type'] == 'git':
-        if not revision and not ref:
-            raise RuntimeError('Git requires that either a ref, a revision, or both are provided')
+    try:
+        if options.get('ssh-secret-name'):
+            ssh_dir = os.path.abspath(os.path.join('.', '.ssh-run-task'))
+            os.makedirs(ssh_dir, 0o700)
+            ssh_key_file = os.path.join(ssh_dir, 'private_ssh_key')
+            ssh_key = fetch_ssh_secret(options['ssh-secret-name'])
+            with open(ssh_key_file, mode='w') as psk:
+                psk.write(ssh_key)
+            os.chmod(ssh_key_file, 0o600)
 
-        if not ref:
-            print('Providing a ref will improve the performance of this checkout')
+        if options['repo-type'] == 'git':
+            if not revision and not ref:
+                raise RuntimeError('Git requires that either a ref, a revision, or both are provided')
 
-        revision = git_checkout(
-            options['checkout'],
-            options['head-repo'],
-            options['base-repo'],
-            ref,
-            revision
-        )
-    elif options['repo-type'] == 'hg':
-        if not revision and not ref:
-            raise RuntimeError('Hg requires that at least one of a ref or revision '
-                               'is provided')
+            if not ref:
+                print('Providing a ref will improve the performance of this checkout')
 
-        revision = hg_checkout(
-            options['checkout'],
-            options['head-repo'],
-            options['base-repo'],
-            options['store-path'],
-            hgmo_fingerprint,
-            options['sparse-profile'],
-            ref,
-            revision
-        )
-    else:
-        raise RuntimeError('Type of VCS must be either "git" or "hg"')
+            revision = git_checkout(
+                options['checkout'],
+                options['head-repo'],
+                options['base-repo'],
+                ref,
+                revision,
+                ssh_key_file
+            )
+        elif options['repo-type'] == 'hg':
+            if not revision and not ref:
+                raise RuntimeError('Hg requires that at least one of a ref or revision '
+                                   'is provided')
+
+            revision = hg_checkout(
+                options['checkout'],
+                options['head-repo'],
+                options['base-repo'],
+                options['store-path'],
+                hgmo_fingerprint,
+                options['sparse-profile'],
+                ref,
+                revision
+            )
+        else:
+            raise RuntimeError('Type of VCS must be either "git" or "hg"')
+    finally:
+        if ssh_dir:
+            shutil.rmtree(ssh_dir, ignore_errors=True)
+            pass
 
     os.environ['%s_HEAD_REV' % options['env-prefix']] = revision
 
