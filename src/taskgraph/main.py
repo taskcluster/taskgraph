@@ -89,11 +89,29 @@ SHOW_METHODS = {
 }
 
 
-@command("full", help="Show the full taskgraph.", defaults={"graph_attr": "full_task_graph"})
-@command("target", help="Show the set of target tasks.", defaults={"graph_attr": "target_task_set"})
-@command("target-graph", help="Show the target graph.", defaults={"graph_attr": "target_task_graph"})
-@command("optimized", help="Show the optimized graph.", defaults={"graph_attr": "optimized_task_graph"})
-@command("morphed", help="Show the morphed graph.", defaults={"graph_attr": "morphed_task_graph"})
+@command(
+    "full", help="Show the full taskgraph.", defaults={"graph_attr": "full_task_graph"}
+)
+@command(
+    "target",
+    help="Show the set of target tasks.",
+    defaults={"graph_attr": "target_task_set"},
+)
+@command(
+    "target-graph",
+    help="Show the target graph.",
+    defaults={"graph_attr": "target_task_graph"},
+)
+@command(
+    "optimized",
+    help="Show the optimized graph.",
+    defaults={"graph_attr": "optimized_task_graph"},
+)
+@command(
+    "morphed",
+    help="Show the morphed graph.",
+    defaults={"graph_attr": "morphed_task_graph"},
+)
 @argument("--root", "-r", help="root of the taskgraph definition relative to topsrcdir")
 @argument("--quiet", "-q", action="store_true", help="suppress all logging output")
 @argument(
@@ -334,6 +352,7 @@ def taskgraph_cron(options):
     """Run the cron task; this task creates zero or more decision tasks.  It is run
     from the hooks service on a regular basis."""
     import taskgraph.cron
+
     return taskgraph.cron.taskgraph_cron(options)
 
 
