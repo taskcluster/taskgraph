@@ -168,6 +168,17 @@ class Parameters(ReadOnlyDict):
                 rev = self['head_rev']
                 endpoint = 'blob' if pretty else 'raw'
                 return '{}/{}/{}/{}'.format(repo, endpoint, rev, path)
+            elif repo.startswith('git@github.com:'):
+                if repo.endswith('.git'):
+                    repo = repo[:-4]
+                rev = self['head_rev']
+                endpoint = 'blob' if pretty else 'raw'
+                return "{}/{}/{}/{}".format(
+                    repo.replace("git@github.com:", "https://github.com/"),
+                    endpoint,
+                    rev,
+                    path,
+                )
             else:
                 raise ParameterMismatch("Don't know how to determine file URL for non-github"
                                         "repo: {}".format(repo))

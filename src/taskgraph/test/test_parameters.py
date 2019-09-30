@@ -81,9 +81,14 @@ class TestParameters(unittest.TestCase):
         vals = self.vals.copy()
         vals['repository_type'] = 'git'
 
-        vals['head_repository'] = 'git@github.com:owner/repo.git'
+        vals['head_repository'] = 'git@bitbucket.com:owner/repo.git'
         p = Parameters(**vals)
         self.assertRaises(ParameterMismatch, lambda: p.file_url(''))
+
+        vals['head_repository'] = 'git@github.com:owner/repo.git'
+        p = Parameters(**vals)
+        self.assertTrue(p.file_url('', pretty=True).startswith(
+            'https://github.com/owner/repo/blob/'))
 
         vals['head_repository'] = 'https://github.com/mozilla-mobile/reference-browser'
         p = Parameters(**vals)
