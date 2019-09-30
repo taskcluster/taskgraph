@@ -139,6 +139,7 @@ def support_vcs_checkout(config, job, taskdesc, sparse=False):
             'BASE_REPOSITORY'.format(repo_prefix): config.params['base_repository'],
             'HEAD_REPOSITORY'.format(repo_prefix): config.params['head_repository'],
             'HEAD_REV': config.params['head_rev'],
+            'HEAD_REF': config.params['head_ref'],
             'PATH': vcsdir,
             'REPOSITORY_TYPE': config.params['repository_type'],
             'SSH_SECRET_NAME': repo_config.get('ssh-secret-name'),
