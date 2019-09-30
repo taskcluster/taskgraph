@@ -52,8 +52,13 @@ graph_config_schema = Schema({
             description="The taskcluster index prefix to use for caching tasks. "
             "Defaults to `trust-domain`."
         ): text_type,
-        Required('repositories'): All(
-            {text_type: {Required('name'): text_type}},
+        Required("repositories"): All(
+            {
+                text_type: {
+                    Required("name"): text_type,
+                    Optional("ssh-secret-name"): text_type,
+                }
+            },
             Length(1),
         ),
     },

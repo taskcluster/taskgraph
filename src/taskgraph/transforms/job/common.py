@@ -133,7 +133,7 @@ def support_vcs_checkout(config, job, taskdesc, sparse=False):
             repo: repo_config['name'] for repo, repo_config in repositories.items()
         }),
     })
-    repo_prefix = next(repositories.iterkeys())
+    repo_prefix, repo_config = next(repositories.iteritems())
     taskdesc['worker'].setdefault('env', {}).update({
         '{}_{}'.format(repo_prefix.upper(), key): value for key, value in {
             'BASE_REPOSITORY'.format(repo_prefix): config.params['base_repository'],
@@ -141,7 +141,9 @@ def support_vcs_checkout(config, job, taskdesc, sparse=False):
             'HEAD_REV': config.params['head_rev'],
             'PATH': vcsdir,
             'REPOSITORY_TYPE': config.params['repository_type'],
+            'SSH_SECRET_NAME': repo_config.get('ssh-secret-name'),
         }.items()
+        if value is not None
     })
 
     if config.params['repository_type'] == 'hg':
@@ -149,9 +151,10 @@ def support_vcs_checkout(config, job, taskdesc, sparse=False):
         # for hg.mozilla.org.
         taskdesc['scopes'].append('secrets:get:project/taskcluster/gecko/hgfingerprint')
 
-    # only some worker platforms have taskcluster-proxy enabled
-    if job['worker']['implementation'] in ('docker-worker',):
-        taskdesc['worker']['taskcluster-proxy'] = True
+    if 'ssh-secret-name' in repo_config:
+        taskdesc['scopes'].append('secrets:get:{}'.format(repo_config['ssh-secret-name']))
+
+    taskdesc['worker']['taskcluster-proxy'] = True
 
 
 def generic_worker_hg_commands(base_repo, head_repo, head_rev, path):
