@@ -7,6 +7,7 @@ test "$(whoami)" == 'root'
 apt-get update
 apt-get install -y --force-yes --no-install-recommends \
     ca-certificates \
+    openssh-client \
     python \
     python3 \
     python-pip \
