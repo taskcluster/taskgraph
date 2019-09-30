@@ -45,6 +45,15 @@ FALLBACK_FINGERPRINT = {
         "sha256:17:38:aa:92:0b:84:3e:aa:8e:52:52:e9:4c:2f:98:a9:0e:bf:6c:3e:e9"
         ":15:ff:0a:29:80:f7:06:02:5b:e8:48"}
 
+GITHUB_SSH_FINGERPRINT = (
+    b"github.com ssh-rsa "
+    b"AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkcc"
+    b"Krpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFz"
+    b"LQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaS"
+    b"jB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3sku"
+    b"a2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ==\n"
+)
+
 
 CACHE_UID_GID_MISMATCH = '''
 There is a UID/GID mismatch on the cache. This likely means:
@@ -397,16 +406,26 @@ def git_checkout(
     base_repo: Optional[str],
     ref: Optional[str],
     commit: Optional[str],
-    ssh_key_file: Optional[str]
+    ssh_key_file: Optional[Path],
+    ssh_known_hosts_file: Optional[Path]
 ):
-    if not IS_POSIX:
-        raise RuntimeError('git checkout only supported on POSIX')
-
     env = {'PYTHONUNBUFFERED': '1'}
 
-    if ssh_key_file:
-        assert os.path.exists(ssh_key_file)
-        env['GIT_SSH_COMMAND'] = "ssh -i {}".format(ssh_key_file)
+    if ssh_key_file and ssh_known_hosts_file:
+        if not ssh_key_file.exists():
+            raise RuntimeError("Can't find specified ssh_key file.")
+        if not ssh_known_hosts_file.exists():
+            raise RuntimeError("Can't find specified known_hosts file.")
+        env['GIT_SSH_COMMAND'] = " ".join([
+            "ssh",
+            "-oIdentityFile={}".format(ssh_key_file.as_posix()),
+            "-oStrictHostKeyChecking=yes",
+            "-oUserKnownHostsFile={}".format(ssh_known_hosts_file.as_posix()),
+        ])
+    elif ssh_key_file or ssh_known_hosts_file:
+        raise RuntimeError(
+            'Must specify both ssh_key_file and ssh_known_hosts_file, if either are specified',
+        )
 
     if not os.path.exists(destination_path):
         # Repository doesn't already exist, needs to be cloned
@@ -692,17 +711,21 @@ def vcs_checkout_from_args(options, *, hgmo_fingerprint):
     revision = options['revision']
     ref = options['ref']
     ssh_key_file = None
+    ssh_known_hosts_file = None
     ssh_dir = None
 
     try:
         if options.get('ssh-secret-name'):
-            ssh_dir = os.path.abspath(os.path.join('.', '.ssh-run-task'))
+            ssh_dir = Path("~/.ssh-run-task").expanduser()
             os.makedirs(ssh_dir, 0o700)
-            ssh_key_file = os.path.join(ssh_dir, 'private_ssh_key')
+            ssh_key_file = ssh_dir.joinpath('private_ssh_key')
             ssh_key = fetch_ssh_secret(options['ssh-secret-name'])
-            with open(ssh_key_file, mode='w') as psk:
-                psk.write(ssh_key)
-            os.chmod(ssh_key_file, 0o600)
+            # We don't use write_text here, to avoid \n -> \r\n on windows
+            ssh_key_file.write_bytes(ssh_key.encode("ascii"))
+            ssh_key_file.chmod(0o600)
+            # TODO: We should pull this from a secret, so it can be updated on old trees
+            ssh_known_hosts_file = ssh_dir.joinpath("known_hosts")
+            ssh_known_hosts_file.write_bytes(GITHUB_SSH_FINGERPRINT)
 
         if options['repo-type'] == 'git':
             if not revision and not ref:
@@ -717,7 +740,8 @@ def vcs_checkout_from_args(options, *, hgmo_fingerprint):
                 options['base-repo'],
                 ref,
                 revision,
-                ssh_key_file
+                ssh_key_file,
+                ssh_known_hosts_file,
             )
         elif options['repo-type'] == 'hg':
             if not revision and not ref:
