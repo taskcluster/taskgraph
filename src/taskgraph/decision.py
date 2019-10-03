@@ -67,7 +67,9 @@ def taskgraph_decision(options, parameters=None):
      * calling TaskCluster APIs to create the graph
     """
 
-    parameters = parameters or (lambda config: get_decision_parameters(config, options))
+    parameters = parameters or (
+        lambda graph_config: get_decision_parameters(graph_config, options)
+    )
 
     # create a TaskGraphGenerator instance
     tgg = TaskGraphGenerator(
@@ -102,7 +104,7 @@ def taskgraph_decision(options, parameters=None):
     create_tasks(tgg.graph_config, tgg.morphed_task_graph, tgg.label_to_taskid, tgg.parameters)
 
 
-def get_decision_parameters(config, options):
+def get_decision_parameters(graph_config, options):
     """
     Load parameters from the command-line options for 'taskgraph decision'.
     This also applies per-project parameters, based on the given project.
@@ -173,8 +175,8 @@ def get_decision_parameters(config, options):
     if options.get('optimize_target_tasks') is not None:
         parameters['optimize_target_tasks'] = options['optimize_target_tasks']
 
-    if 'decision-parameters' in config['taskgraph']:
-        find_object(config['taskgraph']['decision-parameters'])(config, parameters)
+    if 'decision-parameters' in graph_config['taskgraph']:
+        find_object(graph_config['taskgraph']['decision-parameters'])(graph_config, parameters)
 
     result = Parameters(**parameters)
     result.check()
