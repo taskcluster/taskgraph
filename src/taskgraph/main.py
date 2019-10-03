@@ -50,7 +50,7 @@ def show_taskgraph_json(taskgraph):
 
 
 def show_taskgraph_yaml(taskgraph):
-    print(yaml.safe_dump(taskgraph.to_json()))
+    print(yaml.safe_dump(taskgraph.to_json(), default_flow_style=False))
 
 
 def get_filtered_taskgraph(taskgraph, tasksregex):
