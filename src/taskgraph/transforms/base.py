@@ -54,11 +54,11 @@ class TransformConfig(object):
 
     @property
     @memoize
-    def repo_config(self):
+    def repo_configs(self):
         repositories = self.graph_config['taskgraph']['repositories']
         repo_prefix = repositories.keys()[0]
 
-        return RepoConfig(
+        return [RepoConfig(
             prefix=repo_prefix,
             name=repositories[repo_prefix]['name'],
             base_repository=self.params['base_repository'],
@@ -67,7 +67,7 @@ class TransformConfig(object):
             head_rev=self.params['head_rev'],
             type=self.params['repository_type'],
             ssh_secret_name=repositories[repo_prefix].get('ssh-secret-name'),
-        )
+        )]
 
 
 @attr.s()

@@ -57,12 +57,16 @@ run_task_schema = Schema({
 def common_setup(config, job, taskdesc, command):
     run = job['run']
     if run['checkout']:
-        support_vcs_checkout(config, job, taskdesc,
-                             sparse=bool(run['sparse-profile']))
-        repo_config = config.repo_config
+        repo_configs = config.repo_configs
+        vcs_path = support_vcs_checkout(
+            config, job, taskdesc,
+            repo_configs=repo_configs,
+            sparse=bool(run['sparse-profile']),
+        )
 
-        vcs_path = taskdesc['worker']['env']['{}_PATH'.format(repo_config.prefix.upper())]
-        command.append('--{}-checkout={}'.format(repo_config.prefix, vcs_path))
+        vcs_path = taskdesc['worker']['env']['VCS_PATH']
+        for repo_config in repo_configs:
+            command.append('--{}-checkout={}'.format(repo_config.prefix, vcs_path))
 
         if run['sparse-profile']:
             command.append('--{}-sparse-profile=build/sparse-profiles/{}'.format(

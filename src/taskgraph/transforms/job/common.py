@@ -97,7 +97,7 @@ def generic_worker_add_artifacts(config, job, taskdesc):
     add_artifacts(config, job, taskdesc, path=get_artifact_prefix(taskdesc))
 
 
-def support_vcs_checkout(config, job, taskdesc, sparse=False):
+def support_vcs_checkout(config, job, taskdesc, repo_configs, sparse=False):
     """Update a job/task with parameters to enable a VCS checkout.
 
     This can only be used with ``run-task`` tasks, as the cache name is
@@ -126,33 +126,32 @@ def support_vcs_checkout(config, job, taskdesc, sparse=False):
 
     add_cache(job, taskdesc, cache_name, checkoutdir)
 
-    repositories = config.graph_config['taskgraph']['repositories']
-    taskdesc['worker'].setdefault('env', {}).update({
+    env = taskdesc['worker'].setdefault('env', {})
+    env.update({
         'HG_STORE_PATH': hgstore,
         'REPOSITORIES': json.dumps({
-            repo: repo_config['name'] for repo, repo_config in repositories.items()
+            repo.prefix: repo.name for repo in repo_configs
         }),
+        'VCS_PATH': vcsdir,
     })
-    repo_config = config.repo_config
-    taskdesc['worker'].setdefault('env', {}).update({
-        '{}_{}'.format(repo_config.prefix.upper(), key): value for key, value in {
-            'BASE_REPOSITORY'.format(repo_config.prefix): repo_config.base_repository,
-            'HEAD_REPOSITORY'.format(repo_config.prefix): repo_config.head_repository,
-            'HEAD_REV': repo_config.head_rev,
-            'HEAD_REF': repo_config.head_ref,
-            'PATH': vcsdir,
-            'REPOSITORY_TYPE': repo_config.type,
-            'SSH_SECRET_NAME': repo_config.ssh_secret_name,
-        }.items()
-        if value is not None
-    })
+    for repo_config in repo_configs:
+        env.update({
+            '{}_{}'.format(repo_config.prefix.upper(), key): value for key, value in {
+                'BASE_REPOSITORY'.format(repo_config.prefix): repo_config.base_repository,
+                'HEAD_REPOSITORY'.format(repo_config.prefix): repo_config.head_repository,
+                'HEAD_REV': repo_config.head_rev,
+                'HEAD_REF': repo_config.head_ref,
+                'REPOSITORY_TYPE': repo_config.type,
+                'SSH_SECRET_NAME': repo_config.ssh_secret_name,
+            }.items()
+            if value is not None
+        })
+        if repo_config.ssh_secret_name:
+            taskdesc['scopes'].append('secrets:get:{}'.format(repo_config.ssh_secret_name))
 
-    if repo_config.type == 'hg':
+    if any(repo_config.type == 'hg' for repo_config in repo_configs):
         # Give task access to hgfingerprint secret so it can pin the certificate
         # for hg.mozilla.org.
         taskdesc['scopes'].append('secrets:get:project/taskcluster/gecko/hgfingerprint')
-
-    if repo_config.ssh_secret_name:
-        taskdesc['scopes'].append('secrets:get:{}'.format(repo_config.ssh_secret_name))
 
     taskdesc['worker']['taskcluster-proxy'] = True
