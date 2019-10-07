@@ -101,7 +101,6 @@ class TransformConfig(object):
         return repo_configs
 
 
-
 @attr.s()
 class TransformSequence(object):
     """
