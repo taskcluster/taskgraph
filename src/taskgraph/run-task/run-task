@@ -460,7 +460,9 @@ def git_checkout(
     args = [
         'git',
         'clean',
-        '-xdf',
+        # Two -f`s causes subdirectories with `.git` directories to be removed
+        # as well.
+        '-xdff',
     ]
 
     run_required_command(b'vcs', args, cwd=destination_path)
