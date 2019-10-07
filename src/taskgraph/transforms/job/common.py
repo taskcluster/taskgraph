@@ -130,11 +130,11 @@ def support_vcs_checkout(config, job, taskdesc, repo_configs, sparse=False):
     env.update({
         'HG_STORE_PATH': hgstore,
         'REPOSITORIES': json.dumps({
-            repo.prefix: repo.name for repo in repo_configs
+            repo.prefix: repo.name for repo in repo_configs.values()
         }),
         'VCS_PATH': vcsdir,
     })
-    for repo_config in repo_configs:
+    for repo_config in repo_configs.values():
         env.update({
             '{}_{}'.format(repo_config.prefix.upper(), key): value for key, value in {
                 'BASE_REPOSITORY'.format(repo_config.prefix): repo_config.base_repository,
@@ -149,7 +149,7 @@ def support_vcs_checkout(config, job, taskdesc, repo_configs, sparse=False):
         if repo_config.ssh_secret_name:
             taskdesc['scopes'].append('secrets:get:{}'.format(repo_config.ssh_secret_name))
 
-    if any(repo_config.type == 'hg' for repo_config in repo_configs):
+    if any(repo_config.type == 'hg' for repo_config in repo_configs.values()):
         # Give task access to hgfingerprint secret so it can pin the certificate
         # for hg.mozilla.org.
         taskdesc['scopes'].append('secrets:get:project/taskcluster/gecko/hgfingerprint')

@@ -56,10 +56,13 @@ graph_config_schema = Schema({
             {
                 text_type: {
                     Required("name"): text_type,
+                    Optional("project-regex"): text_type,
                     Optional("ssh-secret-name"): text_type,
+                    # FIXME
+                    Extra: text_type,
                 }
             },
-            Length(1),
+            Length(min=1),
         ),
     },
     Extra: object,

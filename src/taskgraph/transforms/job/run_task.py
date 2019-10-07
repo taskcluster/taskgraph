@@ -10,6 +10,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 from six import text_type
 
+import attr
+
 from taskgraph.transforms.task import taskref_or_string
 from taskgraph.transforms.job import run_job_using
 from taskgraph.util import path
@@ -29,7 +31,7 @@ run_task_schema = Schema({
     Optional('use-caches'): bool,
 
     # if true (the default), perform a checkout on the worker
-    Required('checkout'): bool,
+    Required('checkout'): Any(bool, {text_type: dict}),
 
     Optional(
         "cwd",
@@ -58,6 +60,14 @@ def common_setup(config, job, taskdesc, command):
     run = job['run']
     if run['checkout']:
         repo_configs = config.repo_configs
+        if len(repo_configs) > 1 and run['checkout'] is True:
+            raise Exception("Must explicitly sepcify checkouts with multiple repos.")
+        elif run["checkout"] is not True:
+            repo_configs = {
+                repo: attr.evolve(repo_configs[repo], **config)
+                for (repo, config) in run["checkout"].items()
+            }
+
         vcs_path = support_vcs_checkout(
             config, job, taskdesc,
             repo_configs=repo_configs,
@@ -65,8 +75,9 @@ def common_setup(config, job, taskdesc, command):
         )
 
         vcs_path = taskdesc['worker']['env']['VCS_PATH']
-        for repo_config in repo_configs:
-            command.append('--{}-checkout={}'.format(repo_config.prefix, vcs_path))
+        for repo_config in repo_configs.values():
+            checkout_path = path.join(vcs_path, repo_config.path)
+            command.append('--{}-checkout={}'.format(repo_config.prefix, checkout_path))
 
         if run['sparse-profile']:
             command.append('--{}-sparse-profile=build/sparse-profiles/{}'.format(

@@ -4,6 +4,8 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import re
+
 import attr
 
 from six import text_type
@@ -21,8 +23,9 @@ class RepoConfig(object):
     base_repository = attr.ib(type=text_type)
     head_repository = attr.ib(type=text_type)
     head_ref = attr.ib(type=text_type)
-    head_rev = attr.ib(type=text_type)
     type = attr.ib(type=text_type)
+    path = attr.ib(type=text_type, default="")
+    head_rev = attr.ib(type=text_type, default=None)
     ssh_secret_name = attr.ib(type=text_type, default=None)
 
 
@@ -56,18 +59,47 @@ class TransformConfig(object):
     @memoize
     def repo_configs(self):
         repositories = self.graph_config['taskgraph']['repositories']
-        repo_prefix = repositories.keys()[0]
+        if len(repositories) == 1:
+            current_prefix = repositories.keys()[0]
+        else:
+            project = self.params['project']
+            matching_repos = {
+                repo_prefix: repo
+                for (repo_prefix, repo) in repositories.items()
+                if re.match(repo['project-regex'], project)
+             }
+            if len(matching_repos) != 1:
+                raise Exception("Couldn't find repository matching project `{}`".format(project))
+            current_prefix = matching_repos.keys()[0]
 
-        return [RepoConfig(
-            prefix=repo_prefix,
-            name=repositories[repo_prefix]['name'],
-            base_repository=self.params['base_repository'],
-            head_repository=self.params['head_repository'],
-            head_ref=self.params['head_ref'],
-            head_rev=self.params['head_rev'],
-            type=self.params['repository_type'],
-            ssh_secret_name=repositories[repo_prefix].get('ssh-secret-name'),
-        )]
+        repo_configs = {
+            current_prefix: RepoConfig(
+                prefix=current_prefix,
+                name=repositories[current_prefix]['name'],
+                base_repository=self.params['base_repository'],
+                head_repository=self.params['head_repository'],
+                head_ref=self.params['head_ref'],
+                head_rev=self.params['head_rev'],
+                type=self.params['repository_type'],
+                ssh_secret_name=repositories[current_prefix].get('ssh-secret-name'),
+            ),
+        }
+        if len(repositories) != 1:
+            repo_configs.update({
+                repo_prefix: RepoConfig(
+                    prefix=repo_prefix,
+                    name=repo['name'],
+                    base_repository=repo['default-repository'],
+                    head_repository=repo['default-repository'],
+                    head_ref=repo['default-ref'],
+                    type=repo['type'],
+                    ssh_secret_name=repo.get('ssh-secret-name'),
+                )
+                for (repo_prefix, repo) in repositories.items()
+                if repo_prefix != current_prefix
+            })
+        return repo_configs
+
 
 
 @attr.s()
