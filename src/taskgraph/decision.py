@@ -18,7 +18,7 @@ from .generator import TaskGraphGenerator
 from .parameters import Parameters
 from .taskgraph import TaskGraph
 from taskgraph.util.python_path import find_object
-from taskgraph.util.vcs import get_hg_revision_branch, get_commit_message
+from taskgraph.util.vcs import get_commit_message
 from taskgraph.util.yaml import load_yaml
 
 
@@ -135,12 +135,6 @@ def get_decision_parameters(graph_config, options):
     parameters['optimize_target_tasks'] = True
     parameters['existing_tasks'] = {}
     parameters['do_not_optimize'] = []
-
-    if parameters['repository_type'] == 'hg':
-        parameters['hg_branch'] = get_hg_revision_branch(os.getcwd(),
-                                                         revision=parameters['head_rev'])
-    else:
-        parameters['hg_branch'] = None
 
     # owner must be an email, but sometimes (e.g., for ffxbld) it is not, in which
     # case, fake it

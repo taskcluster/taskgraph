@@ -26,7 +26,6 @@ class TestParameters(unittest.TestCase):
         'head_ref': 'ref',
         'head_repository': 'repository',
         'head_rev': 'rev',
-        'hg_branch': 'default',
         'level': '3',
         'moz_build_date': 'time',
         'optimize_target_tasks': True,

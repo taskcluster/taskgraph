@@ -43,16 +43,6 @@ def find_hg_revision_push_info(repository, revision):
     }
 
 
-def get_hg_revision_branch(root, revision):
-    """Given the parameters for a revision, find the hg_branch (aka
-    relbranch) of the revision."""
-    return subprocess.check_output([
-        'hg', 'identify',
-        '-T', '{branch}',
-        '--rev', revision,
-    ], cwd=root)
-
-
 def get_repository_type(root):
     root = root or '.'
     if os.path.isdir(os.path.join(root, '.git')):
