@@ -6,12 +6,27 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import attr
 
+from six import text_type
+
 from ..config import GraphConfig
 from ..parameters import Parameters
 from ..util.schema import Schema, validate_schema
+from ..util.memoize import memoize
 
 
 @attr.s(frozen=True)
+class RepoConfig(object):
+    prefix = attr.ib(type=text_type)
+    name = attr.ib(type=text_type)
+    base_repository = attr.ib(type=text_type)
+    head_repository = attr.ib(type=text_type)
+    head_ref = attr.ib(type=text_type)
+    head_rev = attr.ib(type=text_type)
+    type = attr.ib(type=text_type)
+    ssh_secret_name = attr.ib(type=text_type, default=None)
+
+
+@attr.s(frozen=True, cmp=False)
 class TransformConfig(object):
     """
     A container for configuration affecting transforms.  The `config` argument
@@ -36,6 +51,23 @@ class TransformConfig(object):
 
     # Global configuration of the taskgraph
     graph_config = attr.ib(type=GraphConfig)
+
+    @property
+    @memoize
+    def repo_config(self):
+        repositories = self.graph_config['taskgraph']['repositories']
+        repo_prefix = repositories.keys()[0]
+
+        return RepoConfig(
+            prefix=repo_prefix,
+            name=repositories[repo_prefix]['name'],
+            base_repository=self.params['base_repository'],
+            head_repository=self.params['head_repository'],
+            head_ref=self.params['head_ref'],
+            head_rev=self.params['head_rev'],
+            type=self.params['repository_type'],
+            ssh_secret_name=repositories[repo_prefix].get('ssh-secret-name'),
+        )
 
 
 @attr.s()

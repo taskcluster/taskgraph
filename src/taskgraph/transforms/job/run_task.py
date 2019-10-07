@@ -59,15 +59,14 @@ def common_setup(config, job, taskdesc, command):
     if run['checkout']:
         support_vcs_checkout(config, job, taskdesc,
                              sparse=bool(run['sparse-profile']))
-        repositories = config.graph_config['taskgraph']['repositories']
-        repo_prefix = repositories.keys()[0]
+        repo_config = config.repo_config
 
-        vcs_path = taskdesc['worker']['env']['{}_PATH'.format(repo_prefix.upper())]
-        command.append('--{}-checkout={}'.format(repo_prefix, vcs_path))
+        vcs_path = taskdesc['worker']['env']['{}_PATH'.format(repo_config.prefix.upper())]
+        command.append('--{}-checkout={}'.format(repo_config.prefix, vcs_path))
 
         if run['sparse-profile']:
             command.append('--{}-sparse-profile=build/sparse-profiles/{}'.format(
-                repo_prefix,
+                repo_config.prefix,
                 run['sparse-profile'],
             ))
 

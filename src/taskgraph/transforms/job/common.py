@@ -133,26 +133,26 @@ def support_vcs_checkout(config, job, taskdesc, sparse=False):
             repo: repo_config['name'] for repo, repo_config in repositories.items()
         }),
     })
-    repo_prefix, repo_config = next(repositories.iteritems())
+    repo_config = config.repo_config
     taskdesc['worker'].setdefault('env', {}).update({
-        '{}_{}'.format(repo_prefix.upper(), key): value for key, value in {
-            'BASE_REPOSITORY'.format(repo_prefix): config.params['base_repository'],
-            'HEAD_REPOSITORY'.format(repo_prefix): config.params['head_repository'],
-            'HEAD_REV': config.params['head_rev'],
-            'HEAD_REF': config.params['head_ref'],
+        '{}_{}'.format(repo_config.prefix.upper(), key): value for key, value in {
+            'BASE_REPOSITORY'.format(repo_config.prefix): repo_config.base_repository,
+            'HEAD_REPOSITORY'.format(repo_config.prefix): repo_config.head_repository,
+            'HEAD_REV': repo_config.head_rev,
+            'HEAD_REF': repo_config.head_ref,
             'PATH': vcsdir,
-            'REPOSITORY_TYPE': config.params['repository_type'],
-            'SSH_SECRET_NAME': repo_config.get('ssh-secret-name'),
+            'REPOSITORY_TYPE': repo_config.type,
+            'SSH_SECRET_NAME': repo_config.ssh_secret_name,
         }.items()
         if value is not None
     })
 
-    if config.params['repository_type'] == 'hg':
+    if repo_config.type == 'hg':
         # Give task access to hgfingerprint secret so it can pin the certificate
         # for hg.mozilla.org.
         taskdesc['scopes'].append('secrets:get:project/taskcluster/gecko/hgfingerprint')
 
-    if 'ssh-secret-name' in repo_config:
-        taskdesc['scopes'].append('secrets:get:{}'.format(repo_config['ssh-secret-name']))
+    if repo_config.ssh_secret_name:
+        taskdesc['scopes'].append('secrets:get:{}'.format(repo_config.ssh_secret_name))
 
     taskdesc['worker']['taskcluster-proxy'] = True
