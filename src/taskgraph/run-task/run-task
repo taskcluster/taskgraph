@@ -939,7 +939,16 @@ def main(args):
         if running_as_root:
             os.chown(store_path, uid, gid)
 
+    repository_paths = [
+        Path(repo["checkout"]) for repo in repositories if repo["checkout"]
+    ]
     for repo in repositories:
+        if not repo['checkout']:
+            continue
+        parents = Path(repo['checkout']).parents
+        if any((path in repository_paths) for path in parents):
+            # Skip creating any checkouts that are inside other checokuts
+            continue
         prepare_checkout_dir(repo['checkout'])
 
     hgmo_fingerprint = None
