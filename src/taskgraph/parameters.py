@@ -134,6 +134,13 @@ class Parameters(ReadOnlyDict):
         """
         return 'try' in self['project'] or self['tasks_for'] == 'github-pull-request'
 
+    @property
+    def moz_build_date(self):
+        # XXX self["moz_build_date"] is left as a string because:
+        #  * of backward compatibility
+        #  * parameters are output in a YAML file
+        return datetime.strptime(self["moz_build_date"], "%Y%m%d%H%M%S")
+
     def file_url(self, path, pretty=False):
         """
         Determine the VCS URL for viewing a file in the tree, suitable for

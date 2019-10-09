@@ -4,6 +4,7 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import datetime
 import unittest
 
 from taskgraph.parameters import (
@@ -27,7 +28,7 @@ class TestParameters(unittest.TestCase):
         'head_repository': 'repository',
         'head_rev': 'rev',
         'level': '3',
-        'moz_build_date': 'time',
+        'moz_build_date': '20191008095500',
         'optimize_target_tasks': True,
         'owner': 'nobody@mozilla.com',
         'project': 'project',
@@ -129,3 +130,8 @@ class TestParameters(unittest.TestCase):
             self.assertEqual(
                 load_parameters_file('params.json', overrides={'some': 'other'}),
                 {'some': 'other'})
+
+    def test_moz_build_date_time(self):
+        p = Parameters(**self.vals)
+        self.assertEqual(p['moz_build_date'], '20191008095500')
+        self.assertEqual(p.moz_build_date, datetime.datetime(2019, 10, 8, 9, 55, 0))
