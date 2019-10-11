@@ -8,7 +8,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import json
 import os
-import re
 from slugid import nice as slugid
 from types import FunctionType
 from collections import namedtuple
@@ -174,9 +173,6 @@ def register_callback_action(name, title, symbol, description, order=10000,
             }
 
             task_group_id = os.environ.get('TASK_ID', slugid())
-            match = re.match(r'https://(hg.mozilla.org)/(.*?)/?$', parameters[repo_param])
-            if not match:
-                raise Exception('Unrecognized {}'.format(repo_param))
             action = {
                 'name': name,
                 'title': title,
