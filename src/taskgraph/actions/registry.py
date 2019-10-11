@@ -159,14 +159,14 @@ def register_callback_action(name, title, symbol, description, order=10000,
             actionPerm = 'generic' if generic else cb_name
 
             # gather up the common decision-task-supplied data for this action
-            repo_param = '{}head_repository'.format(graph_config['project-repo-param-prefix'])
+            repo_param = 'head_repository'
             repository = {
                 'url': parameters[repo_param],
                 'project': parameters['project'],
                 'level': parameters['level'],
             }
 
-            revision = parameters['{}head_rev'.format(graph_config['project-repo-param-prefix'])]
+            revision = parameters['head_rev']
             push = {
                 'owner': 'mozilla-taskcluster-maintenance@mozilla.com',
                 'pushlog_id': parameters['pushlog_id'],
@@ -289,7 +289,7 @@ def sanity_check_task_scope(callback, parameters, graph_config):
 
     actionPerm = 'generic' if action.generic else action.cb_name
 
-    repo_param = '{}head_repository'.format(graph_config['project-repo-param-prefix'])
+    repo_param = 'head_repository'
     head_repository = parameters[repo_param]
     assert head_repository.startswith('https://hg.mozilla.org/')
     expected_scope = 'assume:repo:{}:action:{}'.format(head_repository[8:], actionPerm)
