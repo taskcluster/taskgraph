@@ -287,7 +287,11 @@ def sanity_check_task_scope(callback, parameters, graph_config):
 
     repo_param = 'head_repository'
     head_repository = parameters[repo_param]
-    assert head_repository.startswith('https://hg.mozilla.org/')
+    if not head_repository.startswith(('https://hg.mozilla.org', 'https://github.com')):
+        raise Exception(
+            '{} is not either https://hg.mozilla.org or https://github.com !'
+        )
+
     expected_scope = 'assume:repo:{}:action:{}'.format(head_repository[8:], actionPerm)
 
     # the scope should appear literally; no need for a satisfaction check. The use of
