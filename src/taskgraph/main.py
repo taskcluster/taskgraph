@@ -356,6 +356,108 @@ def taskgraph_cron(options):
     return taskgraph.cron.taskgraph_cron(options)
 
 
+@command("action-callback", description="Run action callback used by action tasks")
+@argument(
+    "--root",
+    "-r",
+    default="taskcluster/ci",
+    help="root of the taskgraph definition relative to topsrcdir",
+)
+def action_callback(options):
+    from taskgraph.actions import trigger_action_callback
+    from taskgraph.actions.util import get_parameters
+
+    try:
+        # the target task for this action (or null if it's a group action)
+        task_id = json.loads(os.environ.get("ACTION_TASK_ID", "null"))
+        # the target task group for this action
+        task_group_id = os.environ.get("ACTION_TASK_GROUP_ID", None)
+        input = json.loads(os.environ.get("ACTION_INPUT", "null"))
+        callback = os.environ.get("ACTION_CALLBACK", None)
+        root = options["root"]
+
+        parameters = get_parameters(task_group_id)
+
+        return trigger_action_callback(
+            task_group_id=task_group_id,
+            task_id=task_id,
+            input=input,
+            callback=callback,
+            parameters=parameters,
+            root=root,
+            test=False,
+        )
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)
+
+
+@command("test-action-callback", description="Run an action callback in a testing mode")
+@argument(
+    "--root",
+    "-r",
+    default="taskcluster/ci",
+    help="root of the taskgraph definition relative to topsrcdir",
+)
+@argument(
+    "--parameters",
+    "-p",
+    default="project=mozilla-central",
+    help="parameters file (.yml or .json; see " "`taskcluster/docs/parameters.rst`)`",
+)
+@argument("--task-id", default=None, help="TaskId to which the action applies")
+@argument(
+    "--task-group-id", default=None, help="TaskGroupId to which the action applies"
+)
+@argument("--input", default=None, help="Action input (.yml or .json)")
+@argument("callback", default=None, help="Action callback name (Python function name)")
+def test_action_callback(options):
+    import taskgraph.parameters
+    import taskgraph.actions
+    from taskgraph.util import yaml
+    from taskgraph.config import load_graph_config
+
+    def load_data(filename):
+        with open(filename) as f:
+            if filename.endswith(".yml"):
+                return yaml.load_stream(f)
+            elif filename.endswith(".json"):
+                return json.load(f)
+            else:
+                raise Exception("unknown filename {}".format(filename))
+
+    try:
+        task_id = options["task_id"]
+
+        if options["input"]:
+            input = load_data(options["input"])
+        else:
+            input = None
+
+        root = options["root"]
+        graph_config = load_graph_config(root)
+        trust_domain = graph_config["trust-domain"]
+        graph_config.register()
+
+        parameters = taskgraph.parameters.load_parameters_file(
+            options["parameters"], strict=False, trust_domain=trust_domain
+        )
+        parameters.check()
+
+        return taskgraph.actions.trigger_action_callback(
+            task_group_id=options["task_group_id"],
+            task_id=task_id,
+            input=input,
+            callback=options["callback"],
+            parameters=parameters,
+            root=root,
+            test=True,
+        )
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)
+
+
 def create_parser():
     parser = argparse.ArgumentParser(description="Interact with taskgraph")
     subparsers = parser.add_subparsers()
