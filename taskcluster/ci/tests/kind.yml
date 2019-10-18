@@ -11,7 +11,7 @@ transforms:
 
 job-defaults:
     attributes: {}
-    worker-type: misc
+    worker-type: t-linux
     worker:
         docker-image: {in-tree: python2.7}
         max-run-time: 3600

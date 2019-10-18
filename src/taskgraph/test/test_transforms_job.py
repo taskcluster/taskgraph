@@ -67,7 +67,7 @@ def transform(monkeypatch, config):
 
 
 @pytest.mark.parametrize('task', [
-    {'worker-type': 'misc'},
+    {'worker-type': 't-linux'},
     pytest.param({'worker-type': 'releng-hardware/gecko-t-win10-64-hw'}, marks=pytest.mark.xfail),
 ], ids=['docker-worker', 'generic-worker'])
 def test_worker_caches(task, transform):
