@@ -50,23 +50,28 @@ def worker_type_implementation(graph_config, worker_type):
 
 
 @memoize
-def get_worker_type(graph_config, worker_type, level):
+def get_worker_type(graph_config, alias, level):
     """
     Get the worker type based, evaluating aliases from the graph config.
     """
-    if worker_type in _BUILTIN_TYPES:
-        builtin_type = _BUILTIN_TYPES[worker_type]
+    if alias in _BUILTIN_TYPES:
+        builtin_type = _BUILTIN_TYPES[alias]
         return builtin_type.provisioner, builtin_type.worker_type
 
     level = str(level)
     worker_config = evaluate_keyed_by(
-        {"by-worker-type": graph_config["workers"]["aliases"]},
-        "worker-types.yml",
-        {"worker-type": worker_type},
+        {"by-alias": graph_config["workers"]["aliases"]},
+        "graph_config.workers.aliases",
+        {"alias": alias},
     )
+    provisioner = evaluate_keyed_by(
+        worker_config["provisioner"],
+        alias,
+        {"level": level},
+    ).format(level=level)
     worker_type = evaluate_keyed_by(
         worker_config["worker-type"],
-        worker_type,
+        alias,
         {"level": level},
-    ).format(level=level, alias=worker_type)
-    return worker_config["provisioner"], worker_type
+    ).format(level=level, alias=alias)
+    return provisioner, worker_type
