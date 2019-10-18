@@ -139,7 +139,7 @@ tasks:
 
                   image:
                       type: indexed-image
-                      namespace: taskgraph.cache.level-3.docker-images.v2.decision.hash.bd477b55732fc5f5d55a78e6162355af8bc81805b415a9ea8dbe42c020f840db
+                      namespace: taskgraph.cache.level-3.docker-images.v2.decision.hash.21bef1bc0f11e62c7a23384584f9f8f0d96e95eef192e5bb599fc82ba55c81a7
                       path: public/image.tar.zst
 
                   maxRunTime: 1800
