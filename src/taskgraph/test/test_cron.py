@@ -32,7 +32,7 @@ from taskgraph.cron import (
 )))
 def test_taskgraph_cron(monkeypatch, force_run, run_job_output, expectation):
     monkeypatch.setattr('taskgraph.cron.calculate_head_rev', lambda _, __: 'someheadrev')
-    monkeypatch.setattr('taskgraph.cron.calculate_time', lambda _: datetime())
+    monkeypatch.setattr('taskgraph.cron.calculate_time', lambda _: datetime(2019, 10, 24))
     monkeypatch.setattr('taskgraph.cron.load_jobs', lambda _, root: {'nightly': {}})
     monkeypatch.setattr('taskgraph.cron.should_run', lambda _, __: True)
 
