@@ -60,27 +60,18 @@ def run_job(job_name, job, params, root):
     params = params.copy()
     params['job_name'] = job_name
 
-    try:
-        job_type = job['job']['type']
-        if job_type in JOB_TYPES:
-            tasks = JOB_TYPES[job_type](job['job'], params, root=root)
-        else:
-            raise Exception("job type {} not recognized".format(job_type))
-        if params['no_create']:
-            for task_id, task in tasks:
-                print("Not creating task {} (--no-create):\n".format(task_id) +
-                      json.dumps(task, sort_keys=True, indent=4, separators=(',', ': ')))
-        else:
-            for task_id, task in tasks:
-                create_task(get_session(), task_id, job_name, task)
-
-    except Exception:
-        # report the exception, but don't fail the whole cron task, as that
-        # would leave other jobs un-run.  NOTE: we could report job failure to
-        # a responsible person here via tc-notify
-        traceback.print_exc()
-        logger.error("cron job {} run failed; continuing to next job".format(
-            params['job_name']))
+    job_type = job['job']['type']
+    if job_type in JOB_TYPES:
+        tasks = JOB_TYPES[job_type](job['job'], params, root=root)
+    else:
+        raise Exception("job type {} not recognized".format(job_type))
+    if params['no_create']:
+        for task_id, task in tasks:
+            print("Not creating task {} (--no-create):\n".format(task_id) +
+                  json.dumps(task, sort_keys=True, indent=4, separators=(',', ': ')))
+    else:
+        for task_id, task in tasks:
+            create_task(get_session(), task_id, job_name, task)
 
 
 def calculate_time(options):
@@ -148,13 +139,39 @@ def taskgraph_cron(options):
 
     if options['force_run']:
         job_name = options['force_run']
-        logger.info("force-running cron job {}".format(job_name))
+        logger.info('force-running cron job "{}"'.format(job_name))
         run_job(job_name, jobs[job_name], params, root)
         return
 
+    failed_jobs = []
     for job_name, job in sorted(jobs.items()):
         if should_run(job, params):
-            logger.info("running cron job {}".format(job_name))
-            run_job(job_name, job, params, root)
+            logger.info('running cron job "{}"'.format(job_name))
+            try:
+                run_job(job_name, job, params, root)
+            except Exception as exc:
+                # report the exception, but don't fail the whole cron task, as that
+                # would leave other jobs un-run.
+                failed_jobs.append((job_name, exc))
+                traceback.print_exc()
+                logger.error('cron job "{}" run failed; continuing to next job'.format(job_name))
+
         else:
-            logger.info("not running cron job {}".format(job_name))
+            logger.info('not running cron job "{}"'.format(job_name))
+
+    _format_and_raise_error_if_any(failed_jobs)
+
+
+def _format_and_raise_error_if_any(failed_jobs):
+    if failed_jobs:
+        failed_job_names = [job_name for job_name, _ in failed_jobs]
+        failed_job_names_with_exceptions = (
+            '"{}": "{}"'.format(job_name, exc) for job_name, exc in failed_jobs
+        )
+        raise RuntimeError(
+            "Cron jobs {} couldn't be triggered properly. "
+            "Reason(s):\n * {}\nSee logs above for details.".format(
+                failed_job_names,
+                '\n * '.join(failed_job_names_with_exceptions)
+            )
+        )

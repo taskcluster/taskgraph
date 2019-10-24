@@ -368,7 +368,7 @@ def create_parser():
 
 
 def main():
-    logging.basicConfig(format="%(message)s", level=logging.INFO)
+    logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
     parser = create_parser()
     args = parser.parse_args()
     try:
