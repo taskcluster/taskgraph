@@ -24,11 +24,10 @@ from .task import task_description_schema
 
 DIGEST_RE = re.compile('^[0-9a-f]{64}$')
 
-# TODO Bug 1595808 - part 2: Update this reference once part 1 was landed and built.
 IMAGE_BUILDER_BOOSTRAP_IMAGE = (
     'mozillareleases/taskgraph'
-    ':image_builder-f2fabc103b83df379ecaa02a67fda4d2da650135ce894de277ea4b30329799d9'
-    '@sha256:294a509387c728933d6a46eacabaa8a5d08b226545bae63012f14ae096515d91'
+    ':image_builder-3dcd9dec75e660a8a7df3f68d36b37364c4bcbcae081954fe8954de87060ee83'
+    '@sha256:dc4cc7c1f129834b624e67cae320294661dfc657cc11c03cfcd255a61f3f8d99'
 )
 
 transforms = TransformSequence()
