@@ -24,6 +24,7 @@ from .task import task_description_schema
 
 DIGEST_RE = re.compile('^[0-9a-f]{64}$')
 
+# TODO Bug 1595808 - part 2: Update this reference once part 1 was landed and built.
 IMAGE_BUILDER_BOOSTRAP_IMAGE = (
     'mozillareleases/taskgraph'
     ':image_builder-f2fabc103b83df379ecaa02a67fda4d2da650135ce894de277ea4b30329799d9'
