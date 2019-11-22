@@ -14,6 +14,7 @@ from taskgraph.util.vcs import (
     get_repository_type,
     calculate_head_rev,
     get_commit_message,
+    get_repo_path,
 )
 
 
@@ -138,3 +139,19 @@ def test_calculate_head_rev_git(git_repo):
     #  * the hash of the files stored on disk (here, it's always the same file)
     # https://gist.github.com/masak/2415865
     assert calculate_head_rev('git', git_repo) == 'c34844580592fcf4575b8f1174285b853b566d85'
+
+
+def test_get_repo_path_hg(hg_repo):
+    with open(os.path.join(hg_repo, '.hg/hgrc'), 'w') as f:
+        f.write("""
+[paths]
+default = https://some.hg/repo
+""")
+    assert get_repo_path('hg', hg_repo) == 'https://some.hg/repo'
+
+
+def test_get_repo_path_git(git_repo):
+    subprocess.check_output(
+        ['git', 'remote', 'add', 'origin', 'https://some.git/repo'], cwd=git_repo
+    )
+    assert get_repo_path('git', git_repo) == 'https://some.git/repo'
