@@ -11,6 +11,7 @@ import pytest
 import subprocess
 
 from taskgraph.util.vcs import (
+    get_repository_type,
     calculate_head_rev,
     get_commit_message,
 )
@@ -74,6 +75,19 @@ def _init_repo(tmpdir, repo_type):
     subprocess.check_output([repo_type, 'add', first_file_path.strpath], cwd=repo_dir)
 
     return repo_dir
+
+
+def test_get_repository_type_hg(hg_repo):
+    assert get_repository_type(hg_repo) == 'hg'
+
+
+def test_get_repository_type_git(git_repo):
+    assert get_repository_type(git_repo) == 'git'
+
+
+def test_get_repository_type_failure(tmpdir):
+    with pytest.raises(RuntimeError):
+        get_repository_type(tmpdir.strpath)
 
 
 @pytest.mark.parametrize('repo_type, commit_message', ((
