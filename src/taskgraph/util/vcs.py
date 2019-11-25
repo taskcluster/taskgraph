@@ -58,12 +58,14 @@ def get_repository_type(root):
 # current revision is.  Mercurial refers to that as `.`.
 def get_commit_message(repository_type, root):
     if repository_type == 'hg':
-        return subprocess.check_output(['hg', 'log', '-r', '.', '-T', '{desc}'], cwd=root)
+        message = subprocess.check_output(['hg', 'log', '-r', '.', '-T', '{desc}'], cwd=root)
     elif repository_type == 'git':
-        return subprocess.check_output(['git', 'log', '-n1', '--format=%B'], cwd=root)
+        message = subprocess.check_output(['git', 'log', '-n1', '--format=%B'], cwd=root)
     else:
         raise RuntimeError('Only the "git" and "hg" repository types are supported for using '
                            'get_commit_message()')
+
+    return message.decode("utf-8")
 
 
 def calculate_head_rev(repository_type, root):
