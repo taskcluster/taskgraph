@@ -310,6 +310,7 @@ def image_digest(args):
 @argument(
     "--head-rev", required=True, help="Commit revision to use from head repository"
 )
+@argument("--head-tag", help="Tag attached to the revision", default="")
 @argument(
     "--tasks-for", required=True, help="the tasks_for value used to generate this task"
 )

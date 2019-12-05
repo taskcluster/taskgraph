@@ -53,6 +53,7 @@ class TestGetDecisionParameters(unittest.TestCase):
             'head_repository': 'https://hg.mozilla.org/mozilla-central',
             'head_rev': 'abcd',
             'head_ref': 'ef01',
+            'head_tag': 'v0.0.1',
             'message': '',
             'project': 'mozilla-central',
             'pushlog_id': '143',
@@ -65,8 +66,9 @@ class TestGetDecisionParameters(unittest.TestCase):
 
     def test_simple_options(self):
         params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
-        self.assertEqual(params['pushlog_id'], '143')
         self.assertEqual(params['build_date'], 1503691511)
+        self.assertEqual(params['head_tag'], 'v0.0.1')
+        self.assertEqual(params['pushlog_id'], '143')
         self.assertEqual(params['moz_build_date'], '20170825200511')
 
     def test_no_email_owner(self):
