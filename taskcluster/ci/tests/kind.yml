@@ -10,7 +10,8 @@ transforms:
     - taskgraph.transforms.task:transforms
 
 job-defaults:
-    attributes: {}
+    attributes:
+        retrigger: true
     worker-type: t-linux
     worker:
         docker-image: {in-tree: python2.7}
