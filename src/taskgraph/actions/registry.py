@@ -171,6 +171,9 @@ def register_callback_action(name, title, symbol, description, order=10000,
                 'pushlog_id': parameters['pushlog_id'],
                 'revision': revision,
             }
+            branch = parameters.get('head_ref')
+            if branch:
+                push['branch'] = branch
 
             task_group_id = os.environ.get('TASK_ID', slugid())
             action = {
@@ -214,8 +217,6 @@ def register_callback_action(name, title, symbol, description, order=10000,
                         'action': action,
                         'repository': repository,
                         'push': push,
-                        # parameters is long, so fetch it from the actions.json variables
-                        'parameters': {'$eval': 'parameters'},
                     },
 
                     # and pass everything else through from our own context
@@ -263,9 +264,7 @@ def render_actions_json(parameters, graph_config):
             actions.append(action)
     return {
         'version': 1,
-        'variables': {
-            'parameters': dict(**parameters),
-        },
+        'variables': {},
         'actions': actions,
     }
 
