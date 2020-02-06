@@ -641,6 +641,10 @@ def fetch_artifacts():
     fetch_content = shutil.which('fetch-content')
 
     if not fetch_content or not os.path.isfile(fetch_content):
+        fetch_content = os.path.join(os.path.dirname(__file__),
+                                     'fetch-content')
+
+    if not os.path.isfile(fetch_content):
         print(FETCH_CONTENT_NOT_FOUND)
         sys.exit(1)
 
