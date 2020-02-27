@@ -9,6 +9,8 @@ import os
 import json
 import logging
 
+from six import text_type
+
 import time
 import yaml
 
@@ -19,7 +21,9 @@ from .parameters import Parameters
 from .taskgraph import TaskGraph
 from taskgraph.util.python_path import find_object
 from taskgraph.util.vcs import get_commit_message
+from .util.schema import validate_schema, Schema
 from taskgraph.util.yaml import load_yaml
+from voluptuous import Optional
 
 
 logger = logging.getLogger(__name__)
@@ -34,6 +38,11 @@ PER_PROJECT_PARAMETERS = {
         'target_tasks_method': 'default',
     }
 }
+
+
+try_task_config_schema_v2 = Schema({
+    Optional('parameters'): {text_type: object},
+})
 
 
 def full_task_graph_to_runnable_jobs(full_task_json):
@@ -173,9 +182,40 @@ def get_decision_parameters(graph_config, options):
     if 'decision-parameters' in graph_config['taskgraph']:
         find_object(graph_config['taskgraph']['decision-parameters'])(graph_config, parameters)
 
+    if options.get('try_task_config_file'):
+        task_config_file = os.path.abspath(options.get('try_task_config_file'))
+    else:
+        # if try_task_config.json is present, load it
+        task_config_file = os.path.join(os.getcwd(), 'try_task_config.json')
+
+    # load try settings
+    if (
+        ('try' in project and options['tasks_for'] == 'hg-push')
+        or options['tasks_for'] == 'github-pull-request'
+    ):
+        set_try_config(parameters, task_config_file)
+
     result = Parameters(**parameters)
     result.check()
     return result
+
+
+def set_try_config(parameters, task_config_file):
+    if os.path.isfile(task_config_file):
+        logger.info("using try tasks from {}".format(task_config_file))
+        with open(task_config_file, 'r') as fh:
+            task_config = json.load(fh)
+        task_config_version = task_config.pop('version')
+        if task_config_version == 2:
+            validate_schema(
+                try_task_config_schema_v2, task_config,
+                "Invalid v2 `try_task_config.json`.",
+            )
+            parameters.update(task_config['parameters'])
+            return
+        else:
+            raise Exception(
+                "Unknown `try_task_config.json` version: {}".format(task_config_version))
 
 
 def write_artifact(filename, data):
