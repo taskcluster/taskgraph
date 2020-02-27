@@ -166,10 +166,76 @@ def add_index_tasks(taskgraph, label_to_taskid, parameters, graph_config):
     return taskgraph, label_to_taskid
 
 
+def _get_morph_url():
+    """
+    Guess a URL for the current file, for source metadata for created tasks.
+
+    If we checked out the taskgraph code with run-task in the decision task,
+    we can use TASKGRAPH_* to find the right version, which covers the
+    existing use case.
+    """
+    taskgraph_repo = os.environ.get(
+        'TASKGRAPH_HEAD_REPOSITORY', 'https://hg.mozilla.org/ci/taskgraph'
+    )
+    taskgraph_rev = os.environ.get('TASKGRAPH_HEAD_REV', 'default')
+    return '{}/raw-file/{}/src/taskgraph/morph.py'.format(taskgraph_repo, taskgraph_rev)
+
+
+def add_code_review_task(taskgraph, label_to_taskid, parameters, graph_config):
+    logger.debug('Morphing: adding index tasks')
+
+    diff = parameters.get('phabricator_diff')
+    if not diff:
+        return taskgraph, label_to_taskid
+
+    code_review_tasks = {}
+    for label, task in taskgraph.tasks.iteritems():
+        if task.attributes.get('code-review'):
+            code_review_tasks[task.label] = task.task_id
+
+    if code_review_tasks:
+        code_review_task_def = {
+            'provisionerId': 'built-in',
+            'workerType': 'succeed',
+            'dependencies': sorted(code_review_tasks.values()),
+            # This option permits to run the task
+            # regardless of the dependencies tasks exit status
+            # as we are interested in the task failures
+            'requires': 'all-resolved',
+            'created': {'relative-datestamp': '0 seconds'},
+            'deadline': {'relative-datestamp': '1 day'},
+            # no point existing past the parent task's deadline
+            'expires': {'relative-datestamp': '1 day'},
+            'metadata': {
+                'name': 'code-review',
+                'description': "List all issues found in static analysis and linting tasks",
+                'owner': parameters['owner'],
+                'source': _get_morph_url(),
+            },
+            'scopes': [],
+            'payload': {},
+            'routes': ['project.relman.codereview.v1.try_ending'],
+            'extra': {
+                'code-review': {
+                    'phabricator-diff': diff,
+                }
+            }
+        }
+        task = Task(kind='misc', label='code-review', attributes={}, task=code_review_task_def,
+                    dependencies=code_review_tasks)
+        task.task_id = slugid()
+        taskgraph, label_to_taskid = amend_taskgraph(
+            taskgraph, label_to_taskid, [task])
+        logger.info('Added code review task.')
+
+    return taskgraph, label_to_taskid
+
+
 def morph(taskgraph, label_to_taskid, parameters, graph_config):
     """Apply all morphs"""
     morphs = [
         add_index_tasks,
+        add_code_review_task,
     ]
 
     for m in morphs:

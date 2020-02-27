@@ -10,6 +10,8 @@ import json
 import time
 from datetime import datetime
 
+from six import text_type
+
 from taskgraph.util.schema import validate_schema
 from taskgraph.util.vcs import calculate_head_rev, get_repo_path, get_repository_type
 from taskgraph.util.memoize import memoize
@@ -17,7 +19,9 @@ from taskgraph.util.readonlydict import ReadOnlyDict
 from voluptuous import (
     ALLOW_EXTRA,
     Required,
+    Optional,
     Schema,
+    Any,
 )
 
 
@@ -61,6 +65,7 @@ base_schema = Schema({
     Required('repository_type'): basestring,
     Required('target_tasks_method'): basestring,
     Required('tasks_for'): basestring,
+    Optional('phabricator_diff'): Any(None, text_type),
 })
 
 

@@ -12,6 +12,7 @@ transforms:
 job-defaults:
     attributes:
         retrigger: true
+        code-review: true
     worker-type: t-linux
     worker:
         docker-image: {in-tree: python2.7}

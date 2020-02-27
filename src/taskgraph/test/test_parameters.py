@@ -38,6 +38,7 @@ class TestParameters(unittest.TestCase):
         'repository_type': 'hg',
         'target_tasks_method': 'default',
         'tasks_for': 'github-push',
+        'phabricator_diff': None,
     }
 
     def test_Parameters_immutable(self):
