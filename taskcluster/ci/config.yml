@@ -27,3 +27,8 @@ workers:
             implementation: docker-worker
             os: linux
             worker-type: linux
+        misc:
+            provisioner: 'taskgraph-t'
+            implementation: docker-worker
+            os: linux
+            worker-type: linux
