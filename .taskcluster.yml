@@ -84,8 +84,7 @@ tasks:
                   else:
                       $if: 'tasks_for == "action"'
                       then:
-                          # when all actions are hooks, we can calculate this directly rather than using a variable
-                          - '${action.repo_scope}'
+                          - 'assume:repo:${repoUrl[8:]}:action:${action.action_perm}'
                       else:
                           - 'assume:repo:${repoUrl[8:]}:cron:${cron.job_name}'
 
