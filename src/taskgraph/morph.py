@@ -184,8 +184,8 @@ def _get_morph_url():
 def add_code_review_task(taskgraph, label_to_taskid, parameters, graph_config):
     logger.debug('Morphing: adding index tasks')
 
-    diff = parameters.get('phabricator_diff')
-    if not diff:
+    review_config = parameters.get('code-review')
+    if not review_config:
         return taskgraph, label_to_taskid
 
     code_review_tasks = {}
@@ -217,7 +217,9 @@ def add_code_review_task(taskgraph, label_to_taskid, parameters, graph_config):
             'routes': ['project.relman.codereview.v1.try_ending'],
             'extra': {
                 'code-review': {
-                    'phabricator-diff': diff,
+                    'phabricator-build-target': review_config[
+                        'phabricator-build-target'
+                    ],
                 }
             }
         }

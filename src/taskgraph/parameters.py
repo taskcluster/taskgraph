@@ -21,7 +21,6 @@ from voluptuous import (
     Required,
     Optional,
     Schema,
-    Any,
 )
 
 
@@ -65,7 +64,9 @@ base_schema = Schema({
     Required('repository_type'): basestring,
     Required('target_tasks_method'): basestring,
     Required('tasks_for'): basestring,
-    Optional('phabricator_diff'): Any(None, text_type),
+    Optional('code-review'): {
+        Required('phabricator-build-target'): text_type,
+    }
 })
 
 
