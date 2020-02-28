@@ -220,6 +220,8 @@ def add_code_review_task(taskgraph, label_to_taskid, parameters, graph_config):
                     'phabricator-build-target': review_config[
                         'phabricator-build-target'
                     ],
+                    'repository': parameters['head_repository'],
+                    'revision': parameters['head_rev'],
                 }
             }
         }
