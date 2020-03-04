@@ -14,39 +14,27 @@ from six import text_type
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.schema import Schema
+from taskgraph.transforms.job import run_job_using
 
-from voluptuous import Required, Optional
+from voluptuous import Required
 
 transforms = TransformSequence()
 
-schema = Schema(
+run_task_schema = Schema(
     {
-        Required("name"): text_type,
-        Required("description"): text_type,
+        Required("using"): "index-search",
         Required(
             "index-search",
             "A list of indexes in decreasing order of priority at which to lookup for this "
             "task. This is interpolated with the graph parameters.",
         ): [text_type],
-        Optional('job-from'): text_type,
     }
 )
 
-transforms.add_validate(schema)
 
-
-@transforms.add
-def fill_template(config, tasks):
-    for task in tasks:
-        taskdesc = {
-            "name": task["name"],
-            "description": task["description"],
-            "optimization": {
-                "index-search": [
-                    index.format(**config.params) for index in task["index-search"]
-                ]
-            },
-            "worker-type": "always-optimized",
-        }
-
-        yield taskdesc
+@run_job_using("always-optimized", "index-search", schema=run_task_schema)
+def fill_template(config, job, taskdesc):
+    run = job["run"]
+    taskdesc["optimization"] = {
+        "index-search": [index.format(**config.params) for index in run["index-search"]]
+    }

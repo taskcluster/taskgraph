@@ -16,6 +16,7 @@ import logging
 import json
 import os
 
+from six import text_type
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util import path as mozpath
@@ -28,6 +29,7 @@ from taskgraph.util.workertypes import worker_type_implementation
 from taskgraph.transforms.task import task_description_schema
 from voluptuous import (
     Extra,
+    Any,
     Optional,
     Required,
     Exclusive,
@@ -77,12 +79,16 @@ job_description_schema = Schema({
     },
 
     # A list of artifacts to install from 'fetch' tasks.
-    Optional('fetches'): {
-        basestring: [basestring, {
-            Required('artifact'): basestring,
-            Optional('dest'): basestring,
-            Optional('extract'): bool,
-        }],
+    Optional("fetches"): {
+        Any("toolchain", "fetch"): [text_type],
+        basestring: [
+            basestring,
+            {
+                Required("artifact"): basestring,
+                Optional("dest"): basestring,
+                Optional("extract"): bool,
+            },
+        ],
     },
 
     # A description of how to run this job.
@@ -250,7 +256,7 @@ def make_task_description(config, jobs):
             del job['name']
 
         # always-optimized tasks never execute, so have no workdir
-        if job['run']['using'] != 'always-optimized':
+        if job['worker']['implementation'] in ('docker-worker', 'generic-worker'):
             job['run'].setdefault('workdir', '/builds/worker')
 
         taskdesc = copy.deepcopy(job)
