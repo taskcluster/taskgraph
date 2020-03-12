@@ -150,12 +150,6 @@ def make_task(config, jobs):
             'expires-after': expires,
             'label': 'fetch-%s' % name,
             'run-on-projects': [],
-            'treeherder': {
-                'symbol': join_symbol('Fetch', name),
-                'kind': 'build',
-                'platform': 'fetch/opt',
-                'tier': 1,
-            },
             'run': {
                 'using': 'run-task',
                 'checkout': False,
@@ -174,6 +168,14 @@ def make_task(config, jobs):
                 }],
             },
         }
+
+        if 'treeherder' in config.graph_config:
+            task['treeherder'] = {
+                'symbol': join_symbol('Fetch', name),
+                'kind': 'build',
+                'platform': 'fetch/opt',
+                'tier': 1,
+            }
 
         alias = job.get('fetch-alias')
         if alias:
