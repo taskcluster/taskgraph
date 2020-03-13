@@ -24,7 +24,7 @@ from .task import task_description_schema
 
 DIGEST_RE = re.compile('^[0-9a-f]{64}$')
 
-IMAGE_BUILDER_BOOSTRAP_IMAGE = (
+IMAGE_BUILDER_BOOTSTRAP_IMAGE = (
     'mozillareleases/taskgraph'
     ':image_builder-3dcd9dec75e660a8a7df3f68d36b37364c4bcbcae081954fe8954de87060ee83'
     '@sha256:dc4cc7c1f129834b624e67cae320294661dfc657cc11c03cfcd255a61f3f8d99'
@@ -207,7 +207,7 @@ def fill_template(config, tasks):
         # obviously. So we fall back to the last snapshot of the image that
         # was uploaded to docker hub.
         if image_name == 'image_builder' or not has_image_builder:
-            worker['docker-image'] = IMAGE_BUILDER_BOOSTRAP_IMAGE
+            worker['docker-image'] = IMAGE_BUILDER_BOOTSTRAP_IMAGE
             # Keep in sync with the Dockerfile used to generate the
             # docker image whose digest is referenced above.
             worker['volumes'] = [
