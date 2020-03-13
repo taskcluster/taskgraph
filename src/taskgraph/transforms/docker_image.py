@@ -7,6 +7,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 
+from six import text_type
+
 from collections import deque
 import taskgraph
 from taskgraph.transforms.base import TransformSequence
@@ -214,6 +216,13 @@ def fill_template(config, tasks):
                 '/builds/worker/checkouts',
                 '/builds/worker/workspace',
             ]
+
+            if not has_image_builder and isinstance(IMAGE_BUILDER_BOOTSTRAP_IMAGE, text_type):
+                # FIXME: We currently get run-task and associated files from the image_builder
+                # image, despite generating the taskcluster image digest based on the the copies
+                # in the decision task taskgraph checkout. Add the image builder image name
+                # so the digest depends on the image until that is fixed.
+                digest_data.append("image-builder-image:{}".format(IMAGE_BUILDER_BOOTSTRAP_IMAGE))
         else:
             worker['docker-image'] = {'in-tree': 'image_builder'}
             # Force images built against the in-tree image builder to
