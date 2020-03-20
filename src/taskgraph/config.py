@@ -102,6 +102,15 @@ class GraphConfig(object):
             find_object(register_path)(self)
 
     @property
+    def vcs_root(self):
+        if path.split(self.root_dir)[-2:] != ['taskcluster', 'ci']:
+            raise Exception(
+                "Not guessing path to vcs root. "
+                "Graph config in non-standard location."
+            )
+        return os.path.dirname(os.path.dirname(self.root_dir))
+
+    @property
     def taskcluster_yml(self):
         if path.split(self.root_dir)[-2:] != ['taskcluster', 'ci']:
             raise Exception(
