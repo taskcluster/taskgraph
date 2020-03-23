@@ -133,7 +133,7 @@ def docker_worker_toolchain(config, job, taskdesc):
     run['using'] = 'run-task'
     run['cwd'] = '{checkout}/..'
     run["command"] = (
-        + ["src/taskcluster/scripts/toolchain/{}".format(run.pop("script"))]
+        ["src/taskcluster/scripts/toolchain/{}".format(run.pop("script"))]
         + run.pop("arguments", [])
     )
 
