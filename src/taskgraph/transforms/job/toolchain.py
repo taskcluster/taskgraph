@@ -7,8 +7,6 @@ Support for running toolchain-building jobs via dedicated scripts
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-from pipes import quote as shell_quote
-
 from six import text_type
 from taskgraph.util.schema import Schema
 from voluptuous import Optional, Required, Any
