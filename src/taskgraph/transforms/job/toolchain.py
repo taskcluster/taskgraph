@@ -18,7 +18,7 @@ from taskgraph.transforms.job import (
 from taskgraph.transforms.job.common import (
     docker_worker_add_artifacts,
 )
-from taskgraph.util.hash import hash_paths, hash_path
+from taskgraph.util.hash import hash_paths
 import taskgraph
 
 
@@ -59,15 +59,12 @@ toolchain_run_schema = Schema({
 
 
 def get_digest_data(config, run, taskdesc):
-    # This file
-    data = [hash_path(__file__)]
-
     files = list(run.pop('resources', []))
     # The script
     files.append('taskcluster/scripts/toolchain/{}'.format(run['script']))
 
     # Accumulate dependency hashes for index generation.
-    data.append(hash_paths(config.graph_config.vcs_root, files))
+    data = [hash_paths(config.graph_config.vcs_root, files)]
 
     # If the task uses an in-tree docker image, we want it to influence
     # the index path as well. Ideally, the content of the docker image itself
