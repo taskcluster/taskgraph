@@ -20,13 +20,6 @@ jobs:
         symbol: I(ib)
     decision:
         symbol: I(d)
-    decision-user:
-        symbol: I(d-u)
-        parent: decision
-        index:
-            product: 'taskgraph'
-            job-name: 'decision-image'
-        cache: false
     # This image should be moved to a mobile-taskgraph project
     decision-mobile:
         symbol: I(d-m)
