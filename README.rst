@@ -19,7 +19,12 @@ In practice for singular graphs
 
 Taskgraph is nice as it allows to break the graph generations at
 different levels. Whether that’s just before submission to the TC Queue
-or earlier. For the gecko-baked one, all the logic is part of the
+or earlier.
+
+Gecko-world
+~~~~~~~~~~~
+
+For the gecko-baked one, all the logic is part of the
 ``mach taskgraph`` command in the root of the gecko tree.
 
 ::
@@ -62,6 +67,24 @@ used locally to feed taskgraph to get that graph:
    $ ./mach taskgraph target-graph -p parameters.yml --json > dirty.json
    $ diff clean.json dirty.json to inspect what has changed
 
+Github-world
+~~~~~~~~~~~~
+
+Outside of gecko, one has to use the `standalone`_ version. The
+repository first needs to be cloned and then install the ``taskgraph``
+within the virtual environment.
+
+::
+
+   $ hg clone https://hg.mozilla.org/ci/taskgraph/
+   $ cd <location-where-taskgraph-has-been-cloned>
+   $ mkvirtualenv taskgraph
+   # ensure we get the development version of it locally to be able to work with it
+   $ (taskgraph) pip install -e .
+   # now one can change directory to the github project that needs taskgraph, e.g. Fenix
+   $ (taskgraph) cd <location-where-fenix-has-been-cloned>
+   $ (taskgraph) taskgraph --help
+
 In practice with automation for multiple graphs
 -----------------------------------------------
 
@@ -99,4 +122,5 @@ side-effect whenever we touch any of the kids.
 .. _section: https://hg.mozilla.org/mozilla-central/file/tip/taskcluster
 .. _this repo: https://hg.mozilla.org/ci/taskgraph/
 .. _blogpost: https://johanlorenzo.github.io/blog/2019/10/24/taskgraph-is-now-deployed-to-the-biggest-mozilla-mobile-projects.html
+.. _standalone: https://hg.mozilla.org/ci/taskgraph/
 .. _here: https://hg.mozilla.org/build/braindump/file/tip/taskcluster/taskgraph-diff
