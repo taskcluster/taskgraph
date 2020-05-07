@@ -6,9 +6,9 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-import sys
 
 import attr
+import six
 
 logger = logging.getLogger(__name__)
 
@@ -125,16 +125,16 @@ def verify_dependency_tiers(task, taskgraph, scratch_pad, graph_config):
     if task is not None:
         tiers[task.label] = task.task.get('extra', {}) \
                                      .get('treeherder', {}) \
-                                     .get('tier', sys.maxint)
+                                     .get('tier', six.MAXSIZE)
     else:
         def printable_tier(tier):
-            if tier == sys.maxint:
+            if tier == six.MAXSIZE:
                 return 'unknown'
             return tier
 
-        for task in taskgraph.tasks.itervalues():
+        for task in six.itervalues(taskgraph.tasks):
             tier = tiers[task.label]
-            for d in task.dependencies.itervalues():
+            for d in six.itervalues(task.dependencies):
                 if taskgraph[d].task.get("workerType") == "always-optimized":
                     continue
                 if "dummy" in taskgraph[d].kind:

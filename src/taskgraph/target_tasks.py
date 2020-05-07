@@ -6,6 +6,8 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import six
+
 from taskgraph.util.attributes import match_run_on_projects, match_run_on_tasks_for
 
 _target_task_methods = {}
@@ -52,7 +54,7 @@ def standard_filter(task, parameters):
 def target_tasks_default(full_task_graph, parameters, graph_config):
     """Target the tasks which have indicated they should be run on this project
     via the `run_on_projects` attributes."""
-    return [l for l, t in full_task_graph.tasks.iteritems()
+    return [l for l, t in six.iteritems(full_task_graph.tasks)
             if standard_filter(t, parameters)]
 
 
@@ -60,7 +62,7 @@ def target_tasks_default(full_task_graph, parameters, graph_config):
 def target_tasks_codereview(full_task_graph, parameters, graph_config):
     """Target the tasks which have indicated they should be run on this project
     via the `run_on_projects` attributes."""
-    return [l for l, t in full_task_graph.tasks.iteritems()
+    return [l for l, t in six.iteritems(full_task_graph.tasks)
             if standard_filter(t, parameters)
             and t.attributes.get('code-review')]
 

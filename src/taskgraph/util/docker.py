@@ -11,6 +11,8 @@ import re
 import requests_unixsocket
 import sys
 import urllib
+
+import six
 import urlparse
 from io import BytesIO
 
@@ -329,6 +331,6 @@ def parse_volumes(image):
                 raise ValueError('cannot parse array syntax for VOLUME; '
                                  'convert to multiple entries')
 
-            volumes |= set(v.split())
+            volumes |= set([six.ensure_text(volume) for volume in v.split()])
 
     return volumes
