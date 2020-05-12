@@ -86,7 +86,7 @@ def test_make_index_tasks(make_taskgraph, graph_config):
         docker_task.label: docker_task,
     })
 
-    index_task = morph.make_index_task(
+    index_task, _, _ = morph.make_index_task(
         task, taskgraph, label_to_taskid, Parameters(strict=False), graph_config
     )
 

@@ -49,23 +49,17 @@ def amend_taskgraph(taskgraph, label_to_taskid, to_add):
     return taskgraph, label_to_taskid
 
 
-def derive_misc_task(task, purpose, image, taskgraph, label_to_taskid, parameters, graph_config):
+def derive_index_task(task, taskgraph, label_to_taskid, parameters, graph_config):
     """Create the shell of a task that depends on `task` and on the given docker
     image."""
+    purpose = 'index-task'
     label = '{}-{}'.format(purpose, task.label)
-
-    # this is why all docker image tasks are included in the target task graph: we
-    # need to find them in label_to_taskid, if if nothing else required them
-    image_taskid = label_to_taskid['build-docker-image-' + image]
-
-    provisioner_id, worker_type = get_worker_type(
-        graph_config, 'misc', parameters['level'],
-    )
+    provisioner_id, worker_type = get_worker_type(graph_config, 'misc', parameters['level'])
 
     task_def = {
         'provisionerId': provisioner_id,
         'workerType': worker_type,
-        'dependencies': [task.task_id, image_taskid],
+        'dependencies': [task.task_id],
         'created': {'relative-datestamp': '0 seconds'},
         'deadline': task.task['deadline'],
         # no point existing past the parent task's deadline
@@ -80,8 +74,8 @@ def derive_misc_task(task, purpose, image, taskgraph, label_to_taskid, parameter
         'payload': {
             'image': {
                 'path': 'public/image.tar.zst',
-                'taskId': image_taskid,
-                'type': 'task-image',
+                'namespace': 'taskgraph.cache.level-3.docker-images.v2.index-task.latest',
+                'type': 'indexed-image',
             },
             'features': {
                 'taskclusterProxy': True,
@@ -94,13 +88,11 @@ def derive_misc_task(task, purpose, image, taskgraph, label_to_taskid, parameter
     # taskgraph (has not been optimized).  It is included in
     # task_def['dependencies'] unconditionally.
     dependencies = {'parent': task.task_id}
-    if image_taskid in taskgraph.tasks:
-        dependencies['docker-image'] = image_taskid
 
     task = Task(kind='misc', label=label, attributes={}, task=task_def,
                 dependencies=dependencies)
     task.task_id = slugid()
-    return task
+    return task, taskgraph, label_to_taskid
 
 
 # these regular expressions capture route prefixes for which we have a star
@@ -118,8 +110,9 @@ def make_index_task(parent_task, taskgraph, label_to_taskid, parameters, graph_c
     parent_task.task['routes'] = [r for r in parent_task.task['routes']
                                   if not r.startswith('index.')]
 
-    task = derive_misc_task(parent_task, 'index-task', 'index-task',
-                            taskgraph, label_to_taskid, parameters, graph_config)
+    task, taskgraph, label_to_taskid = derive_index_task(
+        parent_task, taskgraph, label_to_taskid, parameters, graph_config
+    )
 
     # we need to "summarize" the scopes, otherwise a particularly
     # namespace-heavy index task might have more scopes than can fit in a
@@ -140,7 +133,7 @@ def make_index_task(parent_task, taskgraph, label_to_taskid, parameters, graph_c
         'TARGET_TASKID': parent_task.task_id,
         'INDEX_RANK': parent_task.task.get('extra', {}).get('index', {}).get('rank', 0),
     }
-    return task
+    return task, taskgraph, label_to_taskid
 
 
 def add_index_tasks(taskgraph, label_to_taskid, parameters, graph_config):
@@ -156,7 +149,10 @@ def add_index_tasks(taskgraph, label_to_taskid, parameters, graph_config):
     for label, task in taskgraph.tasks.iteritems():
         if len(task.task.get('routes', [])) <= MAX_ROUTES:
             continue
-        added.append(make_index_task(task, taskgraph, label_to_taskid, parameters, graph_config))
+        task, taskgraph, label_to_taskid = make_index_task(
+            task, taskgraph, label_to_taskid, parameters, graph_config
+        )
+        added.append(task)
 
     if added:
         taskgraph, label_to_taskid = amend_taskgraph(

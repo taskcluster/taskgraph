@@ -24,6 +24,8 @@ jobs:
     decision-mobile:
         symbol: I(d-m)
         parent: decision
+    index-task:
+        symbol: I(idx)
     python2.7:
         symbol: I(py2.7)
         definition: python
