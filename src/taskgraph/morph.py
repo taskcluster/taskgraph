@@ -100,7 +100,12 @@ def derive_index_task(task, taskgraph, label_to_taskid, parameters, graph_config
 # in each Gecko `assume:repo:hg.mozilla.org/...` role.
 SCOPE_SUMMARY_REGEXPS = [
     re.compile(r'(index:insert-task:docker\.images\.v1\.[^.]*\.).*'),
+    # TODO Make these scopes more generic
     re.compile(r'(index:insert-task:gecko\.v2\.[^.]*\.).*'),
+    re.compile(r'(index:insert-task:mobile\.v2\.[^.]*\.).*'),
+    # TODO Bug 1631839 - Remove these scopes once the migration is done
+    re.compile(r'(index:insert-task:project\.mobile\.fenix\.v2\.[^.]*\.).*'),
+    re.compile(r'(index:insert-task:project\.mobile\.reference-browser\.v3\.[^.]*\.).*'),
 ]
 
 
