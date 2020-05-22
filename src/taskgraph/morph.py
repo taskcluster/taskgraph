@@ -98,11 +98,7 @@ def derive_index_task(task, taskgraph, label_to_taskid, parameters, graph_config
 # these regular expressions capture route prefixes for which we have a star
 # scope, allowing them to be summarized.  Each should correspond to a star scope
 # in each Gecko `assume:repo:hg.mozilla.org/...` role.
-SCOPE_SUMMARY_REGEXPS = [
-    re.compile(r'(index:insert-task:docker\.images\.v1\.[^.]*\.).*'),
-    # TODO Make these scopes more generic
-    re.compile(r'(index:insert-task:gecko\.v2\.[^.]*\.).*'),
-    re.compile(r'(index:insert-task:mobile\.v2\.[^.]*\.).*'),
+_SCOPE_SUMMARY_REGEXPS = [
     # TODO Bug 1631839 - Remove these scopes once the migration is done
     re.compile(r'(index:insert-task:project\.mobile\.fenix\.v2\.[^.]*\.).*'),
     re.compile(r'(index:insert-task:project\.mobile\.reference-browser\.v3\.[^.]*\.).*'),
@@ -123,9 +119,15 @@ def make_index_task(parent_task, taskgraph, label_to_taskid, parameters, graph_c
     # namespace-heavy index task might have more scopes than can fit in a
     # temporary credential.
     scopes = set()
+    domain_scope_regex = re.compile(
+        r'(index:insert-task:{trust_domain}\.v2\.[^.]*\.).*'.format(
+            trust_domain=re.escape(graph_config["trust-domain"])
+        )
+    )
+    all_scopes_summary_regexps = _SCOPE_SUMMARY_REGEXPS + [domain_scope_regex]
     for path in index_paths:
         scope = 'index:insert-task:{}'.format(path)
-        for summ_re in SCOPE_SUMMARY_REGEXPS:
+        for summ_re in all_scopes_summary_regexps:
             match = summ_re.match(scope)
             if match:
                 scope = match.group(1) + '*'
