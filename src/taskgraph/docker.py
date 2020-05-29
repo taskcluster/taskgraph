@@ -11,8 +11,6 @@ import os
 import tarfile
 from io import BytesIO
 
-# The imports here need to be minimal, as this module is used by the
-# image_builder image, which has a stripped down taskgraph pacakge.
 from taskgraph.util import docker
 from taskgraph.util.taskcluster import (
     get_artifact_url,
