@@ -8,7 +8,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import json
 import os
-from slugid import nice as slugid
 from types import FunctionType
 from collections import namedtuple
 
@@ -151,7 +150,7 @@ def register_callback_action(name, title, symbol, description, order=10000,
             cb_name = name
         assert cb_name not in callbacks, 'callback name {} is not unique'.format(cb_name)
 
-        def action_builder(parameters, graph_config):
+        def action_builder(parameters, graph_config, decision_task_id):
             if not available(parameters):
                 return None
 
@@ -175,13 +174,12 @@ def register_callback_action(name, title, symbol, description, order=10000,
             if branch:
                 push['branch'] = branch
 
-            task_group_id = os.environ.get('TASK_ID', slugid())
             action = {
                 'name': name,
                 'title': title,
                 'description': description,
                 # target taskGroupId (the task group this decision task is creating)
-                'taskGroupId': task_group_id,
+                'taskGroupId': decision_task_id,
                 'cb_name': cb_name,
                 'symbol': symbol,
             }
@@ -241,7 +239,7 @@ def register_callback_action(name, title, symbol, description, order=10000,
     return register_callback
 
 
-def render_actions_json(parameters, graph_config):
+def render_actions_json(parameters, graph_config, decision_task_id):
     """
     Render JSON object for the ``public/actions.json`` artifact.
 
@@ -258,7 +256,7 @@ def render_actions_json(parameters, graph_config):
     assert isinstance(parameters, Parameters), 'requires instance of Parameters'
     actions = []
     for action in sorted(_get_actions(graph_config), key=lambda action: action.order):
-        action = action.action_builder(parameters, graph_config)
+        action = action.action_builder(parameters, graph_config, decision_task_id)
         if action:
             assert is_json(action), 'action must be a JSON compatible object'
             actions.append(action)
