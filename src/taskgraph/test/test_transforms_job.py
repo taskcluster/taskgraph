@@ -35,7 +35,7 @@ TASK_DEFAULTS = {
 @pytest.fixture(scope='module')
 def config():
     graph_config = load_graph_config(os.path.join('taskcluster', 'ci'))
-    return TransformConfig('job_test', here, {}, {}, [], graph_config)
+    return TransformConfig('job_test', here, {}, {}, [], graph_config, write_artifacts=False)
 
 
 @pytest.fixture()

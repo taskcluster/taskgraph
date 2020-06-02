@@ -55,6 +55,9 @@ class TransformConfig(object):
     # Global configuration of the taskgraph
     graph_config = attr.ib(type=GraphConfig)
 
+    # whether to write out artifacts for the decision task
+    write_artifacts = attr.ib(type=bool)
+
     @property
     @memoize
     def repo_configs(self):
