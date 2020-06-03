@@ -33,7 +33,7 @@ from taskgraph.util.schema import (
     taskref_or_string,
 )
 from taskgraph.util.workertypes import worker_type_implementation
-from voluptuous import Any, Required, Optional, Extra
+from voluptuous import Any, Required, Optional, Extra, All, NotIn
 from taskgraph import MAX_DEPENDENCIES
 from ..util import docker as dockerutil
 from ..util.workertypes import get_worker_type
@@ -64,7 +64,12 @@ task_description_schema = Schema({
     # dependencies of this task, keyed by name; these are passed through
     # verbatim and subject to the interpretation of the Task's get_dependencies
     # method.
-    Optional('dependencies'): {basestring: object},
+    Optional('dependencies'): {
+        All(
+            text_type,
+            NotIn(["self", "decision"], "Can't use 'self` or 'decision' as depdency names."),
+        ): object,
+    },
 
     # Soft dependencies of this task, as a list of tasks labels
     Optional('soft-dependencies'): [basestring],

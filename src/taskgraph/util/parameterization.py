@@ -35,7 +35,7 @@ def resolve_timestamps(now, task_def):
     })
 
 
-def resolve_task_references(label, task_def, dependencies):
+def resolve_task_references(label, task_def, task_id, dependencies):
     """Resolve all instances of
       {'task-reference': '..<..>..'}
     and
@@ -45,6 +45,8 @@ def resolve_task_references(label, task_def, dependencies):
     def task_reference(val):
         def repl(match):
             key = match.group(1)
+            if key == 'self':
+                return task_id
             try:
                 return dependencies[key]
             except KeyError:
@@ -58,6 +60,11 @@ def resolve_task_references(label, task_def, dependencies):
     def artifact_reference(val):
         def repl(match):
             dependency, artifact_name = match.group(1, 2)
+
+            if dependency == 'self':
+                raise KeyError(
+                    "task '{}' can't reference artifacts of self".format(label)
+                )
 
             try:
                 task_id = dependencies[dependency]

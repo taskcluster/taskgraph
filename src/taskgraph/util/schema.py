@@ -140,6 +140,8 @@ def check_schema(schema):
         def check_identifier(path, k):
             if k in (basestring, text_type, voluptuous.Extra):
                 pass
+            elif isinstance(k, voluptuous.NotIn):
+                pass
             elif isinstance(k, basestring):
                 if not identifier_re.match(k) and not whitelisted(path):
                     raise RuntimeError(
@@ -147,7 +149,7 @@ def check_schema(schema):
                         'not {!r} @ {}'.format(k, path))
             elif isinstance(k, (voluptuous.Optional, voluptuous.Required)):
                 check_identifier(path, k.schema)
-            elif isinstance(k, voluptuous.Any):
+            elif isinstance(k, (voluptuous.Any, voluptuous.All)):
                 for v in k.validators:
                     check_identifier(path, v)
             elif not whitelisted(path):
