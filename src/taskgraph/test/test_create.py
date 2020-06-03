@@ -5,7 +5,6 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import unittest
-import os
 import mock
 
 from taskgraph import create
@@ -20,19 +19,12 @@ GRAPH_CONFIG = GraphConfig({'trust-domain': 'domain'}, '/var/empty')
 class TestCreate(unittest.TestCase):
 
     def setUp(self):
-        self.old_task_id = os.environ.get('TASK_ID')
-        if 'TASK_ID' in os.environ:
-            del os.environ['TASK_ID']
         self.created_tasks = {}
         self.old_create_task = create.create_task
         create.create_task = self.fake_create_task
 
     def tearDown(self):
         create.create_task = self.old_create_task
-        if self.old_task_id:
-            os.environ['TASK_ID'] = self.old_task_id
-        elif 'TASK_ID' in os.environ:
-            del os.environ['TASK_ID']
 
     def fake_create_task(self, session, task_id, label, task_def):
         self.created_tasks[task_id] = task_def
@@ -46,7 +38,13 @@ class TestCreate(unittest.TestCase):
         graph = Graph(nodes={'tid-a', 'tid-b'}, edges={('tid-a', 'tid-b', 'edge')})
         taskgraph = TaskGraph(tasks, graph)
 
-        create.create_tasks(GRAPH_CONFIG, taskgraph, label_to_taskid, {'level': '4'})
+        create.create_tasks(
+            GRAPH_CONFIG,
+            taskgraph,
+            label_to_taskid,
+            {"level": "4"},
+            decision_task_id="decisiontask",
+        )
 
         for tid, task in self.created_tasks.iteritems():
             self.assertEqual(task['payload'], 'hello world')
@@ -60,7 +58,6 @@ class TestCreate(unittest.TestCase):
 
     def test_create_task_without_dependencies(self):
         "a task with no dependencies depends on the decision task"
-        os.environ['TASK_ID'] = 'decisiontask'
         tasks = {
             'tid-a': Task(kind='test', label='a', attributes={}, task={'payload': 'hello world'}),
         }
@@ -68,15 +65,20 @@ class TestCreate(unittest.TestCase):
         graph = Graph(nodes={'tid-a'}, edges=set())
         taskgraph = TaskGraph(tasks, graph)
 
-        create.create_tasks(GRAPH_CONFIG, taskgraph, label_to_taskid, {'level': '4'})
+        create.create_tasks(
+            GRAPH_CONFIG,
+            taskgraph,
+            label_to_taskid,
+            {"level": "4"},
+            decision_task_id="decisiontask",
+        )
 
         for tid, task in self.created_tasks.iteritems():
-            self.assertEqual(task.get('dependencies'), [os.environ['TASK_ID']])
+            self.assertEqual(task.get('dependencies'), ["decisiontask"])
 
     @mock.patch('taskgraph.create.create_task')
     def test_create_tasks_fails_if_create_fails(self, create_task):
         "creat_tasks fails if a single create_task call fails"
-        os.environ['TASK_ID'] = 'decisiontask'
         tasks = {
             'tid-a': Task(kind='test', label='a', attributes={}, task={'payload': 'hello world'}),
         }
@@ -90,4 +92,10 @@ class TestCreate(unittest.TestCase):
         create_task.side_effect = fail
 
         with self.assertRaises(RuntimeError):
-            create.create_tasks(GRAPH_CONFIG, taskgraph, label_to_taskid, {'level': '4'})
+            create.create_tasks(
+                GRAPH_CONFIG,
+                taskgraph,
+                label_to_taskid,
+                {"level": "4"},
+                decision_task_id="decisiontask",
+            )
