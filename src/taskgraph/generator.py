@@ -103,7 +103,9 @@ class TaskGraphGenerator(object):
     # each "phase" of generation.  This allows some mach subcommands to short-
     # circuit generation of the entire graph by never completing the generator.
 
-    def __init__(self, root_dir, parameters, target_kind=None):
+    def __init__(
+            self, root_dir, parameters, decision_task_id="<decision-task>", target_kind=None,
+    ):
         """
         @param root_dir: root directory, with subdirectories for each kind
         @param paramaters: parameters for this task-graph generation, or callable
@@ -115,6 +117,7 @@ class TaskGraphGenerator(object):
         self.root_dir = root_dir
         self._parameters = parameters
         self._target_kind = target_kind
+        self._decision_task_id = decision_task_id
 
         # start the generator
         self._run = self._run()
@@ -319,10 +322,13 @@ class TaskGraphGenerator(object):
         do_not_optimize = set(parameters.get('do_not_optimize', []))
         if not parameters.get('optimize_target_tasks', True):
             do_not_optimize = set(target_task_set.graph.nodes).union(do_not_optimize)
-        optimized_task_graph, label_to_taskid = optimize_task_graph(target_task_graph,
-                                                                    parameters,
-                                                                    do_not_optimize,
-                                                                    existing_tasks=existing_tasks)
+        optimized_task_graph, label_to_taskid = optimize_task_graph(
+            target_task_graph,
+            parameters,
+            do_not_optimize,
+            self._decision_task_id,
+            existing_tasks=existing_tasks,
+        )
 
         yield verifications('optimized_task_graph', optimized_task_graph, graph_config)
 
