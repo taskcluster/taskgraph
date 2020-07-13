@@ -279,9 +279,7 @@ def image_digest(args):
 @command("decision", help="Run the decision task")
 @argument("--root", "-r", help="root of the taskgraph definition relative to topsrcdir")
 @argument(
-    "--message",
-    required=True,
-    help='Commit message to be parsed. Example: "try: -b do -p all -u all"',
+    "--message", required=False, help="(ignored - deprecated)",
 )
 @argument(
     "--project",

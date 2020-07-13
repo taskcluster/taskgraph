@@ -54,7 +54,6 @@ class TestGetDecisionParameters(unittest.TestCase):
             'head_rev': 'abcd',
             'head_ref': 'ef01',
             'head_tag': 'v0.0.1',
-            'message': '',
             'project': 'mozilla-central',
             'pushlog_id': '143',
             'pushdate': 1503691511,
