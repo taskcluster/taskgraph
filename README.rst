@@ -39,7 +39,6 @@ For the gecko-baked one, all the logic is part of the
    ...
    Sub Commands:
      actions               Write actions.json to stdout
-     cron                  Run the cron task
      decision              Run the decision task
      optimized             Show the optimized taskgraph
      target-graph          Show the target taskgraph
