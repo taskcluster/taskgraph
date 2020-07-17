@@ -11,7 +11,6 @@ import re
 
 import six
 
-from collections import deque
 import taskgraph
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.docker import (
