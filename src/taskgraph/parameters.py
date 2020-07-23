@@ -47,7 +47,7 @@ def _get_repo_path():
 base_schema = Schema({
     Required('base_repository'): basestring,
     Required('build_date'): int,
-    Required('do_not_optimize'): [int],
+    Required('do_not_optimize'): [basestring],
     Required('existing_tasks'): {basestring: basestring},
     Required('filters'): [basestring],
     Required('head_ref'): basestring,
