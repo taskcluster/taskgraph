@@ -937,9 +937,10 @@ def build_task(config, tasks):
 
             branch_rev = get_branch_rev(config)
 
+            th_project_suffix = '-prs' if config.params['tasks_for'] == 'github-pull-request' else ''
             routes.append(
                 '{}.v2.{}.{}.{}'.format(TREEHERDER_ROUTE_ROOT,
-                                        config.params['project'],
+                                        config.params['project'] + th_project_suffix,
                                         branch_rev,
                                         config.params['pushlog_id'])
             )
@@ -985,7 +986,7 @@ def build_task(config, tasks):
         if task_th:
             # link back to treeherder in description
             th_push_link = 'https://treeherder.mozilla.org/#/jobs?repo={}&revision={}'.format(
-                config.params['project'], branch_rev)
+                config.params['project'] + th_project_suffix, branch_rev)
             task_def['metadata']['description'] += ' ([Treeherder push]({}))'.format(
                 th_push_link)
 
