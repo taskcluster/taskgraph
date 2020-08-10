@@ -938,7 +938,7 @@ def build_task(config, tasks):
             branch_rev = get_branch_rev(config)
 
             th_project_suffix = (
-                "-prs" if config.params["tasks_for"] == "github-pull-request" else ""
+                "-pr" if config.params["tasks_for"] == "github-pull-request" else ""
             )
             routes.append(
                 '{}.v2.{}.{}.{}'.format(TREEHERDER_ROUTE_ROOT,
