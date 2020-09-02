@@ -279,7 +279,9 @@ def image_digest(args):
 @command("decision", help="Run the decision task")
 @argument("--root", "-r", help="root of the taskgraph definition relative to topsrcdir")
 @argument(
-    "--message", required=False, help="(ignored - deprecated)",
+    "--message",
+    required=False,
+    help="(ignored - deprecated)",
 )
 @argument(
     "--project",
