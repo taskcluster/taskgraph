@@ -6,25 +6,18 @@
 #    pip-compile-multi
 #
 -r test.txt
-click==7.1.2 \
-    --hash=sha256:d2b5255c7c6349bc1bd1e59e08cd12acbbd63ce649f2588755783aa94dfb6b1a \
-    --hash=sha256:dacca89f4bfadd5de3d7489b7c8a566eee0d3676333fbb50030263894c38c0dc \
+click==7.0 \
+    --hash=sha256:2335065e6395b9e67ca716de5f7526736bfa6ceead690adf616d925bdc622b13 \
+    --hash=sha256:5b94b49521f6456670fdb30cd82a4eca9412788a93fa6dd6df72c94d5a8ff2d7 \
     # via pip-compile-multi, pip-tools
-pip-compile-multi==2.1.0 \
-    --hash=sha256:888788ad738f71121faf6a6ecce87af3ec5eacc11c47cb363f120cde88a2a821 \
-    --hash=sha256:c199a48921c63859707853c36cc506eac978c089e21b347215c979d5fc99161c \
-    # via -r dev.in
-pip-tools==5.3.1 \
-    --hash=sha256:5672c2b6ca0f1fd803f3b45568c2cf7fadf135b4971e7d665232b2075544c0ef \
-    --hash=sha256:73787e23269bf8a9230f376c351297b9037ed0d32ab0f9bef4a187d976acc054 \
+pip-compile-multi==1.5.0 \
+    --hash=sha256:b7e4125969f4464f6e12caed17cbc88fdef71d8d6d1ae6cbff85a028f389b3b4 \
+    --hash=sha256:e94336a1f8efafba3b1c0550eefa53beceb325d9791ba02c99573e5e05146bb7
+pip-tools==4.0.0 \
+    --hash=sha256:3b9fb8948340eff5869ac83dc85e3a7c62b837cec33609c45c48c2e5aa740ba5 \
+    --hash=sha256:44469037863c3587b4c565caf258e2c752d4235c508cf8410a69164bb65ffc78 \
     # via pip-compile-multi
 toposort==1.5 \
     --hash=sha256:d80128b83b411d503b0cdb4a8f172998bc1d3b434b6402a349b8ebd734d51a80 \
     --hash=sha256:dba5ae845296e3bf37b042c640870ffebcdeb8cd4df45adaa01d8c5476c557dd \
     # via pip-compile-multi
-
-# The following packages are considered to be unsafe in a requirements file:
-pip==20.2.2 \
-    --hash=sha256:5244e51494f5d1dfbb89da492d4250cb07f9246644736d10ed6c45deb1a48500 \
-    --hash=sha256:58a3b0b55ee2278104165c7ee7bc8e2db6f635067f3c66cf637113ec5aa71584 \
-    # via pip-tools
