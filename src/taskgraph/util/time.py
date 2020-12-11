@@ -11,7 +11,7 @@ import re
 import datetime
 
 PATTERN = re.compile(
-    '((?:\d+)?\.?\d+) *([a-z]+)'
+    r'((?:\d+)?\.?\d+) *([a-z]+)'
 )
 
 

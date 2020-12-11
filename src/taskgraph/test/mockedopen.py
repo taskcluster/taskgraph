@@ -103,8 +103,10 @@ class MockedOpen(object):
         os.path.isfile = self._orig_path_isfile
 
     def _wrapped_exists(self, p):
-        return (self._wrapped_isfile(p) or
-                self._wrapped_isdir(p))
+        return (
+            self._wrapped_isfile(p)
+            or self._wrapped_isdir(p)
+        )
 
     def _wrapped_isfile(self, p):
         p = normcase(p)

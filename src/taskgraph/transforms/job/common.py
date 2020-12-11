@@ -150,8 +150,8 @@ def support_vcs_checkout(config, job, taskdesc, repo_configs, sparse=False):
     for repo_config in repo_configs.values():
         env.update({
             '{}_{}'.format(repo_config.prefix.upper(), key): value for key, value in {
-                'BASE_REPOSITORY'.format(repo_config.prefix): repo_config.base_repository,
-                'HEAD_REPOSITORY'.format(repo_config.prefix): repo_config.head_repository,
+                'BASE_REPOSITORY': repo_config.base_repository,
+                'HEAD_REPOSITORY': repo_config.head_repository,
                 'HEAD_REV': repo_config.head_rev,
                 'HEAD_REF': repo_config.head_ref,
                 'REPOSITORY_TYPE': repo_config.type,

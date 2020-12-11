@@ -87,11 +87,14 @@ def _get_optimizations(target_task_graph, strategies):
 def _log_optimization(verb, opt_counts):
     if opt_counts:
         logger.info(
-            '{} '.format(verb.title()) +
-            ', '.join(
-                '{} tasks by {}'.format(c, b)
-                for b, c in sorted(opt_counts.iteritems())) +
-            ' during optimization.')
+            '{} {} during optimization.'.format(
+                verb.title(),
+                ', '.join(
+                    '{} tasks by {}'.format(c, b)
+                    for b, c in sorted(opt_counts.iteritems())
+                )
+            )
+        )
     else:
         logger.info('No tasks {} during optimization'.format(verb))
 
@@ -330,7 +333,10 @@ class SkipUnlessChanged(OptimizationStrategy):
 
         changed = files_changed.check(params, file_patterns)
         if not changed:
-            logger.debug('no files found matching a pattern in `skip-unless-changed` for ' +
-                         task.label)
+            logger.debug(
+                'no files found matching a pattern in `skip-unless-changed` for "{}"'.format(
+                    task.label
+                )
+            )
             return True
         return False

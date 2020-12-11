@@ -14,9 +14,9 @@ pip-compile-multi==1.5.9 \
     --hash=sha256:0bfd864fce280c5b3515e8a2b3871ed8d07d338ffdbe72b7c53b050328270b06 \
     --hash=sha256:ed9519858a1e9c64cd7ef7b122631fed02545ca038f35fa0f8cc69602775696c \
     # via -r dev.in
-pip-tools==5.3.1 \
-    --hash=sha256:5672c2b6ca0f1fd803f3b45568c2cf7fadf135b4971e7d665232b2075544c0ef \
-    --hash=sha256:73787e23269bf8a9230f376c351297b9037ed0d32ab0f9bef4a187d976acc054 \
+pip-tools==5.4.0 \
+    --hash=sha256:a4d3990df2d65961af8b41dacc242e600fdc8a65a2e155ed3d2fc18a5c209f20 \
+    --hash=sha256:b73f76fe6464b95e41d595a9c0302c55a786dbc54b63ae776c540c04e31914fb \
     # via pip-compile-multi
 toposort==1.5 \
     --hash=sha256:d80128b83b411d503b0cdb4a8f172998bc1d3b434b6402a349b8ebd734d51a80 \
@@ -24,7 +24,7 @@ toposort==1.5 \
     # via pip-compile-multi
 
 # The following packages are considered to be unsafe in a requirements file:
-pip==20.2.4 \
-    --hash=sha256:51f1c7514530bd5c145d8f13ed936ad6b8bfcb8cf74e10403d0890bc986f0033 \
-    --hash=sha256:85c99a857ea0fb0aedf23833d9be5c40cf253fe24443f0829c7b472e23c364a1 \
+pip==20.3.1 \
+    --hash=sha256:425e79b20939abbffa7633a91151a882aedc77564d9313e3584eb0416c28c558 \
+    --hash=sha256:43f7d3811f05db95809d39515a5111dd05994965d870178a4fe10d5482f9d2e2 \
     # via pip-tools
