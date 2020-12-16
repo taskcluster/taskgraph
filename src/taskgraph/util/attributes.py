@@ -64,6 +64,21 @@ match_run_on_projects = _match_run_on
 match_run_on_tasks_for = _match_run_on
 
 
+def match_run_on_git_branches(git_branch, run_on_git_branches):
+    """
+    Determine whether the given project is included in the `run-on-git-branches` parameter.
+    Allows 'all'.
+    """
+    if 'all' in run_on_git_branches:
+        return True
+
+    for expected_git_branch_pattern in run_on_git_branches:
+        if re.match(expected_git_branch_pattern, git_branch):
+            return True
+
+    return False
+
+
 def sorted_unique_list(*args):
     """Join one or more lists, and return a sorted list of unique members"""
     combined = set().union(*args)

@@ -157,6 +157,7 @@ task_description_schema = Schema({
     Optional('run-on-projects'): optionally_keyed_by('build-platform', [basestring]),
 
     Optional('run-on-tasks-for'): [text_type],
+    Optional('run-on-git-branches'): [text_type],
 
     # The `always-target` attribute will cause the task to be included in the
     # target_task_graph regardless of filtering. Tasks included in this manner
@@ -1002,6 +1003,11 @@ def build_task(config, tasks):
                          **{'build-platform': build_platform})
         attributes['run_on_projects'] = task.get('run-on-projects', ['all'])
         attributes['run_on_tasks_for'] = task.get('run-on-tasks-for', ['all'])
+        # We don't want to pollute non git repos with this attribute. Moreover, target_tasks
+        # already assumes the default value is ['all']
+        if task.get('run-on-git-branches'):
+            attributes['run_on_git_branches'] = task['run-on-git-branches']
+
         attributes['always_target'] = task['always-target']
 
         # Set MOZ_AUTOMATION on all jobs.

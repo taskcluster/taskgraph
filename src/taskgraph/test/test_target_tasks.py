@@ -39,6 +39,26 @@ class TestTargetTasks(unittest.TestCase):
             },
         )
 
+    def default_matches_git_branches(self, run_on_tasks_for, tasks_for, run_on_git_branches, git_branch):
+        attributes = {
+            'run_on_projects': ['all'],
+            'run_git_branches': ['all'],
+        }
+        if run_on_tasks_for is not None:
+            attributes['run_on_tasks_for'] = run_on_tasks_for
+        if run_on_git_branches is not None:
+            attributes['run_on_git_branches'] = run_on_git_branches
+
+        return self.default_matches(
+            attributes=attributes,
+            parameters={
+                'project': 'fenix',
+                'repository_type': 'git',
+                'tasks_for': tasks_for,
+                'head_ref': git_branch,
+            },
+        )
+
     def default_matches(self, attributes, parameters):
         method = target_tasks.get_method('default')
         graph = TaskGraph(tasks={
@@ -77,6 +97,60 @@ class TestTargetTasks(unittest.TestCase):
             self.default_matches_tasks_for(['github-pull-request'], 'github-pull-request')
         )
         self.assertFalse(self.default_matches_tasks_for([r'github-pull-request'], 'hg-pull'))
+
+    def test_default_git_branches(self):
+        self.assertTrue(self.default_matches_git_branches(None, 'github-pull-request', None, 'master'))
+        self.assertTrue(self.default_matches_git_branches(None, 'github-pull-request', None, 'some-branch'))
+        self.assertTrue(self.default_matches_git_branches(None, 'github-push', None, 'master'))
+        self.assertTrue(self.default_matches_git_branches(None, 'github-push', None, 'main'))
+        self.assertTrue(self.default_matches_git_branches(None, 'github-push', None, 'some-branch'))
+        self.assertTrue(self.default_matches_git_branches(None, 'github-release', None, 'release/v1.0'))
+        self.assertTrue(self.default_matches_git_branches(None, 'github-release', None, 'release_v2.0'))
+
+        self.assertFalse(self.default_matches_git_branches([], 'github-pull-request', None, 'master'))
+        self.assertFalse(self.default_matches_git_branches([], 'github-pull-request', None, 'some-branch'))
+        self.assertFalse(self.default_matches_git_branches([], 'github-push', None, 'master'))
+        self.assertFalse(self.default_matches_git_branches([], 'github-push', None, 'main'))
+        self.assertFalse(self.default_matches_git_branches([], 'github-push', None, 'some-branch'))
+        self.assertFalse(self.default_matches_git_branches([], 'github-release', None, 'master'))
+        self.assertFalse(self.default_matches_git_branches([], 'github-release', None, 'release/v1.0'))
+        self.assertFalse(self.default_matches_git_branches([], 'github-release', None, 'release_v2.0'))
+
+        self.assertTrue(self.default_matches_git_branches(['all'], 'github-pull-request', ['master'], 'master'))
+        self.assertTrue(self.default_matches_git_branches(['all'], 'github-pull-request', ['master'], 'some-branch'))
+        self.assertTrue(self.default_matches_git_branches(['all'], 'github-push', ['master'], 'master'))
+        self.assertFalse(self.default_matches_git_branches(['all'], 'github-push', ['master'], 'main'))
+        self.assertFalse(self.default_matches_git_branches(['all'], 'github-push', ['master'], 'some-branch'))
+        self.assertTrue(self.default_matches_git_branches(['all'], 'github-release', ['master'], 'master'))
+        self.assertFalse(self.default_matches_git_branches(['all'], 'github-release', ['master'], 'release/v1.0'))
+        self.assertFalse(self.default_matches_git_branches(['all'], 'github-release', ['master'], 'release_v2.0'))
+
+        self.assertTrue(self.default_matches_git_branches(['all'], 'github-pull-request', [r'release/.+'], 'master'))
+        self.assertTrue(self.default_matches_git_branches(['all'], 'github-pull-request', [r'release/.+'], 'some-branch'))
+        self.assertFalse(self.default_matches_git_branches(['all'], 'github-push', [r'release/.+'], 'master'))
+        self.assertFalse(self.default_matches_git_branches(['all'], 'github-push', [r'release/.+'], 'main'))
+        self.assertFalse(self.default_matches_git_branches(['all'], 'github-push', [r'release/.+'], 'some-branch'))
+        self.assertFalse(self.default_matches_git_branches(['all'], 'github-release', [r'release/.+'], 'master'))
+        self.assertTrue(self.default_matches_git_branches(['all'], 'github-release', [r'release/.+'], 'release/v1.0'))
+        self.assertFalse(self.default_matches_git_branches(['all'], 'github-release', [r'release/.+'], 'release_v2.0'))
+
+        self.assertTrue(self.default_matches_git_branches(['all'], 'github-pull-request', [r'release/.+'], 'refs/heads/master'))
+        self.assertTrue(self.default_matches_git_branches(['all'], 'github-pull-request', [r'release/.+'], 'refs/heads/some-branch'))
+        self.assertFalse(self.default_matches_git_branches(['all'], 'github-push', [r'release/.+'], 'refs/heads/master'))
+        self.assertFalse(self.default_matches_git_branches(['all'], 'github-push', [r'release/.+'], 'refs/heads/main'))
+        self.assertFalse(self.default_matches_git_branches(['all'], 'github-push', [r'release/.+'], 'refs/heads/some-branch'))
+        self.assertFalse(self.default_matches_git_branches(['all'], 'github-release', [r'release/.+'], 'refs/heads/master'))
+        self.assertTrue(self.default_matches_git_branches(['all'], 'github-release', [r'release/.+'], 'refs/heads/release/v1.0'))
+        self.assertFalse(self.default_matches_git_branches(['all'], 'github-release', [r'release/.+'], 'refs/heads/release_v2.0'))
+
+        self.assertTrue(self.default_matches_git_branches(['all'], 'github-pull-request', ['master', r'release/.+'], 'master'))
+        self.assertTrue(self.default_matches_git_branches(['all'], 'github-pull-request', ['master', r'release/.+'], 'some-branch'))
+        self.assertTrue(self.default_matches_git_branches(['all'], 'github-push', ['master', r'release/.+'], 'master'))
+        self.assertFalse(self.default_matches_git_branches(['all'], 'github-push', ['master', r'release/.+'], 'main'))
+        self.assertFalse(self.default_matches_git_branches(['all'], 'github-push', ['master', r'release/.+'], 'some-branch'))
+        self.assertTrue(self.default_matches_git_branches(['all'], 'github-release', ['master', r'release/.+'], 'master'))
+        self.assertTrue(self.default_matches_git_branches(['all'], 'github-release', ['master', r'release/.+'], 'release/v1.0'))
+        self.assertFalse(self.default_matches_git_branches(['all'], 'github-release', ['master', r'release/.+'], 'release_v2.0'))
 
     def make_task_graph(self):
         tasks = {

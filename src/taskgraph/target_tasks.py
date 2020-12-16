@@ -8,9 +8,15 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import six
 
-from taskgraph.util.attributes import match_run_on_projects, match_run_on_tasks_for
+from taskgraph.util.attributes import (
+    match_run_on_projects,
+    match_run_on_tasks_for,
+    match_run_on_git_branches,
+)
 
 _target_task_methods = {}
+
+_GIT_REFS_HEADS_PREFIX = 'refs/heads/'
 
 
 def _target_task(name):
@@ -43,10 +49,29 @@ def filter_for_tasks_for(task, parameters):
     return match_run_on_tasks_for(parameters['tasks_for'], run_on_tasks_for)
 
 
+def filter_for_git_branch(task, parameters):
+    """Filter tasks by git branch.
+    If `run_on_git_branch` is not defined, then task runs on all branches"""
+    # We cannot filter out on git branches if we not on a git repository
+    if parameters.get('repository_type') != 'git':
+        return True
+
+    # Pull requests usually have arbitrary names, let's not filter git branches on them.
+    if parameters['tasks_for'] == 'github-pull-request':
+        return True
+
+    run_on_git_branches = set(task.attributes.get('run_on_git_branches', ['all']))
+    git_branch = parameters['head_ref']
+    if git_branch.startswith(_GIT_REFS_HEADS_PREFIX):
+        git_branch = git_branch[len(_GIT_REFS_HEADS_PREFIX):]
+
+    return match_run_on_git_branches(git_branch, run_on_git_branches)
+
+
 def standard_filter(task, parameters):
     return all(
         filter_func(task, parameters) for filter_func in
-        (filter_out_cron, filter_for_project, filter_for_tasks_for)
+        (filter_out_cron, filter_for_project, filter_for_tasks_for, filter_for_git_branch)
     )
 
 

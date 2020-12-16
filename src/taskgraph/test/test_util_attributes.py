@@ -10,6 +10,7 @@ import unittest
 from taskgraph.util.attributes import (
     attrmatch,
     match_run_on_projects,
+    match_run_on_git_branches,
 )
 
 
@@ -63,3 +64,25 @@ class MatchRunOnProjects(unittest.TestCase):
         self.assertTrue(match_run_on_projects('mozilla-central', ['all']))
         self.assertTrue(match_run_on_projects('mozilla-beta', ['all']))
         self.assertTrue(match_run_on_projects('mozilla-release', ['all']))
+
+
+class MatchRunOnGitBranches(unittest.TestCase):
+
+    def test_empty(self):
+        self.assertFalse(match_run_on_git_branches('master', []))
+
+    def test_all(self):
+        self.assertTrue(match_run_on_git_branches('master', ['all']))
+        self.assertTrue(match_run_on_git_branches('release/v1.0', ['all']))
+        self.assertTrue(match_run_on_git_branches('release_v2.0', ['all']))
+        self.assertTrue(match_run_on_git_branches('arbitrary-branch', ['all']))
+
+    def test_regex(self):
+        self.assertTrue(match_run_on_git_branches('master', ['master']))
+        self.assertFalse(match_run_on_git_branches('master', ['main']))
+        self.assertTrue(match_run_on_git_branches('main', ['main']))
+        self.assertFalse(match_run_on_git_branches('master', ['main']))
+        self.assertFalse(match_run_on_git_branches('master', ['^release/.+$']))
+        self.assertTrue(match_run_on_git_branches('release/v1.0', ['^release/.+$']))
+        self.assertFalse(match_run_on_git_branches('release_v2.0', ['^release/.+$']))
+        self.assertFalse(match_run_on_git_branches('release_v2.0', ['^release/.+$']))
