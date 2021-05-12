@@ -1,5 +1,5 @@
 attrs
-futures
+futures;python_version=="2.7"
 json-e
 pathlib2
 PyYAML
