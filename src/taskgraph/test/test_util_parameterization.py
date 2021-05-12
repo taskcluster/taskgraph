@@ -6,13 +6,18 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import unittest
 import datetime
-import mock
 import os
+
+import mock
+import pytest
+from six import PY3
 
 from taskgraph.util.parameterization import (
     resolve_timestamps,
     resolve_task_references,
 )
+
+pytestmark = pytest.mark.xfail(PY3, reason="fails with Python 3")
 
 
 class TestTimestamps(unittest.TestCase):

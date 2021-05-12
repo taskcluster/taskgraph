@@ -3,6 +3,8 @@ trust-domain: taskgraph
 treeherder:
     group-names:
         'I': 'Docker Image Builds'
+        'flake8': 'Flake8 linter'
+        'unit': 'Unit tests'
 
 index:
     products:

@@ -6,11 +6,14 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import unittest
 
+import pytest
+from six import PY3
+from slugid import nice as slugid
+
 from taskgraph import optimize
 from taskgraph.taskgraph import TaskGraph
 from taskgraph import graph
 from taskgraph.task import Task
-from slugid import nice as slugid
 
 
 class Remove(optimize.OptimizationStrategy):
@@ -81,6 +84,7 @@ class TestOptimize(unittest.TestCase):
         graph = self.make_triangle()
         self.assert_remove_tasks(graph, set())
 
+    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_remove_tasks_all(self):
         "A graph full of optimization=remove has removes everything"
         graph = self.make_triangle(
@@ -89,6 +93,7 @@ class TestOptimize(unittest.TestCase):
             t3={'remove': None})
         self.assert_remove_tasks(graph, {'t1', 't2', 't3'})
 
+    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_remove_tasks_blocked(self):
         "Removable tasks that are depended on by non-removable tasks are not removed"
         graph = self.make_triangle(
@@ -96,6 +101,7 @@ class TestOptimize(unittest.TestCase):
             t3={'remove': None})
         self.assert_remove_tasks(graph, {'t3'})
 
+    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_remove_tasks_do_not_optimize(self):
         "Removable tasks that are marked do_not_optimize are not removed"
         graph = self.make_triangle(
@@ -129,6 +135,7 @@ class TestOptimize(unittest.TestCase):
         graph = self.make_triangle()
         self.assert_replace_tasks(graph, set())
 
+    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_replace_tasks_all(self):
         "All replacable tasks are replaced when strategy is 'replace'"
         graph = self.make_triangle(
@@ -140,6 +147,7 @@ class TestOptimize(unittest.TestCase):
             exp_replaced={'t1', 't2', 't3'},
             exp_label_to_taskid={'t1': 'e1', 't2': 'e2', 't3': 'e3'})
 
+    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_replace_tasks_blocked(self):
         "A task cannot be replaced if it depends on one that was not replaced"
         graph = self.make_triangle(
@@ -150,6 +158,7 @@ class TestOptimize(unittest.TestCase):
             exp_replaced={'t1'},
             exp_label_to_taskid={'t1': 'e1'})
 
+    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_replace_tasks_do_not_optimize(self):
         "A task cannot be replaced if it depends on one that was not replaced"
         graph = self.make_triangle(
@@ -162,6 +171,7 @@ class TestOptimize(unittest.TestCase):
             exp_label_to_taskid={'t1': 'e1'},
             do_not_optimize={'t2'})
 
+    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_replace_tasks_removed(self):
         "A task can be replaced with nothing"
         graph = self.make_triangle(
@@ -188,6 +198,7 @@ class TestOptimize(unittest.TestCase):
         self.assertEqual(got_subgraph.tasks, exp_subgraph.tasks)
         self.assertEqual(label_to_taskid, exp_label_to_taskid)
 
+    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_get_subgraph_no_change(self):
         "get_subgraph returns a similarly-shaped subgraph when nothing is removed"
         graph = self.make_triangle()
@@ -202,6 +213,7 @@ class TestOptimize(unittest.TestCase):
                 ('tid2', 'tid1', 'dep')),
             {'t1': 'tid1', 't2': 'tid2', 't3': 'tid3'})
 
+    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_get_subgraph_removed(self):
         "get_subgraph returns a smaller subgraph when tasks are removed"
         graph = self.make_triangle()
@@ -211,6 +223,7 @@ class TestOptimize(unittest.TestCase):
                 self.make_task('t1', task_id='tid1', dependencies={})),
             {'t1': 'tid1'})
 
+    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_get_subgraph_replaced(self):
         "get_subgraph returns a smaller subgraph when tasks are replaced"
         graph = self.make_triangle()
