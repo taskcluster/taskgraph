@@ -12,6 +12,7 @@ import logging
 import os
 import re
 
+import six
 from six import text_type
 
 from requests.exceptions import HTTPError
@@ -202,7 +203,7 @@ def combine_task_graph_files(suffixes):
         return
 
     def combine(file_contents, base):
-        return reduce(_update_reducer, file_contents, base)
+        return six.moves.reduce(_update_reducer, file_contents, base)
 
     files = [read_artifact("task-graph-{}.json".format(suffix)) for suffix in suffixes]
     write_artifact("task-graph.json", combine(files, dict()))
@@ -253,7 +254,7 @@ def add_args_to_command(cmd_parts, extra_args=[]):
         # windows has single cmd part as dict: 'task-reference', with long string
         cmd_parts = cmd_parts[0]['task-reference'].split(' ')
         cmd_type = 'dict'
-    elif len(cmd_parts) == 1 and (isinstance(cmd_parts[0], unicode)
+    elif len(cmd_parts) == 1 and (isinstance(cmd_parts[0], text_type)
                                   or isinstance(cmd_parts[0], str)):
         # windows has single cmd part as a long string
         cmd_parts = cmd_parts[0].split(' ')

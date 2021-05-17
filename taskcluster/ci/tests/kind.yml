@@ -67,17 +67,8 @@ jobs:
         run:
             command: >-
                 pip install --user -r requirements/test.py3.txt &&
-                flake8 --extend-exclude="\
-                 src/taskgraph/transforms/docker_image.py,\
-                 src/taskgraph/transforms/fetch.py,\
-                 src/taskgraph/transforms/job/run_task.py,\
-                 src/taskgraph/actions/retrigger.py,\
-                 src/taskgraph/actions/util.py,\
-                 src/taskgraph/actions/add_new_jobs.py,\
-                 src/taskgraph/util/archive.py,\
-                 src/taskgraph/util/schema.py,\
-                 src/taskgraph/test/test_optimize.py,\
-                 taskcluster/scripts/external_tools/tooltool.py"
+                flake8
+
     black:
         description: "Run `black` to validate the latest changes"
         treeherder:

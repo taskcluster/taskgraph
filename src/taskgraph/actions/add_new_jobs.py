@@ -6,8 +6,9 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-from taskgraph.actions.registry import register_callback_action
+import six
 
+from taskgraph.actions.registry import register_callback_action
 from taskgraph.actions.util import (
     combine_task_graph_files,
     create_tasks,
@@ -56,7 +57,7 @@ def add_new_jobs_action(parameters, graph_config, input, task_group_id, task_id)
             raise Exception('{} was not found in the task-graph'.format(elem))
 
     times = input.get('times', 1)
-    for i in xrange(times):
+    for i in six.moves.range(times):
         create_tasks(
             graph_config,
             to_run,
