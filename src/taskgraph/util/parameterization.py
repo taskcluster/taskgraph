@@ -22,7 +22,7 @@ def _recurse(val, param_fns):
                 for param_key, param_fn in param_fns.items():
                     if val.keys() == [param_key]:
                         return param_fn(val[param_key])
-            return {k: recurse(v) for k, v in val.iteritems()}
+            return {k: recurse(v) for k, v in val.items()}
         else:
             return val
     return recurse(val)
