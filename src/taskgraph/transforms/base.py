@@ -5,6 +5,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import re
+from typing import AnyStr
 
 import attr
 
@@ -40,7 +41,7 @@ class TransformConfig(object):
     kind = attr.ib()
 
     # the path to the kind configuration directory
-    path = attr.ib(type=basestring)
+    path = attr.ib(type=AnyStr)
 
     # the parsed contents of kind.yml
     config = attr.ib(type=dict)

@@ -9,7 +9,7 @@ import pprint
 import collections
 import voluptuous
 
-from six import text_type
+from six import string_types, text_type
 
 import taskgraph
 
@@ -54,7 +54,7 @@ def optionally_keyed_by(*arguments):
     for _ in arguments:
         options = [schema]
         for field in fields:
-            options.append({'by-' + field: {basestring: schema}})
+            options.append({'by-' + field: {voluptuous.Any(*string_types): schema}})
         schema = voluptuous.Any(*options)
     return schema
 
@@ -138,11 +138,11 @@ def check_schema(schema):
 
     def iter(path, sch):
         def check_identifier(path, k):
-            if k in (basestring, text_type, voluptuous.Extra):
+            if k in string_types or k in (text_type, voluptuous.Extra):
                 pass
             elif isinstance(k, voluptuous.NotIn):
                 pass
-            elif isinstance(k, basestring):
+            elif isinstance(k, string_types):
                 if not identifier_re.match(k) and not whitelisted(path):
                     raise RuntimeError(
                         'YAML schemas should use dashed lower-case identifiers, '
@@ -158,7 +158,7 @@ def check_schema(schema):
                         type(k).__name__, path))
 
         if isinstance(sch, collections.Mapping):
-            for k, v in sch.iteritems():
+            for k, v in sch.items():
                 child = "{}[{!r}]".format(path, k)
                 check_identifier(child, k)
                 iter(child, v)
@@ -196,14 +196,14 @@ OptimizationSchema = voluptuous.Any(
     None,
     # search the index for the given index namespaces, and replace this task if found
     # the search occurs in order, with the first match winning
-    {'index-search': [basestring]},
+    {'index-search': [voluptuous.Any(*string_types)]},
     # skip this task if none of the given file patterns match
-    {'skip-unless-changed': [basestring]},
+    {'skip-unless-changed': [voluptuous.Any(*string_types)]},
 )
 
 # shortcut for a string where task references are allowed
 taskref_or_string = voluptuous.Any(
-    basestring,
-    {voluptuous.Required('task-reference'): basestring},
-    {voluptuous.Required('artifact-reference'): basestring},
+    voluptuous.Any(*string_types),
+    {voluptuous.Required('task-reference'): voluptuous.Any(*string_types)},
+    {voluptuous.Required('artifact-reference'): voluptuous.Any(*string_types)},
 )

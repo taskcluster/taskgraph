@@ -21,6 +21,7 @@ from taskgraph.util.schema import (
     Schema,
 )
 from voluptuous import (
+    Any,
     Optional,
     Required,
 )
@@ -42,27 +43,27 @@ transforms = TransformSequence()
 
 docker_image_schema = Schema({
     # Name of the docker image.
-    Required('name'): basestring,
+    Required('name'): Any(*six.string_types),
 
     # Name of the parent docker image.
-    Optional('parent'): basestring,
+    Optional('parent'): Any(*six.string_types),
 
     # Treeherder symbol.
-    Optional('symbol'): basestring,
+    Optional('symbol'): Any(*six.string_types),
 
     # relative path (from config.path) to the file the docker image was defined
     # in.
-    Optional('job-from'): basestring,
+    Optional('job-from'): Any(*six.string_types),
 
     # Arguments to use for the Dockerfile.
-    Optional('args'): {basestring: basestring},
+    Optional('args'): {Any(*six.string_types): Any(*six.string_types)},
 
     # Name of the docker image definition under taskcluster/docker, when
     # different from the docker image name.
-    Optional('definition'): basestring,
+    Optional('definition'): Any(*six.string_types),
 
     # List of package tasks this docker image depends on.
-    Optional('packages'): [basestring],
+    Optional('packages'): [Any(*six.string_types)],
 
     Optional(
         "index",

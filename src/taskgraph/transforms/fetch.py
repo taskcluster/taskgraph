@@ -12,9 +12,10 @@ import attr
 import io
 import os
 import re
-from six import text_type
+from six import string_types, text_type
 
 from voluptuous import (
+    Any,
     Optional,
     Required,
     Extra,
@@ -64,7 +65,7 @@ FETCH_SCHEMA = Schema({
         "`public/` the artifact will require scopes to access.",
     ): text_type,
 
-    Optional('attributes'): {basestring: object},
+    Optional('attributes'): {Any(*string_types): object},
 
     Required('fetch'): {
         Required('type'): text_type,

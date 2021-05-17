@@ -14,7 +14,7 @@ import hashlib
 import os
 import re
 import time
-from six import text_type
+from six import string_types, text_type
 from copy import deepcopy
 
 import attr
@@ -50,16 +50,16 @@ def _run_task_suffix():
 # A task description is a general description of a TaskCluster task
 task_description_schema = Schema({
     # the label for this task
-    Required('label'): basestring,
+    Required('label'): Any(*string_types),
 
     # description of the task (for metadata)
-    Required('description'): basestring,
+    Required('description'): Any(*string_types),
 
     # attributes for this task
-    Optional('attributes'): {basestring: object},
+    Optional('attributes'): {Any(*string_types): object},
 
     # relative path (from config.path) to the file task was defined in
-    Optional('job-from'): basestring,
+    Optional('job-from'): Any(*string_types),
 
     # dependencies of this task, keyed by name; these are passed through
     # verbatim and subject to the interpretation of the Task's get_dependencies
@@ -72,31 +72,31 @@ task_description_schema = Schema({
     },
 
     # Soft dependencies of this task, as a list of tasks labels
-    Optional('soft-dependencies'): [basestring],
+    Optional('soft-dependencies'): [Any(*string_types)],
 
     Optional('requires'): Any('all-completed', 'all-resolved'),
 
     # expiration and deadline times, relative to task creation, with units
     # (e.g., "14 days").  Defaults are set based on the project.
-    Optional('expires-after'): basestring,
-    Optional('deadline-after'): basestring,
+    Optional('expires-after'): Any(*string_types),
+    Optional('deadline-after'): Any(*string_types),
 
     # custom routes for this task; the default treeherder routes will be added
     # automatically
-    Optional('routes'): [basestring],
+    Optional('routes'): [Any(*string_types)],
 
     # custom scopes for this task; any scopes required for the worker will be
     # added automatically. The following parameters will be substituted in each
     # scope:
     #  {level} -- the scm level of this push
     #  {project} -- the project of this push
-    Optional('scopes'): [basestring],
+    Optional('scopes'): [Any(*string_types)],
 
     # Tags
-    Optional('tags'): {basestring: basestring},
+    Optional('tags'): {Any(*string_types): Any(*string_types)},
 
     # custom "task.extra" content
-    Optional('extra'): {basestring: object},
+    Optional('extra'): {Any(*string_types): object},
 
     # treeherder-related information; see
     # https://schemas.taskcluster.net/taskcluster-treeherder/v1/task-treeherder-config.json
@@ -104,7 +104,7 @@ task_description_schema = Schema({
     # added to the task
     Optional('treeherder'): {
         # either a bare symbol, or "grp(sym)".
-        'symbol': basestring,
+        'symbol': Any(*string_types),
 
         # the job kind
         'kind': Any('build', 'test', 'other'),
@@ -115,20 +115,20 @@ task_description_schema = Schema({
         # task platform, in the form platform/collection, used to set
         # treeherder.machine.platform and treeherder.collection or
         # treeherder.labels
-        'platform': basestring,
+        'platform': Any(*string_types),
     },
 
     # information for indexing this build so its artifacts can be discovered;
     # if omitted, the build will not be indexed.
     Optional('index'): {
         # the name of the product this build produces
-        'product': basestring,
+        'product': Any(*string_types),
 
         # the names to use for this job in the TaskCluster index
-        'job-name': basestring,
+        'job-name': Any(*string_types),
 
         # Type of gecko v2 index to use
-        'type': basestring,
+        'type': Any(*string_types),
 
         # The rank that the task will receive in the TaskCluster
         # index.  A newly completed task supercedes the currently
@@ -154,7 +154,7 @@ task_description_schema = Schema({
     # The `run_on_projects` attribute, defaulting to "all".  This dictates the
     # projects on which this task should be included in the target task set.
     # See the attributes documentation for details.
-    Optional('run-on-projects'): optionally_keyed_by('build-platform', [basestring]),
+    Optional('run-on-projects'): optionally_keyed_by('build-platform', [Any(*string_types)]),
 
     Optional('run-on-tasks-for'): [text_type],
     Optional('run-on-git-branches'): [text_type],
@@ -173,14 +173,14 @@ task_description_schema = Schema({
     # the provisioner-id/worker-type for the task.  The following parameters will
     # be substituted in this string:
     #  {level} -- the scm level of this push
-    'worker-type': basestring,
+    'worker-type': Any(*string_types),
 
     # Whether the job should use sccache compiler caching.
     Required('needs-sccache'): bool,
 
     # information specific to the worker implementation that will run this task
     Optional('worker'): {
-        Required('implementation'): basestring,
+        Required('implementation'): Any(*string_types),
         Extra: object,
     }
 })
@@ -267,11 +267,11 @@ def verify_index(config, index):
     # `desktop-test`, or an image that acts an awful lot like it.
     Required('docker-image'): Any(
         # a raw Docker image path (repo/image:tag)
-        basestring,
+        Any(*string_types),
         # an in-tree generated docker image (from `taskcluster/docker/<name>`)
-        {'in-tree': basestring},
+        {'in-tree': Any(*string_types)},
         # an indexed docker image
-        {'indexed': basestring},
+        {'indexed': Any(*string_types)},
     ),
 
     # worker features that should be enabled
@@ -294,7 +294,7 @@ def verify_index(config, index):
     # Caches are often mounted to the same path as Docker volumes. In this
     # case, they take precedence over a Docker volume. But a volume still
     # needs to be declared for the path.
-    Optional('volumes'): [basestring],
+    Optional('volumes'): [Any(*string_types)],
 
     # caches to set up for the task
     Optional('caches'): [{
@@ -303,10 +303,10 @@ def verify_index(config, index):
 
         # name of the cache, allowing re-use by subsequent tasks naming the
         # same cache
-        'name': basestring,
+        'name': Any(*string_types),
 
         # location in the task image where the cache will be mounted
-        'mount-point': basestring,
+        'mount-point': Any(*string_types),
 
         # Whether the cache is not used in untrusted environments
         # (like the Try repo).
@@ -319,15 +319,15 @@ def verify_index(config, index):
         'type': Any('file', 'directory'),
 
         # task image path from which to read artifact
-        'path': basestring,
+        'path': Any(*string_types),
 
         # name of the produced artifact (root of the names for
         # type=directory)
-        'name': basestring,
+        'name': Any(*string_types),
     }],
 
     # environment variables
-    Required('env'): {basestring: taskref_or_string},
+    Required('env'): {Any(*string_types): taskref_or_string},
 
     # the command to run; if not given, docker-worker will default to the
     # command in the docker image
@@ -464,7 +464,7 @@ def build_docker_worker_payload(config, task, task_def):
             }
         payload['artifacts'] = artifacts
 
-    if isinstance(worker.get('docker-image'), basestring):
+    if isinstance(worker.get('docker-image'), string_types):
         out_of_tree_image = worker['docker-image']
     else:
         out_of_tree_image = None
@@ -570,10 +570,10 @@ def build_docker_worker_payload(config, task, task_def):
         'type': Any('file', 'directory'),
 
         # filesystem path from which to read artifact
-        'path': basestring,
+        'path': Any(*string_types),
 
         # if not specified, path is used for artifact name
-        Optional('name'): basestring
+        Optional('name'): Any(*string_types)
     }],
 
     # Directories and/or files to be mounted.
@@ -583,7 +583,7 @@ def build_docker_worker_payload(config, task, task_def):
     Optional('mounts'): [{
         # A unique name for the cache volume, implies writable cache directory
         # (otherwise mount is a read-only file or directory).
-        Optional('cache-name'): basestring,
+        Optional('cache-name'): Any(*string_types),
         # Optional content for pre-loading cache, or mandatory content for
         # read-only file or directory. Pre-loaded content can come from either
         # a task artifact or from a URL.
@@ -592,12 +592,12 @@ def build_docker_worker_payload(config, task, task_def):
             # *** Either (artifact and task-id) or url must be specified. ***
 
             # Artifact name that contains the content.
-            Optional('artifact'): basestring,
+            Optional('artifact'): Any(*string_types),
             # Task ID that has the artifact that contains the content.
             Optional('task-id'): taskref_or_string,
             # URL that supplies the content in response to an unauthenticated
             # GET request.
-            Optional('url'): basestring
+            Optional('url'): Any(*string_types)
         },
 
         # *** Either file or directory must be specified. ***
@@ -605,10 +605,10 @@ def build_docker_worker_payload(config, task, task_def):
         # If mounting a cache or read-only directory, the filesystem location of
         # the directory should be specified as a relative path to the task
         # directory here.
-        Optional('directory'): basestring,
+        Optional('directory'): Any(*string_types),
         # If mounting a file, specify the relative path within the task
         # directory to mount the file (the file will be read only).
-        Optional('file'): basestring,
+        Optional('file'): Any(*string_types),
         # Required if and only if `content` is specified and mounting a
         # directory (not a file). This should be the archive format of the
         # content (either pre-loaded cache or read-only directory).
@@ -616,13 +616,13 @@ def build_docker_worker_payload(config, task, task_def):
     }],
 
     # environment variables
-    Required('env'): {basestring: taskref_or_string},
+    Required('env'): {Any(*string_types): taskref_or_string},
 
     # the maximum time to run, in seconds
     Required('max-run-time'): int,
 
     # os user groups for test task workers
-    Optional('os-groups'): [basestring],
+    Optional('os-groups'): [Any(*string_types)],
 
     # feature for test task to run as administarotr
     Optional('run-as-administrator'): bool,
@@ -1138,7 +1138,7 @@ def check_run_task_caches(config, tasks):
         payload = task['task'].get('payload', {})
         command = payload.get('command') or ['']
 
-        main_command = command[0] if isinstance(command[0], basestring) else ''
+        main_command = command[0] if isinstance(command[0], string_types) else ''
         run_task = main_command.endswith('run-task')
 
         for cache in payload.get('cache', {}):

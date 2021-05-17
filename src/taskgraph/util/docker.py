@@ -10,10 +10,9 @@ import os
 import re
 import requests_unixsocket
 import sys
-import urllib
 
 import six
-import urlparse
+from six.moves import urllib_parse
 from io import BytesIO
 
 from .archive import create_tar_gz_from_files
@@ -27,12 +26,12 @@ from .yaml import load_yaml
 
 def docker_url(path, **kwargs):
     docker_socket = os.environ.get('DOCKER_SOCKET', '/var/run/docker.sock')
-    return urlparse.urlunparse((
+    return urllib_parse.urlunparse((
         'http+unix',
-        urllib.quote(docker_socket, safe=''),
+        urllib_parse.quote(docker_socket, safe=''),
         path,
         '',
-        urllib.urlencode(kwargs),
+        urllib_parse.urlencode(kwargs),
         ''))
 
 

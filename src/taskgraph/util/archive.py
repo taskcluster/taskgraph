@@ -9,6 +9,8 @@ import gzip
 import stat
 import tarfile
 
+from six import string_types
+
 # 2016-01-01T00:00:00+0000
 DEFAULT_MTIME = 1451606400
 
@@ -28,7 +30,7 @@ def create_tar_from_files(fp, files):
     """
     with tarfile.open(name='', mode='w', fileobj=fp, dereference=True) as tf:
         for archive_path, f in sorted(files.items()):
-            if isinstance(f, basestring):
+            if isinstance(f, string_types):
                 mode = os.stat(f).st_mode
                 f = open(f, 'rb')
             else:

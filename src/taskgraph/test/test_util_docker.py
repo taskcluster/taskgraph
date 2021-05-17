@@ -10,8 +10,11 @@ import stat
 import tarfile
 import tempfile
 import unittest
+
 import mock
+import pytest
 import taskcluster_urls as liburls
+from six import PY3
 
 from taskgraph.util import docker
 
@@ -24,6 +27,7 @@ MODE_STANDARD = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
 @mock.patch.dict('os.environ', {'TASKCLUSTER_ROOT_URL': liburls.test_root_url()})
 class TestDocker(unittest.TestCase):
 
+    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_generate_context_hash(self):
         tmpdir = tempfile.mkdtemp()
         try:
@@ -103,6 +107,7 @@ class TestDocker(unittest.TestCase):
         finally:
             shutil.rmtree(tmp)
 
+    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_create_context_topsrcdir_files(self):
         tmp = tempfile.mkdtemp()
         try:
@@ -130,6 +135,7 @@ class TestDocker(unittest.TestCase):
         finally:
             shutil.rmtree(tmp)
 
+    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_create_context_absolute_path(self):
         tmp = tempfile.mkdtemp()
         try:
@@ -145,6 +151,7 @@ class TestDocker(unittest.TestCase):
         finally:
             shutil.rmtree(tmp)
 
+    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_create_context_outside_topsrcdir(self):
         tmp = tempfile.mkdtemp()
         try:
@@ -159,6 +166,7 @@ class TestDocker(unittest.TestCase):
         finally:
             shutil.rmtree(tmp)
 
+    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_create_context_missing_extra(self):
         tmp = tempfile.mkdtemp()
         try:
@@ -173,6 +181,7 @@ class TestDocker(unittest.TestCase):
         finally:
             shutil.rmtree(tmp)
 
+    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_create_context_extra_directory(self):
         tmp = tempfile.mkdtemp()
         try:

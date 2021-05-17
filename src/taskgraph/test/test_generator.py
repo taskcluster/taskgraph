@@ -4,8 +4,10 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-import pytest
 import unittest
+
+import pytest
+from six import PY3
 
 from taskgraph.generator import TaskGraphGenerator, Kind
 from taskgraph.optimize import OptimizationStrategy
@@ -17,6 +19,8 @@ from taskgraph import (
     optimize as optimize_mod,
     target_tasks as target_tasks_mod,
 )
+
+pytestmark = pytest.mark.xfail(PY3, reason="fails with Python 3")
 
 
 def fake_loader(kind, path, config, parameters, loaded_tasks):

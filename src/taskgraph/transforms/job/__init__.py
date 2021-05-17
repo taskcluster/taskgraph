@@ -16,7 +16,7 @@ import logging
 import json
 import os
 
-from six import text_type
+from six import string_types, text_type
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util import path as mozpath
@@ -43,8 +43,8 @@ job_description_schema = Schema({
     # The name of the job and the job's label.  At least one must be specified,
     # and the label will be generated from the name if necessary, by prepending
     # the kind.
-    Optional('name'): basestring,
-    Optional('label'): basestring,
+    Optional('name'): Any(*string_types),
+    Optional('label'): Any(*string_types),
 
     # the following fields are passed directly through to the task description,
     # possibly modified by the run implementation.  See
@@ -77,17 +77,17 @@ job_description_schema = Schema({
         # This task only needs to be run if a file matching one of the given
         # patterns has changed in the push.  The patterns use the mozpack
         # match function (python/mozbuild/mozpack/path.py).
-        Optional('files-changed'): [basestring],
+        Optional('files-changed'): [Any(*string_types)],
     },
 
     # A list of artifacts to install from 'fetch' tasks.
     Optional("fetches"): {
         Any("toolchain", "fetch"): [text_type],
-        basestring: [
-            basestring,
+        Any(*string_types): [
+            Any(*string_types),
             {
-                Required("artifact"): basestring,
-                Optional("dest"): basestring,
+                Required("artifact"): Any(*string_types),
+                Optional("dest"): Any(*string_types),
                 Optional("extract"): bool,
             },
         ],
@@ -96,10 +96,10 @@ job_description_schema = Schema({
     # A description of how to run this job.
     'run': {
         # The key to a job implementation in a peer module to this one
-        'using': basestring,
+        'using': Any(*string_types),
 
         # Base work directory used to set up the task.
-        Optional('workdir'): basestring,
+        Optional('workdir'): Any(*string_types),
 
         # Any remaining content is verified against that job implementation's
         # own schema.
@@ -295,7 +295,7 @@ def use_fetches(config, jobs):
                     prefix = get_artifact_prefix(dep_tasks[0])
 
                 for artifact in artifacts:
-                    if isinstance(artifact, basestring):
+                    if isinstance(artifact, string_types):
                         path = artifact
                         dest = None
                         extract = True

@@ -8,7 +8,7 @@ Support for running jobs that are invoked via the `run-task` script.
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
-from six import text_type
+from six import string_types, text_type
 
 import attr
 
@@ -41,7 +41,7 @@ run_task_schema = Schema({
 
     # The sparse checkout profile to use. Value is the filename relative to the
     # directory where sparse profiles are defined (build/sparse-profiles/).
-    Required('sparse-profile'): Any(basestring, None),
+    Required('sparse-profile'): Any(Any(*string_types), None),
 
     # The command arguments to pass to the `run-task` script, after the
     # checkout arguments.  If a list, it will be passed directly; otherwise
@@ -49,7 +49,7 @@ run_task_schema = Schema({
     Required('command'): Any([taskref_or_string], taskref_or_string),
 
     # Base work directory used to set up the task.
-    Required('workdir'): basestring,
+    Required('workdir'): Any(*string_types),
 
     # Whether to run as root. (defaults to False)
     Optional('run-as-root'): bool,
@@ -151,8 +151,8 @@ def docker_worker_run_task(config, job, taskdesc):
 
     run_command = run['command']
 
-    # dict is for the case of `{'task-reference': basestring}`.
-    if isinstance(run_command, (basestring, dict)):
+    # dict is for the case of `{'task-reference': Any(*string_types)}`.
+    if isinstance(run_command, string_types) or isinstance(run_command, dict):
         run_command = ['bash', '-cx', run_command]
     command.append('--fetch-hgfingerprint')
     if run['run-as-root']:
@@ -201,7 +201,7 @@ def generic_worker_run_task(config, job, taskdesc):
 
     run_command = run['command']
 
-    if isinstance(run_command, basestring):
+    if isinstance(run_command, string_types):
         if is_win:
             run_command = '"{}"'.format(run_command)
         run_command = ['bash', '-cx', run_command]

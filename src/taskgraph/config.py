@@ -8,7 +8,7 @@ import os
 import logging
 import sys
 import attr
-from six import text_type
+from six import string_types, text_type
 from .util import path
 
 from .util.python_path import find_object
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 graph_config_schema = Schema({
     # The trust-domain for this graph.
     # (See https://firefox-source-docs.mozilla.org/taskcluster/taskcluster/taskgraph.html#taskgraph-trust-domain)  # noqa
-    Required('trust-domain'): basestring,
+    Required('trust-domain'): Any(*string_types),
     Required('task-priority'): optionally_keyed_by('project', Any(
         'highest',
         'very-high',

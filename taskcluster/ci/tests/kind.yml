@@ -47,16 +47,7 @@ jobs:
             command: >-
                 pip install --user -r requirements/test.py3.txt &&
                 pip install --user --no-deps . &&
-                pytest \
-                    --ignore src/taskgraph/test/test_create.py \
-                    --ignore src/taskgraph/test/test_decision.py \
-                    --ignore src/taskgraph/test/test_generator.py \
-                    --ignore src/taskgraph/test/test_morph.py \
-                    --ignore src/taskgraph/test/test_parameters.py \
-                    --ignore src/taskgraph/test/test_transforms_base.py \
-                    --ignore src/taskgraph/test/test_transforms_job.py \
-                    --ignore src/taskgraph/test/test_util_docker.py \
-                    --ignore src/taskgraph/test/test_util_schema.py
+                pytest --pyargs taskgraph
 
     flake8:
         description: "Run `flake8` to validate the latest changes"
@@ -77,22 +68,14 @@ jobs:
             command: >-
                 pip install --user -r requirements/test.py3.txt &&
                 flake8 --extend-exclude="\
-                 src/taskgraph/generator.py,\
-                 src/taskgraph/parameters.py,\
-                 src/taskgraph/config.py,\
                  src/taskgraph/transforms/docker_image.py,\
                  src/taskgraph/transforms/fetch.py,\
-                 src/taskgraph/transforms/base.py,\
-                 src/taskgraph/transforms/task.py,\
                  src/taskgraph/transforms/job/run_task.py,\
-                 src/taskgraph/transforms/job/__init__.py,\
                  src/taskgraph/actions/retrigger.py,\
                  src/taskgraph/actions/util.py,\
                  src/taskgraph/actions/add_new_jobs.py,\
                  src/taskgraph/util/archive.py,\
                  src/taskgraph/util/schema.py,\
-                 src/taskgraph/test/test_create.py,\
-                 src/taskgraph/test/test_util_schema.py,\
                  src/taskgraph/test/test_optimize.py,\
                  taskcluster/scripts/external_tools/tooltool.py"
     black:

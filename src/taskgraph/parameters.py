@@ -10,7 +10,7 @@ import json
 import time
 from datetime import datetime
 
-from six import text_type
+from six import string_types, text_type
 
 from taskgraph.util.schema import validate_schema
 from taskgraph.util.vcs import calculate_head_rev, get_repo_path, get_repository_type
@@ -18,6 +18,7 @@ from taskgraph.util.memoize import memoize
 from taskgraph.util.readonlydict import ReadOnlyDict
 from voluptuous import (
     ALLOW_EXTRA,
+    Any,
     Required,
     Optional,
     Schema,
@@ -45,25 +46,25 @@ def _get_repo_path():
 
 # Please keep this list sorted and in sync with taskcluster/docs/parameters.rst
 base_schema = Schema({
-    Required('base_repository'): basestring,
+    Required('base_repository'): Any(*string_types),
     Required('build_date'): int,
-    Required('do_not_optimize'): [basestring],
-    Required('existing_tasks'): {basestring: basestring},
-    Required('filters'): [basestring],
-    Required('head_ref'): basestring,
-    Required('head_repository'): basestring,
-    Required('head_rev'): basestring,
-    Required('head_tag'): basestring,
-    Required('level'): basestring,
-    Required('moz_build_date'): basestring,
+    Required('do_not_optimize'): [Any(*string_types)],
+    Required('existing_tasks'): {Any(*string_types): Any(*string_types)},
+    Required('filters'): [Any(*string_types)],
+    Required('head_ref'): Any(*string_types),
+    Required('head_repository'): Any(*string_types),
+    Required('head_rev'): Any(*string_types),
+    Required('head_tag'): Any(*string_types),
+    Required('level'): Any(*string_types),
+    Required('moz_build_date'): Any(*string_types),
     Required('optimize_target_tasks'): bool,
-    Required('owner'): basestring,
-    Required('project'): basestring,
+    Required('owner'): Any(*string_types),
+    Required('project'): Any(*string_types),
     Required('pushdate'): int,
-    Required('pushlog_id'): basestring,
-    Required('repository_type'): basestring,
-    Required('target_tasks_method'): basestring,
-    Required('tasks_for'): basestring,
+    Required('pushlog_id'): Any(*string_types),
+    Required('repository_type'): Any(*string_types),
+    Required('target_tasks_method'): Any(*string_types),
+    Required('tasks_for'): Any(*string_types),
     Optional('code-review'): {
         Required('phabricator-build-target'): text_type,
     }
@@ -154,11 +155,11 @@ class Parameters(ReadOnlyDict):
         Determine the VCS URL for viewing a file in the tree, suitable for
         viewing by a human.
 
-        :param basestring path: The path, relative to the root of the repository.
+        :param str path: The path, relative to the root of the repository.
         :param bool pretty: Whether to return a link to a formatted version of the
             file, or the raw file version.
 
-        :return basestring: The URL displaying the given path.
+        :return str: The URL displaying the given path.
         """
         if self['repository_type'] == 'hg':
             if path.startswith('comm/'):
