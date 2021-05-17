@@ -8,23 +8,86 @@
 -r test.txt
 click==7.1.2 \
     --hash=sha256:d2b5255c7c6349bc1bd1e59e08cd12acbbd63ce649f2588755783aa94dfb6b1a \
-    --hash=sha256:dacca89f4bfadd5de3d7489b7c8a566eee0d3676333fbb50030263894c38c0dc \
-    # via pip-compile-multi, pip-tools
+    --hash=sha256:dacca89f4bfadd5de3d7489b7c8a566eee0d3676333fbb50030263894c38c0dc
+# via
+#   pip-compile-multi
+#   pip-tools
+# via
+#   flake8
+#   importlib-metadata
+# via importlib-metadata
+# via flake8
+# via -r test.in
+# via
+#   mock
+#   pytest
+# via flake8
+futures==3.3.0 ; python_version == "2.7" --hash=sha256:49b3f5b064b6e3afc3316421a3f25f66c137ae88f068abbf72830170033c5e16 --hash=sha256:7e033af76a5e35f58e56da7a91e687706faf4e7bdfb2cbc3f2cca6b9bcda9794
+# via -r base.in
+# via requests
+# via
+#   flake8
+#   pluggy
+#   pytest
+# via -r base.in
+# via flake8
+# via -r test.in
+# via pytest
+# via pytest
+# via
+#   -r base.in
+#   importlib-metadata
+#   pytest
+# via yamllint
 pip-compile-multi==1.5.9 \
     --hash=sha256:0bfd864fce280c5b3515e8a2b3871ed8d07d338ffdbe72b7c53b050328270b06 \
-    --hash=sha256:ed9519858a1e9c64cd7ef7b122631fed02545ca038f35fa0f8cc69602775696c \
-    # via -r dev.in
+    --hash=sha256:ed9519858a1e9c64cd7ef7b122631fed02545ca038f35fa0f8cc69602775696c
+# via -r dev.in
 pip-tools==5.4.0 \
     --hash=sha256:a4d3990df2d65961af8b41dacc242e600fdc8a65a2e155ed3d2fc18a5c209f20 \
-    --hash=sha256:b73f76fe6464b95e41d595a9c0302c55a786dbc54b63ae776c540c04e31914fb \
-    # via pip-compile-multi
+    --hash=sha256:b73f76fe6464b95e41d595a9c0302c55a786dbc54b63ae776c540c04e31914fb
+# via pip-compile-multi
+# via pytest
+# via pytest
+# via flake8
+# via flake8
+# via packaging
+# via -r test.in
+# via
+#   -r base.in
+#   yamllint
+# via -r base.in
+# via -r base.in
+# via
+#   -r base.in
+#   requests-unixsocket
+# via pathlib2
+# via
+#   -r base.in
+#   mock
+#   more-itertools
+#   pathlib2
+#   pip-tools
+#   pytest
+# via -r base.in
+# via -r base.in
 toposort==1.5 \
     --hash=sha256:d80128b83b411d503b0cdb4a8f172998bc1d3b434b6402a349b8ebd734d51a80 \
-    --hash=sha256:dba5ae845296e3bf37b042c640870ffebcdeb8cd4df45adaa01d8c5476c557dd \
-    # via pip-compile-multi
+    --hash=sha256:dba5ae845296e3bf37b042c640870ffebcdeb8cd4df45adaa01d8c5476c557dd
+# via pip-compile-multi
+typing==3.7.4.3 ; python_version < "3.5" --hash=sha256:1187fb9c82fd670d10aa07bbb6cfcfe4bdda42d6fab8d5134f04e8c4d0b71cc9 --hash=sha256:283d868f5071ab9ad873e5e52268d611e851c870a2ba354193026f2dfb29d8b5
+# via
+#   -r base.in
+#   flake8
+# via
+#   requests
+#   requests-unixsocket
+# via -r base.in
+# via pytest
+# via -r test.in
+# via importlib-metadata
 
-# The following packages are considered to be unsafe in a requirements file:
-pip==20.3.1 \
-    --hash=sha256:425e79b20939abbffa7633a91151a882aedc77564d9313e3584eb0416c28c558 \
-    --hash=sha256:43f7d3811f05db95809d39515a5111dd05994965d870178a4fe10d5482f9d2e2 \
-    # via pip-tools
+# WARNING: The following packages were not pinned, but pip requires them to be
+# pinned when the requirements file includes hashes. Consider using the --allow-unsafe flag.
+# pip
+# setuptools

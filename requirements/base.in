@@ -9,4 +9,5 @@ requests_unixsocket
 six
 slugid
 taskcluster-urls
+typing;python_version<"3.5"
 voluptuous
