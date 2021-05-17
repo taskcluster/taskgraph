@@ -8,9 +8,6 @@
 import os
 import unittest
 
-import pytest
-from six import PY3
-
 from taskgraph.util.path import (
     relpath,
     join,
@@ -88,7 +85,6 @@ class TestPath(unittest.TestCase):
         self.assertEqual(basedir(foobarbaz, ['foo', 'bar', '']), 'foo')
         self.assertEqual(basedir(foobarbaz, ['bar', 'baz', '']), '')
 
-    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_match(self):
         self.assertTrue(match('foo', ''))
         self.assertTrue(match('foo/bar/baz.qux', 'foo/bar'))
