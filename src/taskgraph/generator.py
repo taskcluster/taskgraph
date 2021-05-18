@@ -9,6 +9,8 @@ import copy
 import attr
 from typing import AnyStr
 
+import six
+
 from . import filter_tasks
 from .graph import Graph
 from .taskgraph import TaskGraph
@@ -252,7 +254,7 @@ class TaskGraphGenerator(object):
         kinds = {kind.name: kind for kind in self._load_kinds(graph_config)}
 
         edges = set()
-        for kind in kinds.itervalues():
+        for kind in kinds.values():
             for dep in kind.config.get('kind-dependencies', []):
                 edges.add((kind.name, dep, 'kind-dependency'))
         kind_graph = Graph(set(kinds), edges)
@@ -286,7 +288,7 @@ class TaskGraphGenerator(object):
         logger.info("Generating full task graph")
         edges = set()
         for t in full_task_set:
-            for depname, dep in t.dependencies.iteritems():
+            for depname, dep in t.dependencies.items():
                 edges.add((t.label, dep, depname))
 
         full_task_graph = TaskGraph(all_tasks,
@@ -313,10 +315,10 @@ class TaskGraphGenerator(object):
 
         logger.info("Generating target task graph")
         # include all docker-image build tasks here, in case they are needed for a graph morph
-        docker_image_tasks = set(t.label for t in full_task_graph.tasks.itervalues()
+        docker_image_tasks = set(t.label for t in six.itervalues(full_task_graph.tasks)
                                  if t.attributes['kind'] == 'docker-image')
         # include all tasks with `always_target` set
-        always_target_tasks = set(t.label for t in full_task_graph.tasks.itervalues()
+        always_target_tasks = set(t.label for t in six.itervalues(full_task_graph.tasks)
                                   if t.attributes.get('always_target'))
         logger.info('Adding %d tasks with `always_target` attribute' % (
                     len(always_target_tasks) - len(always_target_tasks & target_tasks)))
@@ -351,7 +353,7 @@ class TaskGraphGenerator(object):
     def _run_until(self, name):
         while name not in self._run_results:
             try:
-                k, v = self._run.next()
+                k, v = next(self._run)
             except StopIteration:
                 raise AttributeError("No such run result {}".format(name))
             self._run_results[k] = v

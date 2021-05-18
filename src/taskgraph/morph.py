@@ -23,7 +23,9 @@ import logging
 import os
 import re
 
+import six
 from slugid import nice as slugid
+
 from .task import Task
 from .graph import Graph
 from .taskgraph import TaskGraph
@@ -42,7 +44,7 @@ def amend_taskgraph(taskgraph, label_to_taskid, to_add):
         new_tasks[task.task_id] = task
         assert task.label not in label_to_taskid
         label_to_taskid[task.label] = task.task_id
-        for depname, dep in task.dependencies.iteritems():
+        for depname, dep in task.dependencies.items():
             new_edges.add((task.task_id, dep, depname))
 
     taskgraph = TaskGraph(new_tasks, Graph(set(new_tasks), new_edges))
@@ -153,7 +155,7 @@ def add_index_tasks(taskgraph, label_to_taskid, parameters, graph_config):
     logger.debug('Morphing: adding index tasks')
 
     added = []
-    for label, task in taskgraph.tasks.iteritems():
+    for label, task in six.iteritems(taskgraph.tasks):
         if len(task.task.get('routes', [])) <= MAX_ROUTES:
             continue
         task, taskgraph, label_to_taskid = make_index_task(
@@ -192,7 +194,7 @@ def add_code_review_task(taskgraph, label_to_taskid, parameters, graph_config):
         return taskgraph, label_to_taskid
 
     code_review_tasks = {}
-    for label, task in taskgraph.tasks.iteritems():
+    for label, task in six.iteritems(taskgraph.tasks):
         if task.attributes.get('code-review'):
             code_review_tasks[task.label] = task.task_id
 

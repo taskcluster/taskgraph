@@ -17,12 +17,14 @@ import logging
 import os
 from collections import defaultdict
 
+import six
+from slugid import nice as slugid
+
 from .graph import Graph
 from . import files_changed
 from .taskgraph import TaskGraph
 from .util.taskcluster import find_task_id
 from .util.parameterization import resolve_task_references
-from slugid import nice as slugid
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +79,7 @@ def _get_optimizations(target_task_graph, strategies):
     def optimizations(label):
         task = target_task_graph.tasks[label]
         if task.optimization:
-            opt_by, arg = task.optimization.items()[0]
+            opt_by, arg = list(task.optimization.items())[0]
             return (opt_by, strategies[opt_by], arg)
         else:
             return ('never', strategies['never'], None)
@@ -91,7 +93,7 @@ def _log_optimization(verb, opt_counts):
                 verb.title(),
                 ', '.join(
                     '{} tasks by {}'.format(c, b)
-                    for b, c in sorted(opt_counts.iteritems())
+                    for b, c in sorted(opt_counts.items())
                 )
             )
         )
@@ -205,13 +207,13 @@ def get_subgraph(
     tasks_by_taskid = {}
     named_links_dict = target_task_graph.graph.named_links_dict()
     omit = removed_tasks | replaced_tasks
-    for label, task in target_task_graph.tasks.iteritems():
+    for label, task in six.iteritems(target_task_graph.tasks):
         if label in omit:
             continue
         task.task_id = label_to_taskid[label]
         named_task_dependencies = {
             name: label_to_taskid[label]
-            for name, label in named_links_dict.get(label, {}).iteritems()}
+            for name, label in named_links_dict.get(label, {}).items()}
 
         # Add remaining soft dependencies
         if task.soft_dependencies:
@@ -229,7 +231,7 @@ def get_subgraph(
             dependencies=named_task_dependencies,
         )
         deps = task.task.setdefault('dependencies', [])
-        deps.extend(sorted(named_task_dependencies.itervalues()))
+        deps.extend(sorted(named_task_dependencies.values()))
         tasks_by_taskid[task.task_id] = task
 
     # resolve edges to taskIds

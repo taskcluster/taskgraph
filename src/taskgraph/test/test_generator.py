@@ -7,7 +7,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import unittest
 
 import pytest
-from six import PY3
 
 from taskgraph.generator import TaskGraphGenerator, Kind
 from taskgraph.optimize import OptimizationStrategy
@@ -19,8 +18,6 @@ from taskgraph import (
     optimize as optimize_mod,
     target_tasks as target_tasks_mod,
 )
-
-pytestmark = pytest.mark.xfail(PY3, reason="fails with Python 3")
 
 
 def fake_loader(kind, path, config, parameters, loaded_tasks):
@@ -156,8 +153,9 @@ class TestGenerator(unittest.TestCase):
         self.tgg = self.maketgg(['_fake-t-1'])
         self.assertEqual(self.tgg.target_task_set.graph,
                          graph.Graph({'_fake-t-1'}, set()))
-        self.assertEqual(self.tgg.target_task_set.tasks.keys(),
-                         ['_fake-t-1'])
+        self.assertEqual(
+            set(self.tgg.target_task_set.tasks.keys()), {"_fake-t-1"}
+        )
 
     def test_target_task_graph(self):
         "The target_task_graph property has the targeted tasks and deps"
