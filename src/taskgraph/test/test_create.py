@@ -16,7 +16,6 @@ from taskgraph.graph import Graph
 from taskgraph.taskgraph import TaskGraph
 from taskgraph.task import Task
 
-pytestmark = pytest.mark.xfail(PY3, reason="fails with Python 3")
 GRAPH_CONFIG = GraphConfig({'trust-domain': 'domain'}, '/var/empty')
 
 
@@ -50,7 +49,7 @@ class TestCreate(unittest.TestCase):
             decision_task_id="decisiontask",
         )
 
-        for tid, task in self.created_tasks.iteritems():
+        for tid, task in self.created_tasks.items():
             self.assertEqual(task['payload'], 'hello world')
             self.assertEqual(task['schedulerId'], 'domain-level-4')
             # make sure the dependencies exist, at least
@@ -77,7 +76,7 @@ class TestCreate(unittest.TestCase):
             decision_task_id="decisiontask",
         )
 
-        for tid, task in self.created_tasks.iteritems():
+        for tid, task in self.created_tasks.items():
             self.assertEqual(task.get('dependencies'), ["decisiontask"])
 
     @mock.patch('taskgraph.create.create_task')
