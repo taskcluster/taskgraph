@@ -5,6 +5,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
+import io
 import json
 import os
 import re
@@ -13,7 +14,6 @@ import sys
 
 import six
 from six.moves import urllib_parse
-from io import BytesIO
 
 from .archive import create_tar_gz_from_files
 from .memoize import memoize
@@ -239,7 +239,7 @@ def stream_context_tar(topsrcdir, context_dir, out_file, image_name=None, args=N
 
     # Parse Dockerfile for special syntax of extra files to include.
     content = []
-    with open(os.path.join(context_dir, 'Dockerfile'), 'rb') as fh:
+    with io.open(os.path.join(context_dir, 'Dockerfile'), 'r') as fh:
         for line in fh:
             if line.startswith('# %ARG'):
                 p = line[len('# %ARG '):].strip()
@@ -285,7 +285,9 @@ def stream_context_tar(topsrcdir, context_dir, out_file, image_name=None, args=N
                 archive_path = os.path.join('topsrcdir', p)
                 archive_files[archive_path] = fs_path
 
-    archive_files['Dockerfile'] = BytesIO(b''.join(content))
+    archive_files['Dockerfile'] = io.BytesIO(
+        b''.join(six.ensure_binary(s) for s in content)
+    )
 
     writer = HashingWriter(out_file)
     create_tar_gz_from_files(writer, archive_files, image_name)
