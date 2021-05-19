@@ -22,7 +22,9 @@ _FORCE_COMMIT_DATE_TIME = "2019-11-04T10:03:58+00:00"
 
 
 @pytest.fixture(scope="function")
-def hg_repo(tmpdir):
+def hg_repo(tmpdir, monkeypatch):
+    # Set HGPLAIN to ensure local .hgrc configs don't cause test failures.
+    monkeypatch.setenv("HGPLAIN", "1")
     repo_dir = _init_repo(tmpdir, 'hg')
     with open(os.path.join(repo_dir, '.hg', 'hgrc'), 'a') as f:
         f.write('''[ui]
