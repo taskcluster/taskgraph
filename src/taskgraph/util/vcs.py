@@ -7,10 +7,11 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
+import subprocess
 
 import requests
-import subprocess
 from redo import retry
+from six import PY3
 
 PUSHLOG_TMPL = '{}/json-pushes?version=2&changeset={}&tipsonly=1&full=1'
 
@@ -74,10 +75,18 @@ def calculate_head_rev(repository_type, root):
 
     if repository_type == 'hg':
         # Mercurial refers to the current revision as `.`.
-        return subprocess.check_output(['hg', 'log', '-r', '.', '-T', '{node}'], cwd=root)
+        return subprocess.check_output(
+            ['hg', 'log', '-r', '.', '-T', '{node}'],
+            cwd=root,
+            universal_newlines=PY3,
+        )
     elif repository_type == 'git':
         # Git refers to the current revision as HEAD
-        return subprocess.check_output(['git', 'rev-parse', '--verify', 'HEAD'], cwd=root).strip()
+        return subprocess.check_output(
+            ['git', 'rev-parse', '--verify', 'HEAD'],
+            cwd=root,
+            universal_newlines=PY3,
+        ).strip()
     else:
         raise RuntimeError('Only the "git" and "hg" repository types are supported for using '
                            'calculate_head_rev()')
@@ -85,9 +94,17 @@ def calculate_head_rev(repository_type, root):
 
 def get_repo_path(repository_type, root):
     if repository_type == 'hg':
-        return subprocess.check_output(['hg', 'path', '-T', '{url}', 'default'], cwd=root)
+        return subprocess.check_output(
+            ['hg', 'path', '-T', '{url}', 'default'],
+            cwd=root,
+            universal_newlines=PY3,
+        )
     elif repository_type == 'git':
-        return subprocess.check_output(['git', 'remote', 'get-url', 'origin'], cwd=root).strip()
+        return subprocess.check_output(
+            ['git', 'remote', 'get-url', 'origin'],
+            cwd=root,
+            universal_newlines=PY3,
+        ).strip()
     else:
         raise RuntimeError('Only the "git" and "hg" repository types are supported for using '
                            'calculate_head_rev()')

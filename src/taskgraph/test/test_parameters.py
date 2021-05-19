@@ -7,8 +7,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 import unittest
 
-import pytest
-from six import PY3
 from taskgraph.parameters import (
     Parameters,
     ParameterMismatch,
@@ -53,7 +51,6 @@ class TestParameters(unittest.TestCase):
         p = Parameters(**self.vals)
         self.assertRaises(KeyError, lambda: p['z'])
 
-    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_Parameters_invalid_KeyError(self):
         """even if the value is present, if it's not a valid property, raise KeyError"""
         p = Parameters(xyz=10, strict=True, **self.vals)
@@ -67,7 +64,6 @@ class TestParameters(unittest.TestCase):
         p = Parameters(**self.vals)
         p.check()  # should not raise
 
-    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_Parameters_check_missing(self):
         p = Parameters()
         self.assertRaises(ParameterMismatch, lambda: p.check())
@@ -75,7 +71,6 @@ class TestParameters(unittest.TestCase):
         p = Parameters(strict=False)
         p.check()  # should not raise
 
-    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_Parameters_check_extra(self):
         p = Parameters(xyz=10, **self.vals)
         self.assertRaises(ParameterMismatch, lambda: p.check())

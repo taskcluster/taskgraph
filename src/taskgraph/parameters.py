@@ -128,7 +128,7 @@ class Parameters(ReadOnlyDict):
         try:
             validate_schema(schema, self.copy(), 'Invalid parameters:')
         except Exception as e:
-            raise ParameterMismatch(e.message)
+            raise ParameterMismatch(str(e))
 
     def __getitem__(self, k):
         try:
