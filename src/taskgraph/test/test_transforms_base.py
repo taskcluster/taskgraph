@@ -5,9 +5,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import unittest
-from taskgraph.transforms.base import (
-    TransformSequence
-)
+from taskgraph.transforms.base import TransformSequence
 
 transforms = TransformSequence()
 
@@ -15,23 +13,25 @@ transforms = TransformSequence()
 @transforms.add
 def trans1(config, tests):
     for test in tests:
-        test['one'] = 1
+        test["one"] = 1
         yield test
 
 
 @transforms.add
 def trans2(config, tests):
     for test in tests:
-        test['two'] = 2
+        test["two"] = 2
         yield test
 
 
 class TestTransformSequence(unittest.TestCase):
-
     def test_sequence(self):
-        tests = [{}, {'two': 1, 'second': True}]
+        tests = [{}, {"two": 1, "second": True}]
         res = list(transforms({}, tests))
-        self.assertEqual(res, [
-            {u'two': 2, u'one': 1},
-            {u'second': True, u'two': 2, u'one': 1},
-        ])
+        self.assertEqual(
+            res,
+            [
+                {"two": 2, "one": 1},
+                {"second": True, "two": 2, "one": 1},
+            ],
+        )

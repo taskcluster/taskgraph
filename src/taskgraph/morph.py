@@ -54,45 +54,54 @@ def amend_taskgraph(taskgraph, label_to_taskid, to_add):
 def derive_index_task(task, taskgraph, label_to_taskid, parameters, graph_config):
     """Create the shell of a task that depends on `task` and on the given docker
     image."""
-    purpose = 'index-task'
-    label = '{}-{}'.format(purpose, task.label)
-    provisioner_id, worker_type = get_worker_type(graph_config, 'misc', parameters['level'])
+    purpose = "index-task"
+    label = "{}-{}".format(purpose, task.label)
+    provisioner_id, worker_type = get_worker_type(
+        graph_config, "misc", parameters["level"]
+    )
 
     task_def = {
-        'provisionerId': provisioner_id,
-        'workerType': worker_type,
-        'dependencies': [task.task_id],
-        'created': {'relative-datestamp': '0 seconds'},
-        'deadline': task.task['deadline'],
+        "provisionerId": provisioner_id,
+        "workerType": worker_type,
+        "dependencies": [task.task_id],
+        "created": {"relative-datestamp": "0 seconds"},
+        "deadline": task.task["deadline"],
         # no point existing past the parent task's deadline
-        'expires': task.task['deadline'],
-        'metadata': {
-            'name': label,
-            'description': '{} for {}'.format(purpose, task.task['metadata']['description']),
-            'owner': task.task['metadata']['owner'],
-            'source': task.task['metadata']['source'],
+        "expires": task.task["deadline"],
+        "metadata": {
+            "name": label,
+            "description": "{} for {}".format(
+                purpose, task.task["metadata"]["description"]
+            ),
+            "owner": task.task["metadata"]["owner"],
+            "source": task.task["metadata"]["source"],
         },
-        'scopes': [],
-        'payload': {
-            'image': {
-                'path': 'public/image.tar.zst',
-                'namespace': 'taskgraph.cache.level-3.docker-images.v2.index-task.latest',
-                'type': 'indexed-image',
+        "scopes": [],
+        "payload": {
+            "image": {
+                "path": "public/image.tar.zst",
+                "namespace": "taskgraph.cache.level-3.docker-images.v2.index-task.latest",
+                "type": "indexed-image",
             },
-            'features': {
-                'taskclusterProxy': True,
+            "features": {
+                "taskclusterProxy": True,
             },
-            'maxRunTime': 600,
+            "maxRunTime": 600,
         },
     }
 
     # only include the docker-image dependency here if it is actually in the
     # taskgraph (has not been optimized).  It is included in
     # task_def['dependencies'] unconditionally.
-    dependencies = {'parent': task.task_id}
+    dependencies = {"parent": task.task_id}
 
-    task = Task(kind='misc', label=label, attributes={}, task=task_def,
-                dependencies=dependencies)
+    task = Task(
+        kind="misc",
+        label=label,
+        attributes={},
+        task=task_def,
+        dependencies=dependencies,
+    )
     task.task_id = slugid()
     return task, taskgraph, label_to_taskid
 
@@ -102,16 +111,20 @@ def derive_index_task(task, taskgraph, label_to_taskid, parameters, graph_config
 # in each Gecko `assume:repo:hg.mozilla.org/...` role.
 _SCOPE_SUMMARY_REGEXPS = [
     # TODO Bug 1631839 - Remove these scopes once the migration is done
-    re.compile(r'(index:insert-task:project\.mobile\.fenix\.v2\.[^.]*\.).*'),
-    re.compile(r'(index:insert-task:project\.mobile\.reference-browser\.v3\.[^.]*\.).*'),
+    re.compile(r"(index:insert-task:project\.mobile\.fenix\.v2\.[^.]*\.).*"),
+    re.compile(
+        r"(index:insert-task:project\.mobile\.reference-browser\.v3\.[^.]*\.).*"
+    ),
 ]
 
 
 def make_index_task(parent_task, taskgraph, label_to_taskid, parameters, graph_config):
-    index_paths = [r.split('.', 1)[1] for r in parent_task.task['routes']
-                   if r.startswith('index.')]
-    parent_task.task['routes'] = [r for r in parent_task.task['routes']
-                                  if not r.startswith('index.')]
+    index_paths = [
+        r.split(".", 1)[1] for r in parent_task.task["routes"] if r.startswith("index.")
+    ]
+    parent_task.task["routes"] = [
+        r for r in parent_task.task["routes"] if not r.startswith("index.")
+    ]
 
     task, taskgraph, label_to_taskid = derive_index_task(
         parent_task, taskgraph, label_to_taskid, parameters, graph_config
@@ -122,25 +135,25 @@ def make_index_task(parent_task, taskgraph, label_to_taskid, parameters, graph_c
     # temporary credential.
     scopes = set()
     domain_scope_regex = re.compile(
-        r'(index:insert-task:{trust_domain}\.v2\.[^.]*\.).*'.format(
+        r"(index:insert-task:{trust_domain}\.v2\.[^.]*\.).*".format(
             trust_domain=re.escape(graph_config["trust-domain"])
         )
     )
     all_scopes_summary_regexps = _SCOPE_SUMMARY_REGEXPS + [domain_scope_regex]
     for path in index_paths:
-        scope = 'index:insert-task:{}'.format(path)
+        scope = "index:insert-task:{}".format(path)
         for summ_re in all_scopes_summary_regexps:
             match = summ_re.match(scope)
             if match:
-                scope = match.group(1) + '*'
+                scope = match.group(1) + "*"
                 break
         scopes.add(scope)
-    task.task['scopes'] = sorted(scopes)
+    task.task["scopes"] = sorted(scopes)
 
-    task.task['payload']['command'] = ['insert-indexes.js'] + index_paths
-    task.task['payload']['env'] = {
-        'TARGET_TASKID': parent_task.task_id,
-        'INDEX_RANK': parent_task.task.get('extra', {}).get('index', {}).get('rank', 0),
+    task.task["payload"]["command"] = ["insert-indexes.js"] + index_paths
+    task.task["payload"]["env"] = {
+        "TARGET_TASKID": parent_task.task_id,
+        "INDEX_RANK": parent_task.task.get("extra", {}).get("index", {}).get("rank", 0),
     }
     return task, taskgraph, label_to_taskid
 
@@ -152,11 +165,11 @@ def add_index_tasks(taskgraph, label_to_taskid, parameters, graph_config):
     "index tasks" that depend on such tasks and do the index insertions
     directly, avoiding the limits on task.routes.
     """
-    logger.debug('Morphing: adding index tasks')
+    logger.debug("Morphing: adding index tasks")
 
     added = []
     for label, task in six.iteritems(taskgraph.tasks):
-        if len(task.task.get('routes', [])) <= MAX_ROUTES:
+        if len(task.task.get("routes", [])) <= MAX_ROUTES:
             continue
         task, taskgraph, label_to_taskid = make_index_task(
             task, taskgraph, label_to_taskid, parameters, graph_config
@@ -164,9 +177,8 @@ def add_index_tasks(taskgraph, label_to_taskid, parameters, graph_config):
         added.append(task)
 
     if added:
-        taskgraph, label_to_taskid = amend_taskgraph(
-            taskgraph, label_to_taskid, added)
-        logger.info('Added {} index tasks'.format(len(added)))
+        taskgraph, label_to_taskid = amend_taskgraph(taskgraph, label_to_taskid, added)
+        logger.info("Added {} index tasks".format(len(added)))
 
     return taskgraph, label_to_taskid
 
@@ -180,62 +192,66 @@ def _get_morph_url():
     existing use case.
     """
     taskgraph_repo = os.environ.get(
-        'TASKGRAPH_HEAD_REPOSITORY', 'https://hg.mozilla.org/ci/taskgraph'
+        "TASKGRAPH_HEAD_REPOSITORY", "https://hg.mozilla.org/ci/taskgraph"
     )
-    taskgraph_rev = os.environ.get('TASKGRAPH_HEAD_REV', 'default')
-    return '{}/raw-file/{}/src/taskgraph/morph.py'.format(taskgraph_repo, taskgraph_rev)
+    taskgraph_rev = os.environ.get("TASKGRAPH_HEAD_REV", "default")
+    return "{}/raw-file/{}/src/taskgraph/morph.py".format(taskgraph_repo, taskgraph_rev)
 
 
 def add_code_review_task(taskgraph, label_to_taskid, parameters, graph_config):
-    logger.debug('Morphing: adding index tasks')
+    logger.debug("Morphing: adding index tasks")
 
-    review_config = parameters.get('code-review')
+    review_config = parameters.get("code-review")
     if not review_config:
         return taskgraph, label_to_taskid
 
     code_review_tasks = {}
     for label, task in six.iteritems(taskgraph.tasks):
-        if task.attributes.get('code-review'):
+        if task.attributes.get("code-review"):
             code_review_tasks[task.label] = task.task_id
 
     if code_review_tasks:
         code_review_task_def = {
-            'provisionerId': 'built-in',
-            'workerType': 'succeed',
-            'dependencies': sorted(code_review_tasks.values()),
+            "provisionerId": "built-in",
+            "workerType": "succeed",
+            "dependencies": sorted(code_review_tasks.values()),
             # This option permits to run the task
             # regardless of the dependencies tasks exit status
             # as we are interested in the task failures
-            'requires': 'all-resolved',
-            'created': {'relative-datestamp': '0 seconds'},
-            'deadline': {'relative-datestamp': '1 day'},
+            "requires": "all-resolved",
+            "created": {"relative-datestamp": "0 seconds"},
+            "deadline": {"relative-datestamp": "1 day"},
             # no point existing past the parent task's deadline
-            'expires': {'relative-datestamp': '1 day'},
-            'metadata': {
-                'name': 'code-review',
-                'description': "List all issues found in static analysis and linting tasks",
-                'owner': parameters['owner'],
-                'source': _get_morph_url(),
+            "expires": {"relative-datestamp": "1 day"},
+            "metadata": {
+                "name": "code-review",
+                "description": "List all issues found in static analysis and linting tasks",
+                "owner": parameters["owner"],
+                "source": _get_morph_url(),
             },
-            'scopes': [],
-            'payload': {},
-            'routes': ['project.relman.codereview.v1.try_ending'],
-            'extra': {
-                'code-review': {
-                    'phabricator-build-target': review_config[
-                        'phabricator-build-target'
+            "scopes": [],
+            "payload": {},
+            "routes": ["project.relman.codereview.v1.try_ending"],
+            "extra": {
+                "code-review": {
+                    "phabricator-build-target": review_config[
+                        "phabricator-build-target"
                     ],
-                    'repository': parameters['head_repository'],
-                    'revision': parameters['head_rev'],
+                    "repository": parameters["head_repository"],
+                    "revision": parameters["head_rev"],
                 }
-            }
+            },
         }
-        task = Task(kind='misc', label='code-review', attributes={}, task=code_review_task_def,
-                    dependencies=code_review_tasks)
+        task = Task(
+            kind="misc",
+            label="code-review",
+            attributes={},
+            task=code_review_task_def,
+            dependencies=code_review_tasks,
+        )
         task.task_id = slugid()
-        taskgraph, label_to_taskid = amend_taskgraph(
-            taskgraph, label_to_taskid, [task])
-        logger.info('Added code review task.')
+        taskgraph, label_to_taskid = amend_taskgraph(taskgraph, label_to_taskid, [task])
+        logger.info("Added code review task.")
 
     return taskgraph, label_to_taskid
 
@@ -248,5 +264,7 @@ def morph(taskgraph, label_to_taskid, parameters, graph_config):
     ]
 
     for m in morphs:
-        taskgraph, label_to_taskid = m(taskgraph, label_to_taskid, parameters, graph_config)
+        taskgraph, label_to_taskid = m(
+            taskgraph, label_to_taskid, parameters, graph_config
+        )
     return taskgraph, label_to_taskid

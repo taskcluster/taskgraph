@@ -12,21 +12,21 @@ from taskgraph.util.readonlydict import ReadOnlyDict
 
 class TestReadOnlyDict(unittest.TestCase):
     def test_basic(self):
-        original = {'foo': 1, 'bar': 2}
+        original = {"foo": 1, "bar": 2}
 
         test = ReadOnlyDict(original)
 
         self.assertEqual(original, test)
-        self.assertEqual(test['foo'], 1)
+        self.assertEqual(test["foo"], 1)
 
         with self.assertRaises(KeyError):
-            test['missing']
+            test["missing"]
 
         with self.assertRaises(Exception):
-            test['baz'] = True
+            test["baz"] = True
 
     def test_update(self):
-        original = {'foo': 1, 'bar': 2}
+        original = {"foo": 1, "bar": 2}
 
         test = ReadOnlyDict(original)
 
@@ -36,11 +36,11 @@ class TestReadOnlyDict(unittest.TestCase):
         self.assertEqual(original, test)
 
     def test_del(self):
-        original = {'foo': 1, 'bar': 2}
+        original = {"foo": 1, "bar": 2}
 
         test = ReadOnlyDict(original)
 
         with self.assertRaises(Exception):
-            del test['foo']
+            del test["foo"]
 
         self.assertEqual(original, test)

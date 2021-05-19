@@ -26,24 +26,28 @@ def add_cache(job, taskdesc, name, mount_point, skip_untrusted=False):
         skip_untrusted (bool): Whether cache is used in untrusted environments
             (default: False). Only applies to docker-worker.
     """
-    if not job['run'].get('use-caches', True):
+    if not job["run"].get("use-caches", True):
         return
 
-    worker = job['worker']
+    worker = job["worker"]
 
-    if worker['implementation'] == 'docker-worker':
-        taskdesc['worker'].setdefault('caches', []).append({
-            'type': 'persistent',
-            'name': name,
-            'mount-point': mount_point,
-            'skip-untrusted': skip_untrusted,
-        })
+    if worker["implementation"] == "docker-worker":
+        taskdesc["worker"].setdefault("caches", []).append(
+            {
+                "type": "persistent",
+                "name": name,
+                "mount-point": mount_point,
+                "skip-untrusted": skip_untrusted,
+            }
+        )
 
-    elif worker['implementation'] == 'generic-worker':
-        taskdesc['worker'].setdefault('mounts', []).append({
-            'cache-name': name,
-            'directory': mount_point,
-        })
+    elif worker["implementation"] == "generic-worker":
+        taskdesc["worker"].setdefault("mounts", []).append(
+            {
+                "cache-name": name,
+                "directory": mount_point,
+            }
+        )
 
     else:
         # Caches not implemented
@@ -60,15 +64,15 @@ def docker_worker_add_workspace_cache(config, job, taskdesc, extra=None):
         extra (str): Optional context passed in that supports extending the cache
             key name to avoid undesired conflicts with other caches.
     """
-    cache_name = '{}-build-{}-{}-workspace'.format(
-        config.params['project'],
-        taskdesc['attributes']['build_platform'],
-        taskdesc['attributes']['build_type'],
+    cache_name = "{}-build-{}-{}-workspace".format(
+        config.params["project"],
+        taskdesc["attributes"]["build_platform"],
+        taskdesc["attributes"]["build_type"],
     )
     if extra:
-        cache_name = '{}-{}'.format(cache_name, extra)
+        cache_name = "{}-{}".format(cache_name, extra)
 
-    mount_point = "{workdir}/workspace".format(**job['run'])
+    mount_point = "{workdir}/workspace".format(**job["run"])
 
     # Don't enable the workspace cache when we can't guarantee its
     # behavior, like on Try.
@@ -76,22 +80,24 @@ def docker_worker_add_workspace_cache(config, job, taskdesc, extra=None):
 
 
 def add_artifacts(config, job, taskdesc, path):
-    taskdesc['worker'].setdefault('artifacts', []).append({
-        'name': get_artifact_prefix(taskdesc),
-        'path': path,
-        'type': 'directory',
-    })
+    taskdesc["worker"].setdefault("artifacts", []).append(
+        {
+            "name": get_artifact_prefix(taskdesc),
+            "path": path,
+            "type": "directory",
+        }
+    )
 
 
 def docker_worker_add_artifacts(config, job, taskdesc):
-    """ Adds an artifact directory to the task """
-    path = '{workdir}/artifacts/'.format(**job['run'])
-    taskdesc['worker']['env']['UPLOAD_DIR'] = path
+    """Adds an artifact directory to the task"""
+    path = "{workdir}/artifacts/".format(**job["run"])
+    taskdesc["worker"]["env"]["UPLOAD_DIR"] = path
     add_artifacts(config, job, taskdesc, path)
 
 
 def generic_worker_add_artifacts(config, job, taskdesc):
-    """ Adds an artifact directory to the task """
+    """Adds an artifact directory to the task"""
     # The path is the location on disk; it doesn't necessarily
     # mean the artifacts will be public or private; that is set via the name
     # attribute in add_artifacts.
@@ -104,21 +110,21 @@ def support_vcs_checkout(config, job, taskdesc, repo_configs, sparse=False):
     This can only be used with ``run-task`` tasks, as the cache name is
     reserved for ``run-task`` tasks.
     """
-    worker = job['worker']
-    is_win = worker['os'] == 'windows'
-    is_linux = worker['os'] == 'linux'
+    worker = job["worker"]
+    is_win = worker["os"] == "windows"
+    is_linux = worker["os"] == "linux"
     assert is_win or is_linux
 
     if is_win:
-        checkoutdir = './build'
-        vcsdir = '{}/src'.format(checkoutdir)
-        hgstore = 'y:/hg-shared'
+        checkoutdir = "./build"
+        vcsdir = "{}/src".format(checkoutdir)
+        hgstore = "y:/hg-shared"
     else:
-        checkoutdir = '{workdir}/checkouts'.format(**job['run'])
-        vcsdir = '{}/src'.format(checkoutdir)
-        hgstore = '{}/hg-store'.format(checkoutdir)
+        checkoutdir = "{workdir}/checkouts".format(**job["run"])
+        vcsdir = "{}/src".format(checkoutdir)
+        hgstore = "{}/hg-store".format(checkoutdir)
 
-    cache_name = 'checkouts'
+    cache_name = "checkouts"
 
     # Robust checkout does not clean up subrepositories, so ensure  that tasks
     # that checkout different sets of paths have separate caches.
@@ -126,45 +132,53 @@ def support_vcs_checkout(config, job, taskdesc, repo_configs, sparse=False):
     if len(repo_configs) > 1:
         checkout_paths = {
             "\t".join([repo_config.path, repo_config.prefix])
-            for repo_config
-            in sorted(repo_configs.values(), key=lambda repo_config: repo_config.path)
+            for repo_config in sorted(
+                repo_configs.values(), key=lambda repo_config: repo_config.path
+            )
         }
-        digest = hashlib.sha256('\n'.join(checkout_paths)).hexdigest()
-        cache_name += '-repos-{}'.format(digest)
+        digest = hashlib.sha256("\n".join(checkout_paths)).hexdigest()
+        cache_name += "-repos-{}".format(digest)
 
     # Sparse checkouts need their own cache because they can interfere
     # with clients that aren't sparse aware.
     if sparse:
-        cache_name += '-sparse'
+        cache_name += "-sparse"
 
     add_cache(job, taskdesc, cache_name, checkoutdir)
 
-    env = taskdesc['worker'].setdefault('env', {})
-    env.update({
-        'HG_STORE_PATH': hgstore,
-        'REPOSITORIES': json.dumps({
-            repo.prefix: repo.name for repo in repo_configs.values()
-        }),
-        'VCS_PATH': vcsdir,
-    })
+    env = taskdesc["worker"].setdefault("env", {})
+    env.update(
+        {
+            "HG_STORE_PATH": hgstore,
+            "REPOSITORIES": json.dumps(
+                {repo.prefix: repo.name for repo in repo_configs.values()}
+            ),
+            "VCS_PATH": vcsdir,
+        }
+    )
     for repo_config in repo_configs.values():
-        env.update({
-            '{}_{}'.format(repo_config.prefix.upper(), key): value for key, value in {
-                'BASE_REPOSITORY': repo_config.base_repository,
-                'HEAD_REPOSITORY': repo_config.head_repository,
-                'HEAD_REV': repo_config.head_rev,
-                'HEAD_REF': repo_config.head_ref,
-                'REPOSITORY_TYPE': repo_config.type,
-                'SSH_SECRET_NAME': repo_config.ssh_secret_name,
-            }.items()
-            if value is not None
-        })
+        env.update(
+            {
+                "{}_{}".format(repo_config.prefix.upper(), key): value
+                for key, value in {
+                    "BASE_REPOSITORY": repo_config.base_repository,
+                    "HEAD_REPOSITORY": repo_config.head_repository,
+                    "HEAD_REV": repo_config.head_rev,
+                    "HEAD_REF": repo_config.head_ref,
+                    "REPOSITORY_TYPE": repo_config.type,
+                    "SSH_SECRET_NAME": repo_config.ssh_secret_name,
+                }.items()
+                if value is not None
+            }
+        )
         if repo_config.ssh_secret_name:
-            taskdesc['scopes'].append('secrets:get:{}'.format(repo_config.ssh_secret_name))
+            taskdesc["scopes"].append(
+                "secrets:get:{}".format(repo_config.ssh_secret_name)
+            )
 
-    if any(repo_config.type == 'hg' for repo_config in repo_configs.values()):
+    if any(repo_config.type == "hg" for repo_config in repo_configs.values()):
         # Give task access to hgfingerprint secret so it can pin the certificate
         # for hg.mozilla.org.
-        taskdesc['scopes'].append('secrets:get:project/taskcluster/gecko/hgfingerprint')
+        taskdesc["scopes"].append("secrets:get:project/taskcluster/gecko/hgfingerprint")
 
-    taskdesc['worker']['taskcluster-proxy'] = True
+    taskdesc["worker"]["taskcluster-proxy"] = True

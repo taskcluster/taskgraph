@@ -24,18 +24,20 @@ here = os.path.abspath(os.path.dirname(__file__))
 
 
 TASK_DEFAULTS = {
-    'description': 'fake description',
-    'label': 'fake-task-label',
-    'run': {
-        'using': 'run-task',
+    "description": "fake description",
+    "label": "fake-task-label",
+    "run": {
+        "using": "run-task",
     },
 }
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def config():
-    graph_config = load_graph_config(os.path.join('taskcluster', 'ci'))
-    return TransformConfig('job_test', here, {}, {}, [], graph_config, write_artifacts=False)
+    graph_config = load_graph_config(os.path.join("taskcluster", "ci"))
+    return TransformConfig(
+        "job_test", here, {}, {}, [], graph_config, write_artifacts=False
+    )
 
 
 @pytest.fixture()
@@ -55,7 +57,9 @@ def transform(monkeypatch, config):
         def _configure_taskdesc_for_run(*args):
             frozen_args.extend(args)
 
-        monkeypatch.setattr(job, 'configure_taskdesc_for_run', _configure_taskdesc_for_run)
+        monkeypatch.setattr(
+            job, "configure_taskdesc_for_run", _configure_taskdesc_for_run
+        )
 
         for _ in job.transforms(config, [task]):
             # This forces the generator to be evaluated
@@ -66,22 +70,29 @@ def transform(monkeypatch, config):
     return inner
 
 
-@pytest.mark.parametrize('task', [
-    {'worker-type': 't-linux'},
-    pytest.param({'worker-type': 'releng-hardware/gecko-t-win10-64-hw'}, marks=pytest.mark.xfail),
-], ids=['docker-worker', 'generic-worker'])
+@pytest.mark.parametrize(
+    "task",
+    [
+        {"worker-type": "t-linux"},
+        pytest.param(
+            {"worker-type": "releng-hardware/gecko-t-win10-64-hw"},
+            marks=pytest.mark.xfail,
+        ),
+    ],
+    ids=["docker-worker", "generic-worker"],
+)
 def test_worker_caches(task, transform):
     config, job, taskdesc, impl = transform(task)
-    add_cache(job, taskdesc, 'cache1', '/cache1')
-    add_cache(job, taskdesc, 'cache2', '/cache2', skip_untrusted=True)
+    add_cache(job, taskdesc, "cache1", "/cache1")
+    add_cache(job, taskdesc, "cache2", "/cache2", skip_untrusted=True)
 
-    if impl not in ('docker-worker', 'generic-worker'):
+    if impl not in ("docker-worker", "generic-worker"):
         pytest.xfail("caches not implemented for '{}'".format(impl))
 
-    key = 'caches' if impl == 'docker-worker' else 'mounts'
-    assert key in taskdesc['worker']
-    assert len(taskdesc['worker'][key]) == 2
+    key = "caches" if impl == "docker-worker" else "mounts"
+    assert key in taskdesc["worker"]
+    assert len(taskdesc["worker"][key]) == 2
 
     # Create a new schema object with just the part relevant to caches.
     partial_schema = Schema(payload_builders[impl].schema.schema[key])
-    validate_schema(partial_schema, taskdesc['worker'][key], "validation error")
+    validate_schema(partial_schema, taskdesc["worker"][key], "validation error")

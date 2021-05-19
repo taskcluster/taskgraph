@@ -14,14 +14,15 @@ def find_object(path):
             import <modulepath> as mod
             return mod.<objectpath>
     """
-    if path.count(':') != 1:
+    if path.count(":") != 1:
         raise ValueError(
-            'python path {!r} does not have the form "module:object"'.format(path))
+            'python path {!r} does not have the form "module:object"'.format(path)
+        )
 
-    modulepath, objectpath = path.split(':')
+    modulepath, objectpath = path.split(":")
     obj = __import__(modulepath)
-    for a in modulepath.split('.')[1:]:
+    for a in modulepath.split(".")[1:]:
         obj = getattr(obj, a)
-    for a in objectpath.split('.'):
+    for a in objectpath.split("."):
         obj = getattr(obj, a)
     return obj

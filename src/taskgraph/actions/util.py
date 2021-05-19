@@ -55,37 +55,45 @@ def fetch_graph_and_labels(parameters, graph_config):
         # fetch any modifications made by action tasks and swap out new tasks
         # for old ones
         def fetch_action(task_id):
-            logger.info('fetching label-to-taskid.json for action task {}'.format(task_id))
+            logger.info(
+                "fetching label-to-taskid.json for action task {}".format(task_id)
+            )
             try:
                 run_label_to_id = get_artifact(task_id, "public/label-to-taskid.json")
                 label_to_taskid.update(run_label_to_id)
             except HTTPError as e:
                 if e.response.status_code != 404:
                     raise
-                logger.debug('No label-to-taskid.json found for {}: {}'.format(task_id, e))
+                logger.debug(
+                    "No label-to-taskid.json found for {}: {}".format(task_id, e)
+                )
 
-        namespace = '{}.v2.{}.pushlog-id.{}.actions'.format(
-            graph_config['trust-domain'],
-            parameters['project'],
-            parameters['pushlog_id'])
+        namespace = "{}.v2.{}.pushlog-id.{}.actions".format(
+            graph_config["trust-domain"],
+            parameters["project"],
+            parameters["pushlog_id"],
+        )
         for task_id in list_tasks(namespace):
             fetches.append(e.submit(fetch_action, task_id))
 
         # Similarly for cron tasks..
         def fetch_cron(task_id):
-            logger.info('fetching label-to-taskid.json for cron task {}'.format(task_id))
+            logger.info(
+                "fetching label-to-taskid.json for cron task {}".format(task_id)
+            )
             try:
                 run_label_to_id = get_artifact(task_id, "public/label-to-taskid.json")
                 label_to_taskid.update(run_label_to_id)
             except HTTPError as e:
                 if e.response.status_code != 404:
                     raise
-                logger.debug('No label-to-taskid.json found for {}: {}'.format(task_id, e))
+                logger.debug(
+                    "No label-to-taskid.json found for {}: {}".format(task_id, e)
+                )
 
-        namespace = '{}.v2.{}.revision.{}.cron'.format(
-            graph_config['trust-domain'],
-            parameters['project'],
-            parameters['head_rev'])
+        namespace = "{}.v2.{}.revision.{}.cron".format(
+            graph_config["trust-domain"], parameters["project"], parameters["head_rev"]
+        )
         for task_id in list_tasks(namespace):
             fetches.append(e.submit(fetch_cron, task_id))
 
@@ -105,25 +113,33 @@ def create_task_from_def(task_id, task_def, level):
     It is useful if you want to "edit" the full_task_graph and then hand
     it to this function. No dependencies will be scheduled. You must handle
     this yourself. Seeing how create_tasks handles it might prove helpful."""
-    task_def['schedulerId'] = 'gecko-level-{}'.format(level)
-    label = task_def['metadata']['name']
+    task_def["schedulerId"] = "gecko-level-{}".format(level)
+    label = task_def["metadata"]["name"]
     session = get_session()
     create.create_task(session, task_id, label, task_def)
 
 
 def update_parent(task, graph):
-    task.task.setdefault('extra', {})['parent'] = os.environ.get('TASK_ID', '')
+    task.task.setdefault("extra", {})["parent"] = os.environ.get("TASK_ID", "")
     return task
 
 
 def update_dependencies(task, graph):
-    if os.environ.get('TASK_ID'):
-        task.task.setdefault('dependencies', []).append(os.environ['TASK_ID'])
+    if os.environ.get("TASK_ID"):
+        task.task.setdefault("dependencies", []).append(os.environ["TASK_ID"])
     return task
 
 
-def create_tasks(graph_config, to_run, full_task_graph, label_to_taskid,
-                 params, decision_task_id=None, suffix='', modifier=lambda t: t):
+def create_tasks(
+    graph_config,
+    to_run,
+    full_task_graph,
+    label_to_taskid,
+    params,
+    decision_task_id=None,
+    suffix="",
+    modifier=lambda t: t,
+):
     """Create new tasks.  The task definition will have {relative-datestamp':
     '..'} rendered just like in a decision task.  Action callbacks should use
     this function to create new tasks,
@@ -142,8 +158,8 @@ def create_tasks(graph_config, to_run, full_task_graph, label_to_taskid,
     If you wish to create the tasks in a new group, leave out decision_task_id.
 
     Returns an updated label_to_taskid containing the new tasks"""
-    if suffix != '':
-        suffix = '-{}'.format(suffix)
+    if suffix != "":
+        suffix = "-{}".format(suffix)
     to_run = set(to_run)
 
     #  Copy to avoid side-effects later
@@ -152,19 +168,21 @@ def create_tasks(graph_config, to_run, full_task_graph, label_to_taskid,
 
     target_graph = full_task_graph.graph.transitive_closure(to_run)
     target_task_graph = TaskGraph(
-        {l: modifier(full_task_graph[l]) for l in target_graph.nodes},
-        target_graph)
+        {l: modifier(full_task_graph[l]) for l in target_graph.nodes}, target_graph
+    )
     target_task_graph.for_each_task(update_parent)
-    if decision_task_id and decision_task_id != os.environ.get('TASK_ID'):
+    if decision_task_id and decision_task_id != os.environ.get("TASK_ID"):
         target_task_graph.for_each_task(update_dependencies)
-    optimized_task_graph, label_to_taskid = optimize_task_graph(target_task_graph,
-                                                                params,
-                                                                to_run,
-                                                                decision_task_id,
-                                                                existing_tasks=label_to_taskid)
-    write_artifact('task-graph{}.json'.format(suffix), optimized_task_graph.to_json())
-    write_artifact('label-to-taskid{}.json'.format(suffix), label_to_taskid)
-    write_artifact('to-run{}.json'.format(suffix), list(to_run))
+    optimized_task_graph, label_to_taskid = optimize_task_graph(
+        target_task_graph,
+        params,
+        to_run,
+        decision_task_id,
+        existing_tasks=label_to_taskid,
+    )
+    write_artifact("task-graph{}.json".format(suffix), optimized_task_graph.to_json())
+    write_artifact("label-to-taskid{}.json".format(suffix), label_to_taskid)
+    write_artifact("to-run{}.json".format(suffix), list(to_run))
     create.create_tasks(
         graph_config,
         optimized_task_graph,
@@ -196,10 +214,10 @@ def combine_task_graph_files(suffixes):
     """
 
     if len(suffixes) == 1:
-        for filename in ['task-graph', 'label-to-taskid', 'to-run']:
+        for filename in ["task-graph", "label-to-taskid", "to-run"]:
             rename_artifact(
-                "{}-{}.json".format(filename, suffixes[0]),
-                "{}.json".format(filename))
+                "{}-{}.json".format(filename, suffixes[0]), "{}.json".format(filename)
+            )
         return
 
     def combine(file_contents, base):
@@ -208,7 +226,9 @@ def combine_task_graph_files(suffixes):
     files = [read_artifact("task-graph-{}.json".format(suffix)) for suffix in suffixes]
     write_artifact("task-graph.json", combine(files, dict()))
 
-    files = [read_artifact("label-to-taskid-{}.json".format(suffix)) for suffix in suffixes]
+    files = [
+        read_artifact("label-to-taskid-{}.json".format(suffix)) for suffix in suffixes
+    ]
     write_artifact("label-to-taskid.json", combine(files, dict()))
 
     files = [read_artifact("to-run-{}.json".format(suffix)) for suffix in suffixes]
@@ -221,55 +241,61 @@ def relativize_datestamps(task_def):
     to {relative_datestamp: ..} format, with the task creation time as "now".
     The result is useful for handing to ``create_task``.
     """
-    base = parse_time(task_def['created'])
+    base = parse_time(task_def["created"])
     # borrowed from https://github.com/epoberezkin/ajv/blob/master/lib/compile/formats.js
     ts_pattern = re.compile(
-        r'^\d\d\d\d-[0-1]\d-[0-3]\d[t\s]'
-        r'(?:[0-2]\d:[0-5]\d:[0-5]\d|23:59:60)(?:\.\d+)?'
-        r'(?:z|[+-]\d\d:\d\d)$', re.I)
+        r"^\d\d\d\d-[0-1]\d-[0-3]\d[t\s]"
+        r"(?:[0-2]\d:[0-5]\d:[0-5]\d|23:59:60)(?:\.\d+)?"
+        r"(?:z|[+-]\d\d:\d\d)$",
+        re.I,
+    )
 
     def recurse(value):
         if isinstance(value, text_type):
             if ts_pattern.match(value):
                 value = parse_time(value)
                 diff = value - base
-                return {'relative-datestamp': '{} seconds'.format(int(diff.total_seconds()))}
+                return {
+                    "relative-datestamp": "{} seconds".format(int(diff.total_seconds()))
+                }
         if isinstance(value, list):
             return [recurse(e) for e in value]
         if isinstance(value, dict):
             return {k: recurse(v) for k, v in value.items()}
         return value
+
     return recurse(task_def)
 
 
 def add_args_to_command(cmd_parts, extra_args=[]):
     """
-        Add custom command line args to a given command.
-        args:
-          cmd_parts: the raw command as seen by taskcluster
-          extra_args: array of args we want to add
+    Add custom command line args to a given command.
+    args:
+      cmd_parts: the raw command as seen by taskcluster
+      extra_args: array of args we want to add
     """
-    cmd_type = 'default'
+    cmd_type = "default"
     if len(cmd_parts) == 1 and isinstance(cmd_parts[0], dict):
         # windows has single cmd part as dict: 'task-reference', with long string
-        cmd_parts = cmd_parts[0]['task-reference'].split(' ')
-        cmd_type = 'dict'
-    elif len(cmd_parts) == 1 and (isinstance(cmd_parts[0], text_type)
-                                  or isinstance(cmd_parts[0], str)):
+        cmd_parts = cmd_parts[0]["task-reference"].split(" ")
+        cmd_type = "dict"
+    elif len(cmd_parts) == 1 and (
+        isinstance(cmd_parts[0], text_type) or isinstance(cmd_parts[0], str)
+    ):
         # windows has single cmd part as a long string
-        cmd_parts = cmd_parts[0].split(' ')
-        cmd_type = 'unicode'
+        cmd_parts = cmd_parts[0].split(" ")
+        cmd_type = "unicode"
     elif len(cmd_parts) == 1 and isinstance(cmd_parts[0], list):
         # osx has an single value array with an array inside
         cmd_parts = cmd_parts[0]
-        cmd_type = 'subarray'
+        cmd_type = "subarray"
 
     cmd_parts.extend(extra_args)
 
-    if cmd_type == 'dict':
-        cmd_parts = [{'task-reference': ' '.join(cmd_parts)}]
-    elif cmd_type == 'unicode':
-        cmd_parts = [' '.join(cmd_parts)]
-    elif cmd_type == 'subarray':
+    if cmd_type == "dict":
+        cmd_parts = [{"task-reference": " ".join(cmd_parts)}]
+    elif cmd_type == "unicode":
+        cmd_parts = [" ".join(cmd_parts)]
+    elif cmd_type == "subarray":
         cmd_parts = [cmd_parts]
     return cmd_parts

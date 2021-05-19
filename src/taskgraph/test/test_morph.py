@@ -16,15 +16,15 @@ from taskgraph.taskgraph import TaskGraph
 from taskgraph.task import Task
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def graph_config():
-    return load_graph_config(os.path.join('taskcluster', 'ci'))
+    return load_graph_config(os.path.join("taskcluster", "ci"))
 
 
 @pytest.fixture
 def make_taskgraph():
     def inner(tasks):
-        label_to_taskid = {k: k + '-tid' for k in tasks}
+        label_to_taskid = {k: k + "-tid" for k in tasks}
         for label, task_id in label_to_taskid.items():
             tasks[label].task_id = task_id
         graph = Graph(nodes=set(tasks), edges=set())
@@ -36,34 +36,40 @@ def make_taskgraph():
 
 def test_make_index_tasks(make_taskgraph, graph_config):
     task_def = {
-        'routes': [
+        "routes": [
             "index.gecko.v2.mozilla-central.*",
-         ],
-        'deadline': 'soon',
-        'metadata': {
-            'description': 'desc',
-            'owner': 'owner@foo.com',
-            'source': 'https://source',
+        ],
+        "deadline": "soon",
+        "metadata": {
+            "description": "desc",
+            "owner": "owner@foo.com",
+            "source": "https://source",
         },
-        'extra': {
-            'index': {'rank': 1540722354},
+        "extra": {
+            "index": {"rank": 1540722354},
         },
     }
-    task = Task(kind='test', label='a', attributes={}, task=task_def)
-    docker_task = Task(kind='docker-image', label='build-docker-image-index-task',
-                       attributes={}, task={})
-    taskgraph, label_to_taskid = make_taskgraph({
-        task.label: task,
-        docker_task.label: docker_task,
-    })
+    task = Task(kind="test", label="a", attributes={}, task=task_def)
+    docker_task = Task(
+        kind="docker-image",
+        label="build-docker-image-index-task",
+        attributes={},
+        task={},
+    )
+    taskgraph, label_to_taskid = make_taskgraph(
+        {
+            task.label: task,
+            docker_task.label: docker_task,
+        }
+    )
 
     index_task, _, _ = morph.make_index_task(
         task, taskgraph, label_to_taskid, Parameters(strict=False), graph_config
     )
 
-    assert index_task.task['payload']['command'][0] == 'insert-indexes.js'
-    assert index_task.task['payload']['env']['TARGET_TASKID'] == 'a-tid'
-    assert index_task.task['payload']['env']['INDEX_RANK'] == 1540722354
+    assert index_task.task["payload"]["command"][0] == "insert-indexes.js"
+    assert index_task.task["payload"]["env"]["TARGET_TASKID"] == "a-tid"
+    assert index_task.task["payload"]["env"]["INDEX_RANK"] == 1540722354
 
     # check the scope summary
-    assert index_task.task['scopes'] == ['index:insert-task:gecko.v2.mozilla-central.*']
+    assert index_task.task["scopes"] == ["index:insert-task:gecko.v2.mozilla-central.*"]

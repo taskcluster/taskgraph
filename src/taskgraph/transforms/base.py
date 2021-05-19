@@ -62,46 +62,50 @@ class TransformConfig(object):
     @property
     @memoize
     def repo_configs(self):
-        repositories = self.graph_config['taskgraph']['repositories']
+        repositories = self.graph_config["taskgraph"]["repositories"]
         if len(repositories) == 1:
             current_prefix = repositories.keys()[0]
         else:
-            project = self.params['project']
+            project = self.params["project"]
             matching_repos = {
                 repo_prefix: repo
                 for (repo_prefix, repo) in repositories.items()
-                if re.match(repo['project-regex'], project)
-             }
+                if re.match(repo["project-regex"], project)
+            }
             if len(matching_repos) != 1:
-                raise Exception("Couldn't find repository matching project `{}`".format(project))
+                raise Exception(
+                    "Couldn't find repository matching project `{}`".format(project)
+                )
             current_prefix = matching_repos.keys()[0]
 
         repo_configs = {
             current_prefix: RepoConfig(
                 prefix=current_prefix,
-                name=repositories[current_prefix]['name'],
-                base_repository=self.params['base_repository'],
-                head_repository=self.params['head_repository'],
-                head_ref=self.params['head_ref'],
-                head_rev=self.params['head_rev'],
-                type=self.params['repository_type'],
-                ssh_secret_name=repositories[current_prefix].get('ssh-secret-name'),
+                name=repositories[current_prefix]["name"],
+                base_repository=self.params["base_repository"],
+                head_repository=self.params["head_repository"],
+                head_ref=self.params["head_ref"],
+                head_rev=self.params["head_rev"],
+                type=self.params["repository_type"],
+                ssh_secret_name=repositories[current_prefix].get("ssh-secret-name"),
             ),
         }
         if len(repositories) != 1:
-            repo_configs.update({
-                repo_prefix: RepoConfig(
-                    prefix=repo_prefix,
-                    name=repo['name'],
-                    base_repository=repo['default-repository'],
-                    head_repository=repo['default-repository'],
-                    head_ref=repo['default-ref'],
-                    type=repo['type'],
-                    ssh_secret_name=repo.get('ssh-secret-name'),
-                )
-                for (repo_prefix, repo) in repositories.items()
-                if repo_prefix != current_prefix
-            })
+            repo_configs.update(
+                {
+                    repo_prefix: RepoConfig(
+                        prefix=repo_prefix,
+                        name=repo["name"],
+                        base_repository=repo["default-repository"],
+                        head_repository=repo["default-repository"],
+                        head_ref=repo["default-ref"],
+                        type=repo["type"],
+                        ssh_secret_name=repo.get("ssh-secret-name"),
+                    )
+                    for (repo_prefix, repo) in repositories.items()
+                    if repo_prefix != current_prefix
+                }
+            )
         return repo_configs
 
 
@@ -140,14 +144,16 @@ class ValidateSchema(object):
 
     def __call__(self, config, tasks):
         for task in tasks:
-            if 'name' in task:
+            if "name" in task:
                 error = "In {kind} kind task {name!r}:".format(
-                    kind=config.kind, name=task['name'])
-            elif 'label' in task:
-                error = "In job {label!r}:".format(label=task['label'])
-            elif 'primary-dependency' in task:
+                    kind=config.kind, name=task["name"]
+                )
+            elif "label" in task:
+                error = "In job {label!r}:".format(label=task["label"])
+            elif "primary-dependency" in task:
                 error = "In {kind} kind task for {dependency!r}:".format(
-                    kind=config.kind, dependency=task['primary-dependency'].label)
+                    kind=config.kind, dependency=task["primary-dependency"].label
+                )
             else:
                 error = "In unknown task:"
             validate_schema(self.schema, task, error)

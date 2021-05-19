@@ -19,37 +19,38 @@ from .mockedopen import MockedOpen
 class TestParameters(unittest.TestCase):
 
     vals = {
-        'base_repository': 'repository',
-        'build_date': 0,
-        'do_not_optimize': [],
-        'existing_tasks': {},
-        'filters': ['target_tasks_method'],
-        'head_ref': 'ref',
-        'head_repository': 'repository',
-        'head_rev': 'rev',
-        'head_tag': '',
-        'level': '3',
-        'moz_build_date': '20191008095500',
-        'optimize_target_tasks': True,
-        'owner': 'nobody@mozilla.com',
-        'project': 'project',
-        'pushdate': 0,
-        'pushlog_id': '0',
-        'repository_type': 'hg',
-        'target_tasks_method': 'default',
-        'tasks_for': 'github-push',
+        "base_repository": "repository",
+        "build_date": 0,
+        "do_not_optimize": [],
+        "existing_tasks": {},
+        "filters": ["target_tasks_method"],
+        "head_ref": "ref",
+        "head_repository": "repository",
+        "head_rev": "rev",
+        "head_tag": "",
+        "level": "3",
+        "moz_build_date": "20191008095500",
+        "optimize_target_tasks": True,
+        "owner": "nobody@mozilla.com",
+        "project": "project",
+        "pushdate": 0,
+        "pushlog_id": "0",
+        "repository_type": "hg",
+        "target_tasks_method": "default",
+        "tasks_for": "github-push",
     }
 
     def test_Parameters_immutable(self):
         p = Parameters(**self.vals)
 
         def assign():
-            p['owner'] = 'nobody@example.test'
+            p["owner"] = "nobody@example.test"
+
         self.assertRaises(Exception, assign)
 
     def test_Parameters_missing_KeyError(self):
         p = Parameters(**self.vals)
-        self.assertRaises(KeyError, lambda: p['z'])
+        self.assertRaises(KeyError, lambda: p["z"])
 
     def test_Parameters_invalid_KeyError(self):
         """even if the value is present, if it's not a valid property, raise KeyError"""
@@ -57,8 +58,8 @@ class TestParameters(unittest.TestCase):
         self.assertRaises(ParameterMismatch, lambda: p.check())
 
     def test_Parameters_get(self):
-        p = Parameters(owner='nobody@example.test', level=20)
-        self.assertEqual(p['owner'], 'nobody@example.test')
+        p = Parameters(owner="nobody@example.test", level=20)
+        self.assertEqual(p["owner"], "nobody@example.test")
 
     def test_Parameters_check(self):
         p = Parameters(**self.vals)
@@ -80,38 +81,43 @@ class TestParameters(unittest.TestCase):
 
     def test_Parameters_file_url_git_remote(self):
         vals = self.vals.copy()
-        vals['repository_type'] = 'git'
+        vals["repository_type"] = "git"
 
-        vals['head_repository'] = 'git@bitbucket.com:owner/repo.git'
+        vals["head_repository"] = "git@bitbucket.com:owner/repo.git"
         p = Parameters(**vals)
-        self.assertRaises(ParameterMismatch, lambda: p.file_url(''))
+        self.assertRaises(ParameterMismatch, lambda: p.file_url(""))
 
-        vals['head_repository'] = 'git@github.com:owner/repo.git'
+        vals["head_repository"] = "git@github.com:owner/repo.git"
         p = Parameters(**vals)
-        self.assertTrue(p.file_url('', pretty=True).startswith(
-            'https://github.com/owner/repo/blob/'))
+        self.assertTrue(
+            p.file_url("", pretty=True).startswith(
+                "https://github.com/owner/repo/blob/"
+            )
+        )
 
-        vals['head_repository'] = 'https://github.com/mozilla-mobile/reference-browser'
+        vals["head_repository"] = "https://github.com/mozilla-mobile/reference-browser"
         p = Parameters(**vals)
-        self.assertTrue(p.file_url('', pretty=True).startswith(
-            'https://github.com/mozilla-mobile/reference-browser/blob/'))
+        self.assertTrue(
+            p.file_url("", pretty=True).startswith(
+                "https://github.com/mozilla-mobile/reference-browser/blob/"
+            )
+        )
 
-        vals['head_repository'] = 'https://github.com/mozilla-mobile/reference-browser/'
+        vals["head_repository"] = "https://github.com/mozilla-mobile/reference-browser/"
         p = Parameters(**vals)
-        self.assertTrue(p.file_url('', pretty=True).startswith(
-            'https://github.com/mozilla-mobile/reference-browser/blob/'))
+        self.assertTrue(
+            p.file_url("", pretty=True).startswith(
+                "https://github.com/mozilla-mobile/reference-browser/blob/"
+            )
+        )
 
     def test_load_parameters_file_yaml(self):
         with MockedOpen({"params.yml": "some: data\n"}):
-            self.assertEqual(
-                    load_parameters_file('params.yml'),
-                    {'some': 'data'})
+            self.assertEqual(load_parameters_file("params.yml"), {"some": "data"})
 
     def test_load_parameters_file_json(self):
         with MockedOpen({"params.json": '{"some": "data"}'}):
-            self.assertEqual(
-                    load_parameters_file('params.json'),
-                    {'some': 'data'})
+            self.assertEqual(load_parameters_file("params.json"), {"some": "data"})
 
     def test_load_parameters_override(self):
         """
@@ -119,8 +125,8 @@ class TestParameters(unittest.TestCase):
         the generated parameters.
         """
         self.assertEqual(
-            load_parameters_file('', overrides={'some': 'data'}),
-            {'some': 'data'})
+            load_parameters_file("", overrides={"some": "data"}), {"some": "data"}
+        )
 
     def test_load_parameters_override_file(self):
         """
@@ -129,10 +135,11 @@ class TestParameters(unittest.TestCase):
         """
         with MockedOpen({"params.json": '{"some": "data"}'}):
             self.assertEqual(
-                load_parameters_file('params.json', overrides={'some': 'other'}),
-                {'some': 'other'})
+                load_parameters_file("params.json", overrides={"some": "other"}),
+                {"some": "other"},
+            )
 
     def test_moz_build_date_time(self):
         p = Parameters(**self.vals)
-        self.assertEqual(p['moz_build_date'], '20191008095500')
+        self.assertEqual(p["moz_build_date"], "20191008095500")
         self.assertEqual(p.moz_build_date, datetime.datetime(2019, 10, 8, 9, 55, 0))

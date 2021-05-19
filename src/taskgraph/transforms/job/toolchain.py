@@ -22,46 +22,41 @@ from taskgraph.util.hash import hash_paths
 import taskgraph
 
 
-CACHE_TYPE = 'toolchains.v3'
+CACHE_TYPE = "toolchains.v3"
 
-toolchain_run_schema = Schema({
-    Required('using'): 'toolchain-script',
-
-    # The script (in taskcluster/scripts/misc) to run.
-    Required('script'): text_type,
-
-    # Arguments to pass to the script.
-    Optional('arguments'): [text_type],
-
-    # Sparse profile to give to checkout using `run-task`.  If given,
-    # a filename in `build/sparse-profiles`.  Defaults to
-    # "toolchain-build", i.e., to
-    # `build/sparse-profiles/toolchain-build`.  If `None`, instructs
-    # `run-task` to not use a sparse profile at all.
-    Required('sparse-profile'): Any(text_type, None),
-
-    # Paths/patterns pointing to files that influence the outcome of a
-    # toolchain build.
-    Optional('resources'): [text_type],
-
-    # Path to the artifact produced by the toolchain job
-    Required('toolchain-artifact'): text_type,
-
-    Optional(
-        "toolchain-alias",
-        description="An alias that can be used instead of the real toolchain job name in "
-        "fetch stanzas for jobs.",
-    ): text_type,
-
-    # Base work directory used to set up the task.
-    Required('workdir'): text_type,
-})
+toolchain_run_schema = Schema(
+    {
+        Required("using"): "toolchain-script",
+        # The script (in taskcluster/scripts/misc) to run.
+        Required("script"): text_type,
+        # Arguments to pass to the script.
+        Optional("arguments"): [text_type],
+        # Sparse profile to give to checkout using `run-task`.  If given,
+        # a filename in `build/sparse-profiles`.  Defaults to
+        # "toolchain-build", i.e., to
+        # `build/sparse-profiles/toolchain-build`.  If `None`, instructs
+        # `run-task` to not use a sparse profile at all.
+        Required("sparse-profile"): Any(text_type, None),
+        # Paths/patterns pointing to files that influence the outcome of a
+        # toolchain build.
+        Optional("resources"): [text_type],
+        # Path to the artifact produced by the toolchain job
+        Required("toolchain-artifact"): text_type,
+        Optional(
+            "toolchain-alias",
+            description="An alias that can be used instead of the real toolchain job name in "
+            "fetch stanzas for jobs.",
+        ): text_type,
+        # Base work directory used to set up the task.
+        Required("workdir"): text_type,
+    }
+)
 
 
 def get_digest_data(config, run, taskdesc):
-    files = list(run.pop('resources', []))
+    files = list(run.pop("resources", []))
     # The script
-    files.append('taskcluster/scripts/toolchain/{}'.format(run['script']))
+    files.append("taskcluster/scripts/toolchain/{}".format(run["script"]))
 
     # Accumulate dependency hashes for index generation.
     data = [hash_paths(config.graph_config.vcs_root, files)]
@@ -73,63 +68,68 @@ def get_digest_data(config, run, taskdesc):
     # changes to docker images actually have an impact on the resulting
     # toolchain artifact, so we'll just rely on such important changes to be
     # accompanied with a docker image name change.
-    image = taskdesc['worker'].get('docker-image', {}).get('in-tree')
+    image = taskdesc["worker"].get("docker-image", {}).get("in-tree")
     if image:
         data.append(image)
 
     # Likewise script arguments should influence the index.
-    args = run.get('arguments')
+    args = run.get("arguments")
     if args:
         data.extend(args)
     return data
 
 
 toolchain_defaults = {
-    'sparse-profile': 'toolchain-build',
+    "sparse-profile": "toolchain-build",
 }
 
 
-@run_job_using("docker-worker", "toolchain-script",
-               schema=toolchain_run_schema, defaults=toolchain_defaults)
+@run_job_using(
+    "docker-worker",
+    "toolchain-script",
+    schema=toolchain_run_schema,
+    defaults=toolchain_defaults,
+)
 def docker_worker_toolchain(config, job, taskdesc):
-    run = job['run']
+    run = job["run"]
 
-    worker = taskdesc['worker'] = job['worker']
-    worker['chain-of-trust'] = True
+    worker = taskdesc["worker"] = job["worker"]
+    worker["chain-of-trust"] = True
 
     # If the task doesn't have a docker-image, set a default
-    worker.setdefault('docker-image', {'in-tree': 'toolchain-build'})
+    worker.setdefault("docker-image", {"in-tree": "toolchain-build"})
 
     # Allow the job to specify where artifacts come from, but add
     # public/build if it's not there already.
-    artifacts = worker.setdefault('artifacts', [])
-    if not any(artifact.get('name') == 'public/build' for artifact in artifacts):
+    artifacts = worker.setdefault("artifacts", [])
+    if not any(artifact.get("name") == "public/build" for artifact in artifacts):
         docker_worker_add_artifacts(config, job, taskdesc)
 
-    env = worker['env']
-    env.update({
-        'MOZ_BUILD_DATE': config.params['moz_build_date'],
-        'MOZ_SCM_LEVEL': config.params['level'],
-    })
-
-    attributes = taskdesc.setdefault('attributes', {})
-    attributes['toolchain-artifact'] = run.pop('toolchain-artifact')
-    if 'toolchain-alias' in run:
-        attributes['toolchain-alias'] = run.pop('toolchain-alias')
-
-    if not taskgraph.fast:
-        name = taskdesc['label'].replace('{}-'.format(config.kind), '', 1)
-        taskdesc['cache'] = {
-            'type': CACHE_TYPE,
-            'name': name,
-            'digest-data': get_digest_data(config, run, taskdesc),
+    env = worker["env"]
+    env.update(
+        {
+            "MOZ_BUILD_DATE": config.params["moz_build_date"],
+            "MOZ_SCM_LEVEL": config.params["level"],
         }
-
-    run['using'] = 'run-task'
-    run['cwd'] = '{checkout}/..'
-    run["command"] = (
-        ["src/taskcluster/scripts/toolchain/{}".format(run.pop("script"))]
-        + run.pop("arguments", [])
     )
 
-    configure_taskdesc_for_run(config, job, taskdesc, worker['implementation'])
+    attributes = taskdesc.setdefault("attributes", {})
+    attributes["toolchain-artifact"] = run.pop("toolchain-artifact")
+    if "toolchain-alias" in run:
+        attributes["toolchain-alias"] = run.pop("toolchain-alias")
+
+    if not taskgraph.fast:
+        name = taskdesc["label"].replace("{}-".format(config.kind), "", 1)
+        taskdesc["cache"] = {
+            "type": CACHE_TYPE,
+            "name": name,
+            "digest-data": get_digest_data(config, run, taskdesc),
+        }
+
+    run["using"] = "run-task"
+    run["cwd"] = "{checkout}/.."
+    run["command"] = [
+        "src/taskcluster/scripts/toolchain/{}".format(run.pop("script"))
+    ] + run.pop("arguments", [])
+
+    configure_taskdesc_for_run(config, job, taskdesc, worker["implementation"])

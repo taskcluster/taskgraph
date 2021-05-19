@@ -28,11 +28,11 @@ def create_tar_from_files(fp, files):
 
     FUTURE accept a filename argument (or create APIs to write files)
     """
-    with tarfile.open(name='', mode='w', fileobj=fp, dereference=True) as tf:
+    with tarfile.open(name="", mode="w", fileobj=fp, dereference=True) as tf:
         for archive_path, f in sorted(files.items()):
             if isinstance(f, string_types):
                 mode = os.stat(f).st_mode
-                f = open(f, 'rb')
+                f = open(f, "rb")
             else:
                 mode = 0o0644
 
@@ -41,21 +41,20 @@ def create_tar_from_files(fp, files):
             ti.type = tarfile.REGTYPE
 
             if not ti.isreg():
-                raise ValueError('not a regular file: %s' % f)
+                raise ValueError("not a regular file: %s" % f)
 
             # Disallow setuid and setgid bits. This is an arbitrary restriction.
             # However, since we set uid/gid to root:root, setuid and setgid
             # would be a glaring security hole if the archive were
             # uncompressed as root.
             if ti.mode & (stat.S_ISUID | stat.S_ISGID):
-                raise ValueError('cannot add file with setuid or setgid set: '
-                                 '%s' % f)
+                raise ValueError("cannot add file with setuid or setgid set: " "%s" % f)
 
             # Set uid, gid, username, and group as deterministic values.
             ti.uid = 0
             ti.gid = 0
-            ti.uname = ''
-            ti.gname = ''
+            ti.uname = ""
+            ti.gname = ""
 
             # Set mtime to a constant value.
             ti.mtime = DEFAULT_MTIME
@@ -79,7 +78,12 @@ def create_tar_gz_from_files(fp, files, filename=None, compresslevel=9):
     """
     # Offset 3-7 in the gzip header contains an mtime. Pin it to a known
     # value so output is deterministic.
-    gf = gzip.GzipFile(filename=filename or '', mode='wb', fileobj=fp,
-                       compresslevel=compresslevel, mtime=DEFAULT_MTIME)
+    gf = gzip.GzipFile(
+        filename=filename or "",
+        mode="wb",
+        fileobj=fp,
+        compresslevel=compresslevel,
+        mtime=DEFAULT_MTIME,
+    )
     with gf:
         create_tar_from_files(gf, files)

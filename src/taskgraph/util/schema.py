@@ -29,7 +29,7 @@ def validate_schema(schema, obj, msg_prefix):
         msg = [msg_prefix]
         for error in exc.errors:
             msg.append(str(error))
-        raise Exception('\n'.join(msg) + '\n' + pprint.pformat(obj))
+        raise Exception("\n".join(msg) + "\n" + pprint.pformat(obj))
 
 
 def optionally_keyed_by(*arguments):
@@ -54,7 +54,7 @@ def optionally_keyed_by(*arguments):
     for _ in arguments:
         options = [schema]
         for field in fields:
-            options.append({'by-' + field: {voluptuous.Any(*string_types): schema}})
+            options.append({"by-" + field: {voluptuous.Any(*string_types): schema}})
         schema = voluptuous.Any(*options)
     return schema
 
@@ -101,8 +101,8 @@ def resolve_keyed_by(item, field, item_name, **extra_values):
     """
     # find the field, returning the item unchanged if anything goes wrong
     container, subfield = item, field
-    while '.' in subfield:
-        f, subfield = subfield.split('.', 1)
+    while "." in subfield:
+        f, subfield = subfield.split(".", 1)
         if f not in container:
             return item
         container = container[f]
@@ -126,12 +126,13 @@ def resolve_keyed_by(item, field, item_name, **extra_values):
 # they can be whitelisted here.
 WHITELISTED_SCHEMA_IDENTIFIERS = [
     # upstream-artifacts are handed directly to scriptWorker, which expects interCaps
-    lambda path: "[u'upstream-artifacts']" in path,
+    lambda path: "[u'upstream-artifacts']"
+    in path,
 ]
 
 
 def check_schema(schema):
-    identifier_re = re.compile('^[a-z][a-z0-9-]*$')
+    identifier_re = re.compile("^[a-z][a-z0-9-]*$")
 
     def whitelisted(path):
         return any(f(path) for f in WHITELISTED_SCHEMA_IDENTIFIERS)
@@ -145,8 +146,9 @@ def check_schema(schema):
             elif isinstance(k, string_types):
                 if not identifier_re.match(k) and not whitelisted(path):
                     raise RuntimeError(
-                        'YAML schemas should use dashed lower-case identifiers, '
-                        'not {!r} @ {}'.format(k, path))
+                        "YAML schemas should use dashed lower-case identifiers, "
+                        "not {!r} @ {}".format(k, path)
+                    )
             elif isinstance(k, (voluptuous.Optional, voluptuous.Required)):
                 check_identifier(path, k.schema)
             elif isinstance(k, (voluptuous.Any, voluptuous.All)):
@@ -154,8 +156,10 @@ def check_schema(schema):
                     check_identifier(path, v)
             elif not whitelisted(path):
                 raise RuntimeError(
-                    'Unexpected type in YAML schema: {} @ {}'.format(
-                        type(k).__name__, path))
+                    "Unexpected type in YAML schema: {} @ {}".format(
+                        type(k).__name__, path
+                    )
+                )
 
         if isinstance(sch, collections.Mapping):
             for k, v in sch.items():
@@ -168,7 +172,8 @@ def check_schema(schema):
         elif isinstance(sch, voluptuous.Any):
             for v in sch.validators:
                 iter(path, v)
-    iter('schema', schema.schema)
+
+    iter("schema", schema.schema)
 
 
 class Schema(voluptuous.Schema):
@@ -176,6 +181,7 @@ class Schema(voluptuous.Schema):
     Operates identically to voluptuous.Schema, but applying some taskgraph-specific checks
     in the process.
     """
+
     def __init__(self, *args, **kwargs):
         super(Schema, self).__init__(*args, **kwargs)
         check_schema(self)
@@ -196,14 +202,14 @@ OptimizationSchema = voluptuous.Any(
     None,
     # search the index for the given index namespaces, and replace this task if found
     # the search occurs in order, with the first match winning
-    {'index-search': [voluptuous.Any(*string_types)]},
+    {"index-search": [voluptuous.Any(*string_types)]},
     # skip this task if none of the given file patterns match
-    {'skip-unless-changed': [voluptuous.Any(*string_types)]},
+    {"skip-unless-changed": [voluptuous.Any(*string_types)]},
 )
 
 # shortcut for a string where task references are allowed
 taskref_or_string = voluptuous.Any(
     voluptuous.Any(*string_types),
-    {voluptuous.Required('task-reference'): voluptuous.Any(*string_types)},
-    {voluptuous.Required('artifact-reference'): voluptuous.Any(*string_types)},
+    {voluptuous.Required("task-reference"): voluptuous.Any(*string_types)},
+    {voluptuous.Required("artifact-reference"): voluptuous.Any(*string_types)},
 )

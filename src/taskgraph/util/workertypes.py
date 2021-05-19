@@ -27,8 +27,8 @@ class _BuiltinWorkerType(object):
 
 
 _BUILTIN_TYPES = {
-    'always-optimized': _BuiltinWorkerType('invalid', 'always-optimized'),
-    'succeed': _BuiltinWorkerType('built-in', 'succeed'),
+    "always-optimized": _BuiltinWorkerType("invalid", "always-optimized"),
+    "succeed": _BuiltinWorkerType("built-in", "succeed"),
 }
 
 
@@ -44,9 +44,9 @@ def worker_type_implementation(graph_config, worker_type):
     worker_config = evaluate_keyed_by(
         {"by-worker-type": graph_config["workers"]["aliases"]},
         "worker-types.yml",
-        {'worker-type': worker_type},
+        {"worker-type": worker_type},
     )
-    return worker_config['implementation'], worker_config.get('os')
+    return worker_config["implementation"], worker_config.get("os")
 
 
 @memoize

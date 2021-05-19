@@ -1,6 +1,5 @@
 [tool.black]
 line-length = 88
-include = '(main.py|setup.py)$'
 
 [tool.pytest.ini_options]
 xfail_strict = true

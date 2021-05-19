@@ -40,13 +40,13 @@ def keymatch(attributes, target):
         return [attributes[target]]
 
     # regular expression match
-    matches = [v for k, v in attributes.items() if re.match(k + '$', target)]
+    matches = [v for k, v in attributes.items() if re.match(k + "$", target)]
     if matches:
         return matches
 
     # default
-    if 'default' in attributes:
-        return [attributes['default']]
+    if "default" in attributes:
+        return [attributes["default"]]
 
     return []
 
@@ -55,7 +55,7 @@ def _match_run_on(key, run_on):
     """
     Determine whether the given parameter is included in the corresponding `run-on-attribute`.
     """
-    if 'all' in run_on:
+    if "all" in run_on:
         return True
     return key in run_on
 
@@ -69,7 +69,7 @@ def match_run_on_git_branches(git_branch, run_on_git_branches):
     Determine whether the given project is included in the `run-on-git-branches` parameter.
     Allows 'all'.
     """
-    if 'all' in run_on_git_branches:
+    if "all" in run_on_git_branches:
         return True
 
     for expected_git_branch_pattern in run_on_git_branches:

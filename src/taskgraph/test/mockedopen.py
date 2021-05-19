@@ -12,7 +12,7 @@ from six import StringIO
 
 
 class MockedFile(StringIO):
-    def __init__(self, context, filename, content=''):
+    def __init__(self, context, filename, content=""):
         self.context = context
         self.name = filename
         StringIO.__init__(self, content)
@@ -29,19 +29,19 @@ class MockedFile(StringIO):
 
 
 def normcase(path):
-    '''
+    """
     Normalize the case of `path`.
 
     Don't use `os.path.normcase` because that also normalizes forward slashes
     to backslashes on Windows.
-    '''
-    if sys.platform.startswith('win'):
+    """
+    if sys.platform.startswith("win"):
         return path.lower()
     return path
 
 
 class MockedOpen(object):
-    '''
+    """
     Context manager diverting the open builtin such that opening files
     can open "virtual" file instances given when creating a MockedOpen.
 
@@ -61,31 +61,33 @@ class MockedOpen(object):
         f = open('foo', 'w')
         f.write('foo')
     self.assertRaises(Exception,f.open('foo', 'r'))
-    '''
+    """
+
     def __init__(self, files={}):
         self.files = {}
         for name, content in files.items():
             self.files[normcase(os.path.abspath(name))] = content
 
-    def __call__(self, name, mode='r'):
+    def __call__(self, name, mode="r"):
         absname = normcase(os.path.abspath(name))
-        if 'w' in mode:
+        if "w" in mode:
             file = MockedFile(self, absname)
         elif absname in self.files:
             content = self.files[absname]
             if content is None:
-                raise IOError(2, 'No such file or directory')
+                raise IOError(2, "No such file or directory")
             file = MockedFile(self, absname, content)
-        elif 'a' in mode:
-            file = MockedFile(self, absname, self.open(name, 'r').read())
+        elif "a" in mode:
+            file = MockedFile(self, absname, self.open(name, "r").read())
         else:
             file = self.open(name, mode)
-        if 'a' in mode:
+        if "a" in mode:
             file.seek(0, os.SEEK_END)
         return file
 
     def __enter__(self):
         import six.moves.builtins
+
         self.open = six.moves.builtins.open
         self._orig_path_exists = os.path.exists
         self._orig_path_isdir = os.path.isdir
@@ -97,16 +99,14 @@ class MockedOpen(object):
 
     def __exit__(self, type, value, traceback):
         import six.moves.builtins
+
         six.moves.builtins.open = self.open
         os.path.exists = self._orig_path_exists
         os.path.isdir = self._orig_path_isdir
         os.path.isfile = self._orig_path_isfile
 
     def _wrapped_exists(self, p):
-        return (
-            self._wrapped_isfile(p)
-            or self._wrapped_isdir(p)
-        )
+        return self._wrapped_isfile(p) or self._wrapped_isdir(p)
 
     def _wrapped_isfile(self, p):
         p = normcase(p)
@@ -121,7 +121,7 @@ class MockedOpen(object):
 
     def _wrapped_isdir(self, p):
         p = normcase(p)
-        p = p if p.endswith(('/', '\\')) else p + os.sep
+        p = p if p.endswith(("/", "\\")) else p + os.sep
         if any(f.startswith(p) for f in self.files):
             return True
 

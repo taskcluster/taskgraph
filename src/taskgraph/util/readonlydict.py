@@ -8,14 +8,15 @@
 
 class ReadOnlyDict(dict):
     """A read-only dictionary."""
+
     def __init__(self, *args, **kwargs):
         dict.__init__(self, *args, **kwargs)
 
     def __delitem__(self, key):
-        raise Exception('Object does not support deletion.')
+        raise Exception("Object does not support deletion.")
 
     def __setitem__(self, key, value):
-        raise Exception('Object does not support assignment.')
+        raise Exception("Object does not support assignment.")
 
     def update(self, *args, **kwargs):
-        raise Exception('Object does not support update.')
+        raise Exception("Object does not support update.")

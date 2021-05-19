@@ -18,55 +18,60 @@ from .util.yaml import load_yaml
 
 logger = logging.getLogger(__name__)
 
-graph_config_schema = Schema({
-    # The trust-domain for this graph.
-    # (See https://firefox-source-docs.mozilla.org/taskcluster/taskcluster/taskgraph.html#taskgraph-trust-domain)  # noqa
-    Required('trust-domain'): Any(*string_types),
-    Required('task-priority'): optionally_keyed_by('project', Any(
-        'highest',
-        'very-high',
-        'high',
-        'medium',
-        'low',
-        'very-low',
-        'lowest',
-    )),
-    Required('workers'): {
-        Required('aliases'): {
-            text_type: {
-                Required('provisioner'): optionally_keyed_by('level', text_type),
-                Required('implementation'): text_type,
-                Required('os'): text_type,
-                Required('worker-type'): optionally_keyed_by('level', text_type),
-            }
-        },
-    },
-    Required("taskgraph"): {
-        Optional(
-            "register",
-            description="Python function to call to register extensions.",
-        ): text_type,
-        Optional('decision-parameters'): text_type,
-        Optional(
-            'cached-task-prefix',
-            description="The taskcluster index prefix to use for caching tasks. "
-            "Defaults to `trust-domain`."
-        ): text_type,
-        Required("repositories"): All(
-            {
+graph_config_schema = Schema(
+    {
+        # The trust-domain for this graph.
+        # (See https://firefox-source-docs.mozilla.org/taskcluster/taskcluster/taskgraph.html#taskgraph-trust-domain)  # noqa
+        Required("trust-domain"): Any(*string_types),
+        Required("task-priority"): optionally_keyed_by(
+            "project",
+            Any(
+                "highest",
+                "very-high",
+                "high",
+                "medium",
+                "low",
+                "very-low",
+                "lowest",
+            ),
+        ),
+        Required("workers"): {
+            Required("aliases"): {
                 text_type: {
-                    Required("name"): text_type,
-                    Optional("project-regex"): text_type,
-                    Optional("ssh-secret-name"): text_type,
-                    # FIXME
-                    Extra: text_type,
+                    Required("provisioner"): optionally_keyed_by("level", text_type),
+                    Required("implementation"): text_type,
+                    Required("os"): text_type,
+                    Required("worker-type"): optionally_keyed_by("level", text_type),
                 }
             },
-            Length(min=1),
-        ),
-    },
-    Extra: object,
-})
+        },
+        Required("taskgraph"): {
+            Optional(
+                "register",
+                description="Python function to call to register extensions.",
+            ): text_type,
+            Optional("decision-parameters"): text_type,
+            Optional(
+                "cached-task-prefix",
+                description="The taskcluster index prefix to use for caching tasks. "
+                "Defaults to `trust-domain`.",
+            ): text_type,
+            Required("repositories"): All(
+                {
+                    text_type: {
+                        Required("name"): text_type,
+                        Optional("project-regex"): text_type,
+                        Optional("ssh-secret-name"): text_type,
+                        # FIXME
+                        Extra: text_type,
+                    }
+                },
+                Length(min=1),
+            ),
+        },
+        Extra: object,
+    }
+)
 
 
 @attr.s(frozen=True, cmp=False)
@@ -97,13 +102,13 @@ class GraphConfig(object):
             raise Exception("Can't register multiple directories on python path.")
         GraphConfig._PATH_MODIFIED = modify_path
         sys.path.insert(0, modify_path)
-        register_path = self['taskgraph'].get('register')
+        register_path = self["taskgraph"].get("register")
         if register_path:
             find_object(register_path)(self)
 
     @property
     def vcs_root(self):
-        if path.split(self.root_dir)[-2:] != ['taskcluster', 'ci']:
+        if path.split(self.root_dir)[-2:] != ["taskcluster", "ci"]:
             raise Exception(
                 "Not guessing path to vcs root. "
                 "Graph config in non-standard location."
@@ -112,7 +117,7 @@ class GraphConfig(object):
 
     @property
     def taskcluster_yml(self):
-        if path.split(self.root_dir)[-2:] != ['taskcluster', 'ci']:
+        if path.split(self.root_dir)[-2:] != ["taskcluster", "ci"]:
             raise Exception(
                 "Not guessing path to `.taskcluster.yml`. "
                 "Graph config in non-standard location."

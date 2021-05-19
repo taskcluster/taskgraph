@@ -7,13 +7,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 import unittest
 
-from taskgraph.util.taskcluster import (
-    parse_time
-)
+from taskgraph.util.taskcluster import parse_time
 
 
 class TestTCUtils(unittest.TestCase):
-
     def test_parse_time(self):
         exp = datetime.datetime(2018, 10, 10, 18, 33, 3, 463000)
-        assert parse_time('2018-10-10T18:33:03.463Z') == exp
+        assert parse_time("2018-10-10T18:33:03.463Z") == exp

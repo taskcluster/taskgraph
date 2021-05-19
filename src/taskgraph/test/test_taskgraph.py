@@ -17,81 +17,100 @@ class TestTaskGraph(unittest.TestCase):
 
     def test_taskgraph_to_json(self):
         tasks = {
-            'a': Task(kind='test', label='a',
-                      attributes={'attr': 'a-task'},
-                      task={'taskdef': True}),
-            'b': Task(kind='test', label='b',
-                      attributes={},
-                      task={'task': 'def'},
-                      optimization={'seta': None},
-                      # note that this dep is ignored, superseded by that
-                      # from the taskgraph's edges
-                      dependencies={'first': 'a'}),
+            "a": Task(
+                kind="test",
+                label="a",
+                attributes={"attr": "a-task"},
+                task={"taskdef": True},
+            ),
+            "b": Task(
+                kind="test",
+                label="b",
+                attributes={},
+                task={"task": "def"},
+                optimization={"seta": None},
+                # note that this dep is ignored, superseded by that
+                # from the taskgraph's edges
+                dependencies={"first": "a"},
+            ),
         }
-        graph = Graph(nodes=set('ab'), edges={('a', 'b', 'edgelabel')})
+        graph = Graph(nodes=set("ab"), edges={("a", "b", "edgelabel")})
         taskgraph = TaskGraph(tasks, graph)
 
         res = taskgraph.to_json()
 
-        self.assertEqual(res, {
-            'a': {
-                'kind': 'test',
-                'label': 'a',
-                'attributes': {'attr': 'a-task', 'kind': 'test'},
-                'task': {'taskdef': True},
-                'dependencies': {'edgelabel': 'b'},
-                'soft_dependencies': [],
-                'optimization': None,
+        self.assertEqual(
+            res,
+            {
+                "a": {
+                    "kind": "test",
+                    "label": "a",
+                    "attributes": {"attr": "a-task", "kind": "test"},
+                    "task": {"taskdef": True},
+                    "dependencies": {"edgelabel": "b"},
+                    "soft_dependencies": [],
+                    "optimization": None,
+                },
+                "b": {
+                    "kind": "test",
+                    "label": "b",
+                    "attributes": {"kind": "test"},
+                    "task": {"task": "def"},
+                    "dependencies": {},
+                    "soft_dependencies": [],
+                    "optimization": {"seta": None},
+                },
             },
-            'b': {
-                'kind': 'test',
-                'label': 'b',
-                'attributes': {'kind': 'test'},
-                'task': {'task': 'def'},
-                'dependencies': {},
-                'soft_dependencies': [],
-                'optimization': {'seta': None},
-            }
-        })
+        )
 
     def test_round_trip(self):
-        graph = TaskGraph(tasks={
-            'a': Task(
-                kind='fancy',
-                label='a',
-                attributes={},
-                dependencies={'prereq': 'b'},  # must match edges, below
-                optimization={'seta': None},
-                task={'task': 'def'}),
-            'b': Task(
-                kind='pre',
-                label='b',
-                attributes={},
-                dependencies={},
-                optimization={'seta': None},
-                task={'task': 'def2'}),
-        }, graph=Graph(nodes={'a', 'b'}, edges={('a', 'b', 'prereq')}))
+        graph = TaskGraph(
+            tasks={
+                "a": Task(
+                    kind="fancy",
+                    label="a",
+                    attributes={},
+                    dependencies={"prereq": "b"},  # must match edges, below
+                    optimization={"seta": None},
+                    task={"task": "def"},
+                ),
+                "b": Task(
+                    kind="pre",
+                    label="b",
+                    attributes={},
+                    dependencies={},
+                    optimization={"seta": None},
+                    task={"task": "def2"},
+                ),
+            },
+            graph=Graph(nodes={"a", "b"}, edges={("a", "b", "prereq")}),
+        )
 
         tasks, new_graph = TaskGraph.from_json(graph.to_json())
         self.assertEqual(graph, new_graph)
 
-    simple_graph = TaskGraph(tasks={
-        'a': Task(
-            kind='fancy',
-            label='a',
-            attributes={},
-            dependencies={'prereq': 'b'},  # must match edges, below
-            optimization={'seta': None},
-            task={'task': 'def'}),
-        'b': Task(
-            kind='pre',
-            label='b',
-            attributes={},
-            dependencies={},
-            optimization={'seta': None},
-            task={'task': 'def2'}),
-    }, graph=Graph(nodes={'a', 'b'}, edges={('a', 'b', 'prereq')}))
+    simple_graph = TaskGraph(
+        tasks={
+            "a": Task(
+                kind="fancy",
+                label="a",
+                attributes={},
+                dependencies={"prereq": "b"},  # must match edges, below
+                optimization={"seta": None},
+                task={"task": "def"},
+            ),
+            "b": Task(
+                kind="pre",
+                label="b",
+                attributes={},
+                dependencies={},
+                optimization={"seta": None},
+                task={"task": "def2"},
+            ),
+        },
+        graph=Graph(nodes={"a", "b"}, edges={("a", "b", "prereq")}),
+    )
 
     def test_contains(self):
-        assert 'a' in self.simple_graph
-        assert 'c' not in self.simple_graph
+        assert "a" in self.simple_graph
+        assert "c" not in self.simple_graph

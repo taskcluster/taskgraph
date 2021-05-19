@@ -22,21 +22,19 @@ from .time import current_json_time
 
 def make_decision_task(params, root, context, head_rev=None):
     """Generate a basic decision task, based on the root .taskcluster.yml"""
-    with open(os.path.join(root, '.taskcluster.yml'), 'rb') as f:
+    with open(os.path.join(root, ".taskcluster.yml"), "rb") as f:
         taskcluster_yml = yaml.safe_load(f)
 
     if not head_rev:
-        head_rev = params['head_rev']
+        head_rev = params["head_rev"]
 
-    if params['repository_type'] == 'hg':
-        pushlog = find_hg_revision_push_info(
-            params['repository_url'],
-            head_rev)
+    if params["repository_type"] == "hg":
+        pushlog = find_hg_revision_push_info(params["repository_url"], head_rev)
 
         hg_push_context = {
-            'pushlog_id': pushlog['pushid'],
-            'pushdate': pushlog['pushdate'],
-            'owner': pushlog['user'],
+            "pushlog_id": pushlog["pushid"],
+            "pushdate": pushlog["pushdate"],
+            "owner": pushlog["user"],
         }
     else:
         hg_push_context = {}
@@ -53,25 +51,31 @@ def make_decision_task(params, root, context, head_rev=None):
     # provide a similar JSON-e context to what mozilla-taskcluster provides:
     # https://docs.taskcluster.net/reference/integrations/mozilla-taskcluster/docs/taskcluster-yml
     # but with a different tasks_for and an extra `cron` section
-    context = merge({
-        'repository': {
-            'url': params['repository_url'],
-            'project': params['project'],
-            'level': params['level'],
+    context = merge(
+        {
+            "repository": {
+                "url": params["repository_url"],
+                "project": params["project"],
+                "level": params["level"],
+            },
+            "push": merge(
+                {
+                    "revision": params["head_rev"],
+                    # remainder are fake values, but the decision task expects them anyway
+                    "comment": " ",
+                },
+                hg_push_context,
+            ),
+            "now": current_json_time(),
+            "as_slugid": as_slugid,
         },
-        'push': merge({
-            'revision': params['head_rev'],
-            # remainder are fake values, but the decision task expects them anyway
-            'comment': ' ',
-        }, hg_push_context),
-        'now': current_json_time(),
-        'as_slugid': as_slugid,
-    }, context)
+        context,
+    )
 
     rendered = jsone.render(taskcluster_yml, context)
-    if len(rendered['tasks']) != 1:
+    if len(rendered["tasks"]) != 1:
         raise Exception("Expected .taskcluster.yml to only produce one cron task")
-    task = rendered['tasks'][0]
+    task = rendered["tasks"][0]
 
-    task_id = task.pop('taskId')
+    task_id = task.pop("taskId")
     return (task_id, task)

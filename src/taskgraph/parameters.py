@@ -45,30 +45,32 @@ def _get_repo_path():
 
 
 # Please keep this list sorted and in sync with taskcluster/docs/parameters.rst
-base_schema = Schema({
-    Required('base_repository'): Any(*string_types),
-    Required('build_date'): int,
-    Required('do_not_optimize'): [Any(*string_types)],
-    Required('existing_tasks'): {Any(*string_types): Any(*string_types)},
-    Required('filters'): [Any(*string_types)],
-    Required('head_ref'): Any(*string_types),
-    Required('head_repository'): Any(*string_types),
-    Required('head_rev'): Any(*string_types),
-    Required('head_tag'): Any(*string_types),
-    Required('level'): Any(*string_types),
-    Required('moz_build_date'): Any(*string_types),
-    Required('optimize_target_tasks'): bool,
-    Required('owner'): Any(*string_types),
-    Required('project'): Any(*string_types),
-    Required('pushdate'): int,
-    Required('pushlog_id'): Any(*string_types),
-    Required('repository_type'): Any(*string_types),
-    Required('target_tasks_method'): Any(*string_types),
-    Required('tasks_for'): Any(*string_types),
-    Optional('code-review'): {
-        Required('phabricator-build-target'): text_type,
+base_schema = Schema(
+    {
+        Required("base_repository"): Any(*string_types),
+        Required("build_date"): int,
+        Required("do_not_optimize"): [Any(*string_types)],
+        Required("existing_tasks"): {Any(*string_types): Any(*string_types)},
+        Required("filters"): [Any(*string_types)],
+        Required("head_ref"): Any(*string_types),
+        Required("head_repository"): Any(*string_types),
+        Required("head_rev"): Any(*string_types),
+        Required("head_tag"): Any(*string_types),
+        Required("level"): Any(*string_types),
+        Required("moz_build_date"): Any(*string_types),
+        Required("optimize_target_tasks"): bool,
+        Required("owner"): Any(*string_types),
+        Required("project"): Any(*string_types),
+        Required("pushdate"): int,
+        Required("pushlog_id"): Any(*string_types),
+        Required("repository_type"): Any(*string_types),
+        Required("target_tasks_method"): Any(*string_types),
+        Required("tasks_for"): Any(*string_types),
+        Optional("code-review"): {
+            Required("phabricator-build-target"): text_type,
+        },
     }
-})
+)
 
 
 def extend_parameters_schema(schema):
@@ -97,25 +99,25 @@ class Parameters(ReadOnlyDict):
     @staticmethod
     def _fill_defaults(**kwargs):
         defaults = {
-            'base_repository': _get_repo_path(),
-            'build_date': int(time.time()),
-            'do_not_optimize': [],
-            'existing_tasks': {},
-            'filters': ['target_tasks_method'],
-            'head_ref': _get_head_ref(),
-            'head_repository': _get_repo_path(),
-            'head_rev': _get_head_ref(),
-            'head_tag': '',
-            'level': '3',
-            'moz_build_date': datetime.now().strftime("%Y%m%d%H%M%S"),
-            'optimize_target_tasks': True,
-            'owner': 'nobody@mozilla.com',
-            'project': _get_repo_path().rsplit('/', 1)[1],
-            'pushdate': int(time.time()),
-            'pushlog_id': '0',
-            'repository_type': _get_repository_type(),
-            'target_tasks_method': 'default',
-            'tasks_for': '',
+            "base_repository": _get_repo_path(),
+            "build_date": int(time.time()),
+            "do_not_optimize": [],
+            "existing_tasks": {},
+            "filters": ["target_tasks_method"],
+            "head_ref": _get_head_ref(),
+            "head_repository": _get_repo_path(),
+            "head_rev": _get_head_ref(),
+            "head_tag": "",
+            "level": "3",
+            "moz_build_date": datetime.now().strftime("%Y%m%d%H%M%S"),
+            "optimize_target_tasks": True,
+            "owner": "nobody@mozilla.com",
+            "project": _get_repo_path().rsplit("/", 1)[1],
+            "pushdate": int(time.time()),
+            "pushlog_id": "0",
+            "repository_type": _get_repository_type(),
+            "target_tasks_method": "default",
+            "tasks_for": "",
         }
 
         for name, default in defaults.items():
@@ -124,9 +126,11 @@ class Parameters(ReadOnlyDict):
         return kwargs
 
     def check(self):
-        schema = base_schema if self.strict else base_schema.extend({}, extra=ALLOW_EXTRA)
+        schema = (
+            base_schema if self.strict else base_schema.extend({}, extra=ALLOW_EXTRA)
+        )
         try:
-            validate_schema(schema, self.copy(), 'Invalid parameters:')
+            validate_schema(schema, self.copy(), "Invalid parameters:")
         except Exception as e:
             raise ParameterMismatch(str(e))
 
@@ -141,7 +145,7 @@ class Parameters(ReadOnlyDict):
         Determine whether this graph is being built on a try project or for
         `mach try fuzzy`.
         """
-        return 'try' in self['project'] or self['tasks_for'] == 'github-pull-request'
+        return "try" in self["project"] or self["tasks_for"] == "github-pull-request"
 
     @property
     def moz_build_date(self):
@@ -161,31 +165,31 @@ class Parameters(ReadOnlyDict):
 
         :return str: The URL displaying the given path.
         """
-        if self['repository_type'] == 'hg':
-            if path.startswith('comm/'):
-                path = path[len('comm/'):]
-                repo = self['comm_head_repository']
-                rev = self['comm_head_rev']
+        if self["repository_type"] == "hg":
+            if path.startswith("comm/"):
+                path = path[len("comm/") :]
+                repo = self["comm_head_repository"]
+                rev = self["comm_head_rev"]
             else:
-                repo = self['head_repository']
-                rev = self['head_rev']
-            endpoint = 'file' if pretty else 'raw-file'
-            return '{}/{}/{}/{}'.format(repo, endpoint, rev, path)
-        elif self['repository_type'] == 'git':
+                repo = self["head_repository"]
+                rev = self["head_rev"]
+            endpoint = "file" if pretty else "raw-file"
+            return "{}/{}/{}/{}".format(repo, endpoint, rev, path)
+        elif self["repository_type"] == "git":
             # For getting the file URL for git repositories, we only support a Github HTTPS remote
-            repo = self['head_repository']
-            if repo.startswith('https://github.com/'):
-                if repo.endswith('/'):
+            repo = self["head_repository"]
+            if repo.startswith("https://github.com/"):
+                if repo.endswith("/"):
                     repo = repo[:-1]
 
-                rev = self['head_rev']
-                endpoint = 'blob' if pretty else 'raw'
-                return '{}/{}/{}/{}'.format(repo, endpoint, rev, path)
-            elif repo.startswith('git@github.com:'):
-                if repo.endswith('.git'):
+                rev = self["head_rev"]
+                endpoint = "blob" if pretty else "raw"
+                return "{}/{}/{}/{}".format(repo, endpoint, rev, path)
+            elif repo.startswith("git@github.com:"):
+                if repo.endswith(".git"):
                     repo = repo[:-4]
-                rev = self['head_rev']
-                endpoint = 'blob' if pretty else 'raw'
+                rev = self["head_rev"]
+                endpoint = "blob" if pretty else "raw"
                 return "{}/{}/{}/{}".format(
                     repo.replace("git@github.com:", "https://github.com/"),
                     endpoint,
@@ -193,11 +197,14 @@ class Parameters(ReadOnlyDict):
                     path,
                 )
             else:
-                raise ParameterMismatch("Don't know how to determine file URL for non-github"
-                                        "repo: {}".format(repo))
+                raise ParameterMismatch(
+                    "Don't know how to determine file URL for non-github"
+                    "repo: {}".format(repo)
+                )
         else:
             raise RuntimeError(
-                'Only the "git" and "hg" repository types are supported for using file_url()')
+                'Only the "git" and "hg" repository types are supported for using file_url()'
+            )
 
 
 def load_parameters_file(filename, strict=True, overrides=None, trust_domain=None):
@@ -239,12 +246,12 @@ def load_parameters_file(filename, strict=True, overrides=None, trust_domain=Non
             task_id = find_task_id(index)
 
         if task_id:
-            filename = get_artifact_url(task_id, 'public/parameters.yml')
+            filename = get_artifact_url(task_id, "public/parameters.yml")
         f = urllib.urlopen(filename)
 
-    if filename.endswith('.yml'):
+    if filename.endswith(".yml"):
         kwargs = yaml.load_stream(f)
-    elif filename.endswith('.json'):
+    elif filename.endswith(".json"):
         kwargs = json.load(f)
     else:
         raise TypeError("Parameters file `{}` is not JSON or YAML".format(filename))
@@ -264,4 +271,5 @@ def parameters_loader(filename, strict=True, overrides=None):
         )
         parameters.check()
         return parameters
+
     return get_parameters

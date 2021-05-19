@@ -58,10 +58,14 @@ class Graph(object):
         nodes, edges = set(), set()
         while (new_nodes, new_edges) != (nodes, edges):
             nodes, edges = new_nodes, new_edges
-            add_edges = set((left, right, name)
-                            for (left, right, name) in self.edges
-                            if (right if reverse else left) in nodes)
-            add_nodes = set((left if reverse else right) for (left, right, _) in add_edges)
+            add_edges = set(
+                (left, right, name)
+                for (left, right, name) in self.edges
+                if (right if reverse else left) in nodes
+            )
+            add_nodes = set(
+                (left if reverse else right) for (left, right, _) in add_edges
+            )
             new_nodes = nodes | add_nodes
             new_edges = edges | add_edges
         return Graph(new_nodes, new_edges)

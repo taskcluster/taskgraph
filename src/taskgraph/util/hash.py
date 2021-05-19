@@ -21,7 +21,7 @@ def hash_path(path):
 
 
 def _find_files(base_path):
-    for path in Path(base_path).rglob('*'):
+    for path in Path(base_path).rglob("*"):
         if path.is_file():
             yield str(path)
 
@@ -44,10 +44,12 @@ def hash_paths(base_path, patterns):
         if matches:
             found.update(matches)
         else:
-            raise Exception('%s did not match anything' % pattern)
+            raise Exception("%s did not match anything" % pattern)
     for path in sorted(found):
-        h.update('{} {}\n'.format(
-            hash_path(mozpath.abspath(mozpath.join(base_path, path))),
-            mozpath.normsep(path)
-        ))
+        h.update(
+            "{} {}\n".format(
+                hash_path(mozpath.abspath(mozpath.join(base_path, path))),
+                mozpath.normsep(path),
+            )
+        )
     return h.hexdigest()

@@ -40,20 +40,20 @@ class Task(object):
     soft_dependencies = attr.ib(factory=list)
 
     def __attrs_post_init__(self):
-        self.attributes['kind'] = self.kind
+        self.attributes["kind"] = self.kind
 
     def to_json(self):
         rv = {
-            'kind': self.kind,
-            'label': self.label,
-            'attributes': self.attributes,
-            'dependencies': self.dependencies,
-            'soft_dependencies': self.soft_dependencies,
-            'optimization': self.optimization,
-            'task': self.task,
+            "kind": self.kind,
+            "label": self.label,
+            "attributes": self.attributes,
+            "dependencies": self.dependencies,
+            "soft_dependencies": self.soft_dependencies,
+            "optimization": self.optimization,
+            "task": self.task,
         }
         if self.task_id:
-            rv['task_id'] = self.task_id
+            rv["task_id"] = self.task_id
         return rv
 
     @classmethod
@@ -64,14 +64,14 @@ class Task(object):
         generation process, for example in Action tasks.
         """
         rv = cls(
-            kind=task_dict['kind'],
-            label=task_dict['label'],
-            attributes=task_dict['attributes'],
-            task=task_dict['task'],
-            optimization=task_dict['optimization'],
-            dependencies=task_dict.get('dependencies'),
-            soft_dependencies=task_dict.get('soft_dependencies'),
+            kind=task_dict["kind"],
+            label=task_dict["label"],
+            attributes=task_dict["attributes"],
+            task=task_dict["task"],
+            optimization=task_dict["optimization"],
+            dependencies=task_dict.get("dependencies"),
+            soft_dependencies=task_dict.get("soft_dependencies"),
         )
-        if 'task_id' in task_dict:
-            rv.task_id = task_dict['task_id']
+        if "task_id" in task_dict:
+            rv.task_id = task_dict["task_id"]
         return rv
