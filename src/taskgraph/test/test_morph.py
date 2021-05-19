@@ -7,7 +7,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 import pytest
-from six import PY3
 
 from taskgraph import morph
 from taskgraph.config import load_graph_config
@@ -26,7 +25,7 @@ def graph_config():
 def make_taskgraph():
     def inner(tasks):
         label_to_taskid = {k: k + '-tid' for k in tasks}
-        for label, task_id in label_to_taskid.iteritems():
+        for label, task_id in label_to_taskid.items():
             tasks[label].task_id = task_id
         graph = Graph(nodes=set(tasks), edges=set())
         taskgraph = TaskGraph(tasks, graph)
@@ -35,7 +34,6 @@ def make_taskgraph():
     return inner
 
 
-@pytest.mark.xfail(PY3, reason="fails with Python 3")
 def test_make_index_tasks(make_taskgraph, graph_config):
     task_def = {
         'routes': [

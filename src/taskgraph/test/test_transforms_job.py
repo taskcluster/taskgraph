@@ -12,7 +12,6 @@ import os
 from copy import deepcopy
 
 import pytest
-from six import PY3
 
 from taskgraph.config import load_graph_config
 from taskgraph.transforms import job
@@ -68,10 +67,7 @@ def transform(monkeypatch, config):
 
 
 @pytest.mark.parametrize('task', [
-    pytest.param(
-        {'worker-type': 't-linux'},
-        marks=pytest.mark.xfail(PY3, reason="fails with Python 3")
-    ),
+    {'worker-type': 't-linux'},
     pytest.param({'worker-type': 'releng-hardware/gecko-t-win10-64-hw'}, marks=pytest.mark.xfail),
 ], ids=['docker-worker', 'generic-worker'])
 def test_worker_caches(task, transform):
