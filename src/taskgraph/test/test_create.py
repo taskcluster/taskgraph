@@ -7,8 +7,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import unittest
 
 import mock
-import pytest
-from six import PY3
 
 from taskgraph import create
 from taskgraph.config import GraphConfig

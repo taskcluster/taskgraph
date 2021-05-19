@@ -15,7 +15,7 @@ def attrmatch(attributes, **kwargs):
     must be in the set.  A callable is called with the attribute value.  If an
     attribute is specified as a keyword argument but not present in the
     attributes, the result is False."""
-    for kwkey, kwval in kwargs.iteritems():
+    for kwkey, kwval in kwargs.items():
         if kwkey not in attributes:
             return False
         attval = attributes[kwkey]
@@ -40,7 +40,7 @@ def keymatch(attributes, target):
         return [attributes[target]]
 
     # regular expression match
-    matches = [v for k, v in attributes.iteritems() if re.match(k + '$', target)]
+    matches = [v for k, v in attributes.items() if re.match(k + '$', target)]
     if matches:
         return matches
 

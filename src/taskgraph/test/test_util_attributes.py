@@ -8,9 +8,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import unittest
 
-import pytest
-from six import PY3
-
 from taskgraph.util.attributes import (
     attrmatch,
     match_run_on_projects,
@@ -20,29 +17,24 @@ from taskgraph.util.attributes import (
 
 class Attrmatch(unittest.TestCase):
 
-    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_trivial_match(self):
         """Given no conditions, anything matches"""
         self.assertTrue(attrmatch({}))
 
-    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_missing_attribute(self):
         """If a filtering attribute is not present, no match"""
         self.assertFalse(attrmatch({}, someattr=10))
 
-    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_literal_attribute(self):
         """Literal attributes must match exactly"""
         self.assertTrue(attrmatch({'att': 10}, att=10))
         self.assertFalse(attrmatch({'att': 10}, att=20))
 
-    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_set_attribute(self):
         """Set attributes require set membership"""
         self.assertTrue(attrmatch({'att': 10}, att=set([9, 10])))
         self.assertFalse(attrmatch({'att': 10}, att=set([19, 20])))
 
-    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_callable_attribute(self):
         """Callable attributes are called and any False causes the match to fail"""
         self.assertTrue(attrmatch({'att': 10}, att=lambda val: True))
@@ -53,7 +45,6 @@ class Attrmatch(unittest.TestCase):
         self.assertTrue(attrmatch({'att': 10}, att=even))
         self.assertFalse(attrmatch({'att': 11}, att=even))
 
-    @pytest.mark.xfail(PY3, reason="fails with Python 3")
     def test_all_matches_required(self):
         """If only one attribute does not match, the result is False"""
         self.assertFalse(attrmatch({'a': 1}, a=1, b=2, c=3))
