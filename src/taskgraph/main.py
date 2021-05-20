@@ -11,6 +11,8 @@ import traceback
 import argparse
 import logging
 import json
+
+import six
 import yaml
 
 _commands = []
@@ -73,7 +75,7 @@ def get_filtered_taskgraph(taskgraph, tasksregex):
         task = taskgraph.tasks[key]
         if regexprogram.match(task.label):
             filteredtasks[key] = task
-            for depname, dep in named_links_dict[key].iteritems():
+            for depname, dep in six.iteritems(named_links_dict[key]):
                 if regexprogram.match(dep):
                     filterededges.add((key, dep, depname))
     filtered_taskgraph = TaskGraph(

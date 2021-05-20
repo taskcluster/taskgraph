@@ -64,7 +64,7 @@ class TransformConfig(object):
     def repo_configs(self):
         repositories = self.graph_config["taskgraph"]["repositories"]
         if len(repositories) == 1:
-            current_prefix = repositories.keys()[0]
+            current_prefix = list(repositories.keys())[0]
         else:
             project = self.params["project"]
             matching_repos = {
@@ -76,7 +76,7 @@ class TransformConfig(object):
                 raise Exception(
                     "Couldn't find repository matching project `{}`".format(project)
                 )
-            current_prefix = matching_repos.keys()[0]
+            current_prefix = list(matching_repos.keys())[0]
 
         repo_configs = {
             current_prefix: RepoConfig(

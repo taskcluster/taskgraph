@@ -6,6 +6,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
+import six
+
 from ..util.templates import merge
 from ..util.yaml import load_yaml
 
@@ -34,7 +36,7 @@ def loader(kind, path, config, params, loaded_tasks):
 
     def jobs():
         defaults = config.get("job-defaults")
-        for name, job in config.get("jobs", {}).iteritems():
+        for name, job in six.iteritems(config.get("jobs", {})):
             if defaults:
                 job = merge(defaults, job)
             job["job-from"] = "kind.yml"
@@ -47,7 +49,7 @@ def loader(kind, path, config, params, loaded_tasks):
             if defaults:
                 file_defaults = merge(defaults, file_defaults or {})
 
-            for name, job in tasks.iteritems():
+            for name, job in six.iteritems(tasks):
                 if file_defaults:
                     job = merge(file_defaults, job)
                 job["job-from"] = filename

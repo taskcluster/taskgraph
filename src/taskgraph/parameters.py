@@ -215,7 +215,7 @@ def load_parameters_file(filename, strict=True, overrides=None, trust_domain=Non
         task-id=fdtgsD5DQUmAQZEaGMvQ4Q
         project=mozilla-central
     """
-    import urllib
+    from six.moves.urllib.request import urlopen
     from taskgraph.util.taskcluster import get_artifact_url, find_task_id
     from taskgraph.util import yaml
 
@@ -247,7 +247,7 @@ def load_parameters_file(filename, strict=True, overrides=None, trust_domain=Non
 
         if task_id:
             filename = get_artifact_url(task_id, "public/parameters.yml")
-        f = urllib.urlopen(filename)
+        f = urlopen(filename)
 
     if filename.endswith(".yml"):
         kwargs = yaml.load_stream(f)

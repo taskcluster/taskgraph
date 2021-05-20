@@ -9,6 +9,7 @@ import os
 import json
 import logging
 
+import six
 from six import text_type
 
 import time
@@ -49,7 +50,7 @@ try_task_config_schema_v2 = Schema(
 
 def full_task_graph_to_runnable_jobs(full_task_json):
     runnable_jobs = {}
-    for label, node in full_task_json.iteritems():
+    for label, node in six.iteritems(full_task_json):
         if not ("extra" in node["task"] and "treeherder" in node["task"]["extra"]):
             continue
 
@@ -112,7 +113,7 @@ def taskgraph_decision(options, parameters=None):
     _, _ = TaskGraph.from_json(full_task_json)
 
     # write out the target task set to allow reproducing this as input
-    write_artifact("target-tasks.json", tgg.target_task_set.tasks.keys())
+    write_artifact("target-tasks.json", list(tgg.target_task_set.tasks.keys()))
 
     # write out the optimized task graph to describe what will actually happen,
     # and the map of labels to taskids
