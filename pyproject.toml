@@ -1,8 +1,9 @@
 [tool.black]
 line-length = 88
-extend-exclude = """(
-taskcluster/scripts/external_tools)
-"""
+extend-exclude = """(\
+  src/taskgraph/run-task|\
+  taskcluster/scripts/external_tools)\
+  """
 
 [tool.pytest.ini_options]
 xfail_strict = true
