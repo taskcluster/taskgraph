@@ -18,6 +18,8 @@ ADD topsrcdir/taskcluster/docker/recipes/install-mercurial.sh /setup/install-mer
 # Add taskgraph package.
 # %include requirements/base.txt
 ADD topsrcdir/requirements/base.txt /setup/requirements.txt
+# %include requirements/base.py3.txt
+ADD topsrcdir/requirements/base.py3.txt /setup/requirements.py3.txt
 
 ADD system-setup.sh /setup/system-setup.sh
 RUN bash /setup/system-setup.sh
