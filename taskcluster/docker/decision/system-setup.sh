@@ -9,10 +9,13 @@ apt-get install -y --force-yes --no-install-recommends \
     ca-certificates \
     openssh-client \
     python \
-    python3 \
     python-pip \
     python-setuptools \
     python-wheel \
+    python3 \
+    python3-pip \
+    python3-setuptools \
+    python3-wheel \
     sudo \
     unzip \
     curl \
