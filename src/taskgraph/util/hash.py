@@ -16,7 +16,7 @@ def hash_path(path):
 
     Returns the SHA-256 hash in hex form.
     """
-    with open(path) as fh:
+    with open(path, "rb") as fh:
         return hashlib.sha256(fh.read()).hexdigest()
 
 

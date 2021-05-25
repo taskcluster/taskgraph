@@ -106,7 +106,7 @@ def post_to_docker(tar, api_path, **kwargs):
                 status_line = {}
                 sys.stderr.write("{}\n".format(data["status"]))
         elif "stream" in data:
-            sys.stderr.write(data["stream"].encode("utf-8"))
+            sys.stderr.write(data["stream"])
         elif "aux" in data:
             sys.stderr.write(repr(data["aux"]))
         elif "error" in data:
@@ -256,9 +256,7 @@ def stream_context_tar(topsrcdir, context_dir, out_file, image_name=None, args=N
                 p = line[len("# %ARG ") :].strip()
                 if not args or p not in args:
                     raise Exception("missing argument: {}".format(p))
-                replace.append(
-                    (re.compile(r"\${}\b".format(p)), args[p].encode("ascii"))
-                )
+                replace.append((re.compile(r"\${}\b".format(p)), args[p]))
                 continue
 
             for regexp, s in replace:
