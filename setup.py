@@ -11,7 +11,10 @@ setup(
     packages=find_packages("src"),
     package_dir={"": "src"},
     install_requires=requirements,
-    classifiers=("Programming Language :: Python :: 2",),
+    classifiers=(
+        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 3.6",
+    ),
     entry_points={"console_scripts": ["taskgraph = taskgraph.main:main"]},
     package_data={
         "taskgraph": [
