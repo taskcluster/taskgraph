@@ -6,6 +6,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import hashlib
 from pathlib2 import Path
 
+import six
+
 from taskgraph.util.memoize import memoize
 from taskgraph.util import path as mozpath
 
@@ -47,9 +49,11 @@ def hash_paths(base_path, patterns):
             raise Exception("%s did not match anything" % pattern)
     for path in sorted(found):
         h.update(
-            "{} {}\n".format(
-                hash_path(mozpath.abspath(mozpath.join(base_path, path))),
-                mozpath.normsep(path),
+            six.ensure_binary(
+                "{} {}\n".format(
+                    hash_path(mozpath.abspath(mozpath.join(base_path, path))),
+                    mozpath.normsep(path),
+                )
             )
         )
     return h.hexdigest()
