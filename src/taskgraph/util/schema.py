@@ -9,7 +9,7 @@ import pprint
 import collections
 import voluptuous
 
-from six import string_types, text_type
+from six import PY3, string_types, text_type
 
 import taskgraph
 
@@ -124,11 +124,18 @@ def resolve_keyed_by(item, field, item_name, **extra_values):
 # Schemas for YAML files should use dashed identifiers by default.  If there are
 # components of the schema for which there is a good reason to use another format,
 # they can be whitelisted here.
-WHITELISTED_SCHEMA_IDENTIFIERS = [
-    # upstream-artifacts are handed directly to scriptWorker, which expects interCaps
-    lambda path: "[u'upstream-artifacts']"
-    in path,
-]
+if PY3:
+    WHITELISTED_SCHEMA_IDENTIFIERS = [
+        # upstream-artifacts are handed directly to scriptWorker, which expects interCaps
+        lambda path: "['upstream-artifacts']"
+        in path,
+    ]
+else:
+    WHITELISTED_SCHEMA_IDENTIFIERS = [
+        # upstream-artifacts are handed directly to scriptWorker, which expects interCaps
+        lambda path: "[u'upstream-artifacts']"
+        in path,
+    ]
 
 
 def check_schema(schema):
