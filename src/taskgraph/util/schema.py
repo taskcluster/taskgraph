@@ -126,15 +126,19 @@ def resolve_keyed_by(item, field, item_name, **extra_values):
 # they can be whitelisted here.
 if PY3:
     WHITELISTED_SCHEMA_IDENTIFIERS = [
-        # upstream-artifacts are handed directly to scriptWorker, which expects interCaps
-        lambda path: "['upstream-artifacts']"
-        in path,
+        # upstream-artifacts and artifact-map are handed directly to scriptWorker,
+        # which expects interCaps
+        lambda path: any(
+            exc in path for exc in ("['upstream-artifacts']", "['artifact-map']")
+        )
     ]
 else:
     WHITELISTED_SCHEMA_IDENTIFIERS = [
-        # upstream-artifacts are handed directly to scriptWorker, which expects interCaps
-        lambda path: "[u'upstream-artifacts']"
-        in path,
+        # upstream-artifacts and artifact-map are handed directly to scriptWorker,
+        # which expects interCaps
+        lambda path: any(
+            exc in path for exc in ("[u'upstream-artifacts']", "[u'artifact-map']")
+        )
     ]
 
 
