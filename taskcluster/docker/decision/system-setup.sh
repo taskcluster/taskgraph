@@ -35,7 +35,11 @@ cd $BUILD
 . /setup/install-mercurial.sh
 
 pip install -r /setup/requirements.txt
-pip3 install -r /setup/requirements.py3.txt
+
+# Using pip3 directly results in a warning that a "very old" wrapper is being
+# used, and that support for this will be deprecated.
+python3 -mpip install --upgrade pip~=21.1.3
+python3 -mpip install -r /setup/requirements.py3.txt
 
 cd /
 rm -rf $BUILD
