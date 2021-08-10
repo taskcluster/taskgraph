@@ -929,13 +929,21 @@ def build_task(config, tasks):
 
             branch_rev = get_branch_rev(config)
 
-            th_project_suffix = (
-                "-pr" if config.params["tasks_for"] == "github-pull-request" else ""
-            )
+            if config.params["tasks_for"] == "github-pull-request":
+                # In the past we used `project` for this, but that ends up being
+                # set to the repository name of the _head_ repo, which is not correct
+                # (and causes scope issues) if it doesn't match the name of the
+                # base repo
+                base_project = config.params["base_repository"].split("/")[-1]
+                th_project_suffix = "-pr"
+            else:
+                base_project = config.params["project"]
+                th_project_suffix = ""
+
             routes.append(
                 "{}.v2.{}.{}.{}".format(
                     TREEHERDER_ROUTE_ROOT,
-                    config.params["project"] + th_project_suffix,
+                    base_project + th_project_suffix,
                     branch_rev,
                     config.params["pushlog_id"],
                 )
