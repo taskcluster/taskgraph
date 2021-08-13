@@ -12,6 +12,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import hashlib
 import json
 
+from six import ensure_binary
+
 from taskgraph.util.taskcluster import get_artifact_prefix
 
 
@@ -136,7 +138,8 @@ def support_vcs_checkout(config, job, taskdesc, repo_configs, sparse=False):
                 repo_configs.values(), key=lambda repo_config: repo_config.path
             )
         }
-        digest = hashlib.sha256("\n".join(checkout_paths)).hexdigest()
+        checkout_paths_str = ensure_binary("\n".join(checkout_paths))
+        digest = hashlib.sha256(checkout_paths_str).hexdigest()
         cache_name += "-repos-{}".format(digest)
 
     # Sparse checkouts need their own cache because they can interfere
