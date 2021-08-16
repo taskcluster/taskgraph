@@ -64,6 +64,8 @@ base_schema = Schema(
         Required("pushdate"): int,
         Required("pushlog_id"): Any(*string_types),
         Required("repository_type"): Any(*string_types),
+        # target-kind is not included, since it should never be
+        # used at run-time
         Required("target_tasks_method"): Any(*string_types),
         Required("tasks_for"): Any(*string_types),
         Optional("code-review"): {

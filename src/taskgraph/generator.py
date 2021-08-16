@@ -16,6 +16,7 @@ from .graph import Graph
 from .taskgraph import TaskGraph
 from .task import Task
 from .optimize import optimize_task_graph
+from .parameters import Parameters
 from .morph import morph
 from .util.python_path import find_object
 from .transforms.base import TransformSequence, TransformConfig
@@ -123,7 +124,6 @@ class TaskGraphGenerator(object):
         parameters,
         decision_task_id="DECISION-TASK",
         write_artifacts=False,
-        target_kind=None,
     ):
         """
         @param root_dir: root directory, with subdirectories for each kind
@@ -135,7 +135,6 @@ class TaskGraphGenerator(object):
             root_dir = "taskcluster/ci"
         self.root_dir = root_dir
         self._parameters = parameters
-        self._target_kind = target_kind
         self._decision_task_id = decision_task_id
         self._write_artifacts = write_artifacts
 
@@ -230,12 +229,26 @@ class TaskGraphGenerator(object):
         """
         return self._run_until("graph_config")
 
-    def _load_kinds(self, graph_config):
-        for kind_name in os.listdir(self.root_dir):
-            try:
-                yield Kind.load(self.root_dir, graph_config, kind_name)
-            except KindNotFound:
-                continue
+    def _load_kinds(self, graph_config, target_kind=None):
+        if target_kind:
+            # docker-image is an implicit dependency that never appears in
+            # kind-dependencies.
+            queue = [target_kind, "docker-image"]
+            seen_kinds = set()
+            while queue:
+                kind_name = queue.pop()
+                if kind_name in seen_kinds:
+                    continue
+                seen_kinds.add(kind_name)
+                kind = Kind.load(self.root_dir, graph_config, kind_name)
+                yield kind
+                queue.extend(kind.config.get("kind-dependencies", []))
+        else:
+            for kind_name in os.listdir(self.root_dir):
+                try:
+                    yield Kind.load(self.root_dir, graph_config, kind_name)
+                except KindNotFound:
+                    continue
 
     def _run(self):
         logger.info("Loading graph configuration.")
@@ -261,7 +274,17 @@ class TaskGraphGenerator(object):
         logger.info("Loading kinds")
         # put the kinds into a graph and sort topologically so that kinds are loaded
         # in post-order
-        kinds = {kind.name: kind for kind in self._load_kinds(graph_config)}
+        if parameters.get("target-kind"):
+            target_kind = parameters["target-kind"]
+            logger.info(
+                "Limiting kinds to {target_kind} and dependencies".format(
+                    target_kind=target_kind
+                )
+            )
+        kinds = {
+            kind.name: kind
+            for kind in self._load_kinds(graph_config, parameters.get("target-kind"))
+        }
 
         edges = set()
         for kind in kinds.values():
@@ -269,15 +292,8 @@ class TaskGraphGenerator(object):
                 edges.add((kind.name, dep, "kind-dependency"))
         kind_graph = Graph(set(kinds), edges)
 
-        if self._target_kind:
-            logger.info(
-                "Limiting kinds to {target_kind} and dependencies".format(
-                    target_kind=self._target_kind
-                )
-            )
-            kind_graph = kind_graph.transitive_closure(
-                {self._target_kind, "docker-image"}
-            )
+        if parameters.get("target-kind"):
+            kind_graph = kind_graph.transitive_closure({target_kind, "docker-image"})
 
         logger.info("Generating full task set")
         all_tasks = {}
@@ -396,7 +412,11 @@ def load_tasks_for_kind(parameters, kind, root_dir=None):
 
     This function is designed to be called from outside of taskgraph.
     """
-    tgg = TaskGraphGenerator(root_dir=root_dir, parameters=parameters, target_kind=kind)
+    # make parameters read-write
+    parameters = dict(parameters)
+    parameters["target-kind"] = kind
+    parameters = Parameters(strict=False, **parameters)
+    tgg = TaskGraphGenerator(root_dir=root_dir, parameters=parameters)
     return {
         task.task["metadata"]["name"]: task
         for task in tgg.full_task_set

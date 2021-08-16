@@ -171,6 +171,11 @@ SHOW_METHODS = {
     help="only return tasks with labels matching this regular " "expression.",
 )
 @argument(
+    "--target-kind",
+    default=None,
+    help="only return tasks that are of the given kind, or their dependencies.",
+)
+@argument(
     "-F",
     "--fast",
     dest="fast",
@@ -189,7 +194,9 @@ def show_taskgraph(options):
 
     try:
         parameters = taskgraph.parameters.parameters_loader(
-            options["parameters"], strict=False
+            options["parameters"],
+            overrides={"target-kind": options.get("target_kind")},
+            strict=False,
         )
 
         tgg = taskgraph.generator.TaskGraphGenerator(
