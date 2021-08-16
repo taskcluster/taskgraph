@@ -11,18 +11,20 @@ import traceback
 import argparse
 import logging
 import json
+from collections import namedtuple
 
 import six
 import yaml
 
-_commands = []
+Command = namedtuple("Command", ["func", "args", "kwargs", "defaults"])
+commands = {}
 
 
 def command(*args, **kwargs):
     defaults = kwargs.pop("defaults", {})
 
     def decorator(func):
-        _commands.append((func, args, kwargs, defaults))
+        commands[args[0]] = Command(func, args, kwargs, defaults)
         return func
 
     return decorator
@@ -91,6 +93,11 @@ SHOW_METHODS = {
 }
 
 
+@command(
+    "tasks",
+    help="Show all tasks in the taskgraph.",
+    defaults={"graph_attr": "full_task_set"},
+)
 @command(
     "full", help="Show the full taskgraph.", defaults={"graph_attr": "full_task_graph"}
 )
@@ -283,14 +290,14 @@ def image_digest(args):
 @argument(
     "--message",
     required=False,
-    help="(ignored - deprecated)",
+    help=argparse.SUPPRESS,
 )
 @argument(
     "--project",
     required=True,
     help="Project to use for creating task graph. Example: --project=try",
 )
-@argument("--pushlog-id", dest="pushlog_id", required=True, default=0)
+@argument("--pushlog-id", dest="pushlog_id", required=True, default="0")
 @argument("--pushdate", dest="pushdate", required=True, type=int, default=0)
 @argument("--owner", required=True, help="email address of who owns this graph")
 @argument("--level", required=True, help="SCM level of this repository")
@@ -298,7 +305,9 @@ def image_digest(args):
     "--target-tasks-method", help="method for selecting the target tasks to generate"
 )
 @argument(
-    "--repository-type", required=True, help='Type of repository, either "hg" or "git"'
+    "--repository-type",
+    required=True,
+    help='Type of repository, either "hg" or "git"',
 )
 @argument("--base-repository", required=True, help='URL for "base" repository to clone')
 @argument(
@@ -369,7 +378,7 @@ def action_callback(options):
 @argument(
     "--parameters",
     "-p",
-    default="project=mozilla-central",
+    default="",
     help="parameters file (.yml or .json; see " "`taskcluster/docs/parameters.rst`)`",
 )
 @argument("--task-id", default=None, help="TaskId to which the action applies")
@@ -428,7 +437,7 @@ def test_action_callback(options):
 def create_parser():
     parser = argparse.ArgumentParser(description="Interact with taskgraph")
     subparsers = parser.add_subparsers()
-    for (func, args, kwargs, defaults) in _commands:
+    for _, (func, args, kwargs, defaults) in commands.items():
         subparser = subparsers.add_parser(*args, **kwargs)
         for arg in func.args:
             subparser.add_argument(*arg[0], **arg[1])
