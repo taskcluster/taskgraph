@@ -182,7 +182,11 @@ def format_taskgraph(options):
     "--parameters",
     "-p",
     default="",
-    help="parameters file (.yml or .json; see " "`taskcluster/docs/parameters.rst`)`",
+    help="Parameters to use for the generation. Can be a path to file (.yml or "
+    ".json; see `taskcluster/docs/parameters.rst`), a url, of the form "
+    "`project=mozilla-central` to download latest parameters file for the "
+    "specified project from CI, or of the form `task-id=<decision task id>` to "
+    "download parameters from the specified decision task.",
 )
 @argument(
     "--no-optimize",
