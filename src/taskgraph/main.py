@@ -222,6 +222,9 @@ def format_taskgraph(options):
     help="enable fast task generation for local debugging.",
 )
 def show_taskgraph(options):
+    if options.pop("verbose", False):
+        logging.root.setLevel(logging.DEBUG)
+
     out = format_taskgraph(options)
 
     fh = options["output_file"]
