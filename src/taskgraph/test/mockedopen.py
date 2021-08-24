@@ -7,8 +7,7 @@
 
 import sys
 import os
-
-from six import StringIO
+from io import StringIO
 
 
 class MockedFile(StringIO):
@@ -86,21 +85,21 @@ class MockedOpen:
         return file
 
     def __enter__(self):
-        import six.moves.builtins
+        import builtins
 
-        self.open = six.moves.builtins.open
+        self.open = builtins.open
         self._orig_path_exists = os.path.exists
         self._orig_path_isdir = os.path.isdir
         self._orig_path_isfile = os.path.isfile
-        six.moves.builtins.open = self
+        builtins.open = self
         os.path.exists = self._wrapped_exists
         os.path.isdir = self._wrapped_isdir
         os.path.isfile = self._wrapped_isfile
 
     def __exit__(self, type, value, traceback):
-        import six.moves.builtins
+        import builtins
 
-        six.moves.builtins.open = self.open
+        builtins.open = self.open
         os.path.exists = self._orig_path_exists
         os.path.isdir = self._orig_path_isdir
         os.path.isfile = self._orig_path_isfile

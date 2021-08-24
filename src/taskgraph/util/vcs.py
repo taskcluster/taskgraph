@@ -8,7 +8,6 @@ import subprocess
 
 import requests
 from redo import retry
-from six import PY3
 
 PUSHLOG_TMPL = "{}/json-pushes?version=2&changeset={}&tipsonly=1&full=1"
 
@@ -84,14 +83,14 @@ def calculate_head_rev(repository_type, root):
         return subprocess.check_output(
             ["hg", "log", "-r", ".", "-T", "{node}"],
             cwd=root,
-            universal_newlines=PY3,
+            universal_newlines=True,
         )
     elif repository_type == "git":
         # Git refers to the current revision as HEAD
         return subprocess.check_output(
             ["git", "rev-parse", "--verify", "HEAD"],
             cwd=root,
-            universal_newlines=PY3,
+            universal_newlines=True,
         ).strip()
     else:
         raise RuntimeError(
@@ -105,13 +104,13 @@ def get_repo_path(repository_type, root):
         return subprocess.check_output(
             ["hg", "path", "-T", "{url}", "default"],
             cwd=root,
-            universal_newlines=PY3,
+            universal_newlines=True,
         )
     elif repository_type == "git":
         return subprocess.check_output(
             ["git", "remote", "get-url", "origin"],
             cwd=root,
-            universal_newlines=PY3,
+            universal_newlines=True,
         ).strip()
     else:
         raise RuntimeError(

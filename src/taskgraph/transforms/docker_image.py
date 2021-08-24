@@ -8,8 +8,6 @@ import logging
 import os
 import re
 
-import six
-
 import taskgraph
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.docker import (
@@ -174,7 +172,7 @@ def fill_template(config, tasks):
                     "IMAGE_NAME": image_name,
                     "DOCKER_IMAGE_ZSTD_LEVEL": zstd_level,
                     "DOCKER_BUILD_ARGS": {
-                        "task-reference": six.ensure_text(json.dumps(args))
+                        "task-reference": json.dumps(args),
                     },
                     "VCS_BASE_REPOSITORY": config.params["base_repository"],
                     "VCS_HEAD_REPOSITORY": config.params["head_repository"],

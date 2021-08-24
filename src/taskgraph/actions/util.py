@@ -8,8 +8,7 @@ import copy
 import logging
 import os
 import re
-
-import six
+from functools import reduce
 
 from requests.exceptions import HTTPError
 
@@ -207,7 +206,7 @@ def combine_task_graph_files(suffixes):
         return
 
     def combine(file_contents, base):
-        return six.moves.reduce(_update_reducer, file_contents, base)
+        return reduce(_update_reducer, file_contents, base)
 
     files = [read_artifact(f"task-graph-{suffix}.json") for suffix in suffixes]
     write_artifact("task-graph.json", combine(files, dict()))

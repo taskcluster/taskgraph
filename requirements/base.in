@@ -1,11 +1,9 @@
 attrs
 json-e
-pathlib2
 PyYAML
 redo
 requests
 requests_unixsocket
-six
 slugid
 taskcluster-urls
 voluptuous

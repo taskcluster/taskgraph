@@ -8,7 +8,6 @@ import copy
 import attr
 from typing import AnyStr
 
-
 from . import filter_tasks
 from .graph import Graph
 from .taskgraph import TaskGraph

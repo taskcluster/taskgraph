@@ -11,8 +11,6 @@ consistency.
 import hashlib
 import json
 
-from six import ensure_binary
-
 from taskgraph.util.taskcluster import get_artifact_prefix
 
 
@@ -143,7 +141,7 @@ def support_vcs_checkout(config, job, taskdesc, repo_configs, sparse=False):
                 repo_configs.values(), key=lambda repo_config: repo_config.path
             )
         }
-        checkout_paths_str = ensure_binary("\n".join(checkout_paths))
+        checkout_paths_str = "\n".join(checkout_paths).encode("utf-8")
         digest = hashlib.sha256(checkout_paths_str).hexdigest()
         cache_name += f"-repos-{digest}"
 

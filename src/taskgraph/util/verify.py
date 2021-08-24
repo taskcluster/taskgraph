@@ -4,9 +4,9 @@
 
 
 import logging
+import sys
 
 import attr
-import six
 
 logger = logging.getLogger(__name__)
 
@@ -131,12 +131,12 @@ def verify_dependency_tiers(task, taskgraph, scratch_pad, graph_config):
     tiers = scratch_pad
     if task is not None:
         tiers[task.label] = (
-            task.task.get("extra", {}).get("treeherder", {}).get("tier", six.MAXSIZE)
+            task.task.get("extra", {}).get("treeherder", {}).get("tier", sys.maxsize)
         )
     else:
 
         def printable_tier(tier):
-            if tier == six.MAXSIZE:
+            if tier == sys.maxsize:
                 return "unknown"
             return tier
 

@@ -6,7 +6,7 @@
 import json
 import time
 from datetime import datetime
-
+from urllib.request import urlopen
 
 from taskgraph.util.schema import validate_schema
 from taskgraph.util.vcs import calculate_head_rev, get_repo_path, get_repository_type
@@ -213,7 +213,6 @@ def load_parameters_file(filename, strict=True, overrides=None, trust_domain=Non
         task-id=fdtgsD5DQUmAQZEaGMvQ4Q
         project=mozilla-central
     """
-    from six.moves.urllib.request import urlopen
     from taskgraph.util.taskcluster import get_artifact_url, find_task_id
     from taskgraph.util import yaml
 

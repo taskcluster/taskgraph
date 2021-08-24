@@ -3,9 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import hashlib
-from pathlib2 import Path
-
-import six
+from pathlib import Path
 
 from taskgraph.util.memoize import memoize
 from taskgraph.util import path as mozpath
@@ -48,11 +46,9 @@ def hash_paths(base_path, patterns):
             raise Exception("%s did not match anything" % pattern)
     for path in sorted(found):
         h.update(
-            six.ensure_binary(
-                "{} {}\n".format(
-                    hash_path(mozpath.abspath(mozpath.join(base_path, path))),
-                    mozpath.normsep(path),
-                )
-            )
+            "{} {}\n".format(
+                hash_path(mozpath.abspath(mozpath.join(base_path, path))),
+                mozpath.normsep(path),
+            ).encode("utf-8")
         )
     return h.hexdigest()

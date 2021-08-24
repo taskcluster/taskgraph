@@ -10,9 +10,7 @@ import os
 import re
 import requests_unixsocket
 import sys
-
-import six
-from six.moves import urllib_parse
+import urllib.parse
 
 from .archive import create_tar_gz_from_files
 from .memoize import memoize
@@ -25,13 +23,13 @@ from .yaml import load_yaml
 
 def docker_url(path, **kwargs):
     docker_socket = os.environ.get("DOCKER_SOCKET", "/var/run/docker.sock")
-    return urllib_parse.urlunparse(
+    return urllib.parse.urlunparse(
         (
             "http+unix",
-            urllib_parse.quote(docker_socket, safe=""),
+            urllib.parse.quote(docker_socket, safe=""),
             path,
             "",
-            urllib_parse.urlencode(kwargs),
+            urllib.parse.urlencode(kwargs),
             "",
         )
     )
@@ -224,10 +222,10 @@ RUN_TASK_FILES = {
     ]
 }
 RUN_TASK_SNIPPET = [
-    b"COPY run-task/run-task /usr/local/bin/run-task\n",
-    b"COPY run-task/fetch-content /usr/local/bin/fetch-content\n",
-    b"COPY run-task/robustcheckout.py /usr/local/mercurial/robustcheckout.py\n"
-    b"COPY run-task/hgrc /etc/mercurial/hgrc.d/mozilla.rc\n",
+    "COPY run-task/run-task /usr/local/bin/run-task\n",
+    "COPY run-task/fetch-content /usr/local/bin/fetch-content\n",
+    "COPY run-task/robustcheckout.py /usr/local/mercurial/robustcheckout.py\n"
+    "COPY run-task/hgrc /etc/mercurial/hgrc.d/mozilla.rc\n",
 ]
 
 
@@ -294,9 +292,7 @@ def stream_context_tar(topsrcdir, context_dir, out_file, image_name=None, args=N
                 archive_path = os.path.join("topsrcdir", p)
                 archive_files[archive_path] = fs_path
 
-    archive_files["Dockerfile"] = io.BytesIO(
-        b"".join(six.ensure_binary(s) for s in content)
-    )
+    archive_files["Dockerfile"] = io.BytesIO("".join(content).encode("utf-8"))
 
     writer = HashingWriter(out_file)
     create_tar_gz_from_files(writer, archive_files, image_name)
@@ -341,6 +337,6 @@ def parse_volumes(image):
                     "convert to multiple entries"
                 )
 
-            volumes |= {six.ensure_text(volume) for volume in v.split()}
+            volumes |= {volume.decode("utf-8") for volume in v.split()}
 
     return volumes
