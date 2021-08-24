@@ -1,12 +1,7 @@
-# -*- coding: utf-8 -*-
-
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
-
-import six
 
 from taskgraph.util.attributes import (
     match_run_on_projects,
@@ -86,9 +81,7 @@ def target_tasks_default(full_task_graph, parameters, graph_config):
     """Target the tasks which have indicated they should be run on this project
     via the `run_on_projects` attributes."""
     return [
-        l
-        for l, t in six.iteritems(full_task_graph.tasks)
-        if standard_filter(t, parameters)
+        l for l, t in full_task_graph.tasks.items() if standard_filter(t, parameters)
     ]
 
 
@@ -98,7 +91,7 @@ def target_tasks_codereview(full_task_graph, parameters, graph_config):
     via the `run_on_projects` attributes."""
     return [
         l
-        for l, t in six.iteritems(full_task_graph.tasks)
+        for l, t in full_task_graph.tasks.items()
         if standard_filter(t, parameters) and t.attributes.get("code-review")
     ]
 

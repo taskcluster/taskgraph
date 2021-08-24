@@ -2,9 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
-
-import six
 
 from .graph import Graph
 from .task import Task
@@ -13,7 +10,7 @@ import attr
 
 
 @attr.s(frozen=True)
-class TaskGraph(object):
+class TaskGraph:
     """
     Representation of a task graph.
 
@@ -41,7 +38,7 @@ class TaskGraph(object):
 
     def __iter__(self):
         "Iterate over tasks in undefined order"
-        return six.itervalues(self.tasks)
+        return iter(self.tasks.values())
 
     def to_json(self):
         "Return a JSON-able object representing the task graph, as documented"
@@ -62,11 +59,11 @@ class TaskGraph(object):
         """
         tasks = {}
         edges = set()
-        for key, value in six.iteritems(tasks_dict):
+        for key, value in tasks_dict.items():
             tasks[key] = Task.from_json(value)
             if "task_id" in value:
                 tasks[key].task_id = value["task_id"]
-            for depname, dep in six.iteritems(value["dependencies"]):
+            for depname, dep in value["dependencies"].items():
                 edges.add((key, dep, depname))
         task_graph = cls(tasks, Graph(set(tasks), edges))
         return tasks, task_graph

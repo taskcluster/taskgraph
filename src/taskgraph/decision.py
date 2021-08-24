@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import json
 import logging
 
-import six
-from six import text_type
 
 import time
 import yaml
@@ -43,14 +39,14 @@ PER_PROJECT_PARAMETERS = {
 
 try_task_config_schema_v2 = Schema(
     {
-        Optional("parameters"): {text_type: object},
+        Optional("parameters"): {str: object},
     }
 )
 
 
 def full_task_graph_to_runnable_jobs(full_task_json):
     runnable_jobs = {}
-    for label, node in six.iteritems(full_task_json):
+    for label, node in full_task_json.items():
         if not ("extra" in node["task"] and "treeherder" in node["task"]["extra"]):
             continue
 
@@ -227,8 +223,8 @@ def get_decision_parameters(graph_config, options):
 
 def set_try_config(parameters, task_config_file):
     if os.path.isfile(task_config_file):
-        logger.info("using try tasks from {}".format(task_config_file))
-        with open(task_config_file, "r") as fh:
+        logger.info(f"using try tasks from {task_config_file}")
+        with open(task_config_file) as fh:
             task_config = json.load(fh)
         task_config_version = task_config.pop("version")
         if task_config_version == 2:
@@ -241,12 +237,12 @@ def set_try_config(parameters, task_config_file):
             return
         else:
             raise Exception(
-                "Unknown `try_task_config.json` version: {}".format(task_config_version)
+                f"Unknown `try_task_config.json` version: {task_config_version}"
             )
 
 
 def write_artifact(filename, data):
-    logger.info("writing artifact file `{}`".format(filename))
+    logger.info(f"writing artifact file `{filename}`")
     if not os.path.isdir(ARTIFACTS_DIR):
         os.mkdir(ARTIFACTS_DIR)
     path = os.path.join(ARTIFACTS_DIR, filename)
@@ -262,7 +258,7 @@ def write_artifact(filename, data):
         with gzip.open(path, "wb") as f:
             f.write(json.dumps(data))
     else:
-        raise TypeError("Don't know how to write to {}".format(filename))
+        raise TypeError(f"Don't know how to write to {filename}")
 
 
 def read_artifact(filename):
@@ -270,7 +266,7 @@ def read_artifact(filename):
     if filename.endswith(".yml"):
         return load_yaml(path, filename)
     elif filename.endswith(".json"):
-        with open(path, "r") as f:
+        with open(path) as f:
             return json.load(f)
     elif filename.endswith(".gz"):
         import gzip
@@ -278,7 +274,7 @@ def read_artifact(filename):
         with gzip.open(path, "rb") as f:
             return json.load(f)
     else:
-        raise TypeError("Don't know how to read {}".format(filename))
+        raise TypeError(f"Don't know how to read {filename}")
 
 
 def rename_artifact(src, dest):

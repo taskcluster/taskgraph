@@ -11,13 +11,11 @@ task.
 See ``taskcluster/docs/optimization.rst`` for more information.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 from collections import defaultdict
 
-import six
 from slugid import nice as slugid
 
 from .graph import Graph
@@ -107,13 +105,11 @@ def _log_optimization(verb, opt_counts):
         logger.info(
             "{} {} during optimization.".format(
                 verb.title(),
-                ", ".join(
-                    "{} tasks by {}".format(c, b) for b, c in sorted(opt_counts.items())
-                ),
+                ", ".join(f"{c} tasks by {b}" for b, c in sorted(opt_counts.items())),
             )
         )
     else:
-        logger.info("No tasks {} during optimization".format(verb))
+        logger.info(f"No tasks {verb} during optimization")
 
 
 def remove_tasks(target_task_graph, params, optimizations, do_not_optimize):
@@ -224,7 +220,7 @@ def get_subgraph(
     ]
     if bad_edges:
         probs = ", ".join(
-            "{} depends on {} as {} but it has been removed".format(l, r, n)
+            f"{l} depends on {r} as {n} but it has been removed"
             for l, r, n in bad_edges
         )
         raise Exception("Optimization error: " + probs)
@@ -240,7 +236,7 @@ def get_subgraph(
     tasks_by_taskid = {}
     named_links_dict = target_task_graph.graph.named_links_dict()
     omit = removed_tasks | replaced_tasks
-    for label, task in six.iteritems(target_task_graph.tasks):
+    for label, task in target_task_graph.tasks.items():
         if label in omit:
             continue
         task.task_id = label_to_taskid[label]
@@ -277,16 +273,16 @@ def get_subgraph(
     )
     # ..and drop edges that are no longer entirely in the task graph
     #   (note that this omits edges to replaced tasks, but they are still in task.dependnecies)
-    edges_by_taskid = set(
+    edges_by_taskid = {
         (left, right, name)
         for (left, right, name) in edges_by_taskid
         if left in tasks_by_taskid and right in tasks_by_taskid
-    )
+    }
 
     return TaskGraph(tasks_by_taskid, Graph(set(tasks_by_taskid), edges_by_taskid))
 
 
-class OptimizationStrategy(object):
+class OptimizationStrategy:
     def should_remove_task(self, task, params, arg):
         """Determine whether to optimize this task by removing it.  Returns
         True to remove."""

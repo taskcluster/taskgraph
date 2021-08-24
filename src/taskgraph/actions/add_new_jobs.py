@@ -1,12 +1,7 @@
-# -*- coding: utf-8 -*-
-
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
-
-import six
 
 from taskgraph.actions.registry import register_callback_action
 from taskgraph.actions.util import (
@@ -53,10 +48,10 @@ def add_new_jobs_action(parameters, graph_config, input, task_group_id, task_id)
         if elem in full_task_graph.tasks:
             to_run.append(elem)
         else:
-            raise Exception("{} was not found in the task-graph".format(elem))
+            raise Exception(f"{elem} was not found in the task-graph")
 
     times = input.get("times", 1)
-    for i in six.moves.range(times):
+    for i in range(times):
         create_tasks(
             graph_config,
             to_run,

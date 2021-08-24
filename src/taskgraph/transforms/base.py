@@ -2,14 +2,12 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 from typing import AnyStr
 
 import attr
 
-from six import text_type
 
 from ..config import GraphConfig
 from ..parameters import Parameters
@@ -18,20 +16,20 @@ from ..util.memoize import memoize
 
 
 @attr.s(frozen=True)
-class RepoConfig(object):
-    prefix = attr.ib(type=text_type)
-    name = attr.ib(type=text_type)
-    base_repository = attr.ib(type=text_type)
-    head_repository = attr.ib(type=text_type)
-    head_ref = attr.ib(type=text_type)
-    type = attr.ib(type=text_type)
-    path = attr.ib(type=text_type, default="")
-    head_rev = attr.ib(type=text_type, default=None)
-    ssh_secret_name = attr.ib(type=text_type, default=None)
+class RepoConfig:
+    prefix = attr.ib(type=str)
+    name = attr.ib(type=str)
+    base_repository = attr.ib(type=str)
+    head_repository = attr.ib(type=str)
+    head_ref = attr.ib(type=str)
+    type = attr.ib(type=str)
+    path = attr.ib(type=str, default="")
+    head_rev = attr.ib(type=str, default=None)
+    ssh_secret_name = attr.ib(type=str, default=None)
 
 
 @attr.s(frozen=True, cmp=False)
-class TransformConfig(object):
+class TransformConfig:
     """
     A container for configuration affecting transforms.  The `config` argument
     to transforms is an instance of this class.
@@ -74,7 +72,7 @@ class TransformConfig(object):
             }
             if len(matching_repos) != 1:
                 raise Exception(
-                    "Couldn't find repository matching project `{}`".format(project)
+                    f"Couldn't find repository matching project `{project}`"
                 )
             current_prefix = list(matching_repos.keys())[0]
 
@@ -110,7 +108,7 @@ class TransformConfig(object):
 
 
 @attr.s()
-class TransformSequence(object):
+class TransformSequence:
     """
     Container for a sequence of transforms.  Each transform is represented as a
     callable taking (config, items) and returning a generator which will yield
@@ -127,7 +125,7 @@ class TransformSequence(object):
         for xform in self._transforms:
             items = xform(config, items)
             if items is None:
-                raise Exception("Transform {} is not a generator".format(xform))
+                raise Exception(f"Transform {xform} is not a generator")
         return items
 
     def add(self, func):
@@ -139,7 +137,7 @@ class TransformSequence(object):
 
 
 @attr.s
-class ValidateSchema(object):
+class ValidateSchema:
     schema = attr.ib(type=Schema)
 
     def __call__(self, config, tasks):

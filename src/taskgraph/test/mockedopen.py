@@ -40,7 +40,7 @@ def normcase(path):
     return path
 
 
-class MockedOpen(object):
+class MockedOpen:
     """
     Context manager diverting the open builtin such that opening files
     can open "virtual" file instances given when creating a MockedOpen.
@@ -75,7 +75,7 @@ class MockedOpen(object):
         elif absname in self.files:
             content = self.files[absname]
             if content is None:
-                raise IOError(2, "No such file or directory")
+                raise OSError(2, "No such file or directory")
             file = MockedFile(self, absname, content)
         elif "a" in mode:
             file = MockedFile(self, absname, self.open(name, "r").read())

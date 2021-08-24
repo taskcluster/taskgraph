@@ -8,9 +8,6 @@ current taskgraph.  The transform takes a list of indexes, and the optimization
 phase will replace the task with the task from the other graph.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
-from six import text_type
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.schema import Schema
@@ -27,7 +24,7 @@ run_task_schema = Schema(
             "index-search",
             "A list of indexes in decreasing order of priority at which to lookup for this "
             "task. This is interpolated with the graph parameters.",
-        ): [text_type],
+        ): [str],
     }
 )
 

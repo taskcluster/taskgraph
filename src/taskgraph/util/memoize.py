@@ -5,7 +5,6 @@
 # Imported from
 # https://searchfox.org/mozilla-central/rev/c3ebaf6de2d481c262c04bb9657eaf76bf47e2ac/python/mozbuild/mozbuild/util.py#923-949
 
-from __future__ import absolute_import, unicode_literals, print_function
 
 import functools
 

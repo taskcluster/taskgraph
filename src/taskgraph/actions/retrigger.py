@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
-
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import sys
 import textwrap
 
-import six
 from slugid import nice as slugid
 
 from .util import (
@@ -171,7 +167,7 @@ def retrigger_action(parameters, graph_config, input, task_group_id, task_id):
         with_downstream = " (with downstream) "
 
     times = input.get("times", 1)
-    for i in six.moves.range(times):
+    for i in range(times):
         create_tasks(
             graph_config,
             to_run,
@@ -182,9 +178,7 @@ def retrigger_action(parameters, graph_config, input, task_group_id, task_id):
             i,
         )
 
-        logger.info(
-            "Scheduled {}{}(time {}/{})".format(label, with_downstream, i + 1, times)
-        )
+        logger.info(f"Scheduled {label}{with_downstream}(time {i + 1}/{times})")
     combine_task_graph_files(list(range(times)))
 
 
@@ -229,7 +223,7 @@ def _rerun_task(task_id, label):
         )
         return
     taskcluster.rerun_task(task_id)
-    logger.info("Reran {}".format(label))
+    logger.info(f"Reran {label}")
 
 
 @register_callback_action(
@@ -290,8 +284,8 @@ def retrigger_multiple(parameters, graph_config, input, task_group_id, task_id):
             # those labels.
             _rerun_task(label_to_taskid[label], label)
 
-        for j in six.moves.range(times):
-            suffix = "{}-{}".format(i, j)
+        for j in range(times):
+            suffix = f"{i}-{j}"
             suffixes.append(suffix)
             create_tasks(
                 graph_config,

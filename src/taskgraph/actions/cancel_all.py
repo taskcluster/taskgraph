@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
-
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import concurrent.futures as futures
 import logging
@@ -35,7 +32,7 @@ logger = logging.getLogger(__name__)
 )
 def cancel_all_action(parameters, graph_config, input, task_group_id, task_id):
     def do_cancel_task(task_id):
-        logger.info("Cancelling task {}".format(task_id))
+        logger.info(f"Cancelling task {task_id}")
         try:
             cancel_task(task_id, use_proxy=True)
         except requests.HTTPError as e:
@@ -55,7 +52,7 @@ def cancel_all_action(parameters, graph_config, input, task_group_id, task_id):
     to_cancel = [
         t for t in list_task_group_incomplete_tasks(task_group_id) if t != own_task_id
     ]
-    logger.info("Cancelling {} tasks".format(len(to_cancel)))
+    logger.info(f"Cancelling {len(to_cancel)} tasks")
     with futures.ThreadPoolExecutor(CONCURRENCY) as e:
         cancel_futs = [e.submit(do_cancel_task, t) for t in to_cancel]
         for f in futures.as_completed(cancel_futs):

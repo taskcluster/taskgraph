@@ -2,14 +2,12 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import gzip
 import stat
 import tarfile
 
-from six import string_types
 
 # 2016-01-01T00:00:00+0000
 DEFAULT_MTIME = 1451606400
@@ -30,7 +28,7 @@ def create_tar_from_files(fp, files):
     """
     with tarfile.open(name="", mode="w", fileobj=fp, dereference=True) as tf:
         for archive_path, f in sorted(files.items()):
-            if isinstance(f, string_types):
+            if isinstance(f, str):
                 mode = os.stat(f).st_mode
                 f = open(f, "rb")
             else:

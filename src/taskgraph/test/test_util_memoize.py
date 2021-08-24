@@ -35,7 +35,7 @@ class TestMemoize(unittest.TestCase):
         self.assertEqual(self._count, 3)
 
     def test_memoize_method(self):
-        class foo(object):
+        class foo:
             def __init__(self):
                 self._count = 0
 

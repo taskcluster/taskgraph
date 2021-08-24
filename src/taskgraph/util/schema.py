@@ -2,14 +2,12 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 import pprint
 import collections
 import voluptuous
 
-from six import PY3, string_types, text_type
 
 import taskgraph
 
@@ -54,7 +52,7 @@ def optionally_keyed_by(*arguments):
     for _ in arguments:
         options = [schema]
         for field in fields:
-            options.append({"by-" + field: {voluptuous.Any(*string_types): schema}})
+            options.append({"by-" + field: {voluptuous.Any(*(str,)): schema}})
         schema = voluptuous.Any(*options)
     return schema
 
@@ -114,7 +112,7 @@ def resolve_keyed_by(item, field, item_name, **extra_values):
 
     container[subfield] = evaluate_keyed_by(
         value=container[subfield],
-        item_name="`{}` in `{}`".format(field, item_name),
+        item_name=f"`{field}` in `{item_name}`",
         attributes=dict(item, **extra_values),
     )
 
@@ -124,22 +122,13 @@ def resolve_keyed_by(item, field, item_name, **extra_values):
 # Schemas for YAML files should use dashed identifiers by default.  If there are
 # components of the schema for which there is a good reason to use another format,
 # they can be whitelisted here.
-if PY3:
-    WHITELISTED_SCHEMA_IDENTIFIERS = [
-        # upstream-artifacts and artifact-map are handed directly to scriptWorker,
-        # which expects interCaps
-        lambda path: any(
-            exc in path for exc in ("['upstream-artifacts']", "['artifact-map']")
-        )
-    ]
-else:
-    WHITELISTED_SCHEMA_IDENTIFIERS = [
-        # upstream-artifacts and artifact-map are handed directly to scriptWorker,
-        # which expects interCaps
-        lambda path: any(
-            exc in path for exc in ("[u'upstream-artifacts']", "[u'artifact-map']")
-        )
-    ]
+WHITELISTED_SCHEMA_IDENTIFIERS = [
+    # upstream-artifacts and artifact-map are handed directly to scriptWorker,
+    # which expects interCaps
+    lambda path: any(
+        exc in path for exc in ("['upstream-artifacts']", "['artifact-map']")
+    )
+]
 
 
 def check_schema(schema):
@@ -150,11 +139,11 @@ def check_schema(schema):
 
     def iter(path, sch):
         def check_identifier(path, k):
-            if k in string_types or k in (text_type, voluptuous.Extra):
+            if k in (str,) or k in (str, voluptuous.Extra):
                 pass
             elif isinstance(k, voluptuous.NotIn):
                 pass
-            elif isinstance(k, string_types):
+            elif isinstance(k, str):
                 if not identifier_re.match(k) and not whitelisted(path):
                     raise RuntimeError(
                         "YAML schemas should use dashed lower-case identifiers, "
@@ -174,12 +163,12 @@ def check_schema(schema):
 
         if isinstance(sch, collections.Mapping):
             for k, v in sch.items():
-                child = "{}[{!r}]".format(path, k)
+                child = f"{path}[{k!r}]"
                 check_identifier(child, k)
                 iter(child, v)
         elif isinstance(sch, (list, tuple)):
             for i, v in enumerate(sch):
-                iter("{}[{}]".format(path, i), v)
+                iter(f"{path}[{i}]", v)
         elif isinstance(sch, voluptuous.Any):
             for v in sch.validators:
                 iter(path, v)
@@ -194,11 +183,11 @@ class Schema(voluptuous.Schema):
     """
 
     def __init__(self, *args, **kwargs):
-        super(Schema, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         check_schema(self)
 
     def extend(self, *args, **kwargs):
-        schema = super(Schema, self).extend(*args, **kwargs)
+        schema = super().extend(*args, **kwargs)
         check_schema(schema)
         # We want twice extend schema to be checked too.
         schema.__class__ = Schema
@@ -213,14 +202,14 @@ OptimizationSchema = voluptuous.Any(
     None,
     # search the index for the given index namespaces, and replace this task if found
     # the search occurs in order, with the first match winning
-    {"index-search": [voluptuous.Any(*string_types)]},
+    {"index-search": [voluptuous.Any(*(str,))]},
     # skip this task if none of the given file patterns match
-    {"skip-unless-changed": [voluptuous.Any(*string_types)]},
+    {"skip-unless-changed": [voluptuous.Any(*(str,))]},
 )
 
 # shortcut for a string where task references are allowed
 taskref_or_string = voluptuous.Any(
-    voluptuous.Any(*string_types),
-    {voluptuous.Required("task-reference"): voluptuous.Any(*string_types)},
-    {voluptuous.Required("artifact-reference"): voluptuous.Any(*string_types)},
+    voluptuous.Any(*(str,)),
+    {voluptuous.Required("task-reference"): voluptuous.Any(*(str,))},
+    {voluptuous.Required("artifact-reference"): voluptuous.Any(*(str,))},
 )

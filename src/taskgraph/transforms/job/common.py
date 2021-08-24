@@ -7,7 +7,6 @@ worker implementation they operate on, and take the same three parameters, for
 consistency.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
 import json
@@ -72,7 +71,7 @@ def docker_worker_add_workspace_cache(config, job, taskdesc, extra=None):
         taskdesc["attributes"]["build_type"],
     )
     if extra:
-        cache_name = "{}-{}".format(cache_name, extra)
+        cache_name = f"{cache_name}-{extra}"
 
     mount_point = "{workdir}/workspace".format(**job["run"])
 
@@ -121,16 +120,16 @@ def support_vcs_checkout(config, job, taskdesc, repo_configs, sparse=False):
 
     if is_win:
         checkoutdir = "./build"
-        vcsdir = "{}/src".format(checkoutdir)
+        vcsdir = f"{checkoutdir}/src"
         hgstore = "y:/hg-shared"
     elif is_docker:
         checkoutdir = "{workdir}/checkouts".format(**job["run"])
-        vcsdir = "{}/vcs".format(checkoutdir)
-        hgstore = "{}/hg-store".format(checkoutdir)
+        vcsdir = f"{checkoutdir}/vcs"
+        hgstore = f"{checkoutdir}/hg-store"
     else:
         checkoutdir = "./checkouts"
-        vcsdir = "{}/vcs".format(checkoutdir)
-        hgstore = "{}/hg-shared".format(checkoutdir)
+        vcsdir = f"{checkoutdir}/vcs"
+        hgstore = f"{checkoutdir}/hg-shared"
 
     cache_name = "checkouts"
 
@@ -146,7 +145,7 @@ def support_vcs_checkout(config, job, taskdesc, repo_configs, sparse=False):
         }
         checkout_paths_str = ensure_binary("\n".join(checkout_paths))
         digest = hashlib.sha256(checkout_paths_str).hexdigest()
-        cache_name += "-repos-{}".format(digest)
+        cache_name += f"-repos-{digest}"
 
     # Sparse checkouts need their own cache because they can interfere
     # with clients that aren't sparse aware.
@@ -174,7 +173,7 @@ def support_vcs_checkout(config, job, taskdesc, repo_configs, sparse=False):
     for repo_config in repo_configs.values():
         env.update(
             {
-                "{}_{}".format(repo_config.prefix.upper(), key): value
+                f"{repo_config.prefix.upper()}_{key}": value
                 for key, value in {
                     "BASE_REPOSITORY": repo_config.base_repository,
                     "HEAD_REPOSITORY": repo_config.head_repository,
@@ -187,9 +186,7 @@ def support_vcs_checkout(config, job, taskdesc, repo_configs, sparse=False):
             }
         )
         if repo_config.ssh_secret_name:
-            taskdesc["scopes"].append(
-                "secrets:get:{}".format(repo_config.ssh_secret_name)
-            )
+            taskdesc["scopes"].append(f"secrets:get:{repo_config.ssh_secret_name}")
 
     if any(repo_config.type == "hg" for repo_config in repo_configs.values()):
         # Give task access to hgfingerprint secret so it can pin the certificate

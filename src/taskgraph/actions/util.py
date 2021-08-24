@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
-
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import concurrent.futures as futures
 import copy
@@ -13,7 +10,6 @@ import os
 import re
 
 import six
-from six import text_type
 
 from requests.exceptions import HTTPError
 
@@ -55,18 +51,14 @@ def fetch_graph_and_labels(parameters, graph_config):
         # fetch any modifications made by action tasks and swap out new tasks
         # for old ones
         def fetch_action(task_id):
-            logger.info(
-                "fetching label-to-taskid.json for action task {}".format(task_id)
-            )
+            logger.info(f"fetching label-to-taskid.json for action task {task_id}")
             try:
                 run_label_to_id = get_artifact(task_id, "public/label-to-taskid.json")
                 label_to_taskid.update(run_label_to_id)
             except HTTPError as e:
                 if e.response.status_code != 404:
                     raise
-                logger.debug(
-                    "No label-to-taskid.json found for {}: {}".format(task_id, e)
-                )
+                logger.debug(f"No label-to-taskid.json found for {task_id}: {e}")
 
         namespace = "{}.v2.{}.pushlog-id.{}.actions".format(
             graph_config["trust-domain"],
@@ -78,18 +70,14 @@ def fetch_graph_and_labels(parameters, graph_config):
 
         # Similarly for cron tasks..
         def fetch_cron(task_id):
-            logger.info(
-                "fetching label-to-taskid.json for cron task {}".format(task_id)
-            )
+            logger.info(f"fetching label-to-taskid.json for cron task {task_id}")
             try:
                 run_label_to_id = get_artifact(task_id, "public/label-to-taskid.json")
                 label_to_taskid.update(run_label_to_id)
             except HTTPError as e:
                 if e.response.status_code != 404:
                     raise
-                logger.debug(
-                    "No label-to-taskid.json found for {}: {}".format(task_id, e)
-                )
+                logger.debug(f"No label-to-taskid.json found for {task_id}: {e}")
 
         namespace = "{}.v2.{}.revision.{}.cron".format(
             graph_config["trust-domain"], parameters["project"], parameters["head_rev"]
@@ -113,7 +101,7 @@ def create_task_from_def(task_id, task_def, level):
     It is useful if you want to "edit" the full_task_graph and then hand
     it to this function. No dependencies will be scheduled. You must handle
     this yourself. Seeing how create_tasks handles it might prove helpful."""
-    task_def["schedulerId"] = "gecko-level-{}".format(level)
+    task_def["schedulerId"] = f"gecko-level-{level}"
     label = task_def["metadata"]["name"]
     session = get_session()
     create.create_task(session, task_id, label, task_def)
@@ -159,7 +147,7 @@ def create_tasks(
 
     Returns an updated label_to_taskid containing the new tasks"""
     if suffix != "":
-        suffix = "-{}".format(suffix)
+        suffix = f"-{suffix}"
     to_run = set(to_run)
 
     #  Copy to avoid side-effects later
@@ -180,9 +168,9 @@ def create_tasks(
         decision_task_id,
         existing_tasks=label_to_taskid,
     )
-    write_artifact("task-graph{}.json".format(suffix), optimized_task_graph.to_json())
-    write_artifact("label-to-taskid{}.json".format(suffix), label_to_taskid)
-    write_artifact("to-run{}.json".format(suffix), list(to_run))
+    write_artifact(f"task-graph{suffix}.json", optimized_task_graph.to_json())
+    write_artifact(f"label-to-taskid{suffix}.json", label_to_taskid)
+    write_artifact(f"to-run{suffix}.json", list(to_run))
     create.create_tasks(
         graph_config,
         optimized_task_graph,
@@ -215,23 +203,19 @@ def combine_task_graph_files(suffixes):
 
     if len(suffixes) == 1:
         for filename in ["task-graph", "label-to-taskid", "to-run"]:
-            rename_artifact(
-                "{}-{}.json".format(filename, suffixes[0]), "{}.json".format(filename)
-            )
+            rename_artifact(f"{filename}-{suffixes[0]}.json", f"{filename}.json")
         return
 
     def combine(file_contents, base):
         return six.moves.reduce(_update_reducer, file_contents, base)
 
-    files = [read_artifact("task-graph-{}.json".format(suffix)) for suffix in suffixes]
+    files = [read_artifact(f"task-graph-{suffix}.json") for suffix in suffixes]
     write_artifact("task-graph.json", combine(files, dict()))
 
-    files = [
-        read_artifact("label-to-taskid-{}.json".format(suffix)) for suffix in suffixes
-    ]
+    files = [read_artifact(f"label-to-taskid-{suffix}.json") for suffix in suffixes]
     write_artifact("label-to-taskid.json", combine(files, dict()))
 
-    files = [read_artifact("to-run-{}.json".format(suffix)) for suffix in suffixes]
+    files = [read_artifact(f"to-run-{suffix}.json") for suffix in suffixes]
     write_artifact("to-run.json", list(combine(files, set())))
 
 
@@ -251,13 +235,11 @@ def relativize_datestamps(task_def):
     )
 
     def recurse(value):
-        if isinstance(value, text_type):
+        if isinstance(value, str):
             if ts_pattern.match(value):
                 value = parse_time(value)
                 diff = value - base
-                return {
-                    "relative-datestamp": "{} seconds".format(int(diff.total_seconds()))
-                }
+                return {"relative-datestamp": f"{int(diff.total_seconds())} seconds"}
         if isinstance(value, list):
             return [recurse(e) for e in value]
         if isinstance(value, dict):
@@ -280,7 +262,7 @@ def add_args_to_command(cmd_parts, extra_args=[]):
         cmd_parts = cmd_parts[0]["task-reference"].split(" ")
         cmd_type = "dict"
     elif len(cmd_parts) == 1 and (
-        isinstance(cmd_parts[0], text_type) or isinstance(cmd_parts[0], str)
+        isinstance(cmd_parts[0], str) or isinstance(cmd_parts[0], str)
     ):
         # windows has single cmd part as a long string
         cmd_parts = cmd_parts[0].split(" ")

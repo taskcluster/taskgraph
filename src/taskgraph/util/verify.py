@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -14,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 @attr.s(frozen=True)
-class VerificationSequence(object):
+class VerificationSequence:
     """
     Container for a sequence of verifications over a TaskGraph. Each
     verification is represented as a callable taking (task, taskgraph,
@@ -142,9 +140,9 @@ def verify_dependency_tiers(task, taskgraph, scratch_pad, graph_config):
                 return "unknown"
             return tier
 
-        for task in six.itervalues(taskgraph.tasks):
+        for task in taskgraph.tasks.values():
             tier = tiers[task.label]
-            for d in six.itervalues(task.dependencies):
+            for d in task.dependencies.values():
                 if taskgraph[d].task.get("workerType") == "always-optimized":
                     continue
                 if "dummy" in taskgraph[d].kind:
@@ -168,4 +166,4 @@ def verify_always_optimized(task, taskgraph, scratch_pad, graph_config):
     if task is None:
         return
     if task.task.get("workerType") == "always-optimized":
-        raise Exception("Could not optimize the task {!r}".format(task.label))
+        raise Exception(f"Could not optimize the task {task.label!r}")

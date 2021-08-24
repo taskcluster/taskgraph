@@ -17,13 +17,11 @@ the graph.
 # `{'relative-datestamp': '..'}` is handled at the last possible moment during
 # task creation.
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import re
 
-import six
 from slugid import nice as slugid
 
 from .task import Task
@@ -55,7 +53,7 @@ def derive_index_task(task, taskgraph, label_to_taskid, parameters, graph_config
     """Create the shell of a task that depends on `task` and on the given docker
     image."""
     purpose = "index-task"
-    label = "{}-{}".format(purpose, task.label)
+    label = f"{purpose}-{task.label}"
     provisioner_id, worker_type = get_worker_type(
         graph_config, "misc", parameters["level"]
     )
@@ -141,7 +139,7 @@ def make_index_task(parent_task, taskgraph, label_to_taskid, parameters, graph_c
     )
     all_scopes_summary_regexps = _SCOPE_SUMMARY_REGEXPS + [domain_scope_regex]
     for path in index_paths:
-        scope = "index:insert-task:{}".format(path)
+        scope = f"index:insert-task:{path}"
         for summ_re in all_scopes_summary_regexps:
             match = summ_re.match(scope)
             if match:
@@ -168,7 +166,7 @@ def add_index_tasks(taskgraph, label_to_taskid, parameters, graph_config):
     logger.debug("Morphing: adding index tasks")
 
     added = []
-    for label, task in six.iteritems(taskgraph.tasks):
+    for label, task in taskgraph.tasks.items():
         if len(task.task.get("routes", [])) <= MAX_ROUTES:
             continue
         task, taskgraph, label_to_taskid = make_index_task(
@@ -178,7 +176,7 @@ def add_index_tasks(taskgraph, label_to_taskid, parameters, graph_config):
 
     if added:
         taskgraph, label_to_taskid = amend_taskgraph(taskgraph, label_to_taskid, added)
-        logger.info("Added {} index tasks".format(len(added)))
+        logger.info(f"Added {len(added)} index tasks")
 
     return taskgraph, label_to_taskid
 
@@ -195,7 +193,7 @@ def _get_morph_url():
         "TASKGRAPH_HEAD_REPOSITORY", "https://hg.mozilla.org/ci/taskgraph"
     )
     taskgraph_rev = os.environ.get("TASKGRAPH_HEAD_REV", "default")
-    return "{}/raw-file/{}/src/taskgraph/morph.py".format(taskgraph_repo, taskgraph_rev)
+    return f"{taskgraph_repo}/raw-file/{taskgraph_rev}/src/taskgraph/morph.py"
 
 
 def add_code_review_task(taskgraph, label_to_taskid, parameters, graph_config):
@@ -206,7 +204,7 @@ def add_code_review_task(taskgraph, label_to_taskid, parameters, graph_config):
         return taskgraph, label_to_taskid
 
     code_review_tasks = {}
-    for label, task in six.iteritems(taskgraph.tasks):
+    for label, task in taskgraph.tasks.items():
         if task.attributes.get("code-review"):
             code_review_tasks[task.label] = task.task_id
 

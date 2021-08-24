@@ -5,9 +5,7 @@
 Support for running toolchain-building jobs via dedicated scripts
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-from six import text_type
 from taskgraph.util.schema import Schema
 from voluptuous import Optional, Required, Any
 
@@ -28,27 +26,27 @@ toolchain_run_schema = Schema(
     {
         Required("using"): "toolchain-script",
         # The script (in taskcluster/scripts/misc) to run.
-        Required("script"): text_type,
+        Required("script"): str,
         # Arguments to pass to the script.
-        Optional("arguments"): [text_type],
+        Optional("arguments"): [str],
         # Sparse profile to give to checkout using `run-task`.  If given,
         # a filename in `build/sparse-profiles`.  Defaults to
         # "toolchain-build", i.e., to
         # `build/sparse-profiles/toolchain-build`.  If `None`, instructs
         # `run-task` to not use a sparse profile at all.
-        Required("sparse-profile"): Any(text_type, None),
+        Required("sparse-profile"): Any(str, None),
         # Paths/patterns pointing to files that influence the outcome of a
         # toolchain build.
-        Optional("resources"): [text_type],
+        Optional("resources"): [str],
         # Path to the artifact produced by the toolchain job
-        Required("toolchain-artifact"): text_type,
+        Required("toolchain-artifact"): str,
         Optional(
             "toolchain-alias",
             description="An alias that can be used instead of the real toolchain job name in "
             "fetch stanzas for jobs.",
-        ): text_type,
+        ): str,
         # Base work directory used to set up the task.
-        Required("workdir"): text_type,
+        Required("workdir"): str,
     }
 )
 
@@ -119,7 +117,7 @@ def docker_worker_toolchain(config, job, taskdesc):
         attributes["toolchain-alias"] = run.pop("toolchain-alias")
 
     if not taskgraph.fast:
-        name = taskdesc["label"].replace("{}-".format(config.kind), "", 1)
+        name = taskdesc["label"].replace(f"{config.kind}-", "", 1)
         taskdesc["cache"] = {
             "type": CACHE_TYPE,
             "name": name,

@@ -9,7 +9,6 @@ from a source repo using best practices to ensure optimal clone
 times and storage efficiency.
 """
 
-from __future__ import absolute_import
 
 import contextlib
 import json
@@ -334,7 +333,7 @@ def _docheckout(ui, url, dest, upstream, revision, branch, purge, sharebase,
             ui.warn(b'(shared store does not exist; deleting destination)\n')
             with timeit('removed_missing_shared_store', 'remove-wdir'):
                 destvfs.rmtree(forcibly=True)
-        elif not re.search(b'[a-f0-9]{40}/\.hg$', storepath.replace(b'\\', b'/')):
+        elif not re.search(br'[a-f0-9]{40}/\.hg$', storepath.replace(b'\\', b'/')):
             ui.warn(b'(shared store does not belong to pooled storage; '
                     b'deleting destination to improve efficiency)\n')
             with timeit('remove_unpooled_store', 'remove-wdir'):

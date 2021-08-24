@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
-
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import datetime
@@ -154,12 +151,12 @@ def get_artifact_prefix(task):
     elif isinstance(task, Task):
         prefix = task.attributes.get("artifact_prefix")
     else:
-        raise Exception("Can't find artifact-prefix of non-task: {}".format(task))
+        raise Exception(f"Can't find artifact-prefix of non-task: {task}")
     return prefix or "public/build"
 
 
 def get_artifact_path(task, path):
-    return "{}/{}".format(get_artifact_prefix(task), path)
+    return f"{get_artifact_prefix(task)}/{path}"
 
 
 def get_index_url(index_path, use_proxy=False, multiple=False):
@@ -172,7 +169,7 @@ def find_task_id(index_path, use_proxy=False):
         response = _do_request(get_index_url(index_path, use_proxy))
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 404:
-            raise KeyError("index path {} not found".format(index_path))
+            raise KeyError(f"index path {index_path} not found")
         raise
     return response.json()["taskId"]
 
@@ -228,7 +225,7 @@ def cancel_task(task_id, use_proxy=False):
     """Cancels a task given a task_id. In testing mode, just logs that it would
     have cancelled."""
     if testing:
-        logger.info("Would have cancelled {}.".format(task_id))
+        logger.info(f"Would have cancelled {task_id}.")
     else:
         _do_request(get_task_url(task_id, use_proxy) + "/cancel", json={})
 
@@ -237,7 +234,7 @@ def status_task(task_id, use_proxy=False):
     """Gets the status of a task given a task_id. In testing mode, just logs that it would
     have retrieved status."""
     if testing:
-        logger.info("Would have gotten status for {}.".format(task_id))
+        logger.info(f"Would have gotten status for {task_id}.")
     else:
         resp = _do_request(get_task_url(task_id, use_proxy) + "/status")
         status = resp.json().get("status", {}).get("state") or "unknown"
@@ -248,7 +245,7 @@ def rerun_task(task_id):
     """Reruns a task given a task_id. In testing mode, just logs that it would
     have reran."""
     if testing:
-        logger.info("Would have rerun {}.".format(task_id))
+        logger.info(f"Would have rerun {task_id}.")
     else:
         _do_request(get_task_url(task_id, use_proxy=True) + "/rerun", json={})
 
@@ -277,14 +274,14 @@ def purge_cache(provisioner_id, worker_type, cache_name, use_proxy=False):
             )
         )
     else:
-        logger.info("Purging {}/{}/{}.".format(provisioner_id, worker_type, cache_name))
+        logger.info(f"Purging {provisioner_id}/{worker_type}/{cache_name}.")
         purge_cache_url = get_purge_cache_url(provisioner_id, worker_type, use_proxy)
         _do_request(purge_cache_url, json={"cacheName": cache_name})
 
 
 def send_email(address, subject, content, link, use_proxy=False):
     """Sends an email using the notify service"""
-    logger.info("Sending email to {}.".format(address))
+    logger.info(f"Sending email to {address}.")
     url = liburls.api(get_root_url(use_proxy), "notify", "v1", "email")
     _do_request(
         url,
@@ -305,7 +302,7 @@ def list_task_group_incomplete_tasks(task_group_id):
             get_root_url(False),
             "queue",
             "v1",
-            "task-group/{}/list".format(task_group_id),
+            f"task-group/{task_group_id}/list",
         )
         resp = _do_request(url, force_get=True, params=params).json()
         for task in [t["status"] for t in resp["tasks"]]:

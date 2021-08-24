@@ -2,7 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import unittest
 
@@ -24,11 +23,11 @@ def fake_loader(kind, path, config, parameters, loaded_tasks):
     for i in range(3):
         dependencies = {}
         if i >= 1:
-            dependencies["prev"] = "{}-t-{}".format(kind, i - 1)
+            dependencies["prev"] = f"{kind}-t-{i - 1}"
 
         task = {
             "kind": kind,
-            "label": "{}-t-{}".format(kind, i),
+            "label": f"{kind}-t-{i}",
             "attributes": {"_tasknum": str(i)},
             "task": {"i": i},
             "dependencies": dependencies,
@@ -44,9 +43,7 @@ class FakeKind(Kind):
 
     def load_tasks(self, parameters, loaded_tasks, write_artifacts):
         FakeKind.loaded_kinds.append(self.name)
-        return super(FakeKind, self).load_tasks(
-            parameters, loaded_tasks, write_artifacts
-        )
+        return super().load_tasks(parameters, loaded_tasks, write_artifacts)
 
 
 class WithFakeKind(TaskGraphGenerator):
@@ -74,7 +71,7 @@ class FakeParameters(dict):
 
 class FakeOptimization(OptimizationStrategy):
     def __init__(self, mode, *args, **kwargs):
-        super(FakeOptimization, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.mode = mode
 
     def should_remove_task(self, task, params, arg):
@@ -219,7 +216,7 @@ class TestGenerator(unittest.TestCase):
             ),
         )
         self.assertEqual(
-            sorted([t.label for t in self.tgg.optimized_task_graph.tasks.values()]),
+            sorted(t.label for t in self.tgg.optimized_task_graph.tasks.values()),
             sorted(["_fake-t-0", "_fake-t-1", "_ignore-t-0", "_ignore-t-1"]),
         )
 

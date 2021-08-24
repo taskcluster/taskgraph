@@ -2,19 +2,17 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import attr
-from six import text_type
 
 from .keyed_by import evaluate_keyed_by
 from .memoize import memoize
 
 
 @attr.s
-class _BuiltinWorkerType(object):
-    provisioner = attr.ib(text_type)
-    worker_type = attr.ib(text_type)
+class _BuiltinWorkerType:
+    provisioner = attr.ib(str)
+    worker_type = attr.ib(str)
 
     @property
     def implementation(self):

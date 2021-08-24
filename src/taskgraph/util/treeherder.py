@@ -2,7 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
 import re
 
 
@@ -21,7 +20,7 @@ def join_symbol(group, symbol):
     symbol.  If the group is '?', then it is omitted."""
     if group == "?":
         return symbol
-    return "{}({})".format(group, symbol)
+    return f"{group}({symbol})"
 
 
 def add_suffix(treeherder_symbol, suffix):
@@ -51,9 +50,7 @@ def inherit_treeherder_from_dep(job, dep_job):
         dep_job.task.get("extra", {}).get("treeherder", {}).get("collection", {}).keys()
     )[0]
     # XXX Doesn't yet support non-opt
-    treeherder.setdefault(
-        "platform", "{}/{}".format(dep_th_platform, dep_th_collection)
-    )
+    treeherder.setdefault("platform", f"{dep_th_platform}/{dep_th_collection}")
     treeherder.setdefault(
         "tier", dep_job.task.get("extra", {}).get("treeherder", {}).get("tier", 1)
     )

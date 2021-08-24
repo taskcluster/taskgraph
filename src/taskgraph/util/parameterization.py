@@ -2,7 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 
@@ -59,9 +58,7 @@ def resolve_task_references(label, task_def, task_id, decision_task_id, dependen
                 # handle escaping '<'
                 if key == "<":
                     return key
-                raise KeyError(
-                    "task '{}' has no dependency named '{}'".format(label, key)
-                )
+                raise KeyError(f"task '{label}' has no dependency named '{key}'")
 
         return TASK_REFERENCE_PATTERN.sub(repl, val)
 
@@ -70,9 +67,7 @@ def resolve_task_references(label, task_def, task_id, decision_task_id, dependen
             dependency, artifact_name = match.group(1, 2)
 
             if dependency == "self":
-                raise KeyError(
-                    "task '{}' can't reference artifacts of self".format(label)
-                )
+                raise KeyError(f"task '{label}' can't reference artifacts of self")
             elif dependency == "decision":
                 task_id = decision_task_id
             else:

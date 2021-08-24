@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
-
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import json
 import time
 from datetime import datetime
 
-from six import string_types, text_type
 
 from taskgraph.util.schema import validate_schema
 from taskgraph.util.vcs import calculate_head_rev, get_repo_path, get_repository_type
@@ -47,29 +43,29 @@ def _get_repo_path():
 # Please keep this list sorted and in sync with taskcluster/docs/parameters.rst
 base_schema = Schema(
     {
-        Required("base_repository"): Any(*string_types),
+        Required("base_repository"): Any(*(str,)),
         Required("build_date"): int,
-        Required("do_not_optimize"): [Any(*string_types)],
-        Required("existing_tasks"): {Any(*string_types): Any(*string_types)},
-        Required("filters"): [Any(*string_types)],
-        Required("head_ref"): Any(*string_types),
-        Required("head_repository"): Any(*string_types),
-        Required("head_rev"): Any(*string_types),
-        Required("head_tag"): Any(*string_types),
-        Required("level"): Any(*string_types),
-        Required("moz_build_date"): Any(*string_types),
+        Required("do_not_optimize"): [Any(*(str,))],
+        Required("existing_tasks"): {Any(*(str,)): Any(*(str,))},
+        Required("filters"): [Any(*(str,))],
+        Required("head_ref"): Any(*(str,)),
+        Required("head_repository"): Any(*(str,)),
+        Required("head_rev"): Any(*(str,)),
+        Required("head_tag"): Any(*(str,)),
+        Required("level"): Any(*(str,)),
+        Required("moz_build_date"): Any(*(str,)),
         Required("optimize_target_tasks"): bool,
-        Required("owner"): Any(*string_types),
-        Required("project"): Any(*string_types),
+        Required("owner"): Any(*(str,)),
+        Required("project"): Any(*(str,)),
         Required("pushdate"): int,
-        Required("pushlog_id"): Any(*string_types),
-        Required("repository_type"): Any(*string_types),
+        Required("pushlog_id"): Any(*(str,)),
+        Required("repository_type"): Any(*(str,)),
         # target-kind is not included, since it should never be
         # used at run-time
-        Required("target_tasks_method"): Any(*string_types),
-        Required("tasks_for"): Any(*string_types),
+        Required("target_tasks_method"): Any(*(str,)),
+        Required("tasks_for"): Any(*(str,)),
         Optional("code-review"): {
-            Required("phabricator-build-target"): text_type,
+            Required("phabricator-build-target"): str,
         },
     }
 )
@@ -138,9 +134,9 @@ class Parameters(ReadOnlyDict):
 
     def __getitem__(self, k):
         try:
-            return super(Parameters, self).__getitem__(k)
+            return super().__getitem__(k)
         except KeyError:
-            raise KeyError("taskgraph parameter {!r} not found".format(k))
+            raise KeyError(f"taskgraph parameter {k!r} not found")
 
     def is_try(self):
         """
@@ -176,7 +172,7 @@ class Parameters(ReadOnlyDict):
                 repo = self["head_repository"]
                 rev = self["head_rev"]
             endpoint = "file" if pretty else "raw-file"
-            return "{}/{}/{}/{}".format(repo, endpoint, rev, path)
+            return f"{repo}/{endpoint}/{rev}/{path}"
         elif self["repository_type"] == "git":
             # For getting the file URL for git repositories, we only support a Github HTTPS remote
             repo = self["head_repository"]
@@ -186,7 +182,7 @@ class Parameters(ReadOnlyDict):
 
                 rev = self["head_rev"]
                 endpoint = "blob" if pretty else "raw"
-                return "{}/{}/{}/{}".format(repo, endpoint, rev, path)
+                return f"{repo}/{endpoint}/{rev}/{path}"
             elif repo.startswith("git@github.com:"):
                 if repo.endswith(".git"):
                     repo = repo[:-4]
@@ -230,7 +226,7 @@ def load_parameters_file(filename, strict=True, overrides=None, trust_domain=Non
     try:
         # reading parameters from a local parameters.yml file
         f = open(filename)
-    except IOError:
+    except OSError:
         # fetching parameters.yml using task task-id, project or supplied url
         task_id = None
         if filename.startswith("task-id="):
@@ -256,7 +252,7 @@ def load_parameters_file(filename, strict=True, overrides=None, trust_domain=Non
     elif filename.endswith(".json"):
         kwargs = json.load(f)
     else:
-        raise TypeError("Parameters file `{}` is not JSON or YAML".format(filename))
+        raise TypeError(f"Parameters file `{filename}` is not JSON or YAML")
 
     kwargs.update(overrides)
 

@@ -2,7 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import json
 import logging
@@ -44,21 +43,21 @@ transforms = TransformSequence()
 docker_image_schema = Schema(
     {
         # Name of the docker image.
-        Required("name"): Any(*six.string_types),
+        Required("name"): Any(*(str,)),
         # Name of the parent docker image.
-        Optional("parent"): Any(*six.string_types),
+        Optional("parent"): Any(*(str,)),
         # Treeherder symbol.
-        Optional("symbol"): Any(*six.string_types),
+        Optional("symbol"): Any(*(str,)),
         # relative path (from config.path) to the file the docker image was defined
         # in.
-        Optional("job-from"): Any(*six.string_types),
+        Optional("job-from"): Any(*(str,)),
         # Arguments to use for the Dockerfile.
-        Optional("args"): {Any(*six.string_types): Any(*six.string_types)},
+        Optional("args"): {Any(*(str,)): Any(*(str,))},
         # Name of the docker image definition under taskcluster/docker, when
         # different from the docker image name.
-        Optional("definition"): Any(*six.string_types),
+        Optional("definition"): Any(*(str,)),
         # List of package tasks this docker image depends on.
-        Optional("packages"): [Any(*six.string_types)],
+        Optional("packages"): [Any(*(str,))],
         Optional(
             "index",
             description="information for indexing this build so its artifacts can be discovered",
@@ -111,12 +110,8 @@ def fill_template(config, tasks):
             context_path = os.path.join("taskcluster", "docker", definition)
             topsrcdir = os.path.dirname(config.graph_config.taskcluster_yml)
             if config.write_artifacts:
-                context_file = os.path.join(
-                    CONTEXTS_DIR, "{}.tar.gz".format(image_name)
-                )
-                logger.info(
-                    "Writing {} for docker image {}".format(context_file, image_name)
-                )
+                context_file = os.path.join(CONTEXTS_DIR, f"{image_name}.tar.gz")
+                logger.info(f"Writing {context_file} for docker image {image_name}")
                 context_hash = create_context_tar(
                     topsrcdir,
                     context_path,
@@ -137,7 +132,7 @@ def fill_template(config, tasks):
             image_name
         )
 
-        args["DOCKER_IMAGE_PACKAGES"] = " ".join("<{}>".format(p) for p in packages)
+        args["DOCKER_IMAGE_PACKAGES"] = " ".join(f"<{p}>" for p in packages)
 
         # Adjust the zstandard compression level based on the execution level.
         # We use faster compression for level 1 because we care more about
@@ -203,16 +198,16 @@ def fill_template(config, tasks):
         worker = taskdesc["worker"]
 
         worker["docker-image"] = IMAGE_BUILDER_IMAGE
-        digest_data.append("image-builder-image:{}".format(IMAGE_BUILDER_IMAGE))
+        digest_data.append(f"image-builder-image:{IMAGE_BUILDER_IMAGE}")
 
         if packages:
             deps = taskdesc.setdefault("dependencies", {})
             for p in sorted(packages):
-                deps[p] = "packages-{}".format(p)
+                deps[p] = f"packages-{p}"
 
         if parent:
             deps = taskdesc.setdefault("dependencies", {})
-            deps["parent"] = "build-docker-image-{}".format(parent)
+            deps["parent"] = f"build-docker-image-{parent}"
             worker["env"]["PARENT_TASK_ID"] = {
                 "task-reference": "<parent>",
             }

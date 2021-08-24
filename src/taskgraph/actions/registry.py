@@ -1,17 +1,13 @@
-# -*- coding: utf-8 -*-
-
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import json
 import os
 from types import FunctionType
 from collections import namedtuple
 
-from six import text_type
 
 from taskgraph import create
 from taskgraph.config import load_graph_config
@@ -134,8 +130,8 @@ def register_callback_action(
     """
     mem = {"registered": False}  # workaround nonlocal missing in 2.x
 
-    assert isinstance(title, text_type), "title must be a string"
-    assert isinstance(description, text_type), "description must be a string"
+    assert isinstance(title, str), "title must be a string"
+    assert isinstance(description, str), "description must be a string"
     title = title.strip()
     description = description.strip()
 
@@ -145,7 +141,7 @@ def register_callback_action(
         context = lambda params: context_value  # noqa
 
     def register_callback(cb, cb_name=cb_name):
-        assert isinstance(name, text_type), "name must be a string"
+        assert isinstance(name, str), "name must be a string"
         assert isinstance(order, int), "order must be an integer"
         assert callable(schema) or is_json(
             schema
@@ -154,7 +150,7 @@ def register_callback_action(
         # Allow for json-e > 25 chars in the symbol.
         if "$" not in symbol:
             assert 1 <= len(symbol) <= 25, "symbol must be between 1 and 25 characters"
-        assert isinstance(symbol, text_type), "symbol must be a string"
+        assert isinstance(symbol, str), "symbol must be a string"
 
         assert not mem[
             "registered"
@@ -225,7 +221,7 @@ def register_callback_action(
             rv.update(
                 {
                     "kind": "hook",
-                    "hookGroupId": "project-{}".format(trustDomain),
+                    "hookGroupId": f"project-{trustDomain}",
                     "hookId": "in-tree-action-{}-{}/{}".format(
                         level, actionPerm, tcyml_hash
                     ),
@@ -301,7 +297,7 @@ def sanity_check_task_scope(callback, parameters, graph_config):
         if action.cb_name == callback:
             break
     else:
-        raise Exception("No action with cb_name {}".format(callback))
+        raise Exception(f"No action with cb_name {callback}")
 
     actionPerm = "generic" if action.generic else action.cb_name
 
@@ -312,13 +308,13 @@ def sanity_check_task_scope(callback, parameters, graph_config):
             "{} is not either https://hg.mozilla.org or https://github.com !"
         )
 
-    expected_scope = "assume:repo:{}:action:{}".format(head_repository[8:], actionPerm)
+    expected_scope = f"assume:repo:{head_repository[8:]}:action:{actionPerm}"
 
     # the scope should appear literally; no need for a satisfaction check. The use of
     # get_current_scopes here calls the auth service through the Taskcluster Proxy, giving
     # the precise scopes available to this task.
     if expected_scope not in taskcluster.get_current_scopes():
-        raise Exception("Expected task scope {} for this action".format(expected_scope))
+        raise Exception(f"Expected task scope {expected_scope} for this action")
 
 
 def trigger_action_callback(

@@ -5,10 +5,8 @@
 Support for running jobs that are invoked via the `run-task` script.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
-from six import string_types, text_type
 
 import attr
 
@@ -29,21 +27,21 @@ run_task_schema = Schema(
         # Whether or not to use caches.
         Optional("use-caches"): bool,
         # if true (the default), perform a checkout on the worker
-        Required("checkout"): Any(bool, {text_type: dict}),
+        Required("checkout"): Any(bool, {str: dict}),
         Optional(
             "cwd",
             description="Path to run command in. If a checkout is present, the path "
             "to the checkout will be interpolated with the key `checkout`",
-        ): text_type,
+        ): str,
         # The sparse checkout profile to use. Value is the filename relative to the
         # directory where sparse profiles are defined (build/sparse-profiles/).
-        Required("sparse-profile"): Any(Any(*string_types), None),
+        Required("sparse-profile"): Any(Any(*(str,)), None),
         # The command arguments to pass to the `run-task` script, after the
         # checkout arguments.  If a list, it will be passed directly; otherwise
         # it will be included in a single argument to `bash -cx`.
         Required("command"): Any([taskref_or_string], taskref_or_string),
         # Base work directory used to set up the task.
-        Required("workdir"): Any(*string_types),
+        Required("workdir"): Any(*(str,)),
         # Whether to run as root. (defaults to False)
         Optional("run-as-root"): bool,
     }
@@ -73,7 +71,7 @@ def common_setup(config, job, taskdesc, command):
         vcs_path = taskdesc["worker"]["env"]["VCS_PATH"]
         for repo_config in repo_configs.values():
             checkout_path = path.join(vcs_path, repo_config.path)
-            command.append("--{}-checkout={}".format(repo_config.prefix, checkout_path))
+            command.append(f"--{repo_config.prefix}-checkout={checkout_path}")
 
         if run["sparse-profile"]:
             command.append(
@@ -156,7 +154,7 @@ def docker_worker_run_task(config, job, taskdesc):
     run_command = run["command"]
 
     # dict is for the case of `{'task-reference': Any(*string_types)}`.
-    if isinstance(run_command, string_types) or isinstance(run_command, dict):
+    if isinstance(run_command, str) or isinstance(run_command, dict):
         run_command = ["bash", "-cx", run_command]
     command.append("--fetch-hgfingerprint")
     if run["run-as-root"]:
@@ -213,9 +211,9 @@ def generic_worker_run_task(config, job, taskdesc):
 
     run_command = run["command"]
 
-    if isinstance(run_command, string_types):
+    if isinstance(run_command, str):
         if is_win:
-            run_command = '"{}"'.format(run_command)
+            run_command = f'"{run_command}"'
         run_command = ["bash", "-cx", run_command]
 
     if run["run-as-root"]:

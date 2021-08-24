@@ -2,12 +2,10 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import unittest
 from functools import partial
 
-import six
 from slugid import nice as slugid
 
 from taskgraph import optimize
@@ -200,7 +198,7 @@ class TestOptimize(unittest.TestCase):
         exp_label_to_taskid,
     ):
         self.maxDiff = None
-        optimize.slugid = partial(next, ("tid%d" % i for i in six.moves.range(1, 10)))
+        optimize.slugid = partial(next, ("tid%d" % i for i in range(1, 10)))
         try:
             got_subgraph = optimize.get_subgraph(
                 graph, removed_tasks, replaced_tasks, label_to_taskid, "DECISION-TASK"

@@ -2,13 +2,11 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import logging
 import sys
 import attr
-from six import string_types, text_type
 from .util import path
 
 from .util.python_path import find_object
@@ -22,7 +20,7 @@ graph_config_schema = Schema(
     {
         # The trust-domain for this graph.
         # (See https://firefox-source-docs.mozilla.org/taskcluster/taskcluster/taskgraph.html#taskgraph-trust-domain)  # noqa
-        Required("trust-domain"): Any(*string_types),
+        Required("trust-domain"): Any(*(str,)),
         Required("task-priority"): optionally_keyed_by(
             "project",
             Any(
@@ -37,11 +35,11 @@ graph_config_schema = Schema(
         ),
         Required("workers"): {
             Required("aliases"): {
-                text_type: {
-                    Required("provisioner"): optionally_keyed_by("level", text_type),
-                    Required("implementation"): text_type,
-                    Required("os"): text_type,
-                    Required("worker-type"): optionally_keyed_by("level", text_type),
+                str: {
+                    Required("provisioner"): optionally_keyed_by("level", str),
+                    Required("implementation"): str,
+                    Required("os"): str,
+                    Required("worker-type"): optionally_keyed_by("level", str),
                 }
             },
         },
@@ -49,21 +47,21 @@ graph_config_schema = Schema(
             Optional(
                 "register",
                 description="Python function to call to register extensions.",
-            ): text_type,
-            Optional("decision-parameters"): text_type,
+            ): str,
+            Optional("decision-parameters"): str,
             Optional(
                 "cached-task-prefix",
                 description="The taskcluster index prefix to use for caching tasks. "
                 "Defaults to `trust-domain`.",
-            ): text_type,
+            ): str,
             Required("repositories"): All(
                 {
-                    text_type: {
-                        Required("name"): text_type,
-                        Optional("project-regex"): text_type,
-                        Optional("ssh-secret-name"): text_type,
+                    str: {
+                        Required("name"): str,
+                        Optional("project-regex"): str,
+                        Optional("ssh-secret-name"): str,
                         # FIXME
-                        Extra: text_type,
+                        Extra: str,
                     }
                 },
                 Length(min=1),
@@ -75,7 +73,7 @@ graph_config_schema = Schema(
 
 
 @attr.s(frozen=True, cmp=False)
-class GraphConfig(object):
+class GraphConfig:
     _config = attr.ib()
     root_dir = attr.ib()
 
@@ -135,9 +133,9 @@ def validate_graph_config(config):
 def load_graph_config(root_dir):
     config_yml = os.path.join(root_dir, "config.yml")
     if not os.path.exists(config_yml):
-        raise Exception("Couldn't find taskgraph configuration: {}".format(config_yml))
+        raise Exception(f"Couldn't find taskgraph configuration: {config_yml}")
 
-    logger.debug("loading config from `{}`".format(config_yml))
+    logger.debug(f"loading config from `{config_yml}`")
     config = load_yaml(config_yml)
 
     validate_graph_config(config)
