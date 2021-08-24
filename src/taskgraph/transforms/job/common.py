@@ -113,18 +113,24 @@ def support_vcs_checkout(config, job, taskdesc, repo_configs, sparse=False):
     reserved for ``run-task`` tasks.
     """
     worker = job["worker"]
+    is_mac = worker["os"] == "macosx"
     is_win = worker["os"] == "windows"
     is_linux = worker["os"] == "linux"
-    assert is_win or is_linux
+    is_docker = worker["implementation"] == "docker-worker"
+    assert is_mac or is_win or is_linux
 
     if is_win:
         checkoutdir = "./build"
         vcsdir = "{}/src".format(checkoutdir)
         hgstore = "y:/hg-shared"
-    else:
+    elif is_docker:
         checkoutdir = "{workdir}/checkouts".format(**job["run"])
-        vcsdir = "{}/src".format(checkoutdir)
+        vcsdir = "{}/vcs".format(checkoutdir)
         hgstore = "{}/hg-store".format(checkoutdir)
+    else:
+        checkoutdir = "./checkouts"
+        vcsdir = "{}/vcs".format(checkoutdir)
+        hgstore = "{}/hg-shared".format(checkoutdir)
 
     cache_name = "checkouts"
 
@@ -146,6 +152,12 @@ def support_vcs_checkout(config, job, taskdesc, repo_configs, sparse=False):
     # with clients that aren't sparse aware.
     if sparse:
         cache_name += "-sparse"
+
+    # Workers using Mercurial >= 5.8 will enable revlog-compression-zstd, which
+    # workers using older versions can't understand, so they can't share cache.
+    # At the moment, only docker workers use the newer version.
+    if is_docker:
+        cache_name += "-hg58"
 
     add_cache(job, taskdesc, cache_name, checkoutdir)
 
@@ -184,4 +196,6 @@ def support_vcs_checkout(config, job, taskdesc, repo_configs, sparse=False):
         # for hg.mozilla.org.
         taskdesc["scopes"].append("secrets:get:project/taskcluster/gecko/hgfingerprint")
 
-    taskdesc["worker"]["taskcluster-proxy"] = True
+    # only some worker platforms have taskcluster-proxy enabled
+    if job["worker"]["implementation"] in ("docker-worker",):
+        taskdesc["worker"]["taskcluster-proxy"] = True
