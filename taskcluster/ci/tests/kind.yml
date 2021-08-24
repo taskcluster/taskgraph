@@ -15,7 +15,7 @@ job-defaults:
         code-review: true
     worker-type: t-linux
     worker:
-        docker-image: {in-tree: python2.7}
+        docker-image: {in-tree: python3.7}
         max-run-time: 3600
     treeherder:
         kind: test
@@ -30,19 +30,7 @@ jobs:
     unit:
         description: "Run `unit tests` to validate the latest changes"
         treeherder:
-            symbol: unit(py2)
-        run:
-            command: >-
-                pip install --user -r requirements/test.txt &&
-                pip install --user --no-deps . &&
-                pytest --pyargs taskgraph
-
-    unit-py3:
-        description: "Run `unit tests` to validate the latest changes"
-        treeherder:
-            symbol: unit(py3)
-        worker:
-            docker-image: {in-tree: python3.7}
+            symbol: unit
         run:
             command: >-
                 pip install --user -r requirements/test.py3.txt &&
@@ -50,20 +38,9 @@ jobs:
                 pytest --pyargs taskgraph
 
     flake8:
-        description: "Run `flake8` to validate the latest changes"
-        treeherder:
-            symbol: flake8(py2)
-        run:
-            command: >-
-                pip install --user -r requirements/test.txt &&
-                flake8
-
-    flake8-py3:
         description: "Run `flake8` on Python 3 to validate the latest changes"
         treeherder:
-            symbol: flake8(py3)
-        worker:
-            docker-image: {in-tree: python3.7}
+            symbol: flake8
         run:
             command: >-
                 pip install --user -r requirements/test.py3.txt &&
@@ -73,8 +50,6 @@ jobs:
         description: "Run `black` to validate the latest changes"
         treeherder:
             symbol: black
-        worker:
-            docker-image: {in-tree: python3.7}
         run:
             command: >-
                 pip install --user black &&
@@ -86,5 +61,5 @@ jobs:
             symbol: yaml
         run:
             command: >-
-                pip install --user -r requirements/test.txt &&
+                pip install --user -r requirements/test.py3.txt &&
                 yamllint .

@@ -1,5 +1,4 @@
 attrs
-futures;python_version=="2.7"
 json-e
 pathlib2
 PyYAML
@@ -9,5 +8,4 @@ requests_unixsocket
 six
 slugid
 taskcluster-urls
-typing;python_version<"3.5"
 voluptuous

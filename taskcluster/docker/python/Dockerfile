@@ -4,7 +4,7 @@
 
 # %ARG PYTHON_VERSION
 FROM python:$PYTHON_VERSION
-MAINTAINER Tom Prince <tom.prince@mozilla.com>
+MAINTAINER Andrew Halberstadt <ahal@mozilla.com>
 
 # Add worker user
 RUN mkdir /builds && \

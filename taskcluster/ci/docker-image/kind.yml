@@ -24,11 +24,6 @@ jobs:
         parent: decision
     index-task:
         symbol: I(idx)
-    python2.7:
-        symbol: I(py2.7)
-        definition: python
-        args:
-            PYTHON_VERSION: "2.7"
     python3.7:
         symbol: I(py3.7)
         definition: python

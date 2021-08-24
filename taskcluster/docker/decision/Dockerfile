@@ -16,8 +16,6 @@ ADD topsrcdir/taskcluster/scripts/external_tools/tooltool.py /setup/tooltool.py
 ADD topsrcdir/taskcluster/docker/recipes/install-mercurial.sh /setup/install-mercurial.sh
 
 # Add taskgraph package.
-# %include requirements/base.txt
-ADD topsrcdir/requirements/base.txt /setup/requirements.txt
 # %include requirements/base.py3.txt
 ADD topsrcdir/requirements/base.py3.txt /setup/requirements.py3.txt
 
