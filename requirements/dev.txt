@@ -5,7 +5,7 @@
 #
 #    pip-compile-multi
 #
--r test.py3.txt
+-r test.txt
 click==8.0.0 \
     --hash=sha256:7d8c289ee437bcb0316820ccee14aefcb056e58d31830ecab8e47eda6540e136 \
     --hash=sha256:e90e62ced43dc8105fb9a26d62f0d9340b5c8db053a814e25d95c19873ae87db
