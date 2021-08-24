@@ -5,8 +5,6 @@
 
 import unittest
 
-from voluptuous import Any
-
 from taskgraph.util.schema import (
     validate_schema,
     resolve_keyed_by,
@@ -16,7 +14,7 @@ from taskgraph.util.schema import (
 schema = Schema(
     {
         "x": int,
-        "y": Any(*(str,)),
+        "y": str,
     }
 )
 

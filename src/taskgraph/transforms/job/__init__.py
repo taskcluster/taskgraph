@@ -42,8 +42,8 @@ job_description_schema = Schema(
         # The name of the job and the job's label.  At least one must be specified,
         # and the label will be generated from the name if necessary, by prepending
         # the kind.
-        Optional("name"): Any(*(str,)),
-        Optional("label"): Any(*(str,)),
+        Optional("name"): str,
+        Optional("label"): str,
         # the following fields are passed directly through to the task description,
         # possibly modified by the run implementation.  See
         # taskcluster/taskgraph/transforms/task.py for the schema details.
@@ -76,16 +76,16 @@ job_description_schema = Schema(
             # This task only needs to be run if a file matching one of the given
             # patterns has changed in the push.  The patterns use the mozpack
             # match function (python/mozbuild/mozpack/path.py).
-            Optional("files-changed"): [Any(*(str,))],
+            Optional("files-changed"): [str],
         },
         # A list of artifacts to install from 'fetch' tasks.
         Optional("fetches"): {
             Any("toolchain", "fetch"): [str],
-            Any(*(str,)): [
-                Any(*(str,)),
+            str: [
+                str,
                 {
-                    Required("artifact"): Any(*(str,)),
-                    Optional("dest"): Any(*(str,)),
+                    Required("artifact"): str,
+                    Optional("dest"): str,
                     Optional("extract"): bool,
                 },
             ],
@@ -93,9 +93,9 @@ job_description_schema = Schema(
         # A description of how to run this job.
         "run": {
             # The key to a job implementation in a peer module to this one
-            "using": Any(*(str,)),
+            "using": str,
             # Base work directory used to set up the task.
-            Optional("workdir"): Any(*(str,)),
+            Optional("workdir"): str,
             # Any remaining content is verified against that job implementation's
             # own schema.
             Extra: object,

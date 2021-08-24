@@ -12,7 +12,6 @@ import os
 import re
 
 from voluptuous import (
-    Any,
     Optional,
     Required,
     Extra,
@@ -56,7 +55,7 @@ FETCH_SCHEMA = Schema(
             "Defaults to `public/`; if it starts with something other than "
             "`public/` the artifact will require scopes to access.",
         ): str,
-        Optional("attributes"): {Any(*(str,)): object},
+        Optional("attributes"): {str: object},
         Required("fetch"): {
             Required("type"): str,
             Extra: object,

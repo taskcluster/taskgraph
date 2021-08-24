@@ -52,7 +52,7 @@ def optionally_keyed_by(*arguments):
     for _ in arguments:
         options = [schema]
         for field in fields:
-            options.append({"by-" + field: {voluptuous.Any(*(str,)): schema}})
+            options.append({"by-" + field: {str: schema}})
         schema = voluptuous.Any(*options)
     return schema
 
@@ -202,14 +202,14 @@ OptimizationSchema = voluptuous.Any(
     None,
     # search the index for the given index namespaces, and replace this task if found
     # the search occurs in order, with the first match winning
-    {"index-search": [voluptuous.Any(*(str,))]},
+    {"index-search": [str]},
     # skip this task if none of the given file patterns match
-    {"skip-unless-changed": [voluptuous.Any(*(str,))]},
+    {"skip-unless-changed": [str]},
 )
 
 # shortcut for a string where task references are allowed
 taskref_or_string = voluptuous.Any(
-    voluptuous.Any(*(str,)),
-    {voluptuous.Required("task-reference"): voluptuous.Any(*(str,))},
-    {voluptuous.Required("artifact-reference"): voluptuous.Any(*(str,))},
+    str,
+    {voluptuous.Required("task-reference"): str},
+    {voluptuous.Required("artifact-reference"): str},
 )

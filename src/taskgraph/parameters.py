@@ -14,7 +14,6 @@ from taskgraph.util.memoize import memoize
 from taskgraph.util.readonlydict import ReadOnlyDict
 from voluptuous import (
     ALLOW_EXTRA,
-    Any,
     Required,
     Optional,
     Schema,
@@ -43,27 +42,27 @@ def _get_repo_path():
 # Please keep this list sorted and in sync with taskcluster/docs/parameters.rst
 base_schema = Schema(
     {
-        Required("base_repository"): Any(*(str,)),
+        Required("base_repository"): str,
         Required("build_date"): int,
-        Required("do_not_optimize"): [Any(*(str,))],
-        Required("existing_tasks"): {Any(*(str,)): Any(*(str,))},
-        Required("filters"): [Any(*(str,))],
-        Required("head_ref"): Any(*(str,)),
-        Required("head_repository"): Any(*(str,)),
-        Required("head_rev"): Any(*(str,)),
-        Required("head_tag"): Any(*(str,)),
-        Required("level"): Any(*(str,)),
-        Required("moz_build_date"): Any(*(str,)),
+        Required("do_not_optimize"): [str],
+        Required("existing_tasks"): {str: str},
+        Required("filters"): [str],
+        Required("head_ref"): str,
+        Required("head_repository"): str,
+        Required("head_rev"): str,
+        Required("head_tag"): str,
+        Required("level"): str,
+        Required("moz_build_date"): str,
         Required("optimize_target_tasks"): bool,
-        Required("owner"): Any(*(str,)),
-        Required("project"): Any(*(str,)),
+        Required("owner"): str,
+        Required("project"): str,
         Required("pushdate"): int,
-        Required("pushlog_id"): Any(*(str,)),
-        Required("repository_type"): Any(*(str,)),
+        Required("pushlog_id"): str,
+        Required("repository_type"): str,
         # target-kind is not included, since it should never be
         # used at run-time
-        Required("target_tasks_method"): Any(*(str,)),
-        Required("tasks_for"): Any(*(str,)),
+        Required("target_tasks_method"): str,
+        Required("tasks_for"): str,
         Optional("code-review"): {
             Required("phabricator-build-target"): str,
         },

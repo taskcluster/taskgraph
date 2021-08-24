@@ -35,13 +35,13 @@ run_task_schema = Schema(
         ): str,
         # The sparse checkout profile to use. Value is the filename relative to the
         # directory where sparse profiles are defined (build/sparse-profiles/).
-        Required("sparse-profile"): Any(Any(*(str,)), None),
+        Required("sparse-profile"): Any(str, None),
         # The command arguments to pass to the `run-task` script, after the
         # checkout arguments.  If a list, it will be passed directly; otherwise
         # it will be included in a single argument to `bash -cx`.
         Required("command"): Any([taskref_or_string], taskref_or_string),
         # Base work directory used to set up the task.
-        Required("workdir"): Any(*(str,)),
+        Required("workdir"): str,
         # Whether to run as root. (defaults to False)
         Optional("run-as-root"): bool,
     }
@@ -153,7 +153,7 @@ def docker_worker_run_task(config, job, taskdesc):
 
     run_command = run["command"]
 
-    # dict is for the case of `{'task-reference': Any(*string_types)}`.
+    # dict is for the case of `{'task-reference': str}`.
     if isinstance(run_command, str) or isinstance(run_command, dict):
         run_command = ["bash", "-cx", run_command]
     command.append("--fetch-hgfingerprint")
