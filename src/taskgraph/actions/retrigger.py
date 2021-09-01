@@ -194,50 +194,9 @@ def retrigger_action(parameters, graph_config, input, task_group_id, task_id):
     ),
     order=300,
     context=[{}],
-    available=lambda params: False
-    if params.get("tasks_for") == "github-pull-request"
-    else True,
     schema={"type": "object", "properties": {}},
 )
 def rerun_action(parameters, graph_config, input, task_group_id, task_id):
-    task = taskcluster.get_task_definition(task_id)
-    parameters = dict(parameters)
-    decision_task_id, full_task_graph, label_to_taskid = fetch_graph_and_labels(
-        parameters, graph_config
-    )
-    label = task["metadata"]["name"]
-    if task_id not in label_to_taskid.values():
-        logger.error(
-            "Refusing to rerun {}: taskId {} not in decision task {} label_to_taskid!".format(
-                label, task_id, decision_task_id
-            )
-        )
-
-    _rerun_task(task_id, label)
-
-
-@register_callback_action(
-    title="Rerun (pull request)",
-    name="rerun-pr",
-    generic=False,
-    cb_name="rerun-pr",
-    symbol="rr",
-    description=(
-        "Rerun a task on a Github pull request.\n\n"
-        "This only works on failed or exception tasks in the original taskgraph,"
-        " and is CoT friendly."
-        " this is a temporary action for testing that will eventually unify with"
-        " the existing rerun action"
-    ),
-    order=300,
-    context=[{}],
-    schema={"type": "object", "properties": {}},
-    available=lambda params: True
-    if params.get("tasks_for") == "github-pull-request"
-    else False,
-    scope_repo="base",
-)
-def rerun_pr_action(parameters, graph_config, input, task_group_id, task_id):
     task = taskcluster.get_task_definition(task_id)
     parameters = dict(parameters)
     decision_task_id, full_task_graph, label_to_taskid = fetch_graph_and_labels(
