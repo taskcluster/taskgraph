@@ -90,24 +90,22 @@ FORMAT_METHODS = {
 }
 
 
-def format_taskgraph(options):
+def format_taskgraph(options, parameters):
     import taskgraph
-    import taskgraph.parameters
-    import taskgraph.generator
+    from taskgraph.generator import TaskGraphGenerator
+    from taskgraph.parameters import parameters_loader
 
     if options["fast"]:
         taskgraph.fast = True
 
     try:
-        parameters = taskgraph.parameters.parameters_loader(
-            options["parameters"],
+        parameters = parameters_loader(
+            parameters,
             overrides={"target-kind": options.get("target_kind")},
             strict=False,
         )
 
-        tgg = taskgraph.generator.TaskGraphGenerator(
-            root_dir=options.get("root"), parameters=parameters
-        )
+        tgg = TaskGraphGenerator(root_dir=options.get("root"), parameters=parameters)
 
         tg = getattr(tgg, options["graph_attr"])
         tg = get_filtered_taskgraph(tg, options["tasks_regex"])
@@ -179,12 +177,15 @@ def format_taskgraph(options):
 @argument(
     "--parameters",
     "-p",
-    default="",
+    default=None,
+    action="append",
     help="Parameters to use for the generation. Can be a path to file (.yml or "
     ".json; see `taskcluster/docs/parameters.rst`), a url, of the form "
     "`project=mozilla-central` to download latest parameters file for the "
     "specified project from CI, or of the form `task-id=<decision task id>` to "
-    "download parameters from the specified decision task.",
+    "download parameters from the specified decision task. Can be specified "
+    "multiple times, in which case multiple generations will happen from the "
+    "same invocation (one per parameters specified).",
 )
 @argument(
     "--no-optimize",
@@ -220,15 +221,33 @@ def format_taskgraph(options):
     help="enable fast task generation for local debugging.",
 )
 def show_taskgraph(options):
+    from taskgraph.parameters import Parameters
+
     if options.pop("verbose", False):
         logging.root.setLevel(logging.DEBUG)
 
-    out = format_taskgraph(options)
+    parameters = options.pop("parameters")
+    for spec in parameters:
+        out = format_taskgraph(options, spec)
 
-    fh = options["output_file"]
-    if fh:
-        fh = open(fh, "w")
-    print(out, file=fh)
+        params_name = Parameters.format_spec(spec)
+        fh = None
+        path = options["output_file"]
+        if path:
+            # Substitute params name into file path if necessary
+            if len(parameters) > 1 and "{params}" not in path:
+                name, ext = os.path.splitext(path)
+                name += "_{params}"
+                path = name + ext
+
+            path = path.format(params=params_name)
+            fh = open(path, "w")
+        else:
+            print(
+                "Dumping result with parameters from {}:".format(params_name),
+                file=sys.stderr,
+            )
+        print(out + "\n", file=fh)
 
 
 @command("build-image", help="Build a Docker image")
