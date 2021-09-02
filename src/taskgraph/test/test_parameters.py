@@ -6,6 +6,8 @@
 import datetime
 import unittest
 
+import pytest
+
 from taskgraph.parameters import (
     Parameters,
     ParameterMismatch,
@@ -142,3 +144,39 @@ class TestParameters(unittest.TestCase):
         p = Parameters(**self.vals)
         self.assertEqual(p["moz_build_date"], "20191008095500")
         self.assertEqual(p.moz_build_date, datetime.datetime(2019, 10, 8, 9, 55, 0))
+
+
+def test_parameters_id():
+    # Some parameters rely on current time, ensure these are the same for the
+    # purposes of this test.
+    defaults = {
+        "build_date": 0,
+        "moz_build_date": "2021-08-23",
+        "pushdate": 0,
+    }
+
+    params1 = Parameters(strict=False, spec=None, foo="bar", **defaults)
+    assert params1.id
+    assert len(params1.id) == 12
+
+    params2 = Parameters(strict=False, spec="p2", foo="bar", **defaults)
+    assert params1.id == params2.id
+
+    params3 = Parameters(strict=False, spec="p3", foo="baz", **defaults)
+    assert params1.id != params3.id
+
+
+@pytest.mark.parametrize(
+    "spec,expected",
+    (
+        (None, "defaults"),
+        ("foo/bar.yaml", "bar"),
+        ("foo/bar.yml", "bar"),
+        ("/bar.json", "bar"),
+        ("http://example.org/bar.yml?id=0", "bar"),
+        ("task-id=123", "task-id=123"),
+        ("project=autoland", "project=autoland"),
+    ),
+)
+def test_parameters_format_spec(spec, expected):
+    assert Parameters.format_spec(spec) == expected

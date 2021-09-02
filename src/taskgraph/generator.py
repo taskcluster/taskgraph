@@ -260,6 +260,9 @@ class TaskGraphGenerator:
         else:
             parameters = self._parameters
 
+        logger.info("Using {}".format(parameters))
+        logger.debug("Dumping parameters:\n{}".format(repr(parameters)))
+
         filters = parameters.get("filters", [])
         # Always add legacy target tasks method until we deprecate that API.
         if "target_tasks_method" not in filters:
