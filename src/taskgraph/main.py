@@ -2,9 +2,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import atexit
 import os
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import traceback
 import argparse
 import logging
@@ -123,6 +127,51 @@ def format_taskgraph(options, parameters, logfile=None):
     return format_method(tg)
 
 
+def generate_taskgraph(options, parameters, logdir):
+    from taskgraph.parameters import Parameters
+
+    futures = {}
+    logfile = None
+    with ProcessPoolExecutor() as executor:
+        for spec in parameters:
+            if logdir:
+                logfile = os.path.join(
+                    logdir,
+                    "{}_{}.log".format(
+                        options["graph_attr"], Parameters.format_spec(spec)
+                    ),
+                )
+            f = executor.submit(format_taskgraph, options, spec, logfile)
+            futures[f] = spec
+
+    for future in as_completed(futures):
+        spec = futures[future]
+        e = future.exception()
+        if e:
+            out = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+        else:
+            out = future.result()
+
+        params_name = Parameters.format_spec(spec)
+        fh = None
+        path = options["output_file"]
+        if path:
+            # Substitute params name into file path if necessary
+            if len(parameters) > 1 and "{params}" not in path:
+                name, ext = os.path.splitext(path)
+                name += "_{params}"
+                path = name + ext
+
+            path = path.format(params=params_name)
+            fh = open(path, "w")
+        else:
+            print(
+                "Dumping result with parameters from {}:".format(params_name),
+                file=sys.stderr,
+            )
+        print(out + "\n", file=fh)
+
+
 @command(
     "tasks",
     help="Show all tasks in the taskgraph.",
@@ -222,16 +271,50 @@ def format_taskgraph(options, parameters, logfile=None):
 @argument(
     "-F",
     "--fast",
-    dest="fast",
     default=False,
     action="store_true",
     help="enable fast task generation for local debugging.",
 )
+@argument(
+    "--diff",
+    const="default",
+    nargs="?",
+    default=None,
+    help="Generate and diff the current taskgraph against another revision. "
+    "Without args the base revision will be used. A revision specifier such as "
+    "the hash or `.~1` (hg) or `HEAD~1` (git) can be used as well.",
+)
 def show_taskgraph(options):
     from taskgraph.parameters import Parameters
+    from taskgraph.util.vcs import get_repository
 
     if options.pop("verbose", False):
         logging.root.setLevel(logging.DEBUG)
+
+    repo = None
+    cur_ref = None
+    diffdir = None
+    if options["diff"]:
+        repo = get_repository(os.getcwd())
+
+        if not repo.working_directory_clean():
+            print("abort: can't diff taskgraph with dirty working directory")
+            return 1
+
+        # We want to return the working directory to the current state
+        # as best we can after we're done. In all known cases, using
+        # branch or bookmark (which are both available on the VCS object)
+        # as `branch` is preferable to a specific revision.
+        cur_ref = repo.branch or repo.head_ref[:12]
+
+        diffdir = tempfile.mkdtemp()
+        atexit.register(
+            shutil.rmtree, diffdir
+        )  # make sure the directory gets cleaned up
+        options["output_file"] = os.path.join(
+            diffdir, f"{options['graph_attr']}_{cur_ref}"
+        )
+        print(f"Generating {options['graph_attr']} @ {cur_ref}", file=sys.stderr)
 
     parameters: List[Any[str, None]] = options.pop("parameters")
     if not parameters:
@@ -258,46 +341,74 @@ def show_taskgraph(options):
         if not os.path.isdir(logdir):
             os.makedirs(logdir)
 
-    futures = {}
-    logfile = None
-    with ProcessPoolExecutor() as executor:
-        for spec in parameters:
-            if logdir:
-                logfile = os.path.join(
-                    logdir,
-                    "{}_{}.log".format(
-                        options["graph_attr"], Parameters.format_spec(spec)
-                    ),
-                )
-            f = executor.submit(format_taskgraph, options, spec, logfile)
-            futures[f] = spec
+    generate_taskgraph(options, parameters, logdir)
 
-    for future in as_completed(futures):
-        spec = futures[future]
-        e = future.exception()
-        if e:
-            out = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+    if options["diff"]:
+        assert diffdir is not None
+        assert repo is not None
+
+        # Some transforms use global state for checks, so will fail
+        # when running taskgraph a second time in the same session.
+        # Reload all taskgraph modules to avoid this.
+        for mod in sys.modules.copy():
+            if mod != __name__ and mod.startswith("taskgraph"):
+                del sys.modules[mod]
+
+        if options["diff"] == "default":
+            base_ref = repo.base_ref
         else:
-            out = future.result()
+            base_ref = options["diff"]
 
-        params_name = Parameters.format_spec(spec)
-        fh = None
-        path = options["output_file"]
-        if path:
-            # Substitute params name into file path if necessary
-            if len(parameters) > 1 and "{params}" not in path:
-                name, ext = os.path.splitext(path)
-                name += "_{params}"
-                path = name + ext
-
-            path = path.format(params=params_name)
-            fh = open(path, "w")
-        else:
-            print(
-                "Dumping result with parameters from {}:".format(params_name),
-                file=sys.stderr,
+        try:
+            repo.update(base_ref)
+            base_ref = repo.head_ref[:12]
+            options["output_file"] = os.path.join(
+                diffdir, f"{options['graph_attr']}_{base_ref}"
             )
-        print(out + "\n", file=fh)
+            print(f"Generating {options['graph_attr']} @ {base_ref}", file=sys.stderr)
+            generate_taskgraph(options, parameters, logdir)
+        finally:
+            repo.update(cur_ref)
+
+        # Generate diff(s)
+        diffcmd = [
+            "diff",
+            "-U20",
+            "--report-identical-files",
+            f"--label={options['graph_attr']}@{base_ref}",
+            f"--label={options['graph_attr']}@{cur_ref}",
+        ]
+
+        for spec in parameters:
+            base_path = os.path.join(diffdir, f"{options['graph_attr']}_{base_ref}")
+            cur_path = os.path.join(diffdir, f"{options['graph_attr']}_{cur_ref}")
+
+            params_name = None
+            if len(parameters) > 1:
+                params_name = Parameters.format_spec(spec)
+                base_path += f"_{params_name}"
+                cur_path += f"_{params_name}"
+
+            try:
+                diff_output = subprocess.run(
+                    diffcmd + [base_path, cur_path],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    universal_newlines=True,
+                    check=True,
+                ).stdout
+            except subprocess.CalledProcessError as e:
+                # returncode 1 simply means diffs were found
+                if e.returncode != 1:
+                    print(e.stderr, file=sys.stderr)
+                    raise
+                diff_output = e.output
+
+            if len(parameters) > 1:
+                assert params_name is not None
+                print(f"Diff from {params_name}:")
+
+            print(diff_output)
 
     if len(parameters) > 1:
         print("See '{}' for logs".format(logdir), file=sys.stderr)

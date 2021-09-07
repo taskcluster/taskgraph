@@ -135,3 +135,77 @@ def test_get_repo_path(repo):
 
     assert repo.get_url() == "https://some/repo"
     assert repo.get_url("other") == "https://some.other/repo"
+
+
+def test_update(repo):
+    bar = os.path.join(repo.path, "bar")
+    with open(bar, "w") as fh:
+        fh.write("bar")
+
+    first_ref = repo.head_ref
+    repo.run("add", bar)
+    repo.run("commit", "-m", "Second commit")
+
+    second_ref = repo.head_ref
+    repo.update(first_ref)
+    assert repo.head_ref == first_ref
+
+    repo.update(second_ref)
+    assert repo.head_ref == second_ref
+
+
+def test_branch(repo):
+    if repo.tool == "git":
+        assert repo.branch == "main"
+        repo.run("checkout", "-b", "test")
+    else:
+        assert repo.branch is None
+        repo.run("bookmark", "test")
+
+    assert repo.branch == "test"
+
+    bar = os.path.join(repo.path, "bar")
+    with open(bar, "w") as fh:
+        fh.write("bar")
+
+    repo.run("add", bar)
+    repo.run("commit", "-m", "Second commit")
+    assert repo.branch == "test"
+
+    repo.update(repo.head_ref)
+    assert repo.branch is None
+
+    repo.update("test")
+    assert repo.branch == "test"
+
+
+def test_working_directory_clean(repo):
+    assert repo.working_directory_clean()
+
+    # untracked file
+    bar = os.path.join(repo.path, "bar")
+    with open(bar, "w") as fh:
+        fh.write("bar")
+
+    assert repo.working_directory_clean()
+    assert not repo.working_directory_clean(untracked=True)
+    repo.run("add", "bar")
+    assert not repo.working_directory_clean()
+
+    repo.run("commit", "-m", "Second commit")
+    assert repo.working_directory_clean()
+
+    # modified file
+    with open(bar, "a") as fh:
+        fh.write("bar2")
+    assert not repo.working_directory_clean()
+
+    if repo.tool == "git":
+        repo.run("reset", "--hard", "HEAD")
+    else:
+        repo.run("revert", "-a")
+    assert repo.working_directory_clean()
+
+    # removed file
+    repo.run("rm", bar)
+    assert not repo.working_directory_clean()
