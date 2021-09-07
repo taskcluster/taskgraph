@@ -11,7 +11,9 @@ import argparse
 import logging
 import json
 from collections import namedtuple
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
+import appdirs
 import yaml
 
 Command = namedtuple("Command", ["func", "args", "kwargs", "defaults"])
@@ -90,31 +92,34 @@ FORMAT_METHODS = {
 }
 
 
-def format_taskgraph(options, parameters):
+def format_taskgraph(options, parameters, logfile=None):
     import taskgraph
     from taskgraph.generator import TaskGraphGenerator
     from taskgraph.parameters import parameters_loader
 
+    if logfile:
+        oldhandler = logging.root.handlers[-1]
+        logging.root.removeHandler(oldhandler)
+
+        handler = logging.FileHandler(logfile, mode="w")
+        handler.setFormatter(oldhandler.formatter)
+        logging.root.addHandler(handler)
+
     if options["fast"]:
         taskgraph.fast = True
 
-    try:
-        parameters = parameters_loader(
-            parameters,
-            overrides={"target-kind": options.get("target_kind")},
-            strict=False,
-        )
+    parameters = parameters_loader(
+        parameters,
+        overrides={"target-kind": options.get("target_kind")},
+        strict=False,
+    )
 
-        tgg = TaskGraphGenerator(root_dir=options.get("root"), parameters=parameters)
+    tgg = TaskGraphGenerator(root_dir=options.get("root"), parameters=parameters)
 
-        tg = getattr(tgg, options["graph_attr"])
-        tg = get_filtered_taskgraph(tg, options["tasks_regex"])
-
-        format_method = FORMAT_METHODS[options["format"] or "labels"]
-        return format_method(tg)
-    except Exception:
-        traceback.print_exc()
-        sys.exit(1)
+    tg = getattr(tgg, options["graph_attr"])
+    tg = get_filtered_taskgraph(tg, options["tasks_regex"])
+    format_method = FORMAT_METHODS[options["format"] or "labels"]
+    return format_method(tg)
 
 
 @command(
@@ -227,8 +232,38 @@ def show_taskgraph(options):
         logging.root.setLevel(logging.DEBUG)
 
     parameters = options.pop("parameters")
-    for spec in parameters:
-        out = format_taskgraph(options, spec)
+    if not parameters:
+        parameters = [None]  # will use default values
+
+    logdir = None
+    if len(parameters) > 1:
+        # Log to separate files for each process instead of stderr to
+        # avoid interleaving.
+        logdir = appdirs.user_log_dir("taskgraph")
+        if not os.path.isdir(logdir):
+            os.makedirs(logdir)
+
+    futures = {}
+    logfile = None
+    with ProcessPoolExecutor() as executor:
+        for spec in parameters:
+            if logdir:
+                logfile = os.path.join(
+                    logdir,
+                    "{}_{}.log".format(
+                        options["graph_attr"], Parameters.format_spec(spec)
+                    ),
+                )
+            f = executor.submit(format_taskgraph, options, spec, logfile)
+            futures[f] = spec
+
+    for future in as_completed(futures):
+        spec = futures[future]
+        e = future.exception()
+        if e:
+            out = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+        else:
+            out = future.result()
 
         params_name = Parameters.format_spec(spec)
         fh = None
@@ -248,6 +283,9 @@ def show_taskgraph(options):
                 file=sys.stderr,
             )
         print(out + "\n", file=fh)
+
+    if len(parameters) > 1:
+        print("See '{}' for logs".format(logdir), file=sys.stderr)
 
 
 @command("build-image", help="Build a Docker image")
