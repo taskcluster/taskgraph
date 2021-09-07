@@ -5,15 +5,11 @@
 
 import os
 import subprocess
+from textwrap import dedent
 
 import pytest
 
-from taskgraph.util.vcs import (
-    get_repository_type,
-    calculate_head_rev,
-    get_commit_message,
-    get_repo_path,
-)
+from taskgraph.util.vcs import get_repository, HgRepository
 
 _FORCE_COMMIT_DATE_TIME = "2019-11-04T10:03:58+00:00"
 
@@ -77,106 +73,65 @@ def _init_repo(tmpdir, repo_type):
     return repo_dir
 
 
-def test_get_repository_type_hg(hg_repo):
-    assert get_repository_type(hg_repo) == "hg"
+@pytest.fixture(params=("git", "hg"))
+def repo(request, hg_repo, git_repo):
+    if request.param == "hg":
+        return get_repository(hg_repo)
+    return get_repository(git_repo)
 
 
-def test_get_repository_type_git(git_repo):
-    assert get_repository_type(git_repo) == "git"
+def test_get_repository_type(repo):
+    if isinstance(repo, HgRepository):
+        assert repo.tool == "hg"
+    else:
+        assert repo.tool == "git"
 
 
 def test_get_repository_type_failure(tmpdir):
     with pytest.raises(RuntimeError):
-        get_repository_type(tmpdir.strpath)
+        get_repository(tmpdir.strpath)
 
 
 @pytest.mark.parametrize(
-    "repo_type, commit_message",
+    "commit_message",
     (
-        (
-            "hg",
-            "commit message in… pure utf8",
-        ),
-        (
-            "hg",
-            "commit message in... ascii",
-        ),
+        "commit message in… pure utf8",
+        "commit message in... ascii",
     ),
 )
-def test_get_commit_message_hg(hg_repo, repo_type, commit_message):
-    _test_get_commit_message(
-        hg_repo, repo_type, commit_message, expected_result=commit_message
-    )
-
-
-@pytest.mark.parametrize(
-    "repo_type, commit_message, expected_result",
-    (
-        (
-            "git",
-            "commit message in… pure utf8",
-            "commit message in… pure utf8\n\n",
-        ),
-        (
-            "git",
-            "commit message in... ascii",
-            "commit message in... ascii\n\n",
-        ),
-    ),
-)
-def test_get_commit_message_git(git_repo, repo_type, commit_message, expected_result):
-    _test_get_commit_message(git_repo, repo_type, commit_message, expected_result)
-
-
-def _test_get_commit_message(repo_dir, repo_type, commit_message, expected_result):
-    some_file_path = os.path.join(repo_dir, "some_file")
+def test_get_commit_message(repo, commit_message):
+    some_file_path = os.path.join(repo.path, "some_file")
     with open(some_file_path, "w") as f:
         f.write("some data")
 
-    subprocess.check_output([repo_type, "add", some_file_path], cwd=repo_dir)
-    # hg sometimes errors out with "nothing changed" even though the commit succeeded
-    subprocess.call([repo_type, "commit", "-m", commit_message], cwd=repo_dir)
+    repo.run("add", some_file_path)
+    repo.run("commit", "-m", commit_message)
 
-    assert get_commit_message(repo_type, repo_dir) == expected_result
-
-
-def test_get_commit_message_unsupported_repo():
-    with pytest.raises(RuntimeError):
-        get_commit_message("svn", "/some/repo/dir")
+    assert repo.get_commit_message() == commit_message
 
 
-def test_calculate_head_rev_hg(hg_repo):
-    # Similarly to git (below), hg hashes can be forecast.
-    assert (
-        calculate_head_rev("hg", hg_repo) == "c6ef323128f7ba6fd47147743e882d9fc6d72a4e"
-    )
+def test_calculate_head_ref(repo):
+    if repo.tool == "hg":
+        assert repo.head_ref == "c6ef323128f7ba6fd47147743e882d9fc6d72a4e"
+    else:
+        assert repo.head_ref == "c34844580592fcf4575b8f1174285b853b566d85"
 
 
-def test_calculate_head_rev_git(git_repo):
-    # Git hashes are predictible if you set:
-    #  * the date/time of the commit (and it's timezone, here UTC)
-    #  * the hash of the parent commit (here, there's none)
-    #  * the hash of the files stored on disk (here, it's always the same file)
-    # https://gist.github.com/masak/2415865
-    assert (
-        calculate_head_rev("git", git_repo)
-        == "c34844580592fcf4575b8f1174285b853b566d85"
-    )
+def test_get_repo_path(repo):
+    if repo.tool == "hg":
+        with open(os.path.join(repo.path, ".hg/hgrc"), "w") as f:
+            f.write(
+                dedent(
+                    """
+                [paths]
+                default = https://some/repo
+                other = https://some.other/repo
+                """
+                )
+            )
+    else:
+        repo.run("remote", "add", "origin", "https://some/repo")
+        repo.run("remote", "add", "other", "https://some.other/repo")
 
-
-def test_get_repo_path_hg(hg_repo):
-    with open(os.path.join(hg_repo, ".hg/hgrc"), "w") as f:
-        f.write(
-            """
-[paths]
-default = https://some.hg/repo
-"""
-        )
-    assert get_repo_path("hg", hg_repo) == "https://some.hg/repo"
-
-
-def test_get_repo_path_git(git_repo):
-    subprocess.check_output(
-        ["git", "remote", "add", "origin", "https://some.git/repo"], cwd=git_repo
-    )
-    assert get_repo_path("git", git_repo) == "https://some.git/repo"
+    assert repo.get_url() == "https://some/repo"
+    assert repo.get_url("other") == "https://some.other/repo"

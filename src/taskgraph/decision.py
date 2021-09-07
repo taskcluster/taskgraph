@@ -17,7 +17,7 @@ from .generator import TaskGraphGenerator
 from .parameters import Parameters
 from .taskgraph import TaskGraph
 from taskgraph.util.python_path import find_object
-from taskgraph.util.vcs import get_commit_message
+from taskgraph.util.vcs import get_repository
 from .util.schema import validate_schema, Schema
 from taskgraph.util.yaml import load_yaml
 from voluptuous import Optional
@@ -152,7 +152,8 @@ def get_decision_parameters(graph_config, options):
         if n in options
     }
 
-    commit_message = get_commit_message(parameters["repository_type"], os.getcwd())
+    repo = get_repository(os.getcwd())
+    commit_message = repo.get_commit_message()
 
     # Define default filter list, as most configurations shouldn't need
     # custom filters.

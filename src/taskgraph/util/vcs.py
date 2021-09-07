@@ -5,11 +5,83 @@
 
 import os
 import subprocess
+from abc import ABC, abstractproperty, abstractmethod
+from shutil import which
 
 import requests
 from redo import retry
 
 PUSHLOG_TMPL = "{}/json-pushes?version=2&changeset={}&tipsonly=1&full=1"
+
+
+class Repository(ABC):
+    def __init__(self, path):
+        self.path = path
+        self.binary = which(self.tool)
+        if self.binary is None:
+            raise OSError(f"{self.tool} not found!")
+
+    def run(self, *args: str):
+        cmd = (self.binary,) + args
+        return subprocess.check_output(cmd, cwd=self.path, universal_newlines=True)
+
+    @abstractproperty
+    def tool(self) -> str:
+        """Version control system being used, either 'hg' or 'git'."""
+
+    @abstractproperty
+    def head_ref(self) -> str:
+        """Hash of HEAD revision."""
+
+    @abstractmethod
+    def get_url(self, remote=None):
+        """Get URL of the upstream repository."""
+
+    @abstractmethod
+    def get_commit_message(self, revision=None):
+        """Commit message of specified revision or current commit."""
+
+
+class HgRepository(Repository):
+    tool = "hg"
+
+    @property
+    def head_ref(self):
+        return self.run("log", "-r", ".", "-T", "{node}").strip()
+
+    def get_url(self, remote="default"):
+        return self.run("path", "-T", "{url}", remote).strip()
+
+    def get_commit_message(self, revision=None):
+        revision = revision or self.head_ref
+        return self.run("log", "-r", ".", "-T", "{desc}")
+
+
+class GitRepository(Repository):
+    tool = "git"
+
+    @property
+    def head_ref(self):
+        return self.run("rev-parse", "--verify", "HEAD").strip()
+
+    def get_url(self, remote="origin"):
+        return self.run("remote", "get-url", remote).strip()
+
+    def get_commit_message(self, revision=None):
+        revision = revision or self.head_ref
+        return self.run("log", "-n1", "--format=%B")
+
+
+def get_repository(path):
+    """Get a repository object for the repository at `path`.
+    If `path` is not a known VCS repository, raise an exception.
+    """
+    if os.path.isdir(os.path.join(path, ".hg")):
+        return HgRepository(path)
+    elif os.path.exists(os.path.join(path, ".git")):
+        return GitRepository(path)
+
+    raise RuntimeError("Current directory is neither a git or hg repository")
 
 
 def find_hg_revision_push_info(repository, revision):
@@ -41,79 +113,3 @@ def find_hg_revision_push_info(repository, revision):
         "pushid": pushid,
         "user": pushes[pushid]["user"],
     }
-
-
-def get_repository_type(root):
-    root = root or "."
-    if os.path.isdir(os.path.join(root, ".git")):
-        return "git"
-    elif os.path.isdir(os.path.join(root, ".hg")):
-        return "hg"
-    else:
-        raise RuntimeError("Current directory is neither a git or hg repository")
-
-
-# For these functions, we assume that run-task has correctly checked out the
-# revision indicated by GECKO_HEAD_REF, so all that remains is to see what the
-# current revision is.  Mercurial refers to that as `.`.
-def get_commit_message(repository_type, root):
-    if repository_type == "hg":
-        message = subprocess.check_output(
-            ["hg", "log", "-r", ".", "-T", "{desc}"], cwd=root
-        )
-    elif repository_type == "git":
-        message = subprocess.check_output(
-            ["git", "log", "-n1", "--format=%B"], cwd=root
-        )
-    else:
-        raise RuntimeError(
-            'Only the "git" and "hg" repository types are supported for using '
-            "get_commit_message()"
-        )
-
-    return message.decode("utf-8")
-
-
-def calculate_head_rev(repository_type, root):
-    # we assume that run-task has correctly checked out the revision indicated by
-    # VCS_HEAD_REF, so all that remains is to see what the current revision is.
-
-    if repository_type == "hg":
-        # Mercurial refers to the current revision as `.`.
-        return subprocess.check_output(
-            ["hg", "log", "-r", ".", "-T", "{node}"],
-            cwd=root,
-            universal_newlines=True,
-        )
-    elif repository_type == "git":
-        # Git refers to the current revision as HEAD
-        return subprocess.check_output(
-            ["git", "rev-parse", "--verify", "HEAD"],
-            cwd=root,
-            universal_newlines=True,
-        ).strip()
-    else:
-        raise RuntimeError(
-            'Only the "git" and "hg" repository types are supported for using '
-            "calculate_head_rev()"
-        )
-
-
-def get_repo_path(repository_type, root):
-    if repository_type == "hg":
-        return subprocess.check_output(
-            ["hg", "path", "-T", "{url}", "default"],
-            cwd=root,
-            universal_newlines=True,
-        )
-    elif repository_type == "git":
-        return subprocess.check_output(
-            ["git", "remote", "get-url", "origin"],
-            cwd=root,
-            universal_newlines=True,
-        ).strip()
-    else:
-        raise RuntimeError(
-            'Only the "git" and "hg" repository types are supported for using '
-            "calculate_head_rev()"
-        )

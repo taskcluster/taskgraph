@@ -15,7 +15,7 @@ from urllib.request import urlopen
 from taskgraph.util.memoize import memoize
 from taskgraph.util.readonlydict import ReadOnlyDict
 from taskgraph.util.schema import validate_schema
-from taskgraph.util.vcs import calculate_head_rev, get_repo_path, get_repository_type
+from taskgraph.util.vcs import get_repository
 from voluptuous import (
     ALLOW_EXTRA,
     Required,
@@ -29,18 +29,8 @@ class ParameterMismatch(Exception):
 
 
 @memoize
-def _get_repository_type():
-    return get_repository_type(None)
-
-
-@memoize
-def _get_head_ref():
-    return calculate_head_rev(_get_repository_type(), None)
-
-
-@memoize
-def _get_repo_path():
-    return get_repo_path(_get_repository_type(), None)
+def _repo():
+    return get_repository(os.getcwd())
 
 
 # Please keep this list sorted and in sync with taskcluster/docs/parameters.rst
@@ -134,23 +124,23 @@ class Parameters(ReadOnlyDict):
     @staticmethod
     def _fill_defaults(**kwargs):
         defaults = {
-            "base_repository": _get_repo_path(),
+            "base_repository": _repo().get_url(),
             "build_date": int(time.time()),
             "do_not_optimize": [],
             "existing_tasks": {},
             "filters": ["target_tasks_method"],
-            "head_ref": _get_head_ref(),
-            "head_repository": _get_repo_path(),
-            "head_rev": _get_head_ref(),
+            "head_ref": _repo().head_ref,
+            "head_repository": _repo().get_url(),
+            "head_rev": _repo().head_ref,
             "head_tag": "",
             "level": "3",
             "moz_build_date": datetime.now().strftime("%Y%m%d%H%M%S"),
             "optimize_target_tasks": True,
             "owner": "nobody@mozilla.com",
-            "project": _get_repo_path().rsplit("/", 1)[1],
+            "project": _repo().get_url().rsplit("/", 1)[1],
             "pushdate": int(time.time()),
             "pushlog_id": "0",
-            "repository_type": _get_repository_type(),
+            "repository_type": _repo().tool,
             "target_tasks_method": "default",
             "tasks_for": "",
         }
