@@ -2,7 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-
 import os
 import re
 import sys
@@ -12,6 +11,8 @@ import logging
 import json
 from collections import namedtuple
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from pathlib import Path
+from typing import Any, List
 
 import appdirs
 import yaml
@@ -185,12 +186,13 @@ def format_taskgraph(options, parameters, logfile=None):
     default=None,
     action="append",
     help="Parameters to use for the generation. Can be a path to file (.yml or "
-    ".json; see `taskcluster/docs/parameters.rst`), a url, of the form "
-    "`project=mozilla-central` to download latest parameters file for the "
-    "specified project from CI, or of the form `task-id=<decision task id>` to "
-    "download parameters from the specified decision task. Can be specified "
-    "multiple times, in which case multiple generations will happen from the "
-    "same invocation (one per parameters specified).",
+    ".json; see `taskcluster/docs/parameters.rst`), a directory (containing "
+    "parameters files), a url, of the form `project=mozilla-central` to download "
+    "latest parameters file for the specified project from CI, or of the form "
+    "`task-id=<decision task id>` to download parameters from the specified "
+    "decision task. Can be specified multiple times, in which case multiple "
+    "generations will happen from the same invocation (one per parameters "
+    "specified).",
 )
 @argument(
     "--no-optimize",
@@ -231,9 +233,22 @@ def show_taskgraph(options):
     if options.pop("verbose", False):
         logging.root.setLevel(logging.DEBUG)
 
-    parameters = options.pop("parameters")
+    parameters: List[Any[str, None]] = options.pop("parameters")
     if not parameters:
         parameters = [None]  # will use default values
+
+    for param in parameters[:]:
+        if param is None or not os.path.isdir(param):
+            continue
+
+        parameters.remove(param)
+        parameters.extend(
+            [
+                p.as_posix()
+                for p in Path(param).iterdir()
+                if p.suffix in (".yml", ".json")
+            ]
+        )
 
     logdir = None
     if len(parameters) > 1:
