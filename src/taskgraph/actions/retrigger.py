@@ -194,9 +194,7 @@ def retrigger_action(parameters, graph_config, input, task_group_id, task_id):
     ),
     order=300,
     context=[{}],
-    available=lambda params: False
-    if params.get("tasks_for") == "github-pull-request"
-    else True,
+    available=lambda params: params.get("tasks_for") != "github-pull-request",
     schema={"type": "object", "properties": {}},
 )
 def rerun_action(parameters, graph_config, input, task_group_id, task_id):
@@ -232,9 +230,7 @@ def rerun_action(parameters, graph_config, input, task_group_id, task_id):
     order=300,
     context=[{}],
     schema={"type": "object", "properties": {}},
-    available=lambda params: True
-    if params.get("tasks_for") == "github-pull-request"
-    else False,
+    available=lambda params: params.get("tasks_for") == "github-pull-request",
     scope_repo="base",
 )
 def rerun_pr_action(parameters, graph_config, input, task_group_id, task_id):
