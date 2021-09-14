@@ -133,7 +133,7 @@ def support_vcs_checkout(config, job, taskdesc, repo_configs, sparse=False):
         checkoutdir = "./checkouts"
         hgstore = f"{checkoutdir}/hg-shared"
 
-    vcsdir = checkoutdir + "/" + get_vcsdir_name(worker["os"], checkoutdir)
+    vcsdir = checkoutdir + "/" + get_vcsdir_name(worker["os"])
     cache_name = "checkouts"
 
     # Robust checkout does not clean up subrepositories, so ensure  that tasks
