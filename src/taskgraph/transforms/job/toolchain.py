@@ -15,6 +15,7 @@ from taskgraph.transforms.job import (
 )
 from taskgraph.transforms.job.common import (
     docker_worker_add_artifacts,
+    get_vcsdir_name,
 )
 from taskgraph.util.hash import hash_paths
 import taskgraph
@@ -94,6 +95,8 @@ def docker_worker_toolchain(config, job, taskdesc):
     worker = taskdesc["worker"] = job["worker"]
     worker["chain-of-trust"] = True
 
+    srcdir = get_vcsdir_name(worker["os"])
+
     # If the task doesn't have a docker-image, set a default
     worker.setdefault("docker-image", {"in-tree": "toolchain-build"})
 
@@ -127,7 +130,7 @@ def docker_worker_toolchain(config, job, taskdesc):
     run["using"] = "run-task"
     run["cwd"] = "{checkout}/.."
     run["command"] = [
-        "src/taskcluster/scripts/toolchain/{}".format(run.pop("script"))
+        "{}/taskcluster/scripts/toolchain/{}".format(srcdir, run.pop("script"))
     ] + run.pop("arguments", [])
 
     configure_taskdesc_for_run(config, job, taskdesc, worker["implementation"])

@@ -14,6 +14,13 @@ import json
 from taskgraph.util.taskcluster import get_artifact_prefix
 
 
+def get_vcsdir_name(os):
+    if os == "windows":
+        return "src"
+    else:
+        return "vcs"
+
+
 def add_cache(job, taskdesc, name, mount_point, skip_untrusted=False):
     """Adds a cache based on the worker's implementation.
 
@@ -118,17 +125,15 @@ def support_vcs_checkout(config, job, taskdesc, repo_configs, sparse=False):
 
     if is_win:
         checkoutdir = "./build"
-        vcsdir = f"{checkoutdir}/src"
         hgstore = "y:/hg-shared"
     elif is_docker:
         checkoutdir = "{workdir}/checkouts".format(**job["run"])
-        vcsdir = f"{checkoutdir}/vcs"
         hgstore = f"{checkoutdir}/hg-store"
     else:
         checkoutdir = "./checkouts"
-        vcsdir = f"{checkoutdir}/vcs"
         hgstore = f"{checkoutdir}/hg-shared"
 
+    vcsdir = checkoutdir + "/" + get_vcsdir_name(worker["os"], checkoutdir)
     cache_name = "checkouts"
 
     # Robust checkout does not clean up subrepositories, so ensure  that tasks
