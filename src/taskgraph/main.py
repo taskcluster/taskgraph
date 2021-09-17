@@ -127,49 +127,71 @@ def format_taskgraph(options, parameters, logfile=None):
     return format_method(tg)
 
 
+def dump_output(out, path=None, params_spec=None):
+    from taskgraph.parameters import Parameters
+
+    params_name = Parameters.format_spec(params_spec)
+    fh = None
+    if path:
+        # Substitute params name into file path if necessary
+        if params_spec and "{params}" not in path:
+            name, ext = os.path.splitext(path)
+            name += "_{params}"
+            path = name + ext
+
+        path = path.format(params=params_name)
+        fh = open(path, "w")
+    else:
+        print(
+            "Dumping result with parameters from {}:".format(params_name),
+            file=sys.stderr,
+        )
+    print(out + "\n", file=fh)
+
+
 def generate_taskgraph(options, parameters, logdir):
     from taskgraph.parameters import Parameters
 
+    def logfile(spec):
+        """Determine logfile given a parameters specification."""
+        if logdir is None:
+            return None
+        return os.path.join(
+            logdir,
+            "{}_{}.log".format(options["graph_attr"], Parameters.format_spec(spec)),
+        )
+
+    # Don't bother using futures if there's only one parameter. This can make
+    # tracebacks a little more readable and avoids additional process overhead.
+    if len(parameters) == 1:
+        spec = parameters[0]
+        out = format_taskgraph(options, spec, logfile(spec))
+        dump_output(out, options["output_file"])
+        return
+
     futures = {}
-    logfile = None
     with ProcessPoolExecutor() as executor:
         for spec in parameters:
-            if logdir:
-                logfile = os.path.join(
-                    logdir,
-                    "{}_{}.log".format(
-                        options["graph_attr"], Parameters.format_spec(spec)
-                    ),
-                )
-            f = executor.submit(format_taskgraph, options, spec, logfile)
+            f = executor.submit(format_taskgraph, options, spec, logfile(spec))
             futures[f] = spec
 
     for future in as_completed(futures):
+        output_file = options["output_file"]
         spec = futures[future]
         e = future.exception()
         if e:
             out = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            if options["diff"]:
+                # Dump to console so we don't accidentally diff the tracebacks.
+                output_file = None
         else:
             out = future.result()
 
-        params_name = Parameters.format_spec(spec)
-        fh = None
-        path = options["output_file"]
-        if path:
-            # Substitute params name into file path if necessary
-            if len(parameters) > 1 and "{params}" not in path:
-                name, ext = os.path.splitext(path)
-                name += "_{params}"
-                path = name + ext
-
-            path = path.format(params=params_name)
-            fh = open(path, "w")
-        else:
-            print(
-                "Dumping result with parameters from {}:".format(params_name),
-                file=sys.stderr,
-            )
-        print(out + "\n", file=fh)
+        dump_output(
+            out,
+            path=output_file,
+            params_spec=spec if len(parameters) > 1 else None,
+        )
 
 
 @command(
@@ -294,11 +316,16 @@ def show_taskgraph(options):
     repo = None
     cur_ref = None
     diffdir = None
+    output_file = options["output_file"]
+
     if options["diff"]:
         repo = get_repository(os.getcwd())
 
         if not repo.working_directory_clean():
-            print("abort: can't diff taskgraph with dirty working directory")
+            print(
+                "abort: can't diff taskgraph with dirty working directory",
+                file=sys.stderr,
+            )
             return 1
 
         # We want to return the working directory to the current state
@@ -337,9 +364,15 @@ def show_taskgraph(options):
     if len(parameters) > 1:
         # Log to separate files for each process instead of stderr to
         # avoid interleaving.
-        logdir = appdirs.user_log_dir("taskgraph")
+        basename = os.path.basename(os.getcwd())
+        logdir = os.path.join(appdirs.user_log_dir("taskgraph"), basename)
         if not os.path.isdir(logdir):
             os.makedirs(logdir)
+    else:
+        # Only setup logging if we have a single parameter spec. Otherwise
+        # logging will go to files. This is also used as a hook for Gecko
+        # to setup its `mach` based logging.
+        setup_logging()
 
     generate_taskgraph(options, parameters, logdir)
 
@@ -390,25 +423,37 @@ def show_taskgraph(options):
                 cur_path += f"_{params_name}"
 
             try:
-                diff_output = subprocess.run(
+                proc = subprocess.run(
                     diffcmd + [base_path, cur_path],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     universal_newlines=True,
                     check=True,
-                ).stdout
+                )
+                diff_output = proc.stdout
+                returncode = 0
             except subprocess.CalledProcessError as e:
                 # returncode 1 simply means diffs were found
                 if e.returncode != 1:
                     print(e.stderr, file=sys.stderr)
                     raise
                 diff_output = e.output
+                returncode = e.returncode
 
-            if len(parameters) > 1:
-                assert params_name is not None
-                print(f"Diff from {params_name}:")
+            dump_output(
+                diff_output,
+                # Don't bother saving file if no diffs were found. Log to
+                # console in this case instead.
+                path=None if returncode == 0 else output_file,
+                params_spec=spec if len(parameters) > 1 else None,
+            )
 
-            print(diff_output)
+        if options["format"] != "json":
+            print(
+                "If you were expecting differences in task bodies "
+                'you should pass "-J"\n',
+                file=sys.stderr,
+            )
 
     if len(parameters) > 1:
         print("See '{}' for logs".format(logdir), file=sys.stderr)
@@ -653,10 +698,14 @@ def create_parser():
     return parser
 
 
-def main():
+def setup_logging():
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO
     )
+
+
+def main():
+    setup_logging()
     parser = create_parser()
     args = parser.parse_args()
     try:
