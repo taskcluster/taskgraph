@@ -3,10 +3,12 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from taskgraph import (
+    generator,
     graph,
 )
+from taskgraph.generator import load_tasks_for_kind
 
-from .conftest import FakeKind
+from .conftest import FakeKind, WithFakeKind, fake_load_graph_config
 
 
 def test_kind_ordering(maketgg):
@@ -107,3 +109,18 @@ def test_optimized_task_graph(maketgg):
             (tid["_fake-t-2"], tid["_fake-t-1"], "prev"),
         },
     )
+
+
+def test_load_tasks_for_kind(monkeypatch):
+    """
+    `load_tasks_for_kinds` will load the tasks for the provided kind
+    """
+    monkeypatch.setattr(generator, "TaskGraphGenerator", WithFakeKind)
+    monkeypatch.setattr(generator, "load_graph_config", fake_load_graph_config)
+
+    tasks = load_tasks_for_kind(
+        {"_kinds": [("_example-kind", []), ("docker-image", [])]},
+        "_example-kind",
+        "/root",
+    )
+    assert "t-1" in tasks and tasks["t-1"].label == "_example-kind-t-1"
