@@ -25,21 +25,6 @@ def find_decision_task(parameters, graph_config):
             )
         )
     elif parameters["repository_type"] == "git":
-        if parameters["tasks_for"] == "github-pull-request":
-            # Repositories are not guaranteed to publish to this index. We
-            # should use it when it's available, but there's no harm in falling
-            # back to the non `-pr` version below if this one is not available.
-            try:
-                return find_task_id(
-                    "{}.v2.{}-pr.revision.{}.taskgraph.decision".format(
-                        graph_config["trust-domain"],
-                        parameters["project"],
-                        parameters["head_rev"],
-                    )
-                )
-            except KeyError:
-                pass
-
         return find_task_id(
             "{}.v2.{}.revision.{}.taskgraph.decision".format(
                 graph_config["trust-domain"],

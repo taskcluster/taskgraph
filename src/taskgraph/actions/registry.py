@@ -19,9 +19,7 @@ from taskgraph.util.memoize import memoize
 actions = []
 callbacks = {}
 
-Action = namedtuple(
-    "Action", ["order", "cb_name", "generic", "action_builder", "scope_repo"]
-)
+Action = namedtuple("Action", ["order", "cb_name", "generic", "action_builder"])
 
 
 def is_json(data):
@@ -60,7 +58,6 @@ def register_callback_action(
     schema=None,
     generic=True,
     cb_name=None,
-    scope_repo="head",
 ):
     """
     Register an action callback that can be triggered from supporting
@@ -100,8 +97,8 @@ def register_callback_action(
         Order of the action in menus, this is relative to the ``order`` of
         other actions declared.
     context : list of dict
-        List of tag-sets specifying which tasks the action can take as input.
-        If no tag-sets are specified as input the action is related to the
+        List of tag-sets specifying which tasks the action is can take as input.
+        If no tag-sets is specified as input the action is related to the
         entire task-group, and won't be triggered with a given task.
 
         Otherwise, if ``context = [{'k': 'b', 'p': 'l'}, {'k': 't'}]`` will only
@@ -125,9 +122,6 @@ def register_callback_action(
         actions, and thus appears in ci-configuration and various role and hook
         names.  Unlike `name`, which can appear multiple times, cb_name must be
         unique among all registered callbacks.
-    scope_repo : str
-        The repository ("base" or "head") to use when verifying scopes for this
-        action.
 
     Returns
     -------
@@ -138,7 +132,6 @@ def register_callback_action(
 
     assert isinstance(title, str), "title must be a string"
     assert isinstance(description, str), "description must be a string"
-    assert scope_repo in ("base", "head"), "scope_repo must be 'base' or 'head'"
     title = title.strip()
     description = description.strip()
 
@@ -175,8 +168,9 @@ def register_callback_action(
             actionPerm = "generic" if generic else cb_name
 
             # gather up the common decision-task-supplied data for this action
+            repo_param = "head_repository"
             repository = {
-                "url": parameters["head_repository"],
+                "url": parameters[repo_param],
                 "project": parameters["project"],
                 "level": parameters["level"],
             }
@@ -237,9 +231,6 @@ def register_callback_action(
                             "action": action,
                             "repository": repository,
                             "push": push,
-                            "scope_repository_url": parameters.get(
-                                f"{scope_repo}_repository"
-                            ),
                         },
                         # and pass everything else through from our own context
                         "user": {
@@ -258,7 +249,7 @@ def register_callback_action(
 
             return rv
 
-        actions.append(Action(order, cb_name, generic, action_builder, scope_repo))
+        actions.append(Action(order, cb_name, generic, action_builder))
 
         mem["registered"] = True
         callbacks[cb_name] = cb
@@ -302,25 +293,22 @@ def sanity_check_task_scope(callback, parameters, graph_config):
     running non-generic actions using generic hooks. While scopes should
     prevent serious damage from such abuse, it's never a valid thing to do.
     """
-    scope_repo = None
     for action in _get_actions(graph_config):
         if action.cb_name == callback:
-            scope_repo = action.scope_repo
             break
     else:
         raise Exception(f"No action with cb_name {callback}")
 
-    # should never be False based on verification when callbacks are registered
-    assert scope_repo in ("base", "head")
     actionPerm = "generic" if action.generic else action.cb_name
 
-    repository = parameters[f"{scope_repo}_repository"]
-    if not repository.startswith(("https://hg.mozilla.org", "https://github.com")):
+    repo_param = "head_repository"
+    head_repository = parameters[repo_param]
+    if not head_repository.startswith(("https://hg.mozilla.org", "https://github.com")):
         raise Exception(
             "{} is not either https://hg.mozilla.org or https://github.com !"
         )
 
-    expected_scope = f"assume:repo:{repository[8:]}:action:{actionPerm}"
+    expected_scope = f"assume:repo:{head_repository[8:]}:action:{actionPerm}"
 
     # the scope should appear literally; no need for a satisfaction check. The use of
     # get_current_scopes here calls the auth service through the Taskcluster Proxy, giving
