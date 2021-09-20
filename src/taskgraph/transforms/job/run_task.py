@@ -40,6 +40,10 @@ run_task_schema = Schema(
         # checkout arguments.  If a list, it will be passed directly; otherwise
         # it will be included in a single argument to `bash -cx`.
         Required("command"): Any([taskref_or_string], taskref_or_string),
+        # Context to substitute into the command using format string
+        # substitution (e.g {value}). This is useful if certain aspects of the
+        # command need to be generated in transforms.
+        Optional("command-context"): dict,
         # Base work directory used to set up the task.
         Required("workdir"): str,
         # Whether to run as root. (defaults to False)
@@ -153,6 +157,10 @@ def docker_worker_run_task(config, job, taskdesc):
 
     run_command = run["command"]
 
+    command_context = run.get("command-context")
+    if command_context:
+        run_command = run_command.format(**command_context)
+
     # dict is for the case of `{'task-reference': str}`.
     if isinstance(run_command, str) or isinstance(run_command, dict):
         run_command = ["bash", "-cx", run_command]
@@ -215,6 +223,11 @@ def generic_worker_run_task(config, job, taskdesc):
         if is_win:
             run_command = f'"{run_command}"'
         run_command = ["bash", "-cx", run_command]
+
+    command_context = run.get("command-context")
+    if command_context:
+        for i in range(len(run_command)):
+            run_command[i] = run_command[i].format(**command_context)
 
     if run["run-as-root"]:
         command.extend(("--user", "root", "--group", "root"))
