@@ -63,8 +63,9 @@ def _build_env_with_git_date_env_vars(date_time_string):
 
 
 def _init_repo(tmpdir, repo_type):
-    repo_dir = tmpdir.strpath
-    first_file_path = tmpdir.join("first_file")
+    repo_dir = os.path.join(tmpdir.strpath, repo_type)
+    os.mkdir(repo_dir)
+    first_file_path = tmpdir.join(repo_type, "first_file")
     first_file_path.write("first piece of data")
 
     subprocess.check_output([repo_type, "init"], cwd=repo_dir)
