@@ -157,7 +157,7 @@ def test_update(repo):
 
 def test_branch(repo):
     if repo.tool == "git":
-        assert repo.branch == "main"
+        assert repo.branch != "test"
         repo.run("checkout", "-b", "test")
     else:
         assert repo.branch is None
