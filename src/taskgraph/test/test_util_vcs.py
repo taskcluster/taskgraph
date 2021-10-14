@@ -108,7 +108,8 @@ def test_get_commit_message(repo, commit_message):
     repo.run("add", some_file_path)
     repo.run("commit", "-m", commit_message)
 
-    assert repo.get_commit_message() == commit_message
+    # strip because git adds newlines
+    assert repo.get_commit_message().strip() == commit_message
 
 
 def test_calculate_head_ref(repo):
