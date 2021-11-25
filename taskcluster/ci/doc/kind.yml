@@ -28,6 +28,8 @@ jobs:
         description: "Trigger doc generation on readthedocs"
         treeherder:
             symbol: doc-hook
+        scopes:
+            - secrets:get:project/releng/taskgraph/ci
         run-on-projects: ["taskgraph"]
         run:
             command: >-
