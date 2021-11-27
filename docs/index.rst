@@ -11,6 +11,7 @@ Welcome to taskgraph's documentation!
 
    intro/index
    usage/using_taskgraph
+   source/modules
 
 Indices and tables
 ==================
