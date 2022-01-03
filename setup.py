@@ -5,18 +5,18 @@ with open("requirements/base.in", "r") as fp:
 
 setup(
     name="taskcluster-taskgraph",
-    version="1.0.1",
+    version="1.1.0",
     description="Build taskcluster taskgraphs",
     url="https://hg.mozilla.org/ci/taskgraph",
     packages=find_packages("src"),
     package_dir={"": "src"},
     install_requires=requirements,
-    classifiers=(
+    classifiers=[
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
-    ),
+    ],
     entry_points={"console_scripts": ["taskgraph = taskgraph.main:main"]},
     package_data={
         "taskgraph": [
