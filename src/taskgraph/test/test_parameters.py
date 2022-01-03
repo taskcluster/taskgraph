@@ -7,10 +7,17 @@ import datetime
 import unittest
 
 import pytest
+from voluptuous import (
+    Optional,
+    Required,
+    Schema,
+)
 
+from taskgraph import parameters
 from taskgraph.parameters import (
     Parameters,
     ParameterMismatch,
+    extend_parameters_schema,
     load_parameters_file,
 )
 
@@ -180,3 +187,41 @@ def test_parameters_id():
 )
 def test_parameters_format_spec(spec, expected):
     assert Parameters.format_spec(spec) == expected
+
+
+def test_extend_parameters_schema(monkeypatch):
+    monkeypatch.setattr(
+        parameters,
+        "base_schema",
+        Schema(
+            {
+                Required("foo"): str,
+            }
+        ),
+    )
+
+    with pytest.raises(ParameterMismatch):
+        Parameters(strict=False).check()
+
+    with pytest.raises(ParameterMismatch):
+        Parameters(foo="1", bar=True).check()
+
+    extend_parameters_schema(
+        {
+            Optional("bar"): bool,
+        },
+        defaults_fn=lambda: {"foo": "1", "bar": False},
+    )
+
+    params = Parameters(foo="1", bar=True)
+    params.check()
+    assert params["bar"] is True
+
+    params = Parameters(foo="1")
+    params.check()
+    assert "bar" not in params
+
+    params = Parameters(strict=False)
+    params.check()
+    assert params["foo"] == "1"
+    assert params["bar"] is False
