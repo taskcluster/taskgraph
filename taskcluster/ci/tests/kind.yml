@@ -52,7 +52,7 @@ jobs:
             symbol: black
         run:
             command: >-
-                pip install --user black &&
+                pip install --user -r requirements/test.txt &&
                 black --check .
 
     yamllint:
