@@ -49,7 +49,10 @@ class Graph:
         transitive_closure([b], reverse=True).nodes == set([b, c, d])
         """
         assert isinstance(nodes, set)
-        assert nodes <= self.nodes
+        if not (nodes <= self.nodes):
+            raise Exception(
+                f"Unknown nodes in transitive closure: {nodes - self.nodes}"
+            )
 
         # generate a new graph by expanding along edges until reaching a fixed
         # point
