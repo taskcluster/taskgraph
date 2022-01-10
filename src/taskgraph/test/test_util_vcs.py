@@ -9,7 +9,7 @@ from textwrap import dedent
 
 import pytest
 
-from taskgraph.util.vcs import get_repository, HgRepository
+from taskgraph.util.vcs import get_repository, HgRepository, Repository
 
 _FORCE_COMMIT_DATE_TIME = "2019-11-04T10:03:58+00:00"
 
@@ -79,6 +79,22 @@ def repo(request, hg_repo, git_repo):
     if request.param == "hg":
         return get_repository(hg_repo)
     return get_repository(git_repo)
+
+
+def test_get_repository(repo):
+    r = get_repository(repo.path)
+    assert isinstance(r, Repository)
+
+    new_dir = os.path.join(repo.path, "new_dir")
+    oldcwd = os.getcwd()
+    try:
+        os.mkdir(new_dir)
+        os.chdir(new_dir)
+        r = get_repository(new_dir)
+        assert isinstance(r, Repository)
+    finally:
+        os.chdir(oldcwd)
+        os.rmdir(new_dir)
 
 
 def test_get_repository_type(repo):
