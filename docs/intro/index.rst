@@ -1,11 +1,11 @@
 .. _intro-to-taskgraph:
 
-Intro to Taskgraph
-==================
+Intro to Taskgraph and TaskCluster
+==================================
 
 Overview
 --------
-Taskgraph is a library that generates graphs of tasks in response to all types of events - such as opening a pull request or creating a release - and submits the graph to Taskcluster. 
+Taskgraph is a library that generates graphs of tasks in response to all types of events - such as opening a pull request or creating a release - and submits the graph to Taskcluster, Mozilla's in-house CI. 
 The graph is built by linking different kinds of tasks together, pruning out tasks that are not required, and then optimizing by replacing subgraphs with links to already-completed tasks.
 
 How Taskgraph relates to Taskcluster
@@ -18,6 +18,12 @@ should wait until a build task has been completed before running or that android
 
 
 .. seealso:: `Taskcluster documentation <https://docs.taskcluster.net/docs/tutorial>`_
+
+Why Taskcluster
+------------------
+There are tens of thousands of tasks that are needed to build, test and release Firefox and most off the shelf solutions aren't designed with this kind of scale in mind. 
+In addition to scaling efficiently, Taskcluster is able to handle complex task scheduling, support any external providers (e.g Bitrise) and provides sophisticated caching and optimization techniques. 
+Security features like `Chain of Trust <https://scriptworker.readthedocs.io/en/latest/chain_of_trust.html>`_ and a fine-grained permissions system (called "scopes") allows Mozilla to maintain full control of signing keys and certificates.
 
 
 Glossary of Terms

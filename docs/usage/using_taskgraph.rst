@@ -1,3 +1,5 @@
+.. _using-taskgraph:
+
 Using Taskgraph 
 ===============
 
@@ -63,7 +65,7 @@ pull-requests, release actions, cron (needed for nightly tasks) and by level.
 Adding the Config file and Kinds
 --------------------------------
 
-It's highly recommended to have read through the :ref:`intro to taskgraph` section before proceeding.
+It's highly recommended to have read through the :ref:`intro-to-taskgraph` section before proceeding.
 
 1. Create a taskcluster directory, with additional directories for `ci`, `docker`, `your_project_name_taskgraph`, and `scripts`. 
   This is where the kinds and config file will live, along with docker images, scripts and custom taskgraph code.
