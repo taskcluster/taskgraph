@@ -1,5 +1,6 @@
 -r base.in
 black
+dataclasses; python_version < "3.7"
 flake8
 mock
 pytest
