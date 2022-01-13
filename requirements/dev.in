@@ -1,4 +1,3 @@
 -r test.in
 pip-compile-multi
-sphinx
 sphinx-autobuild
