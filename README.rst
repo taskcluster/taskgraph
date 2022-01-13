@@ -1,5 +1,5 @@
-Getting Started
-===============
+Taskgraph
+=========
 
 Taskgraph is a Python library to generate graphs of tasks for the `Taskcluster CI <https://taskcluster.net/>`_ service. It is
 the recommended approach for configuring your tasks once your project outgrows a single `.taskcluster.yml` file.

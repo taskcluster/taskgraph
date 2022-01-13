@@ -9,7 +9,7 @@ Welcome to taskgraph's documentation!
 .. toctree::
    :maxdepth: 2
 
-   getting_started/index
+   Getting Started <getting_started>
    intro/index
    usage/using_taskgraph
    usage/debugging_and_testing
