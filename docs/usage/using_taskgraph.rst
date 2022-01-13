@@ -68,11 +68,11 @@ Adding the Config file and Kinds
 It's highly recommended to have read through the :ref:`intro-to-taskgraph` section before proceeding.
 
 1. Create a taskcluster directory, with additional directories for `ci`, `docker`, `your_project_name_taskgraph`, and `scripts`. 
-  This is where the kinds and config file will live, along with docker images, scripts and custom taskgraph code.
+   This is where the kinds and config file will live, along with docker images, scripts and custom taskgraph code.
 
 2. In the `ci` directory, create a `config.yml` file (this is only yaml, no json-e). The config file is used to define group names for `Treeherder <https://wiki.mozilla.org/EngineeringProductivity/Projects/Treeherder>`_ (which will be used in various kind files). 
-  Its also used to register your custom taskgraph directory, and define worker aliases for resources and scriptworkers. Looking at `Focus for androids <https://github.com/mozilla-mobile/focus-android/blob/main/taskcluster/ci/config.yml>`_ 
-  as an example, it has a few mobile-specific things - such as a mobile trust domain and b-android worker - but it is largely boilerplate that can be used as a guide for other projects.
+   Its also used to register your custom taskgraph directory, and define worker aliases for resources and scriptworkers. Looking at `Focus for androids <https://github.com/mozilla-mobile/focus-android/blob/main/taskcluster/ci/config.yml>`_ 
+   as an example, it has a few mobile-specific things - such as a mobile trust domain and b-android worker - but it is largely boilerplate that can be used as a guide for other projects.
 
 3. A :term:`kind` is a yaml file that livez in a directory that describes the `kinds` of tasks it will contain. For example, a `build` directory will have a `kind.yml` file that can include multiple builds. Depending on how you define the tasks, they'll run only when specific
    actions are performed. If you have a debug build in the `build` kind, that task will be called `build-debug` when its created and run.
