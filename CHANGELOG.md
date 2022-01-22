@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.1.2] - 2022-01-22
+
+### Fixed
+
+- An import error with Python 3.10
+
 ## [1.1.1] - 2022-01-10
 
 ### Fixed
