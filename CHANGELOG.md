@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.1.3] - 2022-01-24
+
+### Fixed
+
+- Used repository root as default in `get_repository` rather than cwd
+
 ## [1.1.2] - 2022-01-22
 
 ### Fixed
