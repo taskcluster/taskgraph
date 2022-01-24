@@ -210,7 +210,7 @@ def test_extend_parameters_schema(monkeypatch):
         {
             Optional("bar"): bool,
         },
-        defaults_fn=lambda: {"foo": "1", "bar": False},
+        defaults_fn=lambda root: {"foo": "1", "bar": False},
     )
 
     params = Parameters(foo="1", bar=True)
