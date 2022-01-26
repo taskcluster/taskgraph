@@ -5,6 +5,7 @@
 ### Fixed
 
 - Used repository root as default in `get_repository` rather than cwd
+- Retry vcs commands in run-task if they failed
 
 ## [1.1.2] - 2022-01-22
 
