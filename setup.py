@@ -5,7 +5,7 @@ with open("requirements/base.in", "r") as fp:
 
 setup(
     name="taskcluster-taskgraph",
-    version="1.1.3",
+    version="1.1.4",
     description="Build taskcluster taskgraphs",
     url="https://hg.mozilla.org/ci/taskgraph",
     packages=find_packages("src"),

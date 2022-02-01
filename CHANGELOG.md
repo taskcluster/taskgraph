@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.1.4] - 2022-02-01
+
+### Fixed
+
+- Fix exception in default parameters when no git remote named "origin"
+
 ## [1.1.3] - 2022-01-24
 
 ### Fixed
