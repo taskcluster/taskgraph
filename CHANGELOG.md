@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.1.5] - 2022-02-02
+
+### Fixed
+
+- Set HGPLAIN environment variable for Mercurial commands in util/vcs.py
+
 ## [1.1.4] - 2022-02-01
 
 ### Fixed
