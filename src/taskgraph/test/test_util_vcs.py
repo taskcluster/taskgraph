@@ -109,6 +109,19 @@ def test_get_repository_type_failure(tmpdir):
         get_repository(tmpdir.strpath)
 
 
+def test_hgplain(monkeypatch, hg_repo):
+    repo = get_repository(hg_repo)
+
+    def fake_check_output(*args, **kwargs):
+        return args, kwargs
+
+    monkeypatch.setattr(subprocess, "check_output", fake_check_output)
+
+    _, kwargs = repo.run("log")
+    assert "env" in kwargs
+    assert kwargs["env"]["HGPLAIN"] == "1"
+
+
 @pytest.mark.parametrize(
     "commit_message",
     (
