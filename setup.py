@@ -12,10 +12,15 @@ setup(
     package_dir={"": "src"},
     install_requires=requirements,
     classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "Environment :: Console",
+        "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Topic :: Software Development",
     ],
     entry_points={"console_scripts": ["taskgraph = taskgraph.main:main"]},
     package_data={
