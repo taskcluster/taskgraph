@@ -135,7 +135,10 @@ def test_get_commit_message(repo, commit_message):
         f.write("some data")
 
     repo.run("add", some_file_path)
-    repo.run("commit", "-m", commit_message)
+    if repo.tool == "hg":
+        repo.run("commit", "-l-", input=commit_message)
+    else:
+        repo.run("commit", "-F-", input=commit_message)
 
     # strip because git adds newlines
     assert repo.get_commit_message().strip() == commit_message

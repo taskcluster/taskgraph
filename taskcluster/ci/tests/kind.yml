@@ -17,6 +17,11 @@ job-defaults:
     worker:
         docker-image: {in-tree: python3.7}
         max-run-time: 3600
+        env:
+            LC_ALL: "C"
+            PYTHONUTF8: "0"
+            PYTHONCOERCECLOCALE: "0"
+            HGENCODING: "utf-8"
     treeherder:
         kind: test
         platform: tests/opt
