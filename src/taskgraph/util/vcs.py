@@ -28,7 +28,7 @@ class Repository(ABC):
     def run(self, *args: str):
         cmd = (self.binary,) + args
         return subprocess.check_output(
-            cmd, cwd=self.path, env=self._env, universal_newlines=True
+            cmd, cwd=self.path, env=self._env, encoding="utf-8"
         )
 
     @abstractproperty
