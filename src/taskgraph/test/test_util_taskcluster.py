@@ -45,6 +45,11 @@ def test_get_root_url(monkeypatch):
     tc.get_root_url.clear()
     assert tc.get_root_url(False) == custom_url
 
+    # trailing slash is normalized
+    monkeypatch.setenv("TASKCLUSTER_ROOT_URL", custom_url + "/")
+    tc.get_root_url.clear()
+    assert tc.get_root_url(False) == custom_url
+
     with pytest.raises(RuntimeError):
         tc.get_root_url(True)
 
