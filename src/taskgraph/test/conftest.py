@@ -1,4 +1,5 @@
 import pytest
+from responses import RequestsMock
 
 from taskgraph import (
     generator,
@@ -9,6 +10,12 @@ from taskgraph.config import GraphConfig
 from taskgraph.generator import TaskGraphGenerator, Kind
 from taskgraph.optimize import OptimizationStrategy
 from taskgraph.util.templates import merge
+
+
+@pytest.fixture
+def responses():
+    with RequestsMock() as rsps:
+        yield rsps
 
 
 def fake_loader(kind, path, config, parameters, loaded_tasks):

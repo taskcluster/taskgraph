@@ -26,9 +26,6 @@ PRODUCTION_TASKCLUSTER_ROOT_URL = "https://taskcluster.net"
 # the maximum number of parallel Taskcluster API calls to make
 CONCURRENCY = 50
 
-# the maximum number of parallel Taskcluster API calls to make
-CONCURRENCY = 50
-
 
 @memoize
 def get_root_url(use_proxy):
