@@ -80,7 +80,10 @@ def test_do_request(responses):
     assert r.text == "method:get"
 
     responses.add(responses.POST, "https://example.org", body="method:post")
-    r = tc._do_request("https://example.org", force_get=False, stream=False)
+    r = tc._do_request("https://example.org", method="post")
+    assert r.text == "method:post"
+
+    r = tc._do_request("https://example.org", data={"foo": "bar"})
     assert r.text == "method:post"
 
     responses.replace(responses.GET, "https://example.org", status=404)
