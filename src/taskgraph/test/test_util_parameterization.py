@@ -114,7 +114,7 @@ class TestTaskRefs(unittest.TestCase):
 
     def test_invalid(self):
         "resolve_task_references raises a KeyError on reference to an invalid task"
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError,
             "task 'subject' has no dependency named 'no-such'",
             lambda: resolve_task_references(
@@ -182,7 +182,7 @@ class TestArtifactRefs(unittest.TestCase):
 
     def test_self(self):
         "resolve_task_references raises KeyError on artifact references to `self`"
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError,
             "task 'subject' can't reference artifacts of self",
             lambda: resolve_task_references(
@@ -206,7 +206,7 @@ class TestArtifactRefs(unittest.TestCase):
 
     def test_invalid(self):
         "resolve_task_references raises a KeyError on reference to an invalid task"
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError,
             "task 'subject' has no dependency named 'no-such'",
             lambda: resolve_task_references(

@@ -162,7 +162,7 @@ class TestDocker(unittest.TestCase):
             with open(os.path.join(d, "Dockerfile"), "wb") as fh:
                 fh.write(b"# %include /etc/shadow\n")
 
-            with self.assertRaisesRegexp(Exception, "cannot be absolute"):
+            with self.assertRaisesRegex(Exception, "cannot be absolute"):
                 docker.create_context_tar(tmp, d, os.path.join(tmp, "tar"), "test")
         finally:
             shutil.rmtree(tmp)
@@ -176,7 +176,7 @@ class TestDocker(unittest.TestCase):
             with open(os.path.join(d, "Dockerfile"), "wb") as fh:
                 fh.write(b"# %include foo/../../../etc/shadow\n")
 
-            with self.assertRaisesRegexp(Exception, "path outside topsrcdir"):
+            with self.assertRaisesRegex(Exception, "path outside topsrcdir"):
                 docker.create_context_tar(tmp, d, os.path.join(tmp, "tar"), "test")
         finally:
             shutil.rmtree(tmp)
@@ -190,7 +190,7 @@ class TestDocker(unittest.TestCase):
             with open(os.path.join(d, "Dockerfile"), "wb") as fh:
                 fh.write(b"# %include does/not/exist\n")
 
-            with self.assertRaisesRegexp(Exception, "path does not exist"):
+            with self.assertRaisesRegex(Exception, "path does not exist"):
                 docker.create_context_tar(tmp, d, os.path.join(tmp, "tar"), "test")
         finally:
             shutil.rmtree(tmp)
