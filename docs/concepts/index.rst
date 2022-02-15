@@ -1,6 +1,8 @@
 Concepts
 ========
 
+.. _decision task:
+
 .. rubric:: Decision Task
 
 The decision task for pushes is defined in the .taskcluster.yml file. That task

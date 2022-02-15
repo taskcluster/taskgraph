@@ -26,9 +26,31 @@ This provides the ``taskgraph`` binary, see ``taskgraph --help`` for available
 commands. To integrate Taskgraph in your project, see :ref:`adding taskgraph`.
 
 
+How It Works
+------------
+
+Taskcluster tasks are defined in the ``tasks`` section of a `.taskcluster.yml`_
+file at the repository root. This is adequate for simple CI systems which only
+have a few tasks. But as the complexity of a CI system grows, trying to fit
+all task definitions into a single file becomes difficult to maintain.
+
+Instead of defining everything in the `.taskcluster.yml`_, Taskgraph consumers
+define only a single task called the :ref:`decision task`. This task runs the
+command ``taskgraph decision`` which at a very high level:
+
+1. Reads a set of input YAML files defining :term:`tasks <Task>`.
+2. Runs each task definition through a set of :term:`transforms <Transform>`.
+3. Submits the resulting DAG of tasks (with Decision task as the root) to
+   Taskcluster via its REST API.
+
+Taskgraph's combination of static configuration with logic layered on top,
+allows a project's CI to grow to arbitrary complexity.
+
+
 .. _DAGs: https://en.wikipedia.org/wiki/Directed_acyclic_graph
 .. _CI: https://en.wikipedia.org/wiki/Continuous_integration
 .. _Taskcluster: https://taskcluster.net
+.. _.taskcluster.yml: https://docs.taskcluster.net/docs/reference/integrations/github/taskcluster-yml-v1
 
 Table of Contents
 -----------------
