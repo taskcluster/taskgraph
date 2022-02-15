@@ -3,8 +3,35 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to taskgraph's documentation!
-=====================================
+Taskgraph
+=========
+
+Taskgraph is a Python library to generate `DAGs`_ of tasks for `Taskcluster`_,
+Mozilla's `CI`_ service. The nodes of the DAG represent tasks, while the edges
+represent the dependencies between them.
+
+Taskgraph is designed to scale to any level of complexity. From a handful of
+tasks, to the over 30,000 tasks and counting that make up Firefox's CI.
+
+Installation
+------------
+
+Taskgraph is on Pypi and can be installed via:
+
+.. code-block::
+
+   pip install taskcluster-taskgraph
+
+This provides the ``taskgraph`` binary, see ``taskgraph --help`` for available
+commands. To integrate Taskgraph in your project, see :ref:`adding taskgraph`.
+
+
+.. _DAGs: https://en.wikipedia.org/wiki/Directed_acyclic_graph
+.. _CI: https://en.wikipedia.org/wiki/Continuous_integration
+.. _Taskcluster: https://taskcluster.net
+
+Table of Contents
+-----------------
 
 .. toctree::
    :maxdepth: 2
@@ -16,7 +43,7 @@ Welcome to taskgraph's documentation!
    source/modules
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`

@@ -3,6 +3,8 @@
 Using Taskgraph 
 ===============
 
+.. _adding taskgraph:
+
 Adding Taskgraph to a new Project
 ---------------------------------
 
