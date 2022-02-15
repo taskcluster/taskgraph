@@ -9,10 +9,10 @@ Welcome to taskgraph's documentation!
 .. toctree::
    :maxdepth: 2
 
-   Getting Started <getting_started>
    intro
    usage/using_taskgraph
    usage/debugging_and_testing
+   Contributing <contributing>
    source/modules
 
 Indices and tables
