@@ -36,9 +36,9 @@ Table of Contents
 .. toctree::
    :maxdepth: 2
 
-   intro
    usage/using_taskgraph
    usage/debugging_and_testing
+   concepts/index
    Contributing <contributing>
    source/modules
 
