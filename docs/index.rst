@@ -10,7 +10,7 @@ Welcome to taskgraph's documentation!
    :maxdepth: 2
 
    Getting Started <getting_started>
-   intro/index
+   intro
    usage/using_taskgraph
    usage/debugging_and_testing
    source/modules
