@@ -13,6 +13,8 @@ represent the dependencies between them.
 Taskgraph is designed to scale to any level of complexity. From a handful of
 tasks, to the over 30,000 tasks and counting that make up Firefox's CI.
 
+.. _installation:
+
 Installation
 ------------
 
@@ -23,7 +25,16 @@ Taskgraph is on Pypi and can be installed via:
    pip install taskcluster-taskgraph
 
 This provides the ``taskgraph`` binary, see ``taskgraph --help`` for available
-commands. To integrate Taskgraph in your project, see :ref:`adding taskgraph`.
+commands. To integrate Taskgraph in your project, see :doc:`usage/setup`.
+
+Alternatively you can install it by cloning the repo. This is useful if you
+need to test against a specific revision:
+
+.. code-block::
+
+   hg clone https://hg.mozilla.org/ci/taskgraph
+   cd taskgraph
+   python setup.py develop
 
 
 How It Works
@@ -58,9 +69,9 @@ Table of Contents
 .. toctree::
    :maxdepth: 2
 
-   usage/using_taskgraph
-   usage/debugging_and_testing
+   usage/index
    concepts/index
+   glossary
    Contributing <contributing>
    source/modules
 

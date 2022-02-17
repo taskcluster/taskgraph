@@ -1,5 +1,5 @@
-Glossary of Terms
-=================
+Glossary
+========
 
 .. glossary::
 
@@ -31,12 +31,15 @@ Glossary of Terms
     complete a kind task, such as signing binaries to pushing packages to the
     Google Play store or to Mozilla archives.
 
-  Trust Domains
-    These consist of scopes, routes and worker pools that are grouped roughly
-    by product so as to minimize security risks and manage resources. The
-    smaller the trust domain, the more secure but the harder it is to maintain
-    and manage resources.
+  Trust Domain
+    Trust domains are a concept frequently used in the Firefox-CI cluster. They
+    act as a prefix for scopes, routes and worker pools and roughly correspond
+    to a project or group of related projects. Trust domains ensure that a task
+    from one project isn't accidentally granted scopes to another. This reduces
+    the attack surface should the task get compromised. The more granular the
+    trust domain, the more secure it is. But granular trust domains are also
+    harder to maintain.
 
-  Scopes
-    Taskcluster permissions required to perform a particular action. Each task
+  Scope
+    Taskcluster permission required to perform a particular action. Each task
     has a set of these permissions determining what it can do.
