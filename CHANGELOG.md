@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.1.7] - 2022-02-18
+
+### Fixed
+
+- An exception in default parameters if repo url doesn't contain slashes
+- Support `taskgraph test-action-callback` in `run_task` transforms
+
 ## [1.1.6] - 2022-02-10
 
 ### Fixed
