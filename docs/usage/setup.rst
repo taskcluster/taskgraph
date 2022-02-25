@@ -58,6 +58,7 @@ Create a file system layout similar to:
 ::
 
    taskcluster
+   ├── requirements.in
    ├── ci
    │   ├── config.yml
    │   └── hello
@@ -248,6 +249,36 @@ You can also pass in the ``-J/--json`` flag to see the JSON definition of your
 tasks. This is what will be sent to Taskcluster! For more information on generating
 graphs locally, see :doc:`debugging_and_testing`.
 
+Populate the Requirements
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Finally, let's populate the requirements file. This will be used by the decision task
+later on to install any dependencies needed to generate the graph. This will at least
+include Taskgraph itself. We'll use a tool called `pip-compile`_ to help generate the
+``requirements.txt``.
+
+.. note::
+
+   You may use other tools to create the ``requirements.txt`` as well, such as
+   `hashin`_. As long as package hashes are included.
+
+Run:
+
+.. code-block:: bash
+
+   cd taskcluster
+   echo "taskcluster-taskgraph" > requirements.in
+   # This works best if you use the same Python as the one used in the Decision
+   # image (currently 3.6).
+   pip-compile --generate-hashes --output-file requirements.txt requirements.in
+
+If you intend to create transforms that require additional packages, feel free
+to add them here as well. You may also use `version specifiers`_.
+
+.. _pip-compile: https://github.com/jazzband/pip-tools
+.. _hashin: https://github.com/peterbe/hashin
+.. _version specifiers: https://pip.pypa.io/en/stable/cli/pip_install/#requirement-specifiers
+
 Defining the Decision Task
 --------------------------
 
@@ -272,28 +303,25 @@ and/or `Github quickstart`_ resources.
 There are many different ways you could
 set up the :ref:`decision task`. But here is the recommended method:
 
-#. In the tasks block, create a new `let`_ statement to define some taskgraph
-   related variables. It's recommended to use the `latest revision of
-   Taskgraph`_.
+#. Setup the initial ``.taskcluster.yml``:
+
+   .. code-block:: yaml
+
+    ---
+    version: 1
+    reporting: checks-v1
+    policy:
+        pullRequests: collaborators
+    tasks:
+        -
+
+#. It's often useful to define some variables that can be used later on in the
+   file. We'll start by defining a :term:`Trust Domain`:
 
    .. code-block:: yaml
 
     tasks:
         - $let:
-              taskgraph:
-                  branch: taskgraph
-                  revision: a006669195b0b531cf708e8efdf43d70351b7da3
-
-   This can then be referenced later on in the file via ``${taskgraph.revision}``.
-
-#. Define a :term:`Trust Domain`:
-
-   .. code-block:: yaml
-
-    tasks:
-        - $let:
-              taskgraph:
-                  ...
               trustDomain: my-project
 
    If using a Taskcluster instance that doesn't use trust domains, this part
@@ -306,8 +334,6 @@ set up the :ref:`decision task`. But here is the recommended method:
 
     tasks:
         - $let:
-              taskgraph:
-                  ...
               trustDomain: my-project
 
               # Normalize some variables that differ across Github events
@@ -353,7 +379,7 @@ set up the :ref:`decision task`. But here is the recommended method:
 
    This isn't strictly necessary, but the format of the various Github events
    can vary considerably. By normalizing some of these values into variables
-   early on, we can save considerable logic later on in the file.
+   early on, we can save considerable logic later in the file.
 
    Here's `Fenix's .taskcluster.yml`_ for an idea of other variables that may
    be useful to define.
@@ -480,7 +506,7 @@ set up the :ref:`decision task`. But here is the recommended method:
        then:
            payload:
                image:
-                   mozillareleases/taskgraph:decision-e035c4bb24e3a05bcd666518756aa69fac302ed1e73fd39d39cd182fc4470818@sha256:6b0be618c3909d50bd059d2451090f1a8f36d64f0bcddbcc32f1559c5ebbee58
+                   mozillareleases/taskgraph:decision-cf4b4b4baff57d84c1f9ec8fcd70c9839b70a7d66e6430a6c41ffe67252faa19@sha256:425e07f6813804483bc5a7258288a7684d182617ceeaa0176901ccc7702dfe28
 
       You should use the `latest versions of the images`_. Note that both the
       image id and sha256 are required (separated by ``@``).
@@ -515,12 +541,10 @@ set up the :ref:`decision task`. But here is the recommended method:
                          MYREPO_HEAD_REPOSITORY: '${repoUrl}'
                          MYREPO_HEAD_REF: '${headBranch}'
                          MYREPO_HEAD_REV: '${headSha}'
-                         # run-task similarly does the same for the taskgraph repo
-                         TASKGRAPH_BASE_REPOSITORY: https://hg.mozilla.org/ci/taskgraph
-                         TASKGRAPH_HEAD_REPOSITORY: https://hg.mozilla.org/ci/${taskgraph.branch}
-                         TASKGRAPH_HEAD_REV: ${taskgraph.revision}
-                         TASKGRAPH_REPOSITORY_TYPE: hg
-                         REPOSITORIES: {$json: {mobile: "Fenix", taskgraph: "Taskgraph"}}
+                         # run-task installs this requirements.txt before
+                         # running your command
+                         MYREPO_PIP_REQUIREMENTS: taskcluster/requirements.txt
+                         REPOSITORIES: {$json: {myrepo: "MyRepo"}}
                        - $if: 'tasks_for in ["github-pull-request"]'
                          then:
                              MYREPO_PULL_REQUEST_NUMBER: '${event.pull_request.number}'
@@ -529,14 +553,12 @@ set up the :ref:`decision task`. But here is the recommended method:
                    # This 'myrepo' gets uppercased and is how `run-task`
                    # knows to look for 'MYREPO_*' environment variables.
                    - '--myrepo-checkout=/builds/worker/checkouts/myrepo'
-                   - '--taskgraph-checkout=/builds/worker/checkouts/taskgraph'
                    - '--task-cwd=/builds/worker/checkouts/myrepo'
                    - '--'
                    # Now for the actual command.
                    - bash
                    - -cx
                    - >
-                     PIP_IGNORE_INSTALLED=0 pip3 install --user /builds/worker/checkouts/taskgraph &&
                      ~/.local/bin/taskgraph decision
                      --pushlog-id='0'
                      --pushdate='0'

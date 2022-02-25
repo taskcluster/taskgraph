@@ -6,9 +6,6 @@ policy:
 tasks:
     - $let:
           # Variable definitions
-          taskgraph:
-              branch: taskgraph
-              revision: a006669195b0b531cf708e8efdf43d70351b7da3
           trustDomain: my-project
 
           # Normalize some variables that differ across Github events
@@ -82,7 +79,7 @@ tasks:
                           - 'assume:repo:github.com/${event.pull_request.base.repo.full_name}:pull-request'
               payload:
                   image:
-                      mozillareleases/taskgraph:decision-e035c4bb24e3a05bcd666518756aa69fac302ed1e73fd39d39cd182fc4470818@sha256:6b0be618c3909d50bd059d2451090f1a8f36d64f0bcddbcc32f1559c5ebbee58
+                      mozillareleases/taskgraph:decision-cf4b4b4baff57d84c1f9ec8fcd70c9839b70a7d66e6430a6c41ffe67252faa19@sha256:425e07f6813804483bc5a7258288a7684d182617ceeaa0176901ccc7702dfe28
                   feature:
                       taskclusterProxy: true
                   env:
@@ -93,11 +90,10 @@ tasks:
                             MYREPO_HEAD_REPOSITORY: '${repoUrl}'
                             MYREPO_HEAD_REF: '${headBranch}'
                             MYREPO_HEAD_REV: '${headSha}'
-                            # run-task similarly does the same for the taskgraph repo
-                            TASKGRAPH_BASE_REPOSITORY: https://hg.mozilla.org/ci/taskgraph
-                            TASKGRAPH_HEAD_REPOSITORY: https://hg.mozilla.org/ci/${taskgraph.branch}
-                            TASKGRAPH_HEAD_REV: ${taskgraph.revision}
-                            TASKGRAPH_REPOSITORY_TYPE: hg
+                            # run-task installs this requirements.txt before
+                            # running your command, this is how taskgraph gets
+                            # bootstrapped
+                            MYREPO_PIP_REQUIREMENTS: taskcluster/requirements.txt
                             REPOSITORIES: {$json: {mobile: "Fenix", taskgraph: "Taskgraph"}}
                           - $if: 'tasks_for in ["github-pull-request"]'
                             then:
@@ -107,14 +103,12 @@ tasks:
                       # This 'myrepo' gets uppercased and is how `run-task`
                       # knows to look for 'MYREPO_*' environment variables.
                       - '--myrepo-checkout=/builds/worker/checkouts/myrepo'
-                      - '--taskgraph-checkout=/builds/worker/checkouts/taskgraph'
                       - '--task-cwd=/builds/worker/checkouts/myrepo'
                       - '--'
                       # Now for the actual command.
                       - bash
                       - -cx
                       - >
-                        PIP_IGNORE_INSTALLED=0 pip3 install --user /builds/worker/checkouts/taskgraph &&
                         ~/.local/bin/taskgraph decision
                         --pushlog-id='0'
                         --pushdate='0'
