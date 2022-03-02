@@ -43,3 +43,8 @@ Glossary
   Scope
     Taskcluster permission required to perform a particular action. Each task
     has a set of these permissions determining what it can do.
+
+  Parameters
+    A set of runtime values passed into the Decision task that define the
+    context the graph is being generated in. For instance, parameters can be
+    used to specify whether the generation is for a pull request or a push.

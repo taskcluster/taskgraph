@@ -6,4 +6,5 @@ mock
 pytest
 responses
 sphinx
+sphinxcontrib-mermaid
 yamllint
