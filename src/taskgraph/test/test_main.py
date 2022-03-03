@@ -4,7 +4,13 @@
 import pytest
 
 import taskgraph
-from taskgraph.main import main as taskgraph_main
+from taskgraph.graph import Graph
+from taskgraph.main import (
+    get_filtered_taskgraph,
+    main as taskgraph_main,
+)
+from taskgraph.task import Task
+from taskgraph.taskgraph import TaskGraph
 
 
 @pytest.fixture
@@ -58,3 +64,100 @@ def test_output_file(run_main, tmpdir):
     assert output_file.read_text("utf-8").strip() == "\n".join(
         ["_fake-t-0", "_fake-t-1", "_fake-t-2"]
     )
+
+
+@pytest.mark.parametrize(
+    "regex,exclude,expected",
+    (
+        pytest.param(
+            None,
+            None,
+            {
+                "a": {
+                    "attributes": {"kind": "task"},
+                    "dependencies": {"dep": "b"},
+                    "kind": "task",
+                    "label": "a",
+                    "optimization": None,
+                    "soft_dependencies": [],
+                    "task": {
+                        "foo": {"bar": 1},
+                    },
+                },
+                "b": {
+                    "attributes": {"kind": "task", "thing": True},
+                    "dependencies": {},
+                    "kind": "task",
+                    "label": "b",
+                    "optimization": None,
+                    "soft_dependencies": [],
+                    "task": {
+                        "foo": {"baz": 1},
+                    },
+                },
+            },
+            id="no-op",
+        ),
+        pytest.param(
+            "^b",
+            None,
+            {
+                "b": {
+                    "attributes": {"kind": "task", "thing": True},
+                    "dependencies": {},
+                    "kind": "task",
+                    "label": "b",
+                    "optimization": None,
+                    "soft_dependencies": [],
+                    "task": {
+                        "foo": {"baz": 1},
+                    },
+                },
+            },
+            id="regex-b-only",
+        ),
+        pytest.param(
+            None,
+            [
+                "attributes.thing",
+                "task.foo.baz",
+            ],
+            {
+                "a": {
+                    "attributes": {"kind": "task"},
+                    "dependencies": {"dep": "b"},
+                    "kind": "task",
+                    "label": "a",
+                    "optimization": None,
+                    "soft_dependencies": [],
+                    "task": {
+                        "foo": {"bar": 1},
+                    },
+                },
+                "b": {
+                    "attributes": {"kind": "task"},
+                    "dependencies": {},
+                    "kind": "task",
+                    "label": "b",
+                    "optimization": None,
+                    "soft_dependencies": [],
+                    "task": {
+                        "foo": {},
+                    },
+                },
+            },
+            id="exclude-keys",
+        ),
+    ),
+)
+def test_get_filtered_taskgraph(regex, exclude, expected):
+    tasks = {
+        "a": Task(kind="task", label="a", attributes={}, task={"foo": {"bar": 1}}),
+        "b": Task(
+            kind="task", label="b", attributes={"thing": True}, task={"foo": {"baz": 1}}
+        ),
+    }
+
+    graph = TaskGraph(tasks, Graph(set(tasks), {("a", "b", "dep")}))
+    filtered = get_filtered_taskgraph(graph, regex, exclude)
+    assert filtered.to_json() == expected
