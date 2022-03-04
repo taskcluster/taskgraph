@@ -100,13 +100,17 @@ def _get_optimizations(target_task_graph, strategies):
     return optimizations
 
 
-def _log_optimization(verb, opt_counts):
+def _log_optimization(verb, opt_counts, opt_reasons=None):
+    if opt_reasons:
+        message = "optimize: {label} {action} because of {reason}"
+        for label, (action, reason) in opt_reasons.items():
+            logger.debug(message.format(label=label, action=action, reason=reason))
+
     if opt_counts:
         logger.info(
-            "{} {} during optimization.".format(
-                verb.title(),
-                ", ".join(f"{c} tasks by {b}" for b, c in sorted(opt_counts.items())),
-            )
+            f"{verb.title()} "
+            + ", ".join(f"{c} tasks by {b}" for b, c in sorted(opt_counts.items()))
+            + " during optimization."
         )
     else:
         logger.info(f"No tasks {verb} during optimization")
