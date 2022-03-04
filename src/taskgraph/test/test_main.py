@@ -76,6 +76,7 @@ def test_output_file(run_main, tmpdir):
                 "a": {
                     "attributes": {"kind": "task"},
                     "dependencies": {"dep": "b"},
+                    "description": "",
                     "kind": "task",
                     "label": "a",
                     "optimization": None,
@@ -87,6 +88,7 @@ def test_output_file(run_main, tmpdir):
                 "b": {
                     "attributes": {"kind": "task", "thing": True},
                     "dependencies": {},
+                    "description": "",
                     "kind": "task",
                     "label": "b",
                     "optimization": None,
@@ -105,6 +107,7 @@ def test_output_file(run_main, tmpdir):
                 "b": {
                     "attributes": {"kind": "task", "thing": True},
                     "dependencies": {},
+                    "description": "",
                     "kind": "task",
                     "label": "b",
                     "optimization": None,
@@ -126,6 +129,7 @@ def test_output_file(run_main, tmpdir):
                 "a": {
                     "attributes": {"kind": "task"},
                     "dependencies": {"dep": "b"},
+                    "description": "",
                     "kind": "task",
                     "label": "a",
                     "optimization": None,
@@ -137,6 +141,7 @@ def test_output_file(run_main, tmpdir):
                 "b": {
                     "attributes": {"kind": "task"},
                     "dependencies": {},
+                    "description": "",
                     "kind": "task",
                     "label": "b",
                     "optimization": None,
