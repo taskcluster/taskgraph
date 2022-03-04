@@ -1,8 +1,10 @@
-Setting up Taskgraph
-====================
+Submitting your Graph to Taskcluster
+====================================
 
-This tutorial will walk you through getting your repository set up with
-Taskgraph for the first time.
+This tutorial will explain how to connect your repository with Taskcluster and
+create a :term:`Decision Task` to generate and submit your graph. This tutorial
+assumes you have a functional Taskgraph setup. If you don't already have one,
+see :doc:`creating-a-task-graph`.
 
 Configuring your Project
 ------------------------
@@ -42,217 +44,10 @@ integration.
 .. _Firefox-CI Github integration: https://github.com/apps/firefoxci-taskcluster
 .. _Community Github integration: https://github.com/apps/community-tc-integration
 
-Create the Taskgraph Scaffolding
---------------------------------
-
-The next phase is to create the scaffolding for Taskgraph. For now we'll set up
-a single "Hello World" task. Once this is working, you will have the tools and
-knowledge to start adding your own tasks, and modifying configuration to meet
-your repository's needs.
-
-Create the File System Layout
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Create a file system layout similar to:
-
-::
-
-   taskcluster
-   ├── requirements.in
-   ├── ci
-   │   ├── config.yml
-   │   └── hello
-   |       └── kind.yml
-   └── myrepo_taskgraph
-       └── transforms
-           └── hello.py
-
-The ``taskcluster`` directory should appear at the root of the repository. It
-is possible to rename / put it somewhere else, but you'll need to jump through
-a couple extra steps in that case. The location of the transforms file is
-similarly only a convention (but it must be importable).
-
-Populate the Config File
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-The config file lives at ``taskcluster/ci/config.yml`` and must conform to the
-:py:data:`~taskgraph.config.graph_config_schema`.
-
-The required top-level keys are:
-
-* ``trust-domain`` - This should match what was configured in the first phase. If
-  :term:`trust domains <Trust Domain>` are not used in your instance, just use the
-  repository name.
-* ``task-priority`` - The priority of tasks for this repo.
-* ``workers`` - The set of worker pools available to the project. This should
-  have been configured in the first phase, speak to your Taskcluster administrator
-  if unsure what to use.
-* ``taskgraph`` - A dict containing some miscellaneous configuration needed by
-  Taskgraph.
-
-Here's an example of what a bare ``config.yml`` might look like:
-
-.. code-block:: yaml
-
-   ---
-   trust-domain: myrepo
-   task-priority: low
-   workers:
-       # Values here depend on your Taskcluster instance's configuration.
-       aliases:
-           linux:
-               provisioner: '{trust-domain}-provisioner'
-               implementation: docker-worker
-               os: linux
-               worker-type: '{trust-domain}-linux'
-   taskgraph:
-       repositories:
-           myrepo:
-               name: myrepo
-
-Define a Task
-~~~~~~~~~~~~~
-
-:term:`Kinds <Kind>` are groupings of tasks that share certain characteristics
-with one another. Each subdirectory in ``taskcluster/ci`` corresponds to a
-different kind and contains a ``kind.yml`` file. These files define some
-properties that control how Taskgraph will generate the tasks, as well as the
-starting definitions of the tasks themselves. If you followed the layout above,
-you have a ``hello`` kind.
-
-#. First declare a loader. Loaders determine how the task definitions get read.
-   The most common is the :func:`transform loader
-   <taskgraph.loader.transform.loader>`:
-
-   .. code-block:: yaml
-
-    loader: taskgraph.loader.transform:loader
-
-#. Next declare the set of :term:`transforms <transform>` that will be applied
-   to tasks. Usually there is at least a kind specific set of transforms, as
-   well as the general purpose :mod:`~taskgraph.transforms.task` transforms.
-   Practically every task should use the latter, as they perform the final
-   steps to modify the tasks into the `format Taskcluster expects`_. In our
-   example:
-
-   .. code-block:: yaml
-
-    transforms:
-        - myrepo_taskgraph.transforms.hello:transforms
-        - taskgraph.transforms.task:transforms
-
-#. Finally we define the task under the (confusingly named) ``jobs`` key.
-   The format for the initial definition here can vary wildly from one kind
-   to another, it all depends on the transforms that are used. It's conventional
-   for transforms to define a schema (but not required). So often you can look
-   at the first transform file to see what schema is expected of your job. But
-   since we haven't created the first transforms yet, let's define our task
-   like this for now:
-
-   .. code-block:: yaml
-
-    jobs:
-        taskcluster:
-            description: "Says hello to Taskcluster"
-            text: "Taskcluster!"
-
-Here is the combined ``kind.yml`` file:
-
-.. code-block:: yaml
-
- loader: taskgraph.loader.transform:loader
- transforms:
-     - myrepo_taskgraph.transforms.hello:transforms
-     - taskgraph.transforms.task:transforms
- jobs:
-     taskcluster:
-         description: "Says hello to Taskcluster"
-         text: "Taskcluster!"
-
-Create the Transform
-~~~~~~~~~~~~~~~~~~~~
-
-:term:`Transforms <Transform>` are Python generators that take a
-:class:`~taskgraph.transforms.base.TransformConfig` instance and a generator
-that yields task definitions (in dictionary form) as input. It yields task
-definitions (which may or may not be modified) from the original inputs.
-
-Typically transform files contain a schema, followed by one or more transform
-functions. Rather than break it down step by step, here's what our transform file
-will look like (see comments for explanations):
-
-.. code-block:: python
-
-   from voluptuous import Optional, Required
-
-   from taskgraph.transforms.base import TransformSequence
-   from taskgraph.util.schema import Schema
-
-   # Define the schema. We use the `voluptuous` package to handle validation.
-   hello_description_schema = Schema({
-       Required("text"): str,
-       Optional("description"): str,
-   })
-
-   # Create a 'TransformSequence' instance. This class collects transform
-   # functions to run later.
-   transforms = TransformSequence()
-
-   # First let's validate tasks against the schema.
-   transforms.add_validate(hello_description_schema)
-
-   # Register our first transform functions via decorator.
-   @transforms.add
-   def set_command(config, tasks):
-       """Builds the command the task will run."""
-       for task in tasks:
-           task["command"] = f"bash -cx 'echo Hello {task.pop('text')}'"
-           yield task
-
-   @transforms.add
-   def build_task_description(config, tasks):
-       """Sets the attributes required by transforms in
-       `taskgraph.transforms.task`"""
-       for task in tasks:
-           if "description" not in task:
-               task["description"] = f"Says Hello {task['text']}"
-           task["label"] = f"{config.kind}-{task.pop('name')}"
-           # This is what was defined in `taskcluster/ci/config.yml`.
-           task["worker-type"] = "linux"
-           task["worker"] = {
-               "command": task.pop["command"],
-               "docker-image": "ubuntu:latest",
-               "max-run-time": 300,  # seconds
-           }
-           yield task
-
-.. _format Taskcluster expects: https://docs.taskcluster.net/docs/reference/platform/queue/task-schema
-
-Generate the Taskgraph
-~~~~~~~~~~~~~~~~~~~~~~
-
-Now it's time to see if everything works! If you haven't done so already,
-follow the :ref:`installation` docs to install Taskgraph.
-
-Next run the following command at the root of your repo:
-
-.. code-block:: bash
-
- taskgraph full
-
-If all goes well, you should see some log output followed by a single task
-called ``hello-taskcluster``. Try adding a second task to your ``jobs`` key
-in the ``kind.yml`` file and re-generating the graph. You should see both
-task labels!
-
-You can also pass in the ``-J/--json`` flag to see the JSON definition of your
-tasks. This is what will be sent to Taskcluster! For more information on generating
-graphs locally, see :doc:`/howto/debugging_and_testing`.
-
 Populate the Requirements
-~~~~~~~~~~~~~~~~~~~~~~~~~
+-------------------------
 
-Finally, let's populate the requirements file. This will be used by the decision task
+First, let's populate the requirements file. This will be used by the Decision task
 later on to install any dependencies needed to generate the graph. This will at least
 include Taskgraph itself. We'll use a tool called `pip-compile`_ to help generate the
 ``requirements.txt``.
@@ -282,28 +77,20 @@ to add them here as well. You may also use `version specifiers`_.
 Defining the Decision Task
 --------------------------
 
-So far we've:
-
-1. Enabled our repository in Taskcluster's configuration.
-2. Created the Taskgraph scaffolding and defined a task or two.
-3. Tested out generating the graph locally.
-
-The last phase connects the previous two phases by declaring when and how the
-graph will be generated in response to various repository actions (like pushing
-to the main branch or opening a pull request). To do this we define a
-:ref:`decision task` in the repository's ``.taskcluster.yml`` file. If you
-don't have a ``.taskcluster.yml`` file, create it using the `documentation`_
-and/or `Github quickstart`_ resources.
+Next we'll declare when and how the graph will be generated in response to
+various repository actions (like pushing to the main branch or opening a pull
+request). To do this we define a :ref:`decision task` in the repository's
+``.taskcluster.yml`` file.
 
 .. note::
 
    The ``.taskcluster.yml`` file uses `JSON-e`_. If you are confused about the
    syntax, see the `JSON-e reference`_ or `playground`_ to learn more.
 
-There are many different ways you could
-set up the :ref:`decision task`. But here is the recommended method:
+There are many different ways you could set up the :ref:`decision task`. But
+here is the recommended method:
 
-#. Setup the initial ``.taskcluster.yml``:
+#. Setup the initial ``.taskcluster.yml`` at the root of your repo:
 
    .. code-block:: yaml
 
@@ -575,6 +362,12 @@ set up the :ref:`decision task`. But here is the recommended method:
 
 For convenience, the full ``.taskcluster.yml`` can be :download:`downloaded
 here <example-taskcluster.yml>`.
+
+.. note::
+
+    See the Taskcluster `documentation`_ and/or `Github quickstart`_ resources
+    for more information on creating a ``.taskcluster.yml`` file.
+
 
 Testing it Out
 ~~~~~~~~~~~~~~

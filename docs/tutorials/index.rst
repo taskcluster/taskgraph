@@ -7,4 +7,5 @@ connecting your repository with Taskcluster to running tasks.
 .. toctree::
    :maxdepth: 1
 
-   setup
+   creating-a-task-graph
+   connecting-taskcluster

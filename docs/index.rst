@@ -25,7 +25,8 @@ Taskgraph is on Pypi and can be installed via:
    pip install taskcluster-taskgraph
 
 This provides the ``taskgraph`` binary, see ``taskgraph --help`` for available
-commands. To integrate Taskgraph in your project, see :doc:`tutorials/setup`.
+commands. To integrate Taskgraph in your project, see
+:doc:`tutorials/creating-a-task-graph`.
 
 Alternatively you can install it by cloning the repo. This is useful if you
 need to test against a specific revision:

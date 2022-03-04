@@ -31,6 +31,8 @@ the build. Let's also say that the lint and test tasks depend on an image task
 
 .. _directed acyclic graph: https://en.wikipedia.org/wiki/Directed_acyclic_graph
 
+.. _graph generation:
+
 Graph Generation
 ----------------
 
