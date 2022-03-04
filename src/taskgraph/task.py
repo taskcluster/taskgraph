@@ -33,6 +33,7 @@ class Task:
     label = attr.ib()
     attributes = attr.ib()
     task = attr.ib()
+    description = attr.ib(default="")
     task_id = attr.ib(default=None, init=False)
     optimization = attr.ib(default=None)
     dependencies = attr.ib(factory=dict)
@@ -45,6 +46,7 @@ class Task:
         rv = {
             "kind": self.kind,
             "label": self.label,
+            "description": self.description,
             "attributes": self.attributes,
             "dependencies": self.dependencies,
             "soft_dependencies": self.soft_dependencies,
@@ -65,6 +67,7 @@ class Task:
         rv = cls(
             kind=task_dict["kind"],
             label=task_dict["label"],
+            description=task_dict.get("description", ""),
             attributes=task_dict["attributes"],
             task=task_dict["task"],
             optimization=task_dict["optimization"],
