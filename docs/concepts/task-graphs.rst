@@ -1,3 +1,5 @@
+.. _task graph:
+
 Task Graphs
 ===========
 
@@ -84,7 +86,7 @@ each phase locally:
 
 The decision task uses the command ``taskgraph decision``, which spans the
 whole generation process all the way to task creation in the last step. See
-:doc:`/usage/debugging_and_testing` for more information on running the
+:doc:`/howto/debugging_and_testing` for more information on running the
 ``taskgraph`` command locally.
 
 Transitive Closure

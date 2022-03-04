@@ -25,7 +25,7 @@ Taskgraph is on Pypi and can be installed via:
    pip install taskcluster-taskgraph
 
 This provides the ``taskgraph`` binary, see ``taskgraph --help`` for available
-commands. To integrate Taskgraph in your project, see :doc:`usage/setup`.
+commands. To integrate Taskgraph in your project, see :doc:`tutorials/setup`.
 
 Alternatively you can install it by cloning the repo. This is useful if you
 need to test against a specific revision:
@@ -69,11 +69,12 @@ Table of Contents
 .. toctree::
    :maxdepth: 2
 
-   usage/index
+   tutorials/index
+   howto/index
    concepts/index
    glossary
-   Contributing <contributing>
    source/modules
+   Contributing <contributing>
 
 Indices and tables
 ------------------

@@ -247,7 +247,7 @@ task labels!
 
 You can also pass in the ``-J/--json`` flag to see the JSON definition of your
 tasks. This is what will be sent to Taskcluster! For more information on generating
-graphs locally, see :doc:`debugging_and_testing`.
+graphs locally, see :doc:`/howto/debugging_and_testing`.
 
 Populate the Requirements
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -582,10 +582,10 @@ Testing it Out
 From here you should be ready to commit to your repo (directly or via pull
 request) and start testing things out! It's very likely that you'll run into
 some error or another at first. If you suspect a problem in the task
-configuration, see :doc:`debugging_and_testing` for tips on how to solve it.
-Otherwise you might need to tweak the ``.taskcluster.yml`` or make changes to
-your repo's Taskcluster configuration. If the latter is necessary, reach out to
-your Taskcluster administrators for assistance.
+configuration, see :doc:`/howto/debugging_and_testing` for tips on how to solve
+it. Otherwise you might need to tweak the ``.taskcluster.yml`` or make changes
+to your repo's Taskcluster configuration. If the latter is necessary, reach out
+to your Taskcluster administrators for assistance.
 
 Phew! While that was a lot, this only scratches the surface. You may also want
 to incorporate:
