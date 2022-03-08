@@ -90,11 +90,12 @@ tasks:
                             MYREPO_HEAD_REPOSITORY: '${repoUrl}'
                             MYREPO_HEAD_REF: '${headBranch}'
                             MYREPO_HEAD_REV: '${headSha}'
+                            MYREPO_REPOSITORY_TYPE: git
                             # run-task installs this requirements.txt before
                             # running your command, this is how taskgraph gets
                             # bootstrapped
                             MYREPO_PIP_REQUIREMENTS: taskcluster/requirements.txt
-                            REPOSITORIES: {$json: {mobile: "Fenix", taskgraph: "Taskgraph"}}
+                            REPOSITORIES: {$json: {myrepo: "MyRepo"}}
                           - $if: 'tasks_for in ["github-pull-request"]'
                             then:
                                 MYREPO_PULL_REQUEST_NUMBER: '${event.pull_request.number}'

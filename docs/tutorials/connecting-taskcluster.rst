@@ -48,31 +48,10 @@ Populate the Requirements
 -------------------------
 
 First, let's populate the requirements file. This will be used by the Decision task
-later on to install any dependencies needed to generate the graph. This will at least
-include Taskgraph itself. We'll use a tool called `pip-compile`_ to help generate the
-``requirements.txt``.
+later on to install any dependencies needed to generate the graph (this will at least
+include Taskgraph itself).
 
-.. note::
-
-   You may use other tools to create the ``requirements.txt`` as well, such as
-   `hashin`_. As long as package hashes are included.
-
-Run:
-
-.. code-block:: bash
-
-   cd taskcluster
-   echo "taskcluster-taskgraph" > requirements.in
-   # This works best if you use the same Python as the one used in the Decision
-   # image (currently 3.6).
-   pip-compile --generate-hashes --output-file requirements.txt requirements.in
-
-If you intend to create transforms that require additional packages, feel free
-to add them here as well. You may also use `version specifiers`_.
-
-.. _pip-compile: https://github.com/jazzband/pip-tools
-.. _hashin: https://github.com/peterbe/hashin
-.. _version specifiers: https://pip.pypa.io/en/stable/cli/pip_install/#requirement-specifiers
+Follow the :ref:`define requirements` instructions to get it set up.
 
 Defining the Decision Task
 --------------------------
@@ -328,6 +307,7 @@ here is the recommended method:
                          MYREPO_HEAD_REPOSITORY: '${repoUrl}'
                          MYREPO_HEAD_REF: '${headBranch}'
                          MYREPO_HEAD_REV: '${headSha}'
+                         MYREPO_REPOSITORY_TYPE: git
                          # run-task installs this requirements.txt before
                          # running your command
                          MYREPO_PIP_REQUIREMENTS: taskcluster/requirements.txt
