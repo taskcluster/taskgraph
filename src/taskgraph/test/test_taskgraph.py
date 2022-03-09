@@ -49,6 +49,7 @@ class TestTaskGraph(unittest.TestCase):
                     "dependencies": {"edgelabel": "b"},
                     "description": "",
                     "soft_dependencies": [],
+                    "if_dependencies": [],
                     "optimization": None,
                 },
                 "b": {
@@ -59,6 +60,7 @@ class TestTaskGraph(unittest.TestCase):
                     "dependencies": {},
                     "description": "",
                     "soft_dependencies": [],
+                    "if_dependencies": [],
                     "optimization": {"seta": None},
                 },
             },

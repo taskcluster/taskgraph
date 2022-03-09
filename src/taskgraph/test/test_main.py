@@ -81,6 +81,7 @@ def test_output_file(run_main, tmpdir):
                     "label": "a",
                     "optimization": None,
                     "soft_dependencies": [],
+                    "if_dependencies": [],
                     "task": {
                         "foo": {"bar": 1},
                     },
@@ -93,6 +94,7 @@ def test_output_file(run_main, tmpdir):
                     "label": "b",
                     "optimization": None,
                     "soft_dependencies": [],
+                    "if_dependencies": [],
                     "task": {
                         "foo": {"baz": 1},
                     },
@@ -112,6 +114,7 @@ def test_output_file(run_main, tmpdir):
                     "label": "b",
                     "optimization": None,
                     "soft_dependencies": [],
+                    "if_dependencies": [],
                     "task": {
                         "foo": {"baz": 1},
                     },
@@ -134,6 +137,7 @@ def test_output_file(run_main, tmpdir):
                     "label": "a",
                     "optimization": None,
                     "soft_dependencies": [],
+                    "if_dependencies": [],
                     "task": {
                         "foo": {"bar": 1},
                     },
@@ -146,6 +150,7 @@ def test_output_file(run_main, tmpdir):
                     "label": "b",
                     "optimization": None,
                     "soft_dependencies": [],
+                    "if_dependencies": [],
                     "task": {
                         "foo": {},
                     },
