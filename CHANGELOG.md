@@ -1,5 +1,20 @@
 # Change Log
 
+## [1.2.0] - 2022-03-09
+
+### Added
+
+- An ``--exclude-key`` flag to the CLI for removing subsections of tasks
+- Concept of [if-dependencies][0] to optimization logic
+- Optional description attribute to `Task` objects
+
+[0]: https://taskcluster-taskgraph.readthedocs.io/en/latest/concepts/task-graphs.html#if-dependencies
+
+### Changed
+
+- A minor refactor to optimization logic around logging
+- Ability for `run-task` to install Python dependencies after cloning a repo
+
 ## [1.1.7] - 2022-02-18
 
 ### Fixed
