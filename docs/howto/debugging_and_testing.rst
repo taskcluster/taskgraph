@@ -30,6 +30,30 @@ You can also use the `--diff` flag to generate and view diffs (as json blobs) of
 exactly what the differences are. This can be useful to track down an issue where, for example, github releases is broken but everything else is running smoothly, and to verify that any fix you
 make to the release graph hasn't broken something in the other graphs. If you want to diff against multiple parameters at a time, simply pass `--parameters` multiple times (or pass a directory containing parameters files).
 
+Debugging
+---------
+
+Step-debugging through functions can be the fastest way to troubleshoot problems. Besides using `pdb`, you may want to have your IDE as a debugger for setting breakpoints and use it's UI for controlling the debug session.
+In VSCode, you can achieve it with the following configuration:
+
+.. code-block::
+
+  {
+      "name": "Taskgraph Full",
+      "type": "python",
+      "request": "launch",
+      "program": "/Users/myuser/.pyenv/versions/projectname/bin/taskgraph",
+      "args": ["full", "-p", "taskcluster/test/params/main-push.yml"],
+      "console": "integratedTerminal",
+      "justMyCode": false
+  }
+
+`Note: You should adjust "program" as needed. To find the taskgraph executable when using pyenv, use the following:`
+
+.. code::
+
+  pyenv which taskgraph
+
 Retriggering and Rerunning Tasks
 --------------------------------
 
