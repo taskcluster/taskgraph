@@ -77,11 +77,13 @@ class Kind:
             Task(
                 self.name,
                 label=task_dict["label"],
+                description=task_dict["description"],
                 attributes=task_dict["attributes"],
                 task=task_dict["task"],
                 optimization=task_dict.get("optimization"),
                 dependencies=task_dict.get("dependencies"),
                 soft_dependencies=task_dict.get("soft-dependencies"),
+                if_dependencies=task_dict.get("if-dependencies"),
             )
             for task_dict in transforms(trans_config, inputs)
         ]
