@@ -6,6 +6,8 @@
 import os
 import json
 import logging
+import pathlib
+import shutil
 
 
 import time
@@ -26,6 +28,7 @@ from voluptuous import Optional
 logger = logging.getLogger(__name__)
 
 ARTIFACTS_DIR = "artifacts"
+
 
 # For each project, this gives a set of parameters specific to the project.
 # See `taskcluster/docs/parameters.rst` for information on parameters.
@@ -115,6 +118,11 @@ def taskgraph_decision(options, parameters=None):
     # and the map of labels to taskids
     write_artifact("task-graph.json", tgg.morphed_task_graph.to_json())
     write_artifact("label-to-taskid.json", tgg.label_to_taskid)
+
+    # write out current run-task and fetch-content scripts
+    RUN_TASK_DIR = os.path.join(pathlib.Path(__file__).parent, "run-task")
+    shutil.copy2(RUN_TASK_DIR + "/run-task", ARTIFACTS_DIR)
+    shutil.copy2(RUN_TASK_DIR + "/fetch-content", ARTIFACTS_DIR)
 
     # actually create the graph
     create_tasks(

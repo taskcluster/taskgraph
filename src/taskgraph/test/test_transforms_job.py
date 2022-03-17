@@ -61,8 +61,7 @@ def transform(monkeypatch, config):
     many of the `run_using` subsystems.
     """
     # Needed by 'generic_worker_run_task'
-    monkeypatch.setenv("TASKGRAPH_HEAD_REPOSITORY", config.params["head_repository"])
-    monkeypatch.setenv("TASKGRAPH_HEAD_REV", config.params["head_rev"])
+    monkeypatch.setenv("TASK_ID", "fakeid")
 
     def inner(task_input):
         task = deepcopy(TASK_DEFAULTS)
