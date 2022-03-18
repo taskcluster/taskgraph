@@ -8,6 +8,7 @@ import json
 import shutil
 import unittest
 import tempfile
+from pathlib import Path
 
 from taskgraph import decision
 from taskgraph.util.yaml import load_yaml
@@ -21,26 +22,26 @@ class TestDecision(unittest.TestCase):
         data = [{"some": "data"}]
         tmpdir = tempfile.mkdtemp()
         try:
-            decision.ARTIFACTS_DIR = os.path.join(tmpdir, "artifacts")
+            decision.ARTIFACTS_DIR = Path(tmpdir) / "artifacts"
             decision.write_artifact("artifact.json", data)
             with open(os.path.join(decision.ARTIFACTS_DIR, "artifact.json")) as f:
                 self.assertEqual(json.load(f), data)
         finally:
             if os.path.exists(tmpdir):
                 shutil.rmtree(tmpdir)
-            decision.ARTIFACTS_DIR = "artifacts"
+            decision.ARTIFACTS_DIR = Path("artifacts")
 
     def test_write_artifact_yml(self):
         data = [{"some": "data"}]
         tmpdir = tempfile.mkdtemp()
         try:
-            decision.ARTIFACTS_DIR = os.path.join(tmpdir, "artifacts")
+            decision.ARTIFACTS_DIR = Path(tmpdir) / "artifacts"
             decision.write_artifact("artifact.yml", data)
             self.assertEqual(load_yaml(decision.ARTIFACTS_DIR, "artifact.yml"), data)
         finally:
             if os.path.exists(tmpdir):
                 shutil.rmtree(tmpdir)
-            decision.ARTIFACTS_DIR = "artifacts"
+            decision.ARTIFACTS_DIR = Path("artifacts")
 
 
 class TestGetDecisionParameters(unittest.TestCase):
