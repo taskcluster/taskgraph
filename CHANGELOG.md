@@ -1,5 +1,15 @@
 # Change Log
 
+## [1.3.0] - 2022-03-18
+
+### Added
+
+- Decision tasks uploads `run-task` and `fetch-content` scripts as artifacts
+
+### Fixed
+
+- Forward `description` and `if-dependencies` keys to Task constructor
+
 ## [1.2.0] - 2022-03-09
 
 ### Added
