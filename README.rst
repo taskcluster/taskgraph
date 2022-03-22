@@ -45,6 +45,27 @@ repository, activate a virtualenv and install dependencies:
   python -m venv taskgraph && source taskgraph/bin/activate
   pip install -r requirements/dev.txt
   $ python setup.py develop
+  
+Releasing
+---------
+
+In order to release a new version of Taskgraph, you will need permission to the
+`taskcluster-taskgraph`_ project in PyPI.
+The following are **required** steps:
+
+  1. Update ``CHANGELOG.md``
+  2. Update ``version`` in ``setup.py``
+  3. Commit, and land the above changes
+  4. Make sure your ``hg status`` is clean
+  5. Checkout the latest public revision ``hg checkout -r 'last(public())'``
+  6. Pull latest revision ``hg pull -u``
+  7. Verify ``hg ident`` outputs the desired revision
+  8. Remove previously packaged releases ``rm -rf ./dist/*``
+  9. Package the app ``python setup.py sdist bdist_wheel``
+  10. Upload to PyPI using `twine`_ ``twine upload dist/*`` providing your username and password
+
+.. _taskcluster-taskgraph: https://pypi.org/project/taskcluster-taskgraph/
+.. _twine: https://pypi.org/project/twine/
 
 Running Tests and Linters
 -------------------------

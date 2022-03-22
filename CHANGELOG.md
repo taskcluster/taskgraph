@@ -1,5 +1,16 @@
 # Change Log
 
+## [1.3.1] - 2022-03-22
+
+### Added
+
+- Add pyenv to python docker image
+
+### Fixed
+
+- Point generic worker tasks to TC instance instead of proxy URL
+- Fixed some tests for local development
+
 ## [1.3.0] - 2022-03-18
 
 ### Added
