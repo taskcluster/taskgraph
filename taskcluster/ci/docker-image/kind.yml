@@ -29,3 +29,4 @@ jobs:
         definition: python
         args:
             PYTHON_VERSION: "3.7"
+            PYENV_VERSIONS: "3.10, 3.9, 3.8, 3.7"

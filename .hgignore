@@ -17,3 +17,5 @@
 ^docs/_build
 
 ^\.pytest_cache/
+
+src/taskcluster_taskgraph.egg-info/

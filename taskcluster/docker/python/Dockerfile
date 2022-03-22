@@ -24,5 +24,13 @@ ENV SHELL=/bin/bash \
 VOLUME /builds/worker/checkouts
 VOLUME /builds/worker/.cache
 
+# pyenv
+# %ARG PYENV_VERSIONS
+ENV PYENV_ROOT=/builds/worker/.pyenv \
+    PATH=/builds/worker/.pyenv/bin:/builds/worker/.pyenv/shims:$PATH
+# %include taskcluster/scripts/pyenv-setup
+ADD topsrcdir/taskcluster/scripts/pyenv-setup /builds/worker/pyenv-setup
+RUN chmod +x /builds/worker/pyenv-setup && /builds/worker/pyenv-setup "$PYENV_VERSIONS"
+
 # Set a default command useful for debugging
 CMD ["/bin/bash", "--login"]
