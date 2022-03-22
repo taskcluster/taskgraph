@@ -11,14 +11,15 @@ import os
 from copy import deepcopy
 
 import pytest
-
+from taskcluster_urls import test_root_url
 from taskgraph.config import load_graph_config
 from taskgraph.transforms import job
-from taskgraph.transforms.job import run_task  # noqa: F401
 from taskgraph.transforms.base import TransformConfig
+from taskgraph.transforms.job import run_task  # noqa: F401
 from taskgraph.transforms.job.common import add_cache
 from taskgraph.transforms.task import payload_builders
 from taskgraph.util.schema import Schema, validate_schema
+from taskgraph.util.taskcluster import get_root_url
 
 from .conftest import FakeParameters
 
@@ -132,7 +133,12 @@ def test_worker_caches(task, transform):
         },
     ),
 )
-def test_run_task_command_context(task, transform, workerfn):
+def test_run_task_command_context(task, transform, workerfn, monkeypatch):
+    if "TASKCLUSTER_ROOT_URL" not in os.environ:
+        monkeypatch.setenv("TASKCLUSTER_ROOT_URL", test_root_url())
+    # Clear memoized function
+    get_root_url.clear()
+
     config, job_, taskdesc, _ = transform(task)
     job_ = deepcopy(job_)
 

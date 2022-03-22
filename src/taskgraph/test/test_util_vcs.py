@@ -49,6 +49,13 @@ def git_repo(tmpdir):
     subprocess.check_output(
         ["git", "config", "user.name", "Integration Tests"], cwd=repo_dir, env=env
     )
+
+    # This is mostly for local dev
+    # If gpg signing is on it will fail calculating the head ref
+    subprocess.check_output(
+        ["git", "config", "commit.gpgsign", "false"], cwd=repo_dir, env=env
+    )
+
     subprocess.check_output(
         ["git", "commit", "-m", "First commit"], cwd=repo_dir, env=env
     )
