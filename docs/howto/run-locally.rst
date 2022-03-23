@@ -39,7 +39,8 @@ For a list of available sub-commands, see:
 Useful Arguments
 ~~~~~~~~~~~~~~~~
 
-Here are some useful arguments accepted by most ``taskgraph`` subcommands.
+Here are some useful arguments accepted by most ``taskgraph`` subcommands. For
+a full reference, see :doc:`/reference/cli`.
 
 ``-J/--json``
 +++++++++++++

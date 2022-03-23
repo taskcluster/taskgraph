@@ -30,6 +30,7 @@ author = "releng"
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
+    "sphinxarg.ext",
     "sphinxcontrib.mermaid",
 ]
 

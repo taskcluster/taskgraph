@@ -6,5 +6,6 @@ mock
 pytest
 responses
 sphinx
+sphinx-argparse
 sphinxcontrib-mermaid
 yamllint
