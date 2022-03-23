@@ -74,7 +74,7 @@ Table of Contents
    howto/index
    concepts/index
    glossary
-   source/modules
+   reference/index
    Contributing <contributing>
 
 Indices and tables

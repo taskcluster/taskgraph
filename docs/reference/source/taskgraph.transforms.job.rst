@@ -1,9 +1,6 @@
 taskgraph.transforms.job package
 ================================
 
-Submodules
-----------
-
 taskgraph.transforms.job.common module
 --------------------------------------
 

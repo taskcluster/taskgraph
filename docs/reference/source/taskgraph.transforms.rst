@@ -1,9 +1,6 @@
 taskgraph.transforms package
 ============================
 
-Subpackages
------------
-
 .. toctree::
    :maxdepth: 4
 

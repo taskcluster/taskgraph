@@ -1,9 +1,6 @@
 taskgraph.actions package
 =========================
 
-Submodules
-----------
-
 taskgraph.actions.add\_new\_jobs module
 ---------------------------------------
 

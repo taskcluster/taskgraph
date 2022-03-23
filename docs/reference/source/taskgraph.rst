@@ -1,9 +1,6 @@
 taskgraph package
 =================
 
-Subpackages
------------
-
 .. toctree::
    :maxdepth: 4
 
@@ -11,9 +8,6 @@ Subpackages
    taskgraph.loader
    taskgraph.transforms
    taskgraph.util
-
-Submodules
-----------
 
 taskgraph.config module
 -----------------------
@@ -131,14 +125,6 @@ taskgraph.taskgraph module
 --------------------------
 
 .. automodule:: taskgraph.taskgraph
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: taskgraph
    :members:
    :undoc-members:
    :show-inheritance:

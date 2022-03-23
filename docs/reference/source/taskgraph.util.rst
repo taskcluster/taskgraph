@@ -1,9 +1,6 @@
 taskgraph.util package
 ======================
 
-Submodules
-----------
-
 taskgraph.util.archive module
 -----------------------------
 

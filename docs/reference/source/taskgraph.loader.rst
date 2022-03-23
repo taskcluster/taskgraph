@@ -1,9 +1,6 @@
 taskgraph.loader package
 ========================
 
-Submodules
-----------
-
 taskgraph.loader.transform module
 ---------------------------------
 
