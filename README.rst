@@ -45,27 +45,6 @@ repository, activate a virtualenv and install dependencies:
   python -m venv taskgraph && source taskgraph/bin/activate
   pip install -r requirements/dev.txt
   $ python setup.py develop
-  
-Releasing
----------
-
-In order to release a new version of Taskgraph, you will need permission to the
-`taskcluster-taskgraph`_ project in PyPI.
-The following are **required** steps:
-
-  1. Update ``CHANGELOG.md``
-  2. Update ``version`` in ``setup.py``
-  3. Commit, and land the above changes
-  4. Make sure your ``hg status`` is clean
-  5. Checkout the latest public revision ``hg checkout -r 'last(public())'``
-  6. Pull latest revision ``hg pull -u``
-  7. Verify ``hg ident`` outputs the desired revision
-  8. Remove previously packaged releases ``rm -rf ./dist/*``
-  9. Package the app ``python setup.py sdist bdist_wheel``
-  10. Upload to PyPI using `twine`_ ``twine upload dist/*`` providing your username and password
-
-.. _taskcluster-taskgraph: https://pypi.org/project/taskcluster-taskgraph/
-.. _twine: https://pypi.org/project/twine/
 
 Running Tests and Linters
 -------------------------
@@ -107,19 +86,15 @@ documentation file. Alternatively you can generate static docs under the
   make html
 
 Taskgraph also uses the ``autodoc`` extension to generate an API reference.
-When new modules are created, the API docs need to be regenerated using the
-following command:
-
-.. code-block::
-
-  sphinx-apidoc -o docs/source --ext-autodoc -H "API Reference" src/taskgraph "src/taskgraph/test"
+When new modules are created, be sure to add an ``autodoc`` directive for
+them in the source reference.
 
 .. _Sphinx: https://www.sphinx-doc.org
 
 Managing Dependencies
 ---------------------
 
-.. warning:: 
+.. warning::
    Ensure you always update packages using the minimum supported Python.
    Otherwise you may break the workflow of people trying to develop Taskgraph
    with an older version of Python. The `pyenv`_ tool can help with managing
@@ -136,10 +111,37 @@ Next run the following command from the repository root:
 
 .. code-block::
 
-  pip-compile-multi -g base -g test -g dev --allow-unsafe -P <package>
+  pip-compile-multi -g base -g test -g dev --allow-unsafe
 
-Where ``<package>`` is the name of the package you added or updated. Note the
-``-P`` flag can be passed multiple times if multiple dependencies were changed.
+If you'd like to add a new package without upgrading any of the existing ones,
+you can run:
+
+.. code-block::
+
+  pip-compile-multi -g base -g test -g dev --allow-unsafe --no-upgrade
 
 .. _pyenv: https://github.com/pyenv/pyenv
 .. _pip-compile-multi: https://pip-compile-multi.readthedocs.io/en/latest/
+
+Releasing
+---------
+
+In order to release a new version of Taskgraph, you will need permission to the
+`taskcluster-taskgraph`_ project in PyPI.
+The following are **required** steps:
+
+  1. Update ``CHANGELOG.md``
+  2. Update ``version`` in ``setup.py``
+  3. Commit, and land the above changes
+  4. Make sure your ``hg status`` is clean
+  5. Checkout the latest public revision ``hg checkout -r 'last(public())'``
+  6. Pull latest revision ``hg pull -u``
+  7. Verify ``hg ident`` outputs the desired revision
+  8. Remove previously packaged releases ``rm -rf ./dist/*``
+  9. Package the app ``python setup.py sdist bdist_wheel``
+  10. Upload to PyPI using `twine`_ ``twine upload dist/*`` providing your
+      username and API token
+
+.. _taskcluster-taskgraph: https://pypi.org/project/taskcluster-taskgraph/
+.. _twine: https://pypi.org/project/twine/
+
