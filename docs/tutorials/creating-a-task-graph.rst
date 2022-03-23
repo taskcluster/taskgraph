@@ -223,6 +223,6 @@ In fact, if we hadn't made up the trust domain and worker pool in
 `task creator`_!
 
 Next you can check out the :doc:`connecting-taskcluster` tutorial or learn more
-about :doc:`generating the taskgraph locally </howto/debugging_and_testing>`.
+about :doc:`generating the taskgraph locally </howto/run-locally>`.
 
 .. _task creator: https://firefox-ci-tc.services.mozilla.com/tasks/create

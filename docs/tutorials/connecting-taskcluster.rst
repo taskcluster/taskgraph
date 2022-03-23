@@ -355,10 +355,10 @@ Testing it Out
 From here you should be ready to commit to your repo (directly or via pull
 request) and start testing things out! It's very likely that you'll run into
 some error or another at first. If you suspect a problem in the task
-configuration, see :doc:`/howto/debugging_and_testing` for tips on how to solve
-it. Otherwise you might need to tweak the ``.taskcluster.yml`` or make changes
-to your repo's Taskcluster configuration. If the latter is necessary, reach out
-to your Taskcluster administrators for assistance.
+configuration, see :doc:`/howto/run-locally` for tips on how to solve it.
+Otherwise you might need to tweak the ``.taskcluster.yml`` or make changes to
+your repo's Taskcluster configuration. If the latter is necessary, reach out to
+your Taskcluster administrators for assistance.
 
 Phew! While that was a lot, this only scratches the surface. You may also want
 to incorporate:
