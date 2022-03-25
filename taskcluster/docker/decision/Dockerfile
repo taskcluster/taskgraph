@@ -1,5 +1,5 @@
-FROM          ubuntu:18.04
-MAINTAINER Tom Prince <mozilla@hocat.ca>
+FROM          ubuntu:20.04
+MAINTAINER Release Engineering <release@mozilla.com>
 
 # Add worker user
 RUN mkdir /builds && \
@@ -11,9 +11,6 @@ RUN mkdir /builds && \
 
 # %include taskcluster/scripts/external_tools/tooltool.py
 ADD topsrcdir/taskcluster/scripts/external_tools/tooltool.py /setup/tooltool.py
-
-# %include taskcluster/docker/recipes/install-mercurial.sh
-ADD topsrcdir/taskcluster/docker/recipes/install-mercurial.sh /setup/install-mercurial.sh
 
 # Add taskgraph package.
 # %include requirements/base.txt

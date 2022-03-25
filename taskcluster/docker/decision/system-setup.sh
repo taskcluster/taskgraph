@@ -4,7 +4,7 @@ set -v -e
 
 test "$(whoami)" == 'root'
 
-# Python 2 is still needed for mercurial 4.7.2 (see install-mercurial.sh)
+# Python 2 is still needed for mercurial 5.3.1
 apt-get update
 apt-get install -y --force-yes --no-install-recommends \
     ca-certificates \
@@ -17,6 +17,8 @@ apt-get install -y --force-yes --no-install-recommends \
     sudo \
     unzip \
     curl \
+    ucf \
+    mercurial \
     git
 
 BUILD=/root/build
@@ -29,8 +31,15 @@ tooltool_fetch() {
 }
 
 cd $BUILD
-# shellcheck disable=SC1091
-. /setup/install-mercurial.sh
+
+# mercurial setup
+CERT_PATH=/etc/ssl/certs/ca-certificates.crt
+cat >/etc/mercurial/hgrc.d/cacerts.rc <<EOF
+[web]
+cacerts = ${CERT_PATH}
+EOF
+chmod 644 /etc/mercurial/hgrc.d/cacerts.rc
+chmod 644 /usr/local/mercurial/robustcheckout.py
 
 # Using pip3 directly results in a warning that a "very old" wrapper is being
 # used, and that support for this will be deprecated.
