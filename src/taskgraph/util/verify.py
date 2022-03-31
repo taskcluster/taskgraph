@@ -8,7 +8,15 @@ import sys
 
 import attr
 
+from taskgraph.util.attributes import match_run_on_projects
+
 logger = logging.getLogger(__name__)
+
+
+@attr.s(frozen=True)
+class Verification:
+    verify = attr.ib()
+    run_on_projects = attr.ib()
 
 
 @attr.s(frozen=True)
@@ -23,20 +31,33 @@ class VerificationSequence:
 
     _verifications = attr.ib(factory=dict)
 
-    def __call__(self, graph_name, graph, graph_config):
+    def __call__(self, graph_name, graph, graph_config, parameters):
         for verification in self._verifications.get(graph_name, []):
+            if not match_run_on_projects(
+                parameters["project"], verification.run_on_projects
+            ):
+                continue
             scratch_pad = {}
             graph.for_each_task(
-                verification, scratch_pad=scratch_pad, graph_config=graph_config
+                verification.verify,
+                scratch_pad=scratch_pad,
+                graph_config=graph_config,
+                parameters=parameters,
             )
-            verification(
-                None, graph, scratch_pad=scratch_pad, graph_config=graph_config
+            verification.verify(
+                None,
+                graph,
+                scratch_pad=scratch_pad,
+                graph_config=graph_config,
+                parameters=parameters,
             )
         return graph_name, graph
 
-    def add(self, graph_name):
+    def add(self, graph_name, run_on_projects={"all"}):
         def wrap(func):
-            self._verifications.setdefault(graph_name, []).append(func)
+            self._verifications.setdefault(graph_name, []).append(
+                Verification(func, run_on_projects)
+            )
             return func
 
         return wrap
@@ -46,7 +67,7 @@ verifications = VerificationSequence()
 
 
 @verifications.add("full_task_graph")
-def verify_task_graph_symbol(task, taskgraph, scratch_pad, graph_config):
+def verify_task_graph_symbol(task, taskgraph, scratch_pad, graph_config, parameters):
     """
     This function verifies that tuple
     (collection.keys(), machine.platform, groupSymbol, symbol) is unique
@@ -77,7 +98,9 @@ def verify_task_graph_symbol(task, taskgraph, scratch_pad, graph_config):
 
 
 @verifications.add("full_task_graph")
-def verify_trust_domain_v2_routes(task, taskgraph, scratch_pad, graph_config):
+def verify_trust_domain_v2_routes(
+    task, taskgraph, scratch_pad, graph_config, parameters
+):
     """
     This function ensures that any two tasks have distinct ``index.{trust-domain}.v2`` routes.
     """
@@ -100,7 +123,9 @@ def verify_trust_domain_v2_routes(task, taskgraph, scratch_pad, graph_config):
 
 
 @verifications.add("full_task_graph")
-def verify_routes_notification_filters(task, taskgraph, scratch_pad, graph_config):
+def verify_routes_notification_filters(
+    task, taskgraph, scratch_pad, graph_config, parameters
+):
     """
     This function ensures that only understood filters for notifications are
     specified.
@@ -127,7 +152,7 @@ def verify_routes_notification_filters(task, taskgraph, scratch_pad, graph_confi
 
 
 @verifications.add("full_task_graph")
-def verify_dependency_tiers(task, taskgraph, scratch_pad, graph_config):
+def verify_dependency_tiers(task, taskgraph, scratch_pad, graph_config, parameters):
     tiers = scratch_pad
     if task is not None:
         tiers[task.label] = (
@@ -159,7 +184,7 @@ def verify_dependency_tiers(task, taskgraph, scratch_pad, graph_config):
 
 
 @verifications.add("optimized_task_graph")
-def verify_always_optimized(task, taskgraph, scratch_pad, graph_config):
+def verify_always_optimized(task, taskgraph, scratch_pad, graph_config, parameters):
     """
     This function ensures that always-optimized tasks have been optimized.
     """

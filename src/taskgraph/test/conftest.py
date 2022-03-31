@@ -112,6 +112,7 @@ def maketgg(monkeypatch):
         parameters = FakeParameters(
             {
                 "_kinds": kinds,
+                "project": "",
                 "target_tasks_method": "test_method",
                 "try_mode": None,
                 "tasks_for": "hg-push",
