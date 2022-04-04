@@ -5,18 +5,79 @@
 
 import logging
 import sys
+from abc import ABC, abstractmethod
 
 import attr
 
+from taskgraph.config import GraphConfig
+from taskgraph.parameters import Parameters
+from taskgraph.taskgraph import TaskGraph
 from taskgraph.util.attributes import match_run_on_projects
 
 logger = logging.getLogger(__name__)
 
 
 @attr.s(frozen=True)
-class Verification:
-    verify = attr.ib()
-    run_on_projects = attr.ib()
+class Verification(ABC):
+    func = attr.ib()
+
+    @abstractmethod
+    def verify(self, **kwargs) -> None:
+        pass
+
+
+@attr.s(frozen=True)
+class InitialVerification(Verification):
+    """Verification that doesn't depend on any generation state."""
+
+    def verify(self):
+        self.func()
+
+
+@attr.s(frozen=True)
+class GraphVerification(Verification):
+    """Verification for a TaskGraph object."""
+
+    run_on_projects = attr.ib(default=None)
+
+    def verify(
+        self, graph: TaskGraph, graph_config: GraphConfig, parameters: Parameters
+    ):
+        if self.run_on_projects and not match_run_on_projects(
+            parameters["project"], self.run_on_projects
+        ):
+            return
+
+        scratch_pad = {}
+        graph.for_each_task(
+            self.func,
+            scratch_pad=scratch_pad,
+            graph_config=graph_config,
+            parameters=parameters,
+        )
+        self.func(
+            None,
+            graph,
+            scratch_pad=scratch_pad,
+            graph_config=graph_config,
+            parameters=parameters,
+        )
+
+
+@attr.s(frozen=True)
+class ParametersVerification(Verification):
+    """Verification for a set of parameters."""
+
+    def verify(self, parameters: Parameters):
+        self.func(parameters)
+
+
+@attr.s(frozen=True)
+class KindsVerification(Verification):
+    """Verification for kinds."""
+
+    def verify(self, kinds: dict):
+        self.func(kinds)
 
 
 @attr.s(frozen=True)
@@ -30,34 +91,22 @@ class VerificationSequence:
     """
 
     _verifications = attr.ib(factory=dict)
+    _verification_types = {
+        "graph": GraphVerification,
+        "initial": InitialVerification,
+        "kinds": KindsVerification,
+        "parameters": ParametersVerification,
+    }
 
-    def __call__(self, graph_name, graph, graph_config, parameters):
-        for verification in self._verifications.get(graph_name, []):
-            if not match_run_on_projects(
-                parameters["project"], verification.run_on_projects
-            ):
-                continue
-            scratch_pad = {}
-            graph.for_each_task(
-                verification.verify,
-                scratch_pad=scratch_pad,
-                graph_config=graph_config,
-                parameters=parameters,
-            )
-            verification.verify(
-                None,
-                graph,
-                scratch_pad=scratch_pad,
-                graph_config=graph_config,
-                parameters=parameters,
-            )
-        return graph_name, graph
+    def __call__(self, name, *args, **kwargs):
+        for verification in self._verifications.get(name, []):
+            verification.verify(*args, **kwargs)
 
-    def add(self, graph_name, run_on_projects={"all"}):
+    def add(self, name, **kwargs):
+        cls = self._verification_types.get(name, GraphVerification)
+
         def wrap(func):
-            self._verifications.setdefault(graph_name, []).append(
-                Verification(func, run_on_projects)
-            )
+            self._verifications.setdefault(name, []).append(cls(func, **kwargs))
             return func
 
         return wrap

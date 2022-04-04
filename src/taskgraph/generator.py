@@ -250,6 +250,9 @@ class TaskGraphGenerator:
                     continue
 
     def _run(self):
+        # Initial verifications that don't depend on any generation state.
+        verifications("initial")
+
         logger.info("Loading graph configuration.")
         graph_config = load_graph_config(self.root_dir)
 
@@ -271,7 +274,7 @@ class TaskGraphGenerator:
             filters.insert(0, "target_tasks_method")
         filters = [filter_tasks.filter_task_functions[f] for f in filters]
 
-        yield ("parameters", parameters)
+        yield self.verify("parameters", parameters)
 
         logger.info("Loading kinds")
         # put the kinds into a graph and sort topologically so that kinds are loaded
@@ -287,6 +290,7 @@ class TaskGraphGenerator:
             kind.name: kind
             for kind in self._load_kinds(graph_config, parameters.get("target-kind"))
         }
+        verifications("kinds", kinds)
 
         edges = set()
         for kind in kinds.values():
@@ -317,7 +321,7 @@ class TaskGraphGenerator:
                 all_tasks[task.label] = task
             logger.info(f"Generated {len(new_tasks)} tasks for kind {kind_name}")
         full_task_set = TaskGraph(all_tasks, Graph(set(all_tasks), set()))
-        yield verifications("full_task_set", full_task_set, graph_config, parameters)
+        yield self.verify("full_task_set", full_task_set, graph_config, parameters)
 
         logger.info("Generating full task graph")
         edges = set()
@@ -330,9 +334,7 @@ class TaskGraphGenerator:
             "Full task graph contains %d tasks and %d dependencies"
             % (len(full_task_set.graph.nodes), len(edges))
         )
-        yield verifications(
-            "full_task_graph", full_task_graph, graph_config, parameters
-        )
+        yield self.verify("full_task_graph", full_task_graph, graph_config, parameters)
 
         logger.info("Generating target task set")
         target_task_set = TaskGraph(
@@ -349,9 +351,7 @@ class TaskGraphGenerator:
                 % (fltr.__name__, old_len - len(target_tasks), len(target_tasks))
             )
 
-        yield verifications(
-            "target_task_set", target_task_set, graph_config, parameters
-        )
+        yield self.verify("target_task_set", target_task_set, graph_config, parameters)
 
         logger.info("Generating target task graph")
         # include all docker-image build tasks here, in case they are needed for a graph morph
@@ -376,7 +376,7 @@ class TaskGraphGenerator:
         target_task_graph = TaskGraph(
             {l: all_tasks[l] for l in target_graph.nodes}, target_graph
         )
-        yield verifications(
+        yield self.verify(
             "target_task_graph", target_task_graph, graph_config, parameters
         )
 
@@ -393,7 +393,7 @@ class TaskGraphGenerator:
             existing_tasks=existing_tasks,
         )
 
-        yield verifications(
+        yield self.verify(
             "optimized_task_graph", optimized_task_graph, graph_config, parameters
         )
 
@@ -402,7 +402,7 @@ class TaskGraphGenerator:
         )
 
         yield "label_to_taskid", label_to_taskid
-        yield verifications(
+        yield self.verify(
             "morphed_task_graph", morphed_task_graph, graph_config, parameters
         )
 
@@ -414,6 +414,10 @@ class TaskGraphGenerator:
                 raise AttributeError(f"No such run result {name}")
             self._run_results[k] = v
         return self._run_results[name]
+
+    def verify(self, name, obj, *args, **kwargs):
+        verifications(name, obj, *args, **kwargs)
+        return name, obj
 
 
 def load_tasks_for_kind(parameters, kind, root_dir=None):
