@@ -24,7 +24,7 @@ Alternatively, the repo can be cloned and installed directly:
 
 .. code-block::
 
-  hg clone https://hg.mozilla.org/ci/taskgraph
+  git clone https://github.com/taskcluster/taskgraph
   cd taskgraph
   python setup.py install
 
@@ -40,7 +40,7 @@ repository, activate a virtualenv and install dependencies:
 
 .. code-block::
 
-  hg clone https://hg.mozilla.org/ci/taskgraph
+  git clone https://github.com/taskcluster/taskgraph
   cd taskgraph
   python -m venv taskgraph && source taskgraph/bin/activate
   pip install -r requirements/dev.txt

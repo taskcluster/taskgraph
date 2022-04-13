@@ -108,7 +108,7 @@ defined in ``taskcluster/requirements.txt``, ensuring Taskgraph is bootstrapped
 and ready to go.
 
 .. _decision docker images: https://hub.docker.com/repository/docker/mozillareleases/taskgraph
-.. _run-task: https://hg.mozilla.org/ci/taskgraph/
+.. _run-task: https://github.com/taskcluster/taskgraph/blob/main/src/taskgraph/run-task/run-task
 
 Upgrading Taskgraph
 -------------------
@@ -141,11 +141,10 @@ accomplished using `pip's version control support`_:
 .. code-block:: shell
 
    cd taskcluster
-   echo "taskcluster-taskgraph@hg+https://hg.mozilla.org/ci/taskgraph-try@ae7697ec7905216c7245bafb8a9475355ea00a76" > requirements.in
+   echo "taskcluster-taskgraph@git+https://github.com/taskcluster/taskgraph@refs/pull/123/head" > requirements.in
    pip-compile --generate-hashes --output-file requirements.txt requirements.in
 
-This way you can push an experimental change to the `taskgraph-try`_ repo and
-then install it in your repo's decision task.
+This way you can push an experimental change to a PR and then install it in
+your repo's decision task.
 
 .. _pip's version control support: https://pip.pypa.io/en/stable/topics/vcs-support/
-.. _taskgraph-try: https://hg.mozilla.org/ci/taskgraph-try/

@@ -33,7 +33,7 @@ need to test against a specific revision:
 
 .. code-block::
 
-   hg clone https://hg.mozilla.org/ci/taskgraph
+   git clone https://github.com/taskcluster/taskgraph
    cd taskgraph
    python setup.py develop
 
