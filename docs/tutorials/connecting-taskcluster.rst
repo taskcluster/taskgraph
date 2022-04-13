@@ -382,7 +382,6 @@ which to build.
 .. _JSON-e reference: https://json-e.js.org/language.html
 .. _playground: https://json-e.js.org/playground.html
 .. _let: https://json-e.js.org/operators.html#let
-.. _latest revision of Taskgraph: https://hg.mozilla.org/ci/taskgraph
 .. _push: https://docs.github.com/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
 .. _pull request: https://docs.github.com/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
 .. _release: https://docs.github.com/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#release
@@ -395,4 +394,4 @@ which to build.
 __ docker-worker_
 .. _latest versions of the images: https://hub.docker.com/r/mozillareleases/taskgraph/tags
 .. _taskclusterProxy: https://docs.taskcluster.net/docs/reference/workers/docker-worker/features#feature-taskclusterproxy
-.. _run-task: https://hg.mozilla.org/ci/taskgraph/file/tip/src/taskgraph/run-task/run-task
+.. _run-task: https://github.com/taskcluster/taskgraph/file/tip/src/taskgraph/run-task/run-task

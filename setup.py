@@ -7,7 +7,7 @@ setup(
     name="taskcluster-taskgraph",
     version="1.3.1",
     description="Build taskcluster taskgraphs",
-    url="https://hg.mozilla.org/ci/taskgraph",
+    url="https://github.com/taskcluster/taskgraph",
     packages=find_packages("src"),
     package_dir={"": "src"},
     install_requires=requirements,
