@@ -1,0 +1,17 @@
+# Editor
+*~
+*.dir-locals.el  # Emacs directory variable files.
+
+# Build directories
+build/
+dist/
+docs/_build/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+.pytest_cache/
+.python-version
+.tox/
