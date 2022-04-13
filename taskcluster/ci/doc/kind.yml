@@ -36,14 +36,3 @@ jobs:
                 pip install --user -r requirements/test.txt &&
                 pip install --user --no-deps . &&
                 make html
-    webhook:
-        description: "Trigger doc generation on readthedocs"
-        treeherder:
-            symbol: doc(hook)
-        scopes:
-            - secrets:get:project/releng/taskgraph/ci
-        run-on-projects: ["taskgraph"]
-        run:
-            command: >-
-                pip install --user -r requirements/base.txt &&
-                python taskcluster/scripts/rtd-webhook.py
