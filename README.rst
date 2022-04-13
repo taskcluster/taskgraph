@@ -1,3 +1,16 @@
+
+.. image:: https://firefox-ci-tc.services.mozilla.com/api/github/v1/repository/taskcluster/taskgraph/main/badge.svg
+   :target: https://firefox-ci-tc.services.mozilla.com/api/github/v1/repository/taskcluster/taskgraph/main/latest
+   :alt: Task Status
+
+.. image:: https://badge.fury.io/py/taskcluster-taskgraph.svg
+   :target: https://badge.fury.io/py/taskcluster-taskgraph
+   :alt: Pypi Version
+
+.. image:: https://readthedocs.org/projects/taskcluster-taskgraph/badge/?version=latest
+   :target: https://taskcluster-taskgraph.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
+
 Taskgraph
 =========
 
