@@ -79,4 +79,4 @@ Get Involved
 
 If you'd like to get involved, please see our `contributing docs`_!
 
-.. _contributing docs: https://github.com/taskcluster/taskgraph/blob/main/CONTRIBUTING.md
+.. _contributing docs: https://github.com/taskcluster/taskgraph/blob/main/CONTRIBUTING.rst
