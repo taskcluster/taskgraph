@@ -108,10 +108,10 @@ In order to release a new version of Taskgraph, you will need permission to the
 1. Update ``CHANGELOG.md``
 2. Update ``version`` in ``setup.py``
 3. Commit, and land the above changes
-4. Make sure your ``hg status`` is clean
-5. Checkout the latest public revision ``hg checkout -r 'last(public())'``
-6. Pull latest revision ``hg pull -u``
-7. Verify ``hg ident`` outputs the desired revision
+4. Make sure your ``git status`` is clean
+5. Checkout the latest public revision ``git checkout main``
+6. Pull latest revision ``git pull upstream main``
+7. Verify ``git show`` outputs the desired revision
 8. Remove previously packaged releases ``rm -rf ./dist/*``
 9. Package the app ``python setup.py sdist bdist_wheel``
 10. Upload to PyPI using `twine`_ ``twine upload dist/*`` providing your
