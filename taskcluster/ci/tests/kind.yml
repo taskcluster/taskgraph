@@ -36,6 +36,13 @@ jobs:
         description: "Run `unit tests` to validate the latest changes"
         treeherder:
             symbol: unit
+        worker:
+            artifacts:
+                - type: file
+                  path: /builds/worker/artifacts/coverage.xml
+                  name: public/coverage.xml
+            env:
+                COVERAGE_REPORT_COMMAND: "coverage xml -o /builds/worker/artifacts/coverage.xml"
         run:
             command: >-
                 pip install --user -r requirements/test.txt &&
