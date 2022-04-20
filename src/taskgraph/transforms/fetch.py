@@ -214,6 +214,10 @@ def make_task(config, jobs):
         # Add the given prefix to each file entry in the archive.
         # Requires an artifact-name ending with .tar.zst.
         Optional("add-prefix"): str,
+        # Headers to pass alongside the request.
+        Optional("headers"): {
+            str: str,
+        },
         # IMPORTANT: when adding anything that changes the behavior of the task,
         # it is important to update the digest data used to compute cache hits.
     },
@@ -262,6 +266,10 @@ def create_fetch_url_task(config, name, fetch):
                 "FETCH_GPG_KEY",
             ]
         )
+
+    if "headers" in fetch:
+        for k, v in fetch["headers"].items():
+            command.extend(["-H", f"{k}:{v}"])
 
     command.extend(
         [

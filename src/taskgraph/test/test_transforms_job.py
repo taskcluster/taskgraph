@@ -12,16 +12,13 @@ from copy import deepcopy
 
 import pytest
 from taskcluster_urls import test_root_url
-from taskgraph.config import load_graph_config
 from taskgraph.transforms import job
-from taskgraph.transforms.base import TransformConfig
 from taskgraph.transforms.job import run_task  # noqa: F401
 from taskgraph.transforms.job.common import add_cache
 from taskgraph.transforms.task import payload_builders
 from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.taskcluster import get_root_url
 
-from .conftest import FakeParameters
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -35,26 +32,8 @@ TASK_DEFAULTS = {
 }
 
 
-@pytest.fixture(scope="module")
-def config():
-    graph_config = load_graph_config(os.path.join("taskcluster", "ci"))
-    params = FakeParameters(
-        {
-            "base_repository": "http://hg.example.com",
-            "head_repository": "http://hg.example.com",
-            "head_rev": "abcdef",
-            "head_ref": "abcdef",
-            "level": 1,
-            "repository_type": "hg",
-        }
-    )
-    return TransformConfig(
-        "job_test", here, {}, params, {}, graph_config, write_artifacts=False
-    )
-
-
 @pytest.fixture()
-def transform(monkeypatch, config):
+def transform(monkeypatch, transform_config):
     """Run the job transforms on the specified task but return the inputs to
     `configure_taskdesc_for_run` without executing it.
 
@@ -76,7 +55,7 @@ def transform(monkeypatch, config):
             job, "configure_taskdesc_for_run", _configure_taskdesc_for_run
         )
 
-        for _ in job.transforms(config, [task]):
+        for _ in job.transforms(transform_config, [task]):
             # This forces the generator to be evaluated
             pass
 
