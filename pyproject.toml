@@ -5,5 +5,8 @@ extend-exclude = """(\
   taskcluster/scripts/external_tools)\
   """
 
+[tool.coverage.run]
+omit = ["src/taskgraph/test/*"]
+
 [tool.pytest.ini_options]
 xfail_strict = true
