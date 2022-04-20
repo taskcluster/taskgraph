@@ -609,15 +609,22 @@ def build_generic_worker_payload(config, task, task_def):
         "maxRunTime": worker["max-run-time"],
     }
 
+    on_exit_status = {}
+    if "retry-exit-status" in worker:
+        on_exit_status["retry"] = worker["retry-exit-status"]
+    if "purge-caches-exit-status" in worker:
+        on_exit_status["purgeCaches"] = worker["purge-caches-exit-status"]
     if worker["os"] == "windows":
-        task_def["payload"]["onExitStatus"] = {
-            "retry": [
+        on_exit_status.setdefault("retry", []).extend(
+            [
                 # These codes (on windows) indicate a process interruption,
                 # rather than a task run failure. See bug 1544403.
                 1073807364,  # process force-killed due to system shutdown
                 3221225786,  # sigint (any interrupt)
             ]
-        }
+        )
+    if on_exit_status:
+        task_def["payload"]["onExitStatus"] = on_exit_status
 
     env = worker.get("env", {})
 
