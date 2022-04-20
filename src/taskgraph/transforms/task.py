@@ -612,8 +612,6 @@ def build_generic_worker_payload(config, task, task_def):
     on_exit_status = {}
     if "retry-exit-status" in worker:
         on_exit_status["retry"] = worker["retry-exit-status"]
-    if "purge-caches-exit-status" in worker:
-        on_exit_status["purgeCaches"] = worker["purge-caches-exit-status"]
     if worker["os"] == "windows":
         on_exit_status.setdefault("retry", []).extend(
             [
