@@ -482,7 +482,9 @@ def build_docker_worker_payload(config, task, task_def):
             suffix = f"{cache_version}-{_run_task_suffix()}"
 
             if out_of_tree_image:
-                name_hash = hashlib.sha256(out_of_tree_image).hexdigest()
+                name_hash = hashlib.sha256(
+                    out_of_tree_image.encode("utf-8")
+                ).hexdigest()
                 suffix += name_hash[0:12]
 
         else:
