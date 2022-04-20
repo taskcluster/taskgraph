@@ -1,15 +1,18 @@
+import os
+
 import pytest
 from responses import RequestsMock
 
-from taskgraph import (
-    generator,
-    optimize as optimize_mod,
-    target_tasks as target_tasks_mod,
-)
+from taskgraph import generator
+from taskgraph import optimize as optimize_mod
+from taskgraph import target_tasks as target_tasks_mod
 from taskgraph.config import GraphConfig
-from taskgraph.generator import TaskGraphGenerator, Kind
+from taskgraph.generator import Kind, TaskGraphGenerator
 from taskgraph.optimize import OptimizationStrategy
+from taskgraph.transforms.base import TransformConfig
 from taskgraph.util.templates import merge
+
+here = os.path.abspath(os.path.dirname(__file__))
 
 
 @pytest.fixture
@@ -63,7 +66,25 @@ class WithFakeKind(TaskGraphGenerator):
 
 def fake_load_graph_config(root_dir):
     graph_config = GraphConfig(
-        {"trust-domain": "test-domain", "taskgraph": {}}, root_dir
+        {
+            "trust-domain": "test-domain",
+            "taskgraph": {
+                "repositories": {
+                    "ci": {"name": "Taskgraph"},
+                }
+            },
+            "workers": {
+                "aliases": {
+                    "t-linux": {
+                        "provisioners": "taskgraph-t",
+                        "implementation": "docker-worker",
+                        "os": "linux",
+                        "worker-type": "linux",
+                    }
+                }
+            },
+        },
+        root_dir,
     )
     graph_config.__dict__["register"] = lambda: None
     return graph_config
@@ -89,7 +110,26 @@ class FakeOptimization(OptimizationStrategy):
 
 
 @pytest.fixture
-def maketgg(monkeypatch):
+def parameters():
+    return FakeParameters(
+        {
+            "base_repository": "http://hg.example.com",
+            "build_date": 0,
+            "head_repository": "http://hg.example.com",
+            "head_rev": "abcdef",
+            "head_ref": "abcdef",
+            "level": 1,
+            "project": "",
+            "repository_type": "hg",
+            "target_tasks_method": "test_method",
+            "tasks_for": "hg-push",
+            "try_mode": None,
+        }
+    )
+
+
+@pytest.fixture
+def maketgg(monkeypatch, parameters):
     def inner(target_tasks=None, kinds=[("_fake", [])], params=None):
         params = params or {}
         FakeKind.loaded_kinds = []
@@ -109,19 +149,30 @@ def maketgg(monkeypatch):
             optimize_mod, "_make_default_strategies", make_fake_strategies
         )
 
-        parameters = FakeParameters(
-            {
-                "_kinds": kinds,
-                "project": "",
-                "target_tasks_method": "test_method",
-                "try_mode": None,
-                "tasks_for": "hg-push",
-            }
-        )
+        parameters["_kinds"] = kinds
         parameters.update(params)
 
         monkeypatch.setattr(generator, "load_graph_config", fake_load_graph_config)
 
         return WithFakeKind("/root", parameters)
+
+    return inner
+
+
+@pytest.fixture
+def transform_config(parameters):
+    graph_config = fake_load_graph_config(os.path.join("taskcluster", "ci"))
+    return TransformConfig(
+        "test", here, {}, parameters, {}, graph_config, write_artifacts=False
+    )
+
+
+@pytest.fixture
+def run_transform(transform_config):
+    def inner(func, tasks):
+        if not isinstance(tasks, list):
+            tasks = [tasks]
+
+        return list(func(transform_config, tasks))
 
     return inner
