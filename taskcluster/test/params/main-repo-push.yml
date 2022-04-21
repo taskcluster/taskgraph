@@ -1,0 +1,21 @@
+---
+base_repository: https://github.com/taskcluster/taskgraph
+build_date: 1650566877
+do_not_optimize: []
+existing_tasks: {}
+filters:
+    - target_tasks_method
+head_ref: d0bcf5ac346b3d6037fdcdaf23657593b18e1f18
+head_repository: https://github.com/taskcluster/taskgraph
+head_rev: d0bcf5ac346b3d6037fdcdaf23657593b18e1f18
+head_tag: ''
+level: '3'
+moz_build_date: '20220421184757'
+optimize_target_tasks: true
+owner: user@example.com
+project: taskgraph
+pushdate: 0
+pushlog_id: '0'
+repository_type: git
+target_tasks_method: default
+tasks_for: github-push
