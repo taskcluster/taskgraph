@@ -1,0 +1,21 @@
+---
+base_repository: https://github.com/ahal/taskgraph
+build_date: 1650573119
+do_not_optimize: []
+existing_tasks: {}
+filters:
+    - target_tasks_method
+head_ref: 2695ccc00b55efc92b823e91c03120cec04c6d50
+head_repository: https://github.com/ahal/taskgraph
+head_rev: 2695ccc00b55efc92b823e91c03120cec04c6d50
+head_tag: ''
+level: '1'
+moz_build_date: '20220421203159'
+optimize_target_tasks: true
+owner: ahal@users.noreply.github.com
+project: taskgraph
+pushdate: 0
+pushlog_id: '0'
+repository_type: git
+target_tasks_method: default
+tasks_for: github-pull-request
