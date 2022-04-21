@@ -43,12 +43,13 @@ jobs:
                   name: public/coverage.xml
             env:
                 COVERAGE_REPORT_COMMAND: "coverage xml -o /builds/worker/artifacts/coverage.xml"
+                TOX_PARALLEL_NO_SPINNER: "1"
         run:
             command: >-
                 pip install --user -r requirements/test.txt &&
                 pip install --user --no-deps . &&
                 pyenv latest local 3.10 3.9 3.8 3.7 &&
-                tox
+                tox --parallel
 
     flake8:
         description: "Run `flake8` on Python 3 to validate the latest changes"
