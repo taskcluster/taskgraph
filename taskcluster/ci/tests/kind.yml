@@ -36,6 +36,8 @@ jobs:
         description: "Run `unit tests` to validate the latest changes"
         treeherder:
             symbol: unit
+        attributes:
+            artifact_prefix: public
         worker:
             artifacts:
                 - type: file

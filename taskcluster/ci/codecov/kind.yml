@@ -1,0 +1,43 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+---
+loader: taskgraph.loader.transform:loader
+
+transforms:
+    - taskgraph.transforms.job:transforms
+    - taskgraph.transforms.task:transforms
+
+kind-dependencies:
+    - fetch
+    - tests
+
+jobs:
+    upload:
+        description: "Upload coverage.xml to codecov.io"
+        worker-type: t-linux
+        worker:
+            docker-image: {in-tree: python3.7}
+            max-run-time: 1800
+            env:
+                MOZ_FETCHES_DIR: /builds/worker/fetches
+        treeherder:
+            kind: test
+            platform: tests/opt
+            tier: 1
+            symbol: codecov
+        scopes:
+            - secrets:get:project/releng/taskgraph/ci
+        dependencies:
+            tests: tests-unit
+        fetches:
+            fetch:
+                - codecov-uploader
+            tests:
+                - coverage.xml
+        run:
+            using: run-task
+            cwd: '{checkout}'
+            command: >-
+                pip install --user -r requirements/test.txt &&
+                python taskcluster/scripts/codecov-upload.py
