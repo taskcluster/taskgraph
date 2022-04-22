@@ -22,6 +22,8 @@ jobs:
     decision-mobile:
         symbol: I(d-m)
         parent: decision
+    fetch:
+        symbol: I(fetch)
     index-task:
         symbol: I(idx)
     python3.7:

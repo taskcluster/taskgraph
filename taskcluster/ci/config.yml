@@ -4,6 +4,7 @@ treeherder:
     group-names:
         'I': 'Docker Image Builds'
         'doc': 'Documentation tasks'
+        'Fetch': 'Fetch tasks'
 
 index:
     products:
