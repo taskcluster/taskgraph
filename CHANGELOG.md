@@ -1,5 +1,19 @@
 # Change Log
 
+## [1.4.0] - 2022-04-22
+
+### Added
+- Add ability to run new types of verifications (e.g doc verifications)
+- Allow custom `onExitStatus` values for generic-worker based tasks across all platforms
+
+### Changed
+- Decision docker images updated to Ubuntu 20.04 and Mercurial 5.3.1
+- Pass parameters into verifications functions
+
+### Fixed
+- Don't assume Taskcluster is enabled in generic-worker run-task based tasks
+- Exception during local generation when generic-worker tasks exist
+
 ## [1.3.1] - 2022-03-22
 
 ### Added
