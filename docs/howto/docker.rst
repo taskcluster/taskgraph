@@ -191,7 +191,7 @@ with the following contents:
        - taskgraph.transforms.cached_tasks:transforms
        - taskgraph.transforms.task:transforms
 
-   jobs:
+   tasks:
        custom:
            symbol: I(custom-image)
 

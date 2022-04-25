@@ -104,17 +104,17 @@ you have a ``hello`` kind. For this next section we'll be editing
         - myrepo_taskgraph.transforms.hello:transforms
         - taskgraph.transforms.task:transforms
 
-#. Finally we define the task under the (confusingly named) ``jobs`` key.
-   The format for the initial definition here can vary wildly from one kind
-   to another, it all depends on the transforms that are used. It's conventional
-   for transforms to define a schema (but not required). So often you can look
-   at the first transform file to see what schema is expected of your job. But
-   since we haven't created the first transforms yet, let's define our task
-   like this for now:
+#. Finally we define the task under the ``tasks`` key. The format for the
+   initial definition here can vary wildly from one kind to another, it all
+   depends on the transforms that are used. It's conventional for transforms to
+   define a schema (but not required). So often you can look at the first
+   transform file to see what schema is expected of your job. But since we
+   haven't created the first transforms yet, let's define our task like this
+   for now:
 
    .. code-block:: yaml
 
-    jobs:
+    tasks:
         taskcluster:
             description: "Says hello to Taskcluster"
             text: "Taskcluster!"
@@ -127,7 +127,7 @@ Here is the combined ``kind.yml`` file:
  transforms:
      - myrepo_taskgraph.transforms.hello:transforms
      - taskgraph.transforms.task:transforms
- jobs:
+ tasks:
      taskcluster:
          description: "Says hello to Taskcluster"
          text: "Taskcluster!"
@@ -205,7 +205,7 @@ Next run the following command at the root of your repo:
  taskgraph full
 
 If all goes well, you should see some log output followed by a single task
-called ``hello-taskcluster``. Try adding a second task to your ``jobs`` key
+called ``hello-taskcluster``. Try adding a second task to your ``tasks`` key
 in the ``kind.yml`` file and re-generating the graph. You should see both
 task labels!
 

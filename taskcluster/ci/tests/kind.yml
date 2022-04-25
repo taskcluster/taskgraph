@@ -9,7 +9,7 @@ transforms:
     - taskgraph.transforms.job:transforms
     - taskgraph.transforms.task:transforms
 
-job-defaults:
+task-defaults:
     attributes:
         retrigger: true
         code-review: true
@@ -31,7 +31,7 @@ job-defaults:
         cwd: '{checkout}'
         cache-dotcache: true
 
-jobs:
+tasks:
     unit:
         description: "Run `unit tests` to validate the latest changes"
         treeherder:

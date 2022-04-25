@@ -15,7 +15,7 @@ transforms:
 # (to use subdirectory clones of the proper directory), at which point we can
 # generate tasks for every docker image in the directory, secure in the
 # knowledge that unnecessary images will be omitted from the target task graph
-jobs:
+tasks:
     decision:
         symbol: I(d)
     # This image should be moved to a mobile-taskgraph project

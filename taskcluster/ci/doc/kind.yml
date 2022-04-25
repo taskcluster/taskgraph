@@ -9,7 +9,7 @@ transforms:
     - taskgraph.transforms.job:transforms
     - taskgraph.transforms.task:transforms
 
-job-defaults:
+task-defaults:
     worker-type: t-linux
     worker:
         docker-image: {in-tree: python3.7}
@@ -23,7 +23,7 @@ job-defaults:
         cwd: '{checkout}'
         cache-dotcache: true
 
-jobs:
+tasks:
     generate:
         description: "Generate documentation and fail on warnings"
         treeherder:

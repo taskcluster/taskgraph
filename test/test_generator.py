@@ -70,11 +70,11 @@ def test_always_target_tasks(maketgg):
     tgg_args = {
         "target_tasks": ["_fake-t-0", "_fake-t-1", "_ignore-t-0", "_ignore-t-1"],
         "kinds": [
-            ("_fake", {"job-defaults": {"optimization": {"odd": None}}}),
+            ("_fake", {"task-defaults": {"optimization": {"odd": None}}}),
             (
                 "_ignore",
                 {
-                    "job-defaults": {
+                    "task-defaults": {
                         "attributes": {"always_target": True},
                         "optimization": {"even": None},
                     }

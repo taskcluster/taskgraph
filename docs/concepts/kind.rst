@@ -45,8 +45,8 @@ these are written in snake case and the corresponding python functions aren't).
       - taskgraph.transforms.cached_tasks:transforms
       - taskgraph.transforms.task:transforms
 
-  jobs:
-      android-build:  <-- this android-build image job (or task) is dependent on the the base image below, and will be referenced in a build kind.
+  tasks:
+      android-build:  <-- this android-build image task is dependent on the the base image below, and will be referenced in a build kind.
           symbol: I(agb)
           parent: base
       base:

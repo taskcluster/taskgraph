@@ -12,7 +12,7 @@ kind-dependencies:
     - fetch
     - tests
 
-jobs:
+tasks:
     upload:
         description: "Upload coverage.xml to codecov.io"
         worker-type: t-linux
