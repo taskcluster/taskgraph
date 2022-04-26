@@ -5,6 +5,7 @@
 
 import unittest
 
+import taskgraph
 from taskgraph.util.schema import (
     validate_schema,
     resolve_keyed_by,
@@ -48,6 +49,13 @@ class TestCheckSchema(unittest.TestCase):
             Schema({"kebab-case": int}).extend({"more-kebab": int}).extend(
                 {"camelCase": int}
             )
+
+
+def test_check_skipped(monkeypatch):
+    """Schema not validated if 'check=False' or taskgraph.fast is unset."""
+    Schema({"camelCase": int}, check=False)  # assert no exception
+    monkeypatch.setattr(taskgraph, "fast", True)
+    Schema({"camelCase": int})  # assert no exception
 
 
 class TestResolveKeyedBy(unittest.TestCase):

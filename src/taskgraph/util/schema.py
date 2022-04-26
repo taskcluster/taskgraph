@@ -182,16 +182,26 @@ class Schema(voluptuous.Schema):
     in the process.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, check=True, **kwargs):
         super().__init__(*args, **kwargs)
-        check_schema(self)
+
+        self.check = check
+        if not taskgraph.fast and self.check:
+            check_schema(self)
 
     def extend(self, *args, **kwargs):
         schema = super().extend(*args, **kwargs)
-        check_schema(schema)
+
+        if self.check:
+            check_schema(schema)
         # We want twice extend schema to be checked too.
         schema.__class__ = Schema
         return schema
+
+    def _compile(self, schema):
+        if taskgraph.fast:
+            return
+        return super()._compile(schema)
 
     def __getitem__(self, item):
         return self.schema[item]
