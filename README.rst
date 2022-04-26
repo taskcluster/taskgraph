@@ -3,6 +3,10 @@
    :target: https://firefox-ci-tc.services.mozilla.com/api/github/v1/repository/taskcluster/taskgraph/main/latest
    :alt: Task Status
 
+.. image:: https://codecov.io/gh/taskcluster/taskgraph/branch/main/graph/badge.svg?token=GJIV52ZQNP
+   :target: https://codecov.io/gh/taskcluster/taskgraph
+   :alt: Code Coverage
+   
 .. image:: https://badge.fury.io/py/taskcluster-taskgraph.svg
    :target: https://badge.fury.io/py/taskcluster-taskgraph
    :alt: Pypi Version
@@ -10,6 +14,10 @@
 .. image:: https://readthedocs.org/projects/taskcluster-taskgraph/badge/?version=latest
    :target: https://taskcluster-taskgraph.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
+
+.. image:: https://img.shields.io/badge/license-MPL%202.0-orange.svg
+   :target: http://mozilla.org/MPL/2.0
+   :alt: License
 
 Taskgraph
 =========
