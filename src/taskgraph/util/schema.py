@@ -57,7 +57,9 @@ def optionally_keyed_by(*arguments):
     return schema
 
 
-def resolve_keyed_by(item, field, item_name, **extra_values):
+def resolve_keyed_by(
+    item, field, item_name, defer=None, enforce_single_match=True, **extra_values
+):
     """
     For values which can either accept a literal value, or be keyed by some
     other attribute of the item, perform that lookup and replacement in-place
@@ -96,6 +98,26 @@ def resolve_keyed_by(item, field, item_name, **extra_values):
                         cedar: ..
                 linux: 13
                 default: 12
+
+    Args:
+        item (dict): Object being evaluated.
+        field (str): Name of the key to perform evaluation on.
+        item_name (str): Used to generate useful error messages.
+        defer (list):
+            Allows evaluating a by-* entry at a later time. In the example
+            above it's possible that the project attribute hasn't been set yet,
+            in which case we'd want to stop before resolving that subkey and
+            then call this function again later. This can be accomplished by
+            setting `defer=["project"]` in this example.
+        enforce_single_match (bool):
+            If True (default), each task may only match a single arm of the
+            evaluation.
+        extra_values (kwargs):
+            If supplied, represent additional values available
+            for reference from by-<field>.
+
+    Returns:
+        dict: item which has also been modified in-place.
     """
     # find the field, returning the item unchanged if anything goes wrong
     container, subfield = item, field
@@ -113,6 +135,8 @@ def resolve_keyed_by(item, field, item_name, **extra_values):
     container[subfield] = evaluate_keyed_by(
         value=container[subfield],
         item_name=f"`{field}` in `{item_name}`",
+        defer=defer,
+        enforce_single_match=enforce_single_match,
         attributes=dict(item, **extra_values),
     )
 
