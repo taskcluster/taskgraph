@@ -4,10 +4,14 @@
 
 import unittest
 
+import pytest
+from voluptuous import Invalid, MultipleInvalid
+
 import taskgraph
 from taskgraph.util.schema import (
-    validate_schema,
+    optionally_keyed_by,
     resolve_keyed_by,
+    validate_schema,
     Schema,
 )
 
@@ -217,3 +221,15 @@ class TestResolveKeyedBy(unittest.TestCase):
             ),
             {"x": "anywhere"},
         )
+
+
+def test_optionally_keyed_by():
+    validator = optionally_keyed_by("foo", str)
+    assert validator("baz") == "baz"
+    assert validator({"by-foo": {"a": "b", "c": "d"}}) == {"a": "b", "c": "d"}
+
+    with pytest.raises(Invalid):
+        validator({"by-foo": {"a": 1, "c": "d"}})
+
+    with pytest.raises(MultipleInvalid):
+        validator({"by-bar": {"a": "b"}})
