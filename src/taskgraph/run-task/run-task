@@ -1110,6 +1110,8 @@ def main(args):
         fetches_dir = os.environ.get('MOZ_FETCHES_DIR')
         if fetches_dir and os.path.isdir(fetches_dir):
             print_line(b'fetches', b'removing %s\n' % fetches_dir.encode('utf-8'))
+            if not os.access(fetches_dir, os.W_OK):
+                os.chmod(fetches_dir, stat.S_IWUSR)
             shutil.rmtree(fetches_dir)
             print_line(b'fetches', b'finished\n')
 
