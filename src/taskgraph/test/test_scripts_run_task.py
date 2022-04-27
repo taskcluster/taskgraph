@@ -153,9 +153,9 @@ def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
 
 def test_remove_directory(monkeypatch, run_task_mod):
     _tempdir = tempfile.TemporaryDirectory()
-    assert os.path.isdir(_tempdir.name) == True
+    assert os.path.isdir(_tempdir.name) is True
     run_task_mod.remove(_tempdir.name)
-    assert os.path.isdir(_tempdir.name) == False
+    assert os.path.isdir(_tempdir.name) is False
     _tempdir.cleanup()
 
 
@@ -164,20 +164,20 @@ def test_remove_closed_file(monkeypatch, run_task_mod):
     _tempfile = tempfile.NamedTemporaryFile(dir=_tempdir.name, delete=False)
     _tempfile.write(b"foo")
     _tempfile.close()
-    assert os.path.isdir(_tempdir.name) == True
-    assert os.path.isfile(_tempfile.name) == True
+    assert os.path.isdir(_tempdir.name) is True
+    assert os.path.isfile(_tempfile.name) is True
     run_task_mod.remove(_tempdir.name)
-    assert os.path.isdir(_tempdir.name) == False
-    assert os.path.isfile(_tempfile.name) == False
+    assert os.path.isdir(_tempdir.name) is False
+    assert os.path.isfile(_tempfile.name) is False
     _tempdir.cleanup()
 
 
 def test_remove_readonly_tree(monkeypatch, run_task_mod):
     _tempdir = tempfile.TemporaryDirectory()
     _mark_readonly(_tempdir.name)
-    assert os.path.isdir(_tempdir.name) == True
+    assert os.path.isdir(_tempdir.name) is True
     run_task_mod.remove(_tempdir.name)
-    assert os.path.isdir(_tempdir.name) == False
+    assert os.path.isdir(_tempdir.name) is False
     _tempdir.cleanup()
 
 
@@ -188,9 +188,9 @@ def test_remove_readonly_file(monkeypatch, run_task_mod):
     _tempfile.close()
     _mark_readonly(_tempfile.name)
     # should change write permission and then remove file
-    assert os.path.isfile(_tempfile.name) == True
+    assert os.path.isfile(_tempfile.name) is True
     run_task_mod.remove(_tempfile.name)
-    assert os.path.isfile(_tempfile.name) == False
+    assert os.path.isfile(_tempfile.name) is False
     _tempdir.cleanup()
 
 
