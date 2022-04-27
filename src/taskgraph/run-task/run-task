@@ -868,6 +868,26 @@ def maybe_run_resource_monitoring():
     return process
 
 
+def onerror(func, path, exc_info):
+    """
+    Error handler for ``shutil.rmtree``.
+
+    If the error is due to an access error (read only file)
+    it attempts to add write permission and then retries.
+
+    If the error is for another reason it re-raises the error.
+    
+    Usage : ``shutil.rmtree(path, onerror=onerror)``
+    """
+    import stat
+    # Is the error an access error?
+    if not os.access(path, os.W_OK):
+        os.chmod(path, stat.S_IWUSR)
+        func(path)
+    else:
+        raise
+
+
 def main(args):
     print_line(b'setup', b'run-task started in %s\n' % os.getcwd().encode('utf-8'))
     running_as_root = IS_POSIX and os.getuid() == 0
@@ -1110,9 +1130,7 @@ def main(args):
         fetches_dir = os.environ.get('MOZ_FETCHES_DIR')
         if fetches_dir and os.path.isdir(fetches_dir):
             print_line(b'fetches', b'removing %s\n' % fetches_dir.encode('utf-8'))
-            if not os.access(fetches_dir, os.W_OK):
-                os.chmod(fetches_dir, stat.S_IWUSR)
-            shutil.rmtree(fetches_dir)
+            shutil.rmtree(fetches_dir, onerror=onerror)
             print_line(b'fetches', b'finished\n')
 
 
