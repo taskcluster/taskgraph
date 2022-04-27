@@ -1,8 +1,10 @@
 import os
+import stat
 import sys
+import tempfile
 from argparse import Namespace
 from importlib.machinery import SourceFileLoader
-from importlib.util import spec_from_loader, module_from_spec
+from importlib.util import module_from_spec, spec_from_loader
 
 import pytest
 
@@ -147,3 +149,53 @@ def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
 
     expected.update(extra_expected)
     assert result == expected
+
+
+def test_remove_directory(monkeypatch, run_task_mod):
+    _tempdir = tempfile.TemporaryDirectory()
+    assert os.path.isdir(_tempdir.name) == True
+    run_task_mod.remove(_tempdir.name)
+    assert os.path.isdir(_tempdir.name) == False
+    _tempdir.cleanup()
+
+
+def test_remove_closed_file(monkeypatch, run_task_mod):
+    _tempdir = tempfile.TemporaryDirectory()
+    _tempfile = tempfile.NamedTemporaryFile(dir=_tempdir.name, delete=False)
+    _tempfile.write(b"foo")
+    _tempfile.close()
+    assert os.path.isdir(_tempdir.name) == True
+    assert os.path.isfile(_tempfile.name) == True
+    run_task_mod.remove(_tempdir.name)
+    assert os.path.isdir(_tempdir.name) == False
+    assert os.path.isfile(_tempfile.name) == False
+    _tempdir.cleanup()
+
+
+def test_remove_readonly_tree(monkeypatch, run_task_mod):
+    _tempdir = tempfile.TemporaryDirectory()
+    _mark_readonly(_tempdir.name)
+    assert os.path.isdir(_tempdir.name) == True
+    run_task_mod.remove(_tempdir.name)
+    assert os.path.isdir(_tempdir.name) == False
+
+
+def test_remove_readonly_file(monkeypatch, run_task_mod):
+    _tempdir = tempfile.TemporaryDirectory()
+    _tempfile = tempfile.NamedTemporaryFile(dir=_tempdir.name, delete=False)
+    _tempfile.write(b"foo")
+    _tempfile.close()
+    _mark_readonly(_tempfile.name)
+    # should change write permission and then remove file
+    assert os.path.isfile(_tempfile.name) == True
+    run_task_mod.remove(_tempfile.name)
+    assert os.path.isfile(_tempfile.name) == False
+
+
+def _mark_readonly(path):
+    """Removes all write permissions from given file/directory.
+
+    :param path: path of directory/file of which modes must be changed
+    """
+    mode = os.stat(path)[stat.ST_MODE]
+    os.chmod(path, mode & ~stat.S_IWUSR & ~stat.S_IWGRP & ~stat.S_IWOTH)
