@@ -156,7 +156,6 @@ def test_remove_directory(monkeypatch, run_task_mod):
     assert os.path.isdir(_tempdir.name) is True
     run_task_mod.remove(_tempdir.name)
     assert os.path.isdir(_tempdir.name) is False
-    _tempdir.cleanup()
 
 
 def test_remove_closed_file(monkeypatch, run_task_mod):
@@ -169,7 +168,6 @@ def test_remove_closed_file(monkeypatch, run_task_mod):
     run_task_mod.remove(_tempdir.name)
     assert os.path.isdir(_tempdir.name) is False
     assert os.path.isfile(_tempfile.name) is False
-    _tempdir.cleanup()
 
 
 def test_remove_readonly_tree(monkeypatch, run_task_mod):
@@ -178,7 +176,6 @@ def test_remove_readonly_tree(monkeypatch, run_task_mod):
     assert os.path.isdir(_tempdir.name) is True
     run_task_mod.remove(_tempdir.name)
     assert os.path.isdir(_tempdir.name) is False
-    _tempdir.cleanup()
 
 
 def test_remove_readonly_file(monkeypatch, run_task_mod):
