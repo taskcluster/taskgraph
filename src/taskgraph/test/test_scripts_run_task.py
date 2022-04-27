@@ -178,6 +178,7 @@ def test_remove_readonly_tree(monkeypatch, run_task_mod):
     assert os.path.isdir(_tempdir.name) == True
     run_task_mod.remove(_tempdir.name)
     assert os.path.isdir(_tempdir.name) == False
+    _tempdir.cleanup()
 
 
 def test_remove_readonly_file(monkeypatch, run_task_mod):
@@ -190,6 +191,7 @@ def test_remove_readonly_file(monkeypatch, run_task_mod):
     assert os.path.isfile(_tempfile.name) == True
     run_task_mod.remove(_tempfile.name)
     assert os.path.isfile(_tempfile.name) == False
+    _tempdir.cleanup()
 
 
 def _mark_readonly(path):
