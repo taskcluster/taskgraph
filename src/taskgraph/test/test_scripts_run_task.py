@@ -250,10 +250,17 @@ def test_clean_git_checkout(monkeypatch, run_task_mod):
         _stdin,
     )
 
+    assert os.path.isdir(root_dir.name) is True
+    assert os.path.isdir(tracked_dir.name) is True
+    assert os.path.isdir(untracked_dir.name) is True
+    assert os.path.isfile(untracked_file.name) is True
+    assert os.path.isfile(tracked_file.name) is True
+
     run_task_mod._clean_git_checkout(root_dir.name)
 
     assert os.path.isdir(root_dir.name) is True
     assert os.path.isdir(tracked_dir.name) is True
+    assert os.path.isfile(tracked_file.name) is True
+
     assert os.path.isdir(untracked_dir.name) is False
     assert os.path.isfile(untracked_file.name) is False
-    assert os.path.isfile(tracked_file.name) is True
