@@ -1,10 +1,13 @@
+import io
 import os
 import stat
+import subprocess
 import sys
 import tempfile
 from argparse import Namespace
 from importlib.machinery import SourceFileLoader
 from importlib.util import module_from_spec, spec_from_loader
+from unittest.mock import Mock
 
 import pytest
 
@@ -198,3 +201,59 @@ def _mark_readonly(path):
     """
     mode = os.stat(path)[stat.ST_MODE]
     os.chmod(path, mode & ~stat.S_IWUSR & ~stat.S_IWGRP & ~stat.S_IWOTH)
+
+
+def test_clean_git_checkout(monkeypatch, run_task_mod):
+    prefix = "Would remove "
+    root_dir = tempfile.TemporaryDirectory()
+    untracked_dir = tempfile.TemporaryDirectory(dir=root_dir.name)
+    tracked_dir = tempfile.TemporaryDirectory(dir=root_dir.name)
+    untracked_file = tempfile.NamedTemporaryFile(dir=tracked_dir.name, delete=False)
+    untracked_file.write(b"untracked")
+    untracked_file.close()
+    tracked_file = tempfile.NamedTemporaryFile(dir=tracked_dir.name, delete=False)
+    tracked_file.write(b"tracked")
+    tracked_file.close()
+    output = io.BytesIO(
+        f"{prefix}{untracked_dir.name}/\n{prefix}{untracked_file.name}\n".encode(
+            "latin1"
+        )
+    )
+
+    def _Popen(
+        args,
+        bufsize=None,
+        stdout=None,
+        stderr=None,
+        stdin=None,
+        cwd=None,
+        env=None,
+    ):
+        return Mock(
+            stdout=output,
+            wait=lambda: 0,
+        )
+
+    _stdin = Mock(
+        fileno=lambda: 3,
+    )
+
+    monkeypatch.setattr(
+        subprocess,
+        "Popen",
+        _Popen,
+    )
+
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        _stdin,
+    )
+
+    run_task_mod._clean_git_checkout(root_dir.name)
+
+    assert os.path.isdir(root_dir.name) is True
+    assert os.path.isdir(tracked_dir.name) is True
+    assert os.path.isdir(untracked_dir.name) is False
+    assert os.path.isfile(untracked_file.name) is False
+    assert os.path.isfile(tracked_file.name) is True
