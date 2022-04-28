@@ -882,7 +882,7 @@ def _call_windows_retry(func, args=(), retry_max=5, retry_delay=0.5):
             func(*args)
         except OSError as e:
             # Error codes are defined in:
-            # http://docs.python.org/2/library/errno.html#module-errno
+            # https://docs.python.org/3/library/errno.html#module-errno
             if e.errno not in (errno.EACCES, errno.ENOTEMPTY, errno.ENOENT):
                 raise
 
