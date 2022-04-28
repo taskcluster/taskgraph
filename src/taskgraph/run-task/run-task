@@ -883,7 +883,7 @@ def _call_windows_retry(func, args=(), retry_max=5, retry_delay=0.5):
         except OSError as e:
             # Error codes are defined in:
             # http://docs.python.org/2/library/errno.html#module-errno
-            if e.errno not in (errno.EACCES, errno.ENOTEMPTY):
+            if e.errno not in (errno.EACCES, errno.ENOTEMPTY, errno.ENOENT):
                 raise
 
             if retry_count == retry_max:
@@ -921,14 +921,6 @@ def remove(path):
 
     import shutil
 
-    def _call_with_windows_retry(*args, **kwargs):
-        try:
-            _call_windows_retry(*args, **kwargs)
-        except OSError as e:
-            # The file or directory to be removed doesn't exist anymore
-            if e.errno != errno.ENOENT:
-                raise
-
     def _update_permissions(path):
         """Sets specified pemissions depending on filetype"""
         if os.path.islink(path):
@@ -946,7 +938,7 @@ def remove(path):
             # Not supported type
             return
 
-        _call_with_windows_retry(os.chmod, (path, mode))
+        _call_windows_retry(os.chmod, (path, mode))
 
     if not os.path.lexists(path):
         return
@@ -967,7 +959,7 @@ def remove(path):
     if os.path.isfile(path) or os.path.islink(path):
         # Verify the file or link is read/write for the current user
         _update_permissions(path)
-        _call_with_windows_retry(os.remove, (path,))
+        _call_windows_retry(os.remove, (path,))
 
     elif os.path.isdir(path):
         # Verify the directory is read/write/execute for the current user
@@ -977,7 +969,7 @@ def remove(path):
         for root, dirs, files in os.walk(path):
             for entry in dirs + files:
                 _update_permissions(os.path.join(root, entry))
-        _call_with_windows_retry(shutil.rmtree, (path,))
+        _call_windows_retry(shutil.rmtree, (path,))
 
 
 def main(args):
