@@ -919,8 +919,6 @@ def remove(path):
     :param path: path to be removed
     """
 
-    import shutil
-
     def _update_permissions(path):
         """Sets specified pemissions depending on filetype"""
         if os.path.islink(path):
