@@ -1212,10 +1212,7 @@ def main(args):
         fetches_dir = os.environ.get('MOZ_FETCHES_DIR')
         if fetches_dir and os.path.isdir(fetches_dir):
             print_line(b'fetches', b'removing %s\n' % fetches_dir.encode('utf-8'))
-            if IS_WINDOWS:
-                remove(fetches_dir)
-            else:
-                shutil.rmtree(fetches_dir)
+            remove(fetches_dir)
             print_line(b'fetches', b'finished\n')
 
 
