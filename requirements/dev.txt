@@ -29,11 +29,6 @@ pip-tools==6.4.0 \
     --hash=sha256:65553a15b1ba34be5e43889345062e38fb9b219ffa23b084ca0d4c4039b6f53b \
     --hash=sha256:bb2c3272bc229b4a6d25230ebe255823aba1aa466a0d698c48ab7eb5ab7efdc9
     # via pip-compile-multi
-sphinx==4.3.1 ; python_version < "3.7"     --hash=sha256:048dac56039a5713f47a554589dc98a442b39226a2b9ed7f82797fcb2fe9253f     --hash=sha256:32a5b3e9a1b176cc25ed048557d4d3d01af635e6b76c5bc7a43b0a34447fbd45
-    # via
-    #   -r requirements/test.in
-    #   sphinx-argparse
-    #   sphinx-autobuild
 sphinx-autobuild==2021.3.14 \
     --hash=sha256:8fe8cbfdb75db04475232f05187c776f46f6e9e04cacf1e49ce81bdac649ccac \
     --hash=sha256:de1ca3b66e271d2b5b5140c35034c89e47f263f2cd5db302c9217065f7443f05

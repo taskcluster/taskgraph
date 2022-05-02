@@ -6,7 +6,8 @@ mock
 pytest
 pytest-cov
 responses
-sphinx; python_version >= "3.7"
+# Downgrade sphinx to run the test suite on py3.6; remove once we stop supporting py3.6
+sphinx==4.3.1
 sphinx-argparse
 sphinxcontrib-mermaid
 yamllint
@@ -14,5 +15,3 @@ tox
 tox-pyenv
 # Black dependency; remove once we stop supporting py3.7
 typed-ast>=1.4.2; python_version < "3.8"
-# Downgrade sphinx if running on py3.6; remove once we stop supporting py3.6
-sphinx==4.3.1; python_version < "3.7"
