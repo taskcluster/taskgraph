@@ -253,7 +253,7 @@ def stream_context_tar(topsrcdir, context_dir, out_file, image_name=None, args=N
                 p = line[len("# %ARG ") :].strip()
                 if not args or p not in args:
                     raise Exception(f"missing argument: {p}")
-                replace.append((re.compile(fr"\${p}\b"), args[p]))
+                replace.append((re.compile(rf"\${p}\b"), args[p]))
                 continue
 
             for regexp, s in replace:
