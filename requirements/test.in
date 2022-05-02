@@ -6,7 +6,7 @@ mock
 pytest
 pytest-cov
 responses
-sphinx
+sphinx; python_version >= "3.7"
 sphinx-argparse
 sphinxcontrib-mermaid
 yamllint
