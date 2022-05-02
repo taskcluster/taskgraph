@@ -241,7 +241,6 @@ class TestDocker(unittest.TestCase):
         finally:
             shutil.rmtree(tmp)
 
-
     @pytest.mark.xfail(sys.version_info >= (3, 8), reason="Hash is different")
     def test_stream_context_tar(self):
         tmp = tempfile.mkdtemp()
@@ -250,6 +249,7 @@ class TestDocker(unittest.TestCase):
             os.mkdir(d)
 
             with open(os.path.join(d, "Dockerfile"), "wb") as fh:
+                fh.write(b"# %ARG PYTHON_VERSION\n")
                 fh.write(b"# %include extra\n")
                 fh.write(b"# %include file0\n")
             os.chmod(os.path.join(d, "Dockerfile"), MODE_STANDARD)
@@ -268,7 +268,9 @@ class TestDocker(unittest.TestCase):
 
             # file objects are BufferedRandom instances
             out_file = BufferedRandom(BytesIO(b""))
-            h = docker.stream_context_tar(tmp, d, out_file, "my_image")
+            h = docker.stream_context_tar(
+                tmp, d, out_file, "my_image", args={"PYTHON_VERSION": "3.7"}
+            )
 
             self.assertEqual(
                 h, "e015aabf2677d90fee777c8813fd69402309a2d49bcdff2c28428134a53e36be"
