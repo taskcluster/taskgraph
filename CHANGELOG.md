@@ -1,5 +1,14 @@
 # Change Log
 
+## [1.5.0] - 2022-05-02
+
+### Added
+- Ability to pass headers alongside requests in the `fetch-content` script
+
+### Fixed
+- An encoding error when using out of tree images
+- Windows permissions errors in `run-task` script cleanup
+
 ## [1.4.0] - 2022-04-22
 
 ### Added
