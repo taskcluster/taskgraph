@@ -1,8 +1,13 @@
+import io
 import os
+import stat
+import subprocess
 import sys
+import tempfile
 from argparse import Namespace
 from importlib.machinery import SourceFileLoader
-from importlib.util import spec_from_loader, module_from_spec
+from importlib.util import module_from_spec, spec_from_loader
+from unittest.mock import Mock
 
 import pytest
 
@@ -147,3 +152,115 @@ def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
 
     expected.update(extra_expected)
     assert result == expected
+
+
+def test_remove_directory(monkeypatch, run_task_mod):
+    _tempdir = tempfile.TemporaryDirectory()
+    assert os.path.isdir(_tempdir.name) is True
+    run_task_mod.remove(_tempdir.name)
+    assert os.path.isdir(_tempdir.name) is False
+
+
+def test_remove_closed_file(monkeypatch, run_task_mod):
+    _tempdir = tempfile.TemporaryDirectory()
+    _tempfile = tempfile.NamedTemporaryFile(dir=_tempdir.name, delete=False)
+    _tempfile.write(b"foo")
+    _tempfile.close()
+    assert os.path.isdir(_tempdir.name) is True
+    assert os.path.isfile(_tempfile.name) is True
+    run_task_mod.remove(_tempdir.name)
+    assert os.path.isdir(_tempdir.name) is False
+    assert os.path.isfile(_tempfile.name) is False
+
+
+def test_remove_readonly_tree(monkeypatch, run_task_mod):
+    _tempdir = tempfile.TemporaryDirectory()
+    _mark_readonly(_tempdir.name)
+    assert os.path.isdir(_tempdir.name) is True
+    run_task_mod.remove(_tempdir.name)
+    assert os.path.isdir(_tempdir.name) is False
+
+
+def test_remove_readonly_file(monkeypatch, run_task_mod):
+    _tempdir = tempfile.TemporaryDirectory()
+    _tempfile = tempfile.NamedTemporaryFile(dir=_tempdir.name, delete=False)
+    _tempfile.write(b"foo")
+    _tempfile.close()
+    _mark_readonly(_tempfile.name)
+    # should change write permission and then remove file
+    assert os.path.isfile(_tempfile.name) is True
+    run_task_mod.remove(_tempfile.name)
+    assert os.path.isfile(_tempfile.name) is False
+    _tempdir.cleanup()
+
+
+def _mark_readonly(path):
+    """Removes all write permissions from given file/directory.
+
+    :param path: path of directory/file of which modes must be changed
+    """
+    mode = os.stat(path)[stat.ST_MODE]
+    os.chmod(path, mode & ~stat.S_IWUSR & ~stat.S_IWGRP & ~stat.S_IWOTH)
+
+
+def test_clean_git_checkout(monkeypatch, run_task_mod):
+    prefix = "Would remove "
+    root_dir = tempfile.TemporaryDirectory()
+    untracked_dir = tempfile.TemporaryDirectory(dir=root_dir.name)
+    tracked_dir = tempfile.TemporaryDirectory(dir=root_dir.name)
+    untracked_file = tempfile.NamedTemporaryFile(dir=tracked_dir.name, delete=False)
+    untracked_file.write(b"untracked")
+    untracked_file.close()
+    tracked_file = tempfile.NamedTemporaryFile(dir=tracked_dir.name, delete=False)
+    tracked_file.write(b"tracked")
+    tracked_file.close()
+    output = io.BytesIO(
+        f"{prefix}{untracked_dir.name}/\n{prefix}{untracked_file.name}\n".encode(
+            "latin1"
+        )
+    )
+
+    def _Popen(
+        args,
+        bufsize=None,
+        stdout=None,
+        stderr=None,
+        stdin=None,
+        cwd=None,
+        env=None,
+    ):
+        return Mock(
+            stdout=output,
+            wait=lambda: 0,
+        )
+
+    _stdin = Mock(
+        fileno=lambda: 3,
+    )
+
+    monkeypatch.setattr(
+        subprocess,
+        "Popen",
+        _Popen,
+    )
+
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        _stdin,
+    )
+
+    assert os.path.isdir(root_dir.name) is True
+    assert os.path.isdir(tracked_dir.name) is True
+    assert os.path.isdir(untracked_dir.name) is True
+    assert os.path.isfile(untracked_file.name) is True
+    assert os.path.isfile(tracked_file.name) is True
+
+    run_task_mod._clean_git_checkout(root_dir.name)
+
+    assert os.path.isdir(root_dir.name) is True
+    assert os.path.isdir(tracked_dir.name) is True
+    assert os.path.isfile(tracked_file.name) is True
+
+    assert os.path.isdir(untracked_dir.name) is False
+    assert os.path.isfile(untracked_file.name) is False
