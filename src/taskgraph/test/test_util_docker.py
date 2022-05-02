@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
+from io import BufferedRandom, BytesIO
 import os
 import shutil
 import stat
@@ -237,5 +238,40 @@ class TestDocker(unittest.TestCase):
                         "topsrcdir/file0",
                     ],
                 )
+        finally:
+            shutil.rmtree(tmp)
+
+
+    @pytest.mark.xfail(sys.version_info >= (3, 8), reason="Hash is different")
+    def test_stream_context_tar(self):
+        tmp = tempfile.mkdtemp()
+        try:
+            d = os.path.join(tmp, "test-image")
+            os.mkdir(d)
+
+            with open(os.path.join(d, "Dockerfile"), "wb") as fh:
+                fh.write(b"# %include extra\n")
+                fh.write(b"# %include file0\n")
+            os.chmod(os.path.join(d, "Dockerfile"), MODE_STANDARD)
+
+            extra = os.path.join(tmp, "extra")
+            os.mkdir(extra)
+            for i in range(3):
+                p = os.path.join(extra, "file%d" % i)
+                with open(p, "wb") as fh:
+                    fh.write(b"file%d" % i)
+                os.chmod(p, MODE_STANDARD)
+
+            with open(os.path.join(tmp, "file0"), "a"):
+                pass
+            os.chmod(os.path.join(tmp, "file0"), MODE_STANDARD)
+
+            # file objects are BufferedRandom instances
+            out_file = BufferedRandom(BytesIO(b""))
+            h = docker.stream_context_tar(tmp, d, out_file, "my_image")
+
+            self.assertEqual(
+                h, "e015aabf2677d90fee777c8813fd69402309a2d49bcdff2c28428134a53e36be"
+            )
         finally:
             shutil.rmtree(tmp)
