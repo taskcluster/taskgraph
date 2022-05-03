@@ -4,6 +4,8 @@
 
 
 import datetime
+import gzip
+from base64 import b64decode
 from unittest import TestCase, mock
 
 import pytest
@@ -157,6 +159,17 @@ class TestParameters(TestCase):
         )
         self.assertEqual(dict(ret), expected)
         self.assertRaises(ValueError, load_parameters_file, f"project={project}")
+
+        # Test gzipped data
+        r = mock.Mock()
+        r.info.return_value = {"Content-Encoding": "gzip"}
+        # 'some: data' gzipped then base64 encoded
+        r.read.return_value = b64decode("H4sIAAAAAAAAAyvOz021UkhJLEnkAgB639AyCwAAAA==")
+        mock_urlopen.return_value = r
+        ret = load_parameters_file(f"task-id={tid}")
+        f = mock_load_stream.call_args[0][0]
+        self.assertIsInstance(f, gzip.GzipFile)
+        self.assertEqual(f.read(), b"some: data\n")
 
     def test_load_parameters_override(self):
         """
