@@ -124,6 +124,10 @@ class TestParameters(TestCase):
         with MockedOpen({"params.json": '{"some": "data"}'}):
             self.assertEqual(load_parameters_file("params.json"), {"some": "data"})
 
+    @mock.patch(
+        "taskgraph.util.taskcluster.PRODUCTION_TASKCLUSTER_ROOT_URL",
+        "https://tc.example.com",
+    )
     @mock.patch("taskgraph.parameters.find_task_id")
     @mock.patch("taskgraph.parameters.yaml.load_stream")
     @mock.patch("taskgraph.parameters.urlopen")
