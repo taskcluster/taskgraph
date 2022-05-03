@@ -21,6 +21,11 @@ def mock_environ(monkeypatch):
     monkeypatch.setattr(os, "environ", {})
 
 
+@pytest.fixture(autouse=True)
+def mock_production_taskcluster_root_url(monkeypatch):
+    monkeypatch.setattr(tc, "PRODUCTION_TASKCLUSTER_ROOT_URL", "https://tc.example.com")
+
+
 @pytest.fixture
 def root_url(mock_environ):
     tc.get_root_url.clear()
@@ -63,6 +68,12 @@ def test_get_root_url(monkeypatch):
     monkeypatch.setenv("TASKCLUSTER_PROXY_URL", proxy_url)
     assert tc.get_root_url(True) == proxy_url
     tc.get_root_url.clear()
+
+    # no default set
+    monkeypatch.setattr(tc, "PRODUCTION_TASKCLUSTER_ROOT_URL", None)
+    monkeypatch.delenv("TASKCLUSTER_ROOT_URL")
+    with pytest.raises(RuntimeError):
+        tc.get_root_url(False)
 
 
 def test_get_session():
