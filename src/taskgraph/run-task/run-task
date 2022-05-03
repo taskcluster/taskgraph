@@ -934,7 +934,10 @@ def install_pip_requirements(repositories):
     if not requirements:
         return
 
-    cmd = [sys.executable, '-mpip', 'install', '--require-hashes']
+    cmd = [sys.executable, '-mpip', 'install']
+    if os.environ.get("PIP_DISABLE_REQUIRE_HASHES") != "1":
+        cmd.append("--require-hashes")
+
     for path in requirements:
         cmd.extend(['-r', path])
 

@@ -142,9 +142,24 @@ accomplished using `pip's version control support`_:
 
    cd taskcluster
    echo "taskcluster-taskgraph@git+https://github.com/taskcluster/taskgraph@refs/pull/123/head" > requirements.in
-   pip-compile --generate-hashes --output-file requirements.txt requirements.in
+   pip-compile --output-file requirements.txt requirements.in
+
+Next edit your ``.taskcluster.yml`` to disable hashing since pip does not
+support `hashes with url requirements`_:
+
+.. code-block:: yaml
+
+   payload:
+      env:
+          - PIP_DISABLE_REQUIRE_HASHES: 1
+
+.. note::
+
+   Be sure to omit the ``--generate-hashes`` argument to ``pip-compile``
+   otherwise ``pip`` will implicitly turn hashing back on.
 
 This way you can push an experimental change to a PR and then install it in
 your repo's decision task.
 
 .. _pip's version control support: https://pip.pypa.io/en/stable/topics/vcs-support/
+.. _hashes with url requirements: https://github.com/pypa/pip/issues/6469
