@@ -13,8 +13,10 @@ from subprocess import CalledProcessError
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
+from taskgraph.util import yaml
 from taskgraph.util.readonlydict import ReadOnlyDict
 from taskgraph.util.schema import validate_schema
+from taskgraph.util.taskcluster import get_artifact_url, find_task_id
 from taskgraph.util.vcs import get_repository
 from voluptuous import (
     ALLOW_EXTRA,
@@ -271,8 +273,6 @@ def load_parameters_file(
         task-id=fdtgsD5DQUmAQZEaGMvQ4Q
         project=mozilla-central
     """
-    from taskgraph.util.taskcluster import get_artifact_url, find_task_id
-    from taskgraph.util import yaml
 
     if overrides is None:
         overrides = {}

@@ -4,19 +4,16 @@
 
 
 import datetime
-import unittest
+from unittest import TestCase, mock
 
 import pytest
-from voluptuous import (
-    Optional,
-    Required,
-    Schema,
-)
+from voluptuous import Optional, Required, Schema
 
+import taskgraph  # noqa: F401
 from taskgraph import parameters
 from taskgraph.parameters import (
-    Parameters,
     ParameterMismatch,
+    Parameters,
     extend_parameters_schema,
     load_parameters_file,
 )
@@ -24,7 +21,7 @@ from taskgraph.parameters import (
 from .mockedopen import MockedOpen
 
 
-class TestParameters(unittest.TestCase):
+class TestParameters(TestCase):
 
     vals = {
         "base_repository": "repository",
@@ -126,6 +123,36 @@ class TestParameters(unittest.TestCase):
     def test_load_parameters_file_json(self):
         with MockedOpen({"params.json": '{"some": "data"}'}):
             self.assertEqual(load_parameters_file("params.json"), {"some": "data"})
+
+    @mock.patch("taskgraph.parameters.find_task_id")
+    @mock.patch("taskgraph.parameters.yaml.load_stream")
+    @mock.patch("taskgraph.parameters.urlopen")
+    def test_load_parameters_file_task_id(
+        self, mock_urlopen, mock_load_stream, mock_find_task_id
+    ):
+        # Constants
+        tid = "abc"
+        project = "foo"
+        trust_domain = "bar"
+        expected = {"some": "data"}
+
+        # Setup mocks
+        mock_load_stream.return_value = expected.copy()
+        mock_find_task_id.return_value = tid
+
+        # Test `task-id=`
+        ret = load_parameters_file(f"task-id={tid}")
+        mock_load_stream.assert_called_with(mock_urlopen())
+        self.assertEqual(dict(ret), expected)
+
+        # Test `project=`
+        ret = load_parameters_file(f"project={project}", trust_domain=trust_domain)
+        mock_load_stream.assert_called_with(mock_urlopen())
+        mock_find_task_id.assert_called_with(
+            f"{trust_domain}.v2.{project}.latest.taskgraph.decision"
+        )
+        self.assertEqual(dict(ret), expected)
+        self.assertRaises(ValueError, load_parameters_file, f"project={project}")
 
     def test_load_parameters_override(self):
         """
