@@ -15,7 +15,7 @@ RUN mkdir /builds && \
 # %include-run-task
 
 RUN apt-get update && apt-get install -y --force-yes --no-install-recommends \
-    mercurial
+    mercurial build-essential zlib1g-dev libssl-dev
 
 ENV SHELL=/bin/bash \
     HOME=/builds/worker \

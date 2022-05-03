@@ -6,7 +6,8 @@ mock
 pytest
 pytest-cov
 responses
-sphinx
+# Downgrade sphinx to run the test suite on py3.6; remove once we stop supporting py3.6
+sphinx==4.3.1
 sphinx-argparse
 sphinxcontrib-mermaid
 yamllint
