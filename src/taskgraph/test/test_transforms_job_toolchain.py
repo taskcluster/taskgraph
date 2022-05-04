@@ -50,6 +50,7 @@ def assert_basic(task):
         "attributes": {
             "toolchain-alias": "foo",
             "toolchain-artifact": "public/build/artifact.zip",
+            "toolchain-env": {"FOO": "1"},
         },
         "cache": {
             "digest-data": [
@@ -95,6 +96,9 @@ def assert_basic(task):
             {
                 "run": {
                     "toolchain-alias": "foo",
+                    "toolchain-env": {
+                        "FOO": "1",
+                    },
                 }
             },
             id="basic",
