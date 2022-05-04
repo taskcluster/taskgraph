@@ -64,6 +64,8 @@ def get_digest_data(config, run, taskdesc):
     # Accumulate dependency hashes for index generation.
     data = [hash_paths(config.graph_config.vcs_root, files)]
 
+    data.append(taskdesc["attributes"]["toolchain-artifact"])
+
     # If the task uses an in-tree docker image, we want it to influence
     # the index path as well. Ideally, the content of the docker image itself
     # should have an influence, but at the moment, we can't get that
