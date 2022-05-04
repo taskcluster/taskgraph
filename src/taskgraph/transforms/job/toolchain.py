@@ -5,20 +5,21 @@
 Support for running toolchain-building jobs via dedicated scripts
 """
 
-
-from taskgraph.util.schema import Schema
 from voluptuous import Optional, Required, Any
 
+import taskgraph
+from taskgraph.util.schema import Schema
+from taskgraph.util.shell import quote as shell_quote
 from taskgraph.transforms.job import (
     configure_taskdesc_for_run,
     run_job_using,
 )
 from taskgraph.transforms.job.common import (
     docker_worker_add_artifacts,
+    generic_worker_add_artifacts,
     get_vcsdir_name,
 )
 from taskgraph.util.hash import hash_paths
-import taskgraph
 
 
 CACHE_TYPE = "toolchains.v3"
@@ -84,18 +85,7 @@ def get_digest_data(config, run, taskdesc):
     return data
 
 
-toolchain_defaults = {
-    "sparse-profile": "toolchain-build",
-}
-
-
-@run_job_using(
-    "docker-worker",
-    "toolchain-script",
-    schema=toolchain_run_schema,
-    defaults=toolchain_defaults,
-)
-def docker_worker_toolchain(config, job, taskdesc):
+def common_toolchain(config, job, taskdesc, is_docker):
     run = job["run"]
 
     worker = taskdesc["worker"] = job["worker"]
@@ -103,14 +93,18 @@ def docker_worker_toolchain(config, job, taskdesc):
 
     srcdir = get_vcsdir_name(worker["os"])
 
-    # If the task doesn't have a docker-image, set a default
-    worker.setdefault("docker-image", {"in-tree": "toolchain-build"})
+    if is_docker:
+        # If the task doesn't have a docker-image, set a default
+        worker.setdefault("docker-image", {"in-tree": "toolchain-build"})
 
     # Allow the job to specify where artifacts come from, but add
     # public/build if it's not there already.
     artifacts = worker.setdefault("artifacts", [])
     if not any(artifact.get("name") == "public/build" for artifact in artifacts):
-        docker_worker_add_artifacts(config, job, taskdesc)
+        if is_docker:
+            docker_worker_add_artifacts(config, job, taskdesc)
+        else:
+            generic_worker_add_artifacts(config, job, taskdesc)
 
     env = worker["env"]
     env.update(
@@ -141,4 +135,37 @@ def docker_worker_toolchain(config, job, taskdesc):
         "{}/taskcluster/scripts/toolchain/{}".format(srcdir, run.pop("script"))
     ] + run.pop("arguments", [])
 
+    if not is_docker:
+        # Don't quote the first item in the command because it purposely contains
+        # an environment variable that is not meant to be quoted.
+        if len(run["command"]) > 1:
+            run["command"] = run["command"][0] + " " + shell_quote(*run["command"][1:])
+        else:
+            run["command"] = run["command"][0]
+
     configure_taskdesc_for_run(config, job, taskdesc, worker["implementation"])
+
+
+toolchain_defaults = {
+    "sparse-profile": "toolchain-build",
+}
+
+
+@run_job_using(
+    "docker-worker",
+    "toolchain-script",
+    schema=toolchain_run_schema,
+    defaults=toolchain_defaults,
+)
+def docker_worker_toolchain(config, job, taskdesc):
+    common_toolchain(config, job, taskdesc, is_docker=True)
+
+
+@run_job_using(
+    "generic-worker",
+    "toolchain-script",
+    schema=toolchain_run_schema,
+    defaults=toolchain_defaults,
+)
+def generic_worker_toolchain(config, job, taskdesc):
+    common_toolchain(config, job, taskdesc, is_docker=False)

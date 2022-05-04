@@ -57,14 +57,14 @@ def common_setup(config, job, taskdesc, command):
     if run["checkout"]:
         repo_configs = config.repo_configs
         if len(repo_configs) > 1 and run["checkout"] is True:
-            raise Exception("Must explicitly sepcify checkouts with multiple repos.")
+            raise Exception("Must explicitly specify checkouts with multiple repos.")
         elif run["checkout"] is not True:
             repo_configs = {
                 repo: attr.evolve(repo_configs[repo], **config)
                 for (repo, config) in run["checkout"].items()
             }
 
-        vcs_path = support_vcs_checkout(
+        support_vcs_checkout(
             config,
             job,
             taskdesc,
