@@ -45,7 +45,11 @@ toolchain_run_schema = Schema(
             "toolchain-alias",
             description="An alias that can be used instead of the real toolchain job name in "
             "fetch stanzas for jobs.",
-        ): str,
+        ): Any(str, [str]),
+        Optional(
+            "toolchain-env",
+            description="Additional env variables to add to the worker when using this toolchain",
+        ): {str: object},
         # Base work directory used to set up the task.
         Required("workdir"): str,
     }
@@ -118,6 +122,8 @@ def docker_worker_toolchain(config, job, taskdesc):
     attributes["toolchain-artifact"] = run.pop("toolchain-artifact")
     if "toolchain-alias" in run:
         attributes["toolchain-alias"] = run.pop("toolchain-alias")
+    if "toolchain-env" in run:
+        attributes["toolchain-env"] = run.pop("toolchain-env")
 
     if not taskgraph.fast:
         name = taskdesc["label"].replace(f"{config.kind}-", "", 1)
