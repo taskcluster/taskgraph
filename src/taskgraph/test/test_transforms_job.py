@@ -6,19 +6,19 @@
 Tests for the 'job' transform subsystem.
 """
 
-
 import os
 from copy import deepcopy
+from unittest.mock import patch
 
 import pytest
 from taskcluster_urls import test_root_url
+
 from taskgraph.transforms import job
 from taskgraph.transforms.job import run_task  # noqa: F401
 from taskgraph.transforms.job.common import add_cache
 from taskgraph.transforms.task import payload_builders
 from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.taskcluster import get_root_url
-
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -32,8 +32,8 @@ TASK_DEFAULTS = {
 }
 
 
-@pytest.fixture()
-def transform(monkeypatch, transform_config):
+@pytest.fixture
+def transform(monkeypatch, run_transform):
     """Run the job transforms on the specified task but return the inputs to
     `configure_taskdesc_for_run` without executing it.
 
@@ -46,20 +46,11 @@ def transform(monkeypatch, transform_config):
     def inner(task_input):
         task = deepcopy(TASK_DEFAULTS)
         task.update(task_input)
-        frozen_args = []
 
-        def _configure_taskdesc_for_run(*args):
-            frozen_args.extend(args)
-
-        monkeypatch.setattr(
-            job, "configure_taskdesc_for_run", _configure_taskdesc_for_run
-        )
-
-        for _ in job.transforms(transform_config, [task]):
+        with patch("taskgraph.transforms.job.configure_taskdesc_for_run") as m:
             # This forces the generator to be evaluated
-            pass
-
-        return frozen_args
+            run_transform(job.transforms, task)
+            return m.call_args[0]
 
     return inner
 

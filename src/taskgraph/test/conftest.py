@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import pytest
 from responses import RequestsMock
@@ -12,7 +12,7 @@ from taskgraph.optimize import OptimizationStrategy
 from taskgraph.transforms.base import TransformConfig
 from taskgraph.util.templates import merge
 
-here = os.path.abspath(os.path.dirname(__file__))
+here = Path(__file__).parent
 
 
 @pytest.fixture
@@ -119,6 +119,7 @@ def parameters():
             "head_rev": "abcdef",
             "head_ref": "abcdef",
             "level": 1,
+            "moz_build_date": 0,
             "project": "",
             "repository_type": "hg",
             "target_tasks_method": "test_method",
@@ -161,18 +162,20 @@ def maketgg(monkeypatch, parameters):
 
 @pytest.fixture
 def transform_config(parameters):
-    graph_config = fake_load_graph_config(os.path.join("taskcluster", "ci"))
+    graph_config = fake_load_graph_config(str(here / "data" / "taskcluster" / "ci"))
     return TransformConfig(
-        "test", here, {}, parameters, {}, graph_config, write_artifacts=False
+        "test", str(here), {}, parameters, {}, graph_config, write_artifacts=False
     )
 
 
 @pytest.fixture
 def run_transform(transform_config):
-    def inner(func, tasks):
+    def inner(func, tasks, config=None):
         if not isinstance(tasks, list):
             tasks = [tasks]
 
-        return list(func(transform_config, tasks))
+        if not config:
+            config = transform_config
+        return list(func(config, tasks))
 
     return inner
