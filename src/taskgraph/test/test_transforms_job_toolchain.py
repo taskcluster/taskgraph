@@ -55,6 +55,7 @@ def assert_basic(task):
         "cache": {
             "digest-data": [
                 "a81c34908c02a5b6a14607465397c0f82d5c406b3e2e73f2c29644016d7bb031",
+                "public/build/artifact.zip",
                 "toolchain-build",
             ],
             "name": "fake-task-label",
