@@ -45,8 +45,38 @@ def run_job_using(monkeypatch, run_transform):
     return inner
 
 
-def assert_basic(task):
-    assert task == {
+def assert_docker_worker(job, taskdesc):
+    assert job == {
+        "description": "fake description",
+        "label": "fake-task-label",
+        "run": {
+            "command": ["vcs/taskcluster/scripts/toolchain/run.sh"],
+            "cwd": "{checkout}/..",
+            "sparse-profile": "toolchain-build",
+            "using": "run-task",
+            "workdir": "/builds/worker",
+        },
+        "worker": {
+            "artifacts": [
+                {
+                    "name": "public/build",
+                    "path": "/builds/worker/artifacts/",
+                    "type": "directory",
+                }
+            ],
+            "chain-of-trust": True,
+            "docker-image": {"in-tree": "toolchain-build"},
+            "env": {
+                "MOZ_BUILD_DATE": 0,
+                "MOZ_SCM_LEVEL": 1,
+                "UPLOAD_DIR": "/builds/worker/artifacts/",
+            },
+            "implementation": "docker-worker",
+            "os": "linux",
+        },
+        "worker-type": "t-linux",
+    }
+    assert taskdesc == {
         "attributes": {
             "toolchain-alias": "foo",
             "toolchain-artifact": "public/build/artifact.zip",
@@ -90,6 +120,60 @@ def assert_basic(task):
     }
 
 
+def assert_generic_worker(job, taskdesc):
+    assert job == {
+        "description": "fake description",
+        "label": "fake-task-label",
+        "run": {
+            "command": "src/taskcluster/scripts/toolchain/run.sh --foo bar",
+            "cwd": "{checkout}/..",
+            "sparse-profile": "toolchain-build",
+            "using": "run-task",
+            "workdir": "/builds/worker",
+        },
+        "worker": {
+            "artifacts": [
+                {"name": "public/build", "path": "public/build", "type": "directory"}
+            ],
+            "chain-of-trust": True,
+            "env": {"MOZ_BUILD_DATE": 0, "MOZ_SCM_LEVEL": 1},
+            "implementation": "generic-worker",
+            "os": "windows",
+        },
+        "worker-type": "b-win2012",
+    }
+    assert taskdesc == {
+        "attributes": {"toolchain-artifact": "public/build/artifact.zip"},
+        "cache": {
+            "digest-data": [
+                "a81c34908c02a5b6a14607465397c0f82d5c406b3e2e73f2c29644016d7bb031",
+                "public/build/artifact.zip",
+                "--foo",
+                "bar",
+            ],
+            "name": "fake-task-label",
+            "type": "toolchains.v3",
+        },
+        "dependencies": {},
+        "description": "fake description",
+        "extra": {},
+        "label": "fake-task-label",
+        "routes": [],
+        "scopes": [],
+        "soft-dependencies": [],
+        "worker": {
+            "artifacts": [
+                {"name": "public/build", "path": "public/build", "type": "directory"}
+            ],
+            "chain-of-trust": True,
+            "env": {"MOZ_BUILD_DATE": 0, "MOZ_SCM_LEVEL": 1},
+            "implementation": "generic-worker",
+            "os": "windows",
+        },
+        "worker-type": "b-win2012",
+    }
+
+
 @pytest.mark.parametrize(
     "task",
     (
@@ -102,13 +186,29 @@ def assert_basic(task):
                     },
                 }
             },
-            id="basic",
+            id="docker_worker",
+        ),
+        pytest.param(
+            {
+                "run": {
+                    "arguments": ["--foo", "bar"],
+                },
+                "worker-type": "b-win2012",
+                "worker": {
+                    "os": "windows",
+                    "implementation": "generic-worker",
+                },
+            },
+            id="generic_worker",
         ),
     ),
 )
 def test_toolchain(request, run_job_using, task):
-    task = run_job_using(task)[2]
-    pprint(task)
+    _, job, taskdesc, _ = run_job_using(task)
+    print("Job:")
+    pprint(job)
+    print("Task Description:")
+    pprint(taskdesc)
     param_id = request.node.callspec.id
     assert_func = globals()[f"assert_{param_id}"]
-    assert_func(task)
+    assert_func(job, taskdesc)
