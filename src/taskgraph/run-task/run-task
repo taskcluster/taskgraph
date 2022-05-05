@@ -157,7 +157,7 @@ def remove(path):
 
     :param path: path to be removed
     """
-
+    print_line("remove", f"path = {path}")
     def _update_permissions(path):
         """Sets specified pemissions depending on filetype"""
         if os.path.islink(path):
@@ -178,6 +178,7 @@ def remove(path):
         _call_windows_retry(os.chmod, (path, mode))
 
     if not os.path.lexists(path):
+        print_line("remove", "os.path.lexists(path)")
         return
 
     """
@@ -194,11 +195,13 @@ def remove(path):
         path = u"\\\\?\\%s" % path
 
     if os.path.isfile(path) or os.path.islink(path):
+        print_line("remove", "os.path.isfile(path) or os.path.islink(path)")
         # Verify the file or link is read/write for the current user
         _update_permissions(path)
         _call_windows_retry(os.remove, (path,))
 
     elif os.path.isdir(path):
+        print_line("remove", "os.path.isfile(path) or os.path.islink(path)")
         # Verify the directory is read/write/execute for the current user
         _update_permissions(path)
 
