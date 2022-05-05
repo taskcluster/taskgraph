@@ -550,10 +550,14 @@ def _clean_git_checkout(destination_path):
     data = stdout.read()
     prefix = 'Would remove '
     filenames = [line[len(prefix):] for line in data.splitlines()]
+    print_line(b'vcs', b'DEBUG %r\n' % filenames)
     print_line(b'vcs', b'removing %r\n' % filenames)
+    print_line(b'vcs', b'DEBUG %r\n' % filenames)
     for filename in filenames:
         remove(filename)
+    print_line(b'vcs', b'DEBUG %r\n' % filenames)
     print_line(b'vcs', b'successfully cleaned git checkout!\n')
+    print_line(b'vcs', b'DEBUG %r\n' % filenames)
 
 
 def git_checkout(
