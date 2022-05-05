@@ -555,7 +555,7 @@ def _clean_git_checkout(destination_path):
         sys.exit(ret)
     data = stdout.read()
     prefix = 'Would remove '
-    filenames = [line[len(prefix):] for line in data.splitlines()]
+    filenames = [os.path.abspath(line[len(prefix):]) for line in data.splitlines()]
     print_line(b'vcs', b'DEBUG\n')
     print_line(b'vcs', b'removing %r\n' % filenames)
     print_line(b'vcs', b'DEBUG\n')
