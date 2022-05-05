@@ -176,7 +176,6 @@ def remove(path):
             return
 
         _call_windows_retry(os.chmod, (path, mode))
-        print(f"updated permissions for {path}")
 
     if not os.path.lexists(path):
         print(f"not os.path.lexists(path)")
