@@ -556,7 +556,9 @@ def _clean_git_checkout(destination_path):
     print_line(b'vcs', b'removing %r\n' % filenames)
     print_line(b'vcs', b'DEBUG\n')
     for filename in filenames:
+        print(f"calling remove on {filename}")
         remove(filename)
+        print("called remove?")
     print_line(b'vcs', b'DEBUG\n')
     print_line(b'vcs', b'successfully cleaned git checkout!\n')
     print_line(b'vcs', b'DEBUG\n')
