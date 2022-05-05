@@ -208,7 +208,9 @@ def remove(path):
                 _update_permissions(os.path.join(root, entry))
         _call_windows_retry(shutil.rmtree, (path,))
 
+    print_line("assert os.path.isdir(path) is False")
     assert os.path.isdir(path) is False
+    print_line("os.path.isdir(path) is False!")
 
 
 def print_line(prefix, m):
