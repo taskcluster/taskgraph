@@ -157,7 +157,7 @@ def remove(path):
 
     :param path: path to be removed
     """
-    print_line("remove", f"path = {path}")
+    print(f"remove({path})")
     def _update_permissions(path):
         """Sets specified pemissions depending on filetype"""
         if os.path.islink(path):
@@ -176,9 +176,9 @@ def remove(path):
             return
 
         _call_windows_retry(os.chmod, (path, mode))
+        print(f"updated permissions for {path}")
 
     if not os.path.lexists(path):
-        print_line("remove", "os.path.lexists(path)")
         return
 
     """
@@ -195,25 +195,24 @@ def remove(path):
         path = u"\\\\?\\%s" % path
 
     if os.path.isfile(path) or os.path.islink(path):
-        print_line("remove", "os.path.isfile(path) or os.path.islink(path)")
         # Verify the file or link is read/write for the current user
         _update_permissions(path)
         _call_windows_retry(os.remove, (path,))
+        print("assert os.path.isfile(path) is False")
+        assert os.path.isfile(path) is False
+        print("os.path.isfile(path) is False!")
 
     elif os.path.isdir(path):
-        print_line("remove", "os.path.isfile(path) or os.path.islink(path)")
         # Verify the directory is read/write/execute for the current user
-        _update_permissions(path)
-
+        _update_permissions
         # We're ensuring that every nested item has writable permission.
         for root, dirs, files in os.walk(path):
             for entry in dirs + files:
                 _update_permissions(os.path.join(root, entry))
         _call_windows_retry(shutil.rmtree, (path,))
-
-    print_line("assert os.path.isdir(path) is False")
-    assert os.path.isdir(path) is False
-    print_line("os.path.isdir(path) is False!")
+        print("assert os.path.isdir(path) is False")
+        assert os.path.isdir(path) is False
+        print("os.path.isdir(path) is False!")
 
 
 def print_line(prefix, m):
