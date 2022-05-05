@@ -157,7 +157,7 @@ def remove(path):
 
     :param path: path to be removed
     """
-    print(f"remove({path})"))
+    print(f"remove({path})")
     def _update_permissions(path):
         """Sets specified pemissions depending on filetype"""
         if os.path.islink(path):
