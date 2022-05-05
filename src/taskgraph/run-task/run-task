@@ -179,7 +179,7 @@ def remove(path):
         print(f"updated permissions for {path}")
 
     if not os.path.lexists(path):
-        print(f"os.path.lexists(path)")
+        print(f"not os.path.lexists(path)")
         return
 
     """
@@ -194,7 +194,10 @@ def remove(path):
         and path[2] == "\\"
     ):
         path = u"\\\\?\\%s" % path
-
+    print("os.path.lexists(path)", os.path.lexists(path))
+    print("os.path.isfile(path)", os.path.isfile(path))
+    print("os.path.islink(path)", os.path.islink(path))
+    print("os.path.isdir(path)", os.path.isdir(path))
     if os.path.isfile(path) or os.path.islink(path):
         # Verify the file or link is read/write for the current user
         _update_permissions(path)
