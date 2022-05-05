@@ -204,7 +204,7 @@ def remove(path):
 
     elif os.path.isdir(path):
         # Verify the directory is read/write/execute for the current user
-        _update_permissions
+        _update_permissions(path)
         # We're ensuring that every nested item has writable permission.
         for root, dirs, files in os.walk(path):
             for entry in dirs + files:
@@ -552,14 +552,14 @@ def _clean_git_checkout(destination_path):
     data = stdout.read()
     prefix = 'Would remove '
     filenames = [line[len(prefix):] for line in data.splitlines()]
-    print_line(b'vcs', b'DEBUG %r\n' % filenames)
+    print_line(b'vcs', b'DEBUG\n')
     print_line(b'vcs', b'removing %r\n' % filenames)
-    print_line(b'vcs', b'DEBUG %r\n' % filenames)
+    print_line(b'vcs', b'DEBUG\n')
     for filename in filenames:
         remove(filename)
-    print_line(b'vcs', b'DEBUG %r\n' % filenames)
+    print_line(b'vcs', b'DEBUG\n')
     print_line(b'vcs', b'successfully cleaned git checkout!\n')
-    print_line(b'vcs', b'DEBUG %r\n' % filenames)
+    print_line(b'vcs', b'DEBUG\n')
 
 
 def git_checkout(
