@@ -165,6 +165,7 @@ def remove(path):
 
     :param path: path to be removed
     """
+
     def _update_permissions(path):
         """Sets specified pemissions depending on filetype"""
         if os.path.islink(path):
@@ -545,18 +546,14 @@ def _clean_git_checkout(destination_path):
         sys.exit(ret)
     data = stdout.read()
     prefix = 'Would remove '
-    filenames = [os.path.join(destination_path, line[len(prefix):]) for line in data.splitlines()]
-    print_line(b'vcs', b'DEBUG\n')
+    filenames = [line[len(prefix):] for line in data.splitlines()]
+    # filenames = [os.path.join(destination_path, line[len(prefix):]) for line in data.splitlines()]
     print_line(b'vcs', b'removing %r\n' % filenames)
-    print_line(b'vcs', b'DEBUG\n')
     for filename in filenames:
-        print(f"calling remove on {filename}")
-        print(repr(remove))
         remove(filename)
-        print("called remove?")
-    print_line(b'vcs', b'DEBUG\n')
+        if os.path.isdir(filename) or os.path.isfile(filename):
+            raise Exception(f"Failed to clean git checkout. Could not delete {filename}")
     print_line(b'vcs', b'successfully cleaned git checkout!\n')
-    print_line(b'vcs', b'DEBUG\n')
 
 
 def git_checkout(
