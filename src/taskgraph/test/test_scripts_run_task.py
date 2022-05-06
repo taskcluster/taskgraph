@@ -214,8 +214,9 @@ def test_clean_git_checkout(monkeypatch, run_task_mod):
     tracked_file = tempfile.NamedTemporaryFile(dir=tracked_dir.name, delete=False)
     tracked_file.write(b"tracked")
     tracked_file.close()
+    root_dir_prefix = root_dir.name + "/"
     output = io.BytesIO(
-        f"{prefix}{untracked_dir.name}/\n{prefix}{untracked_file.name}\n".encode(
+        f"{prefix}{untracked_dir.name[len(root_dir_prefix):]}/\n{prefix}{untracked_file.name[len(root_dir_prefix):]}\n".encode(
             "latin1"
         )
     )
@@ -228,6 +229,7 @@ def test_clean_git_checkout(monkeypatch, run_task_mod):
         stdin=None,
         cwd=None,
         env=None,
+        **kwargs,
     ):
         return Mock(
             stdout=output,
