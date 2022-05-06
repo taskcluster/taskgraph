@@ -107,6 +107,14 @@ IS_POSIX = os.name == 'posix'
 IS_WINDOWS = os.name == 'nt'
 
 
+def print_line(prefix, m):
+    now = datetime.datetime.utcnow().isoformat().encode('utf-8')
+    # slice microseconds to 3 decimals.
+    now = now[:-3] if now[-7:-6] == b'.' else now
+    sys.stdout.buffer.write(b'[%s %sZ] %s' % (prefix, now, m))
+    sys.stdout.buffer.flush()
+
+
 def _call_windows_retry(func, args=(), retry_max=5, retry_delay=0.5):
     """
     It's possible to see spurious errors on Windows due to various things
@@ -178,6 +186,7 @@ def remove(path):
         _call_windows_retry(os.chmod, (path, mode))
 
     if not os.path.lexists(path):
+        print_line(b'remove', b'WARNING: %s does not exists!\n' % path.encode('utf-8'))
         return
 
     """
@@ -207,14 +216,6 @@ def remove(path):
             for entry in dirs + files:
                 _update_permissions(os.path.join(root, entry))
         _call_windows_retry(shutil.rmtree, (path,))
-
-
-def print_line(prefix, m):
-    now = datetime.datetime.utcnow().isoformat().encode('utf-8')
-    # slice microseconds to 3 decimals.
-    now = now[:-3] if now[-7:-6] == b'.' else now
-    sys.stdout.buffer.write(b'[%s %sZ] %s' % (prefix, now, m))
-    sys.stdout.buffer.flush()
 
 
 def run_required_command(prefix, args, *, extra_env=None, cwd=None):
@@ -545,7 +546,7 @@ def _clean_git_checkout(destination_path):
         sys.exit(ret)
     data = stdout.read()
     prefix = 'Would remove '
-    filenames = [line[len(prefix):] for line in data.splitlines()]
+    filenames = [os.path.join(destination_path, line[len(prefix):]) for line in data.splitlines()]
     print_line(b'vcs', b'removing %r\n' % filenames)
     for filename in filenames:
         remove(filename)
