@@ -215,7 +215,9 @@ def test_clean_git_checkout(monkeypatch, run_task_mod):
     tracked_file.write(b"tracked")
     tracked_file.close()
     root_dir_prefix = root_dir.name + "/"
-    output_str = f"{prefix}{untracked_dir.name}/\n{prefix}{untracked_file.name}\n"
+    untracked_dir_rel_path = untracked_dir.name[len(root_dir_prefix):]
+    untracked_file_rel_path = untracked_file.name[len(root_dir_prefix):]
+    output_str = f"{prefix}{untracked_dir_rel_path}/\n{prefix}{untracked_file_rel_path}\n"
     output_bytes = output_str.encode("latin1")
     output = io.BytesIO(output_bytes)
 
