@@ -107,6 +107,14 @@ IS_POSIX = os.name == 'posix'
 IS_WINDOWS = os.name == 'nt'
 
 
+def print_line(prefix, m):
+    now = datetime.datetime.utcnow().isoformat().encode('utf-8')
+    # slice microseconds to 3 decimals.
+    now = now[:-3] if now[-7:-6] == b'.' else now
+    sys.stdout.buffer.write(b'[%s %sZ] %s' % (prefix, now, m))
+    sys.stdout.buffer.flush()
+
+
 def _call_windows_retry(func, args=(), retry_max=5, retry_delay=0.5):
     """
     It's possible to see spurious errors on Windows due to various things
@@ -157,7 +165,6 @@ def remove(path):
 
     :param path: path to be removed
     """
-    print(f"remove({path})")
     def _update_permissions(path):
         """Sets specified pemissions depending on filetype"""
         if os.path.islink(path):
@@ -178,7 +185,7 @@ def remove(path):
         _call_windows_retry(os.chmod, (path, mode))
 
     if not os.path.lexists(path):
-        print(f"not os.path.lexists(path)")
+        print_line(b'remove', b'WARNING: %s does not exists!\n' % path.encode('utf-8'))
         return
 
     """
@@ -193,37 +200,21 @@ def remove(path):
         and path[2] == "\\"
     ):
         path = u"\\\\?\\%s" % path
-    print("os.path.lexists(path)", os.path.lexists(path))
-    print("os.path.isfile(path)", os.path.isfile(path))
-    print("os.path.islink(path)", os.path.islink(path))
-    print("os.path.isdir(path)", os.path.isdir(path))
+
     if os.path.isfile(path) or os.path.islink(path):
         # Verify the file or link is read/write for the current user
         _update_permissions(path)
         _call_windows_retry(os.remove, (path,))
-        print("assert os.path.isfile(path) is False")
-        assert os.path.isfile(path) is False
-        print("os.path.isfile(path) is False!")
 
     elif os.path.isdir(path):
         # Verify the directory is read/write/execute for the current user
         _update_permissions(path)
+
         # We're ensuring that every nested item has writable permission.
         for root, dirs, files in os.walk(path):
             for entry in dirs + files:
                 _update_permissions(os.path.join(root, entry))
         _call_windows_retry(shutil.rmtree, (path,))
-        print("assert os.path.isdir(path) is False")
-        assert os.path.isdir(path) is False
-        print("os.path.isdir(path) is False!")
-
-
-def print_line(prefix, m):
-    now = datetime.datetime.utcnow().isoformat().encode('utf-8')
-    # slice microseconds to 3 decimals.
-    now = now[:-3] if now[-7:-6] == b'.' else now
-    sys.stdout.buffer.write(b'[%s %sZ] %s' % (prefix, now, m))
-    sys.stdout.buffer.flush()
 
 
 def run_required_command(prefix, args, *, extra_env=None, cwd=None):
