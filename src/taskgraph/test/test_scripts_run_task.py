@@ -215,11 +215,9 @@ def test_clean_git_checkout(monkeypatch, run_task_mod):
     tracked_file.write(b"tracked")
     tracked_file.close()
     root_dir_prefix = root_dir.name + "/"
-    output = io.BytesIO(
-        f"{prefix}{untracked_dir.name[len(root_dir_prefix):]}/\n{prefix}{untracked_file.name[len(root_dir_prefix):]}\n".encode(
-            "latin1"
-        )
-    )
+    output_str = f"{prefix}{untracked_dir.name}/\n{prefix}{untracked_file.name}\n"
+    output_bytes = output_str.encode("latin1")
+    output = io.BytesIO(output_bytes)
 
     def _Popen(
         args,
