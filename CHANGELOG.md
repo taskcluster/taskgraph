@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.5.1] - 2022-05-06
+
+### Fixed
+- Git checkout cleaning regression
+
 ## [1.5.0] - 2022-05-02
 
 ### Added
