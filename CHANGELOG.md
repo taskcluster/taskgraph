@@ -4,6 +4,10 @@
 
 ### Fixed
 - Git checkout cleaning regression
+- Add a mechanism to bypass `--require-hashes` when installing pip dependencies in `run-task`
+- Decode gzipped artifacts when using `task-id=` or `project=` in the `--parameters` flag
+- Stop defaulting to a dummy `TASKCLUSTER_ROOT_URL` and instead raise error
+- Some node dependency upgrades in the `index-task` image
 
 ## [1.5.0] - 2022-05-02
 
