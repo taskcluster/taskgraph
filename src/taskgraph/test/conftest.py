@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -19,6 +20,13 @@ here = Path(__file__).parent
 def responses():
     with RequestsMock() as rsps:
         yield rsps
+
+
+@pytest.fixture(scope="session", autouse=True)
+def patch_taskcluster_root_url(session_mocker):
+    session_mocker.patch.dict(
+        os.environ, {"TASKCLUSTER_ROOT_URL": "https://tc-tests.localhost"}
+    )
 
 
 def fake_loader(kind, path, config, parameters, loaded_tasks):
