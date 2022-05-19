@@ -2,12 +2,10 @@
 Tests for the 'toolchain' transforms.
 """
 from pprint import pprint
-from unittest.mock import patch
 
 import pytest
 
 from taskgraph.transforms.job import make_task_description
-from taskgraph.util import hash
 from taskgraph.util.templates import merge
 
 TASK_DEFAULTS = {
@@ -28,19 +26,20 @@ TASK_DEFAULTS = {
 
 
 @pytest.fixture
-def run_job_using(monkeypatch, run_transform):
-    def fake_find_files(_):
-        return ["taskcluster/scripts/toolchain/run.sh"]
-
-    monkeypatch.setattr(hash, "_find_files", fake_find_files)
+def run_job_using(mocker, run_transform):
+    m = mocker.patch("taskgraph.util.hash._find_files")
+    m.return_value = [
+        "taskcluster/scripts/toolchain/run.sh",
+        "taskcluster/scripts/toolchain/run.ps1",
+    ]
 
     def inner(task):
         task = merge(TASK_DEFAULTS, task)
-        with patch(
+        m = mocker.patch(
             "taskgraph.transforms.job.toolchain.configure_taskdesc_for_run"
-        ) as m:
-            run_transform(make_task_description, task)
-            return m.call_args[0]
+        )
+        run_transform(make_task_description, task)
+        return m.call_args[0]
 
     return inner
 
@@ -174,6 +173,17 @@ def assert_generic_worker(job, taskdesc):
     }
 
 
+def assert_powershell(job, _):
+    assert job["run"] == {
+        "command": "src/taskcluster/scripts/toolchain/run.ps1",
+        "cwd": "{checkout}/..",
+        "exec-with": "powershell",
+        "sparse-profile": "toolchain-build",
+        "using": "run-task",
+        "workdir": "/builds/worker",
+    }
+
+
 @pytest.mark.parametrize(
     "task",
     (
@@ -200,6 +210,17 @@ def assert_generic_worker(job, taskdesc):
                 },
             },
             id="generic_worker",
+        ),
+        pytest.param(
+            {
+                "run": {"script": "run.ps1"},
+                "worker-type": "b-win2012",
+                "worker": {
+                    "os": "windows",
+                    "implementation": "generic-worker",
+                },
+            },
+            id="powershell",
         ),
     ),
 )
