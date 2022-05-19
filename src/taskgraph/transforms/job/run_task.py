@@ -17,6 +17,11 @@ from taskgraph.util.schema import Schema
 from taskgraph.transforms.job.common import support_vcs_checkout
 from voluptuous import Required, Any, Optional
 
+EXEC_COMMANDS = {
+    "bash": ["bash", "-cx"],
+    "powershell": ["powershell.exe", "-ExecutionPolicy", "Bypass"],
+}
+
 run_task_schema = Schema(
     {
         Required("using"): "run-task",
@@ -38,12 +43,15 @@ run_task_schema = Schema(
         Required("sparse-profile"): Any(str, None),
         # The command arguments to pass to the `run-task` script, after the
         # checkout arguments.  If a list, it will be passed directly; otherwise
-        # it will be included in a single argument to `bash -cx`.
+        # it will be included in a single argument to the command specified by
+        # `exec-with`.
         Required("command"): Any([taskref_or_string], taskref_or_string),
         # Context to substitute into the command using format string
         # substitution (e.g {value}). This is useful if certain aspects of the
         # command need to be generated in transforms.
         Optional("command-context"): dict,
+        # What to execute the command with in the event command is a string.
+        Optional("exec-with"): Any(*list(EXEC_COMMANDS)),
         # Base work directory used to set up the task.
         Required("workdir"): str,
         # Whether to run as root. (defaults to False)
@@ -147,7 +155,8 @@ def docker_worker_run_task(config, job, taskdesc):
 
     # dict is for the case of `{'task-reference': str}`.
     if isinstance(run_command, str) or isinstance(run_command, dict):
-        run_command = ["bash", "-cx", run_command]
+        exec_cmd = EXEC_COMMANDS[run.pop("exec-with", "bash")]
+        run_command = exec_cmd + [run_command]
     command.append("--fetch-hgfingerprint")
     if run["run-as-root"]:
         command.extend(("--user", "root", "--group", "root"))
@@ -206,7 +215,8 @@ def generic_worker_run_task(config, job, taskdesc):
     if isinstance(run_command, str):
         if is_win:
             run_command = f'"{run_command}"'
-        run_command = ["bash", "-cx", run_command]
+        exec_cmd = EXEC_COMMANDS[run.pop("exec-with", "bash")]
+        run_command = exec_cmd + [run_command]
 
     command_context = run.get("command-context")
     if command_context:

@@ -5,22 +5,18 @@
 Support for running toolchain-building jobs via dedicated scripts
 """
 
-from voluptuous import Optional, Required, Any
+from voluptuous import Any, Optional, Required
 
 import taskgraph
-from taskgraph.util.schema import Schema
-from taskgraph.util.shell import quote as shell_quote
-from taskgraph.transforms.job import (
-    configure_taskdesc_for_run,
-    run_job_using,
-)
+from taskgraph.transforms.job import configure_taskdesc_for_run, run_job_using
 from taskgraph.transforms.job.common import (
     docker_worker_add_artifacts,
     generic_worker_add_artifacts,
     get_vcsdir_name,
 )
 from taskgraph.util.hash import hash_paths
-
+from taskgraph.util.schema import Schema
+from taskgraph.util.shell import quote as shell_quote
 
 CACHE_TYPE = "toolchains.v3"
 
@@ -129,19 +125,26 @@ def common_toolchain(config, job, taskdesc, is_docker):
             "digest-data": get_digest_data(config, run, taskdesc),
         }
 
+    script = run.pop("script")
     run["using"] = "run-task"
     run["cwd"] = "{checkout}/.."
-    run["command"] = [
-        "{}/taskcluster/scripts/toolchain/{}".format(srcdir, run.pop("script"))
-    ] + run.pop("arguments", [])
+
+    if script.endswith(".ps1"):
+        run["exec-with"] = "powershell"
+
+    command = [f"{srcdir}/taskcluster/scripts/toolchain/{script}"] + run.pop(
+        "arguments", []
+    )
 
     if not is_docker:
         # Don't quote the first item in the command because it purposely contains
         # an environment variable that is not meant to be quoted.
-        if len(run["command"]) > 1:
-            run["command"] = run["command"][0] + " " + shell_quote(*run["command"][1:])
+        if len(command) > 1:
+            command = command[0] + " " + shell_quote(*command[1:])
         else:
-            run["command"] = run["command"][0]
+            command = command[0]
+
+    run["command"] = command
 
     configure_taskdesc_for_run(config, job, taskdesc, worker["implementation"])
 

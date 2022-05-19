@@ -129,6 +129,19 @@ def assert_generic_worker(task):
     }
 
 
+def assert_exec_with(task):
+    assert task["worker"]["command"] == [
+        "/usr/local/bin/run-task",
+        "--ci-checkout=/builds/worker/checkouts/vcs/",
+        "--fetch-hgfingerprint",
+        "--",
+        "powershell.exe",
+        "-ExecutionPolicy",
+        "Bypass",
+        "echo hello world",
+    ]
+
+
 @pytest.mark.parametrize(
     "task",
     (
@@ -145,6 +158,14 @@ def assert_generic_worker(task):
                 },
             },
             id="generic_worker",
+        ),
+        pytest.param(
+            {
+                "run": {
+                    "exec-with": "powershell",
+                },
+            },
+            id="exec_with",
         ),
     ),
 )
