@@ -22,24 +22,45 @@ repository, activate a virtualenv and install dependencies:
   pip install -r requirements/dev.txt
   python setup.py develop
 
-Running Tests and Linters
--------------------------
+Running Tests
+-------------
 
-Tests are run with the `pytest <https://docs.pytest.org>`_ framework:
+Tests are run with the `pytest`_ framework:
 
 .. code-block::
 
   pytest src
 
-We also enforce the `black`_ formatter and `flake8`_ linter in Taskgraph's CI:
+We use `tox`_ to run tests across multiple versions of Python.
+
+.. _pytest: https://pre-commit.com/
+.. _tox: https://tox.wiki/en/latest/
+
+Running Checks
+--------------
+
+Linters and formatters are run via `pre-commit`_. To install a commit hook,
+run:
 
 .. code-block::
 
-  black .
-  flake8
+   $ pre-commit install
 
+Now checks will automatically run on every commit. If you prefer to run checks
+manually, you can use:
+
+.. code-block::
+
+   $ pre-commit run
+
+Some of the checks we enforce include `black`_, `flake8`_ and `yamllint`_. See
+`pre-commit-config.yaml`_ for a full list.
+
+.. _pre-commit: https://pre-commit.com/
 .. _black: https://black.readthedocs.io
 .. _flake8: https://flake8.pycqa.org/en/latest/
+.. _yamllint: https://yamllint.readthedocs.io/en/stable/
+.. _pre-commit-config.yaml: https://github.com/taskcluster/taskgraph/blob/main/.pre-commit-config.yaml
 
 .. _working-on-taskgraph:
 

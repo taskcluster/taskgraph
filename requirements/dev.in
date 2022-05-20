@@ -1,3 +1,4 @@
 -r test.in
+pre-commit
 pip-compile-multi
 sphinx-autobuild

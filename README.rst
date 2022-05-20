@@ -3,6 +3,10 @@
    :target: https://firefox-ci-tc.services.mozilla.com/api/github/v1/repository/taskcluster/taskgraph/main/latest
    :alt: Task Status
 
+.. image:: https://results.pre-commit.ci/badge/github/taskcluster/taskgraph/main.svg
+   :target: https://results.pre-commit.ci/latest/github/taskcluster/taskgraph/main
+   :alt: pre-commit.ci status
+
 .. image:: https://codecov.io/gh/taskcluster/taskgraph/branch/main/graph/badge.svg?token=GJIV52ZQNP
    :target: https://codecov.io/gh/taskcluster/taskgraph
    :alt: Code Coverage
