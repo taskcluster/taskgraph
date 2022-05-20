@@ -140,4 +140,3 @@ In order to release a new version of Taskgraph, you will need permission to the
 
 .. _taskcluster-taskgraph: https://pypi.org/project/taskcluster-taskgraph/
 .. _twine: https://pypi.org/project/twine/
-

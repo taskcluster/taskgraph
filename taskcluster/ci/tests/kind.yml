@@ -52,33 +52,3 @@ jobs:
                 pip install --user --no-deps . &&
                 pyenv latest local 3.10 3.9 3.8 3.7 3.6 &&
                 tox --parallel
-
-    flake8:
-        description: "Run `flake8` on Python 3 to validate the latest changes"
-        treeherder:
-            symbol: flake8
-        run:
-            command: >-
-                pip install --user -r requirements/test.txt &&
-                flake8
-
-    black:
-        description: "Run `black` to validate the latest changes"
-        treeherder:
-            symbol: black
-        run:
-            command: >-
-                pip install --user -r requirements/test.txt &&
-                black --check .
-
-    yamllint:
-        description: "Run `yamllint` to validate the latest changes"
-        treeherder:
-            symbol: yaml
-        worker:
-            env:
-                LC_ALL: C.UTF-8
-        run:
-            command: >-
-                pip install --user -r requirements/test.txt &&
-                yamllint .
