@@ -10,7 +10,7 @@
 .. image:: https://codecov.io/gh/taskcluster/taskgraph/branch/main/graph/badge.svg?token=GJIV52ZQNP
    :target: https://codecov.io/gh/taskcluster/taskgraph
    :alt: Code Coverage
-   
+
 .. image:: https://badge.fury.io/py/taskcluster-taskgraph.svg
    :target: https://badge.fury.io/py/taskcluster-taskgraph
    :alt: Pypi Version
