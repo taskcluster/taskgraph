@@ -207,6 +207,7 @@ def get_attribute(dict, key, attributes, attribute_name):
 def use_fetches(config, jobs):
     artifact_names = {}
     aliases = {}
+    extra_env = {}
 
     if config.kind in ("toolchain", "fetch"):
         jobs = list(jobs)
@@ -226,6 +227,7 @@ def use_fetches(config, jobs):
                 task.attributes,
                 f"{task.kind}-artifact",
             )
+            get_attribute(extra_env, task.label, task.attributes, f"{task.kind}-env")
             value = task.attributes.get(f"{task.kind}-alias")
             if value:
                 aliases[f"{task.kind}-{value}"] = task.label
@@ -243,6 +245,7 @@ def use_fetches(config, jobs):
         name = job.get("name", job.get("label"))
         dependencies = job.setdefault("dependencies", {})
         worker = job.setdefault("worker", {})
+        env = worker.setdefault("env", {})
         prefix = get_artifact_prefix(job)
         for kind, artifacts in fetches.items():
             if kind in ("fetch", "toolchain"):
@@ -255,6 +258,8 @@ def use_fetches(config, jobs):
                                 kind=config.kind, name=name, fetch=fetch_name
                             )
                         )
+                    if label in extra_env:
+                        env.update(extra_env[label])
 
                     path = artifact_names[label]
 
@@ -329,7 +334,6 @@ def use_fetches(config, jobs):
                 if scope not in job.setdefault("scopes", []):
                     job["scopes"].append(scope)
 
-        env = worker.setdefault("env", {})
         env["MOZ_FETCHES"] = {"task-reference": json.dumps(job_fetches, sort_keys=True)}
 
         env.setdefault("MOZ_FETCHES_DIR", "fetches")
