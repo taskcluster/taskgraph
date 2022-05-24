@@ -1,5 +1,16 @@
 # Change Log
 
+## [1.6.0] - 2022-04-24
+
+### Added
+- Support for a `toolchain-env` key which gets added to dependent tasks' environment
+- Support for `generic-worker` toolchain tasks
+- Ability to execute commands using powershell in `run_task` transforms
+- Implicitly run toolchain scripts ending in `.ps1` with powershell
+
+### Fixed
+- Renaming `toolchain-artifact` now rebuilds toolchain tasks
+
 ## [1.5.1] - 2022-05-06
 
 ### Fixed
