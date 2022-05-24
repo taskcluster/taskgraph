@@ -8,17 +8,20 @@ Tests for the 'job' transform subsystem.
 
 import os
 from copy import deepcopy
+from pprint import pprint
 from unittest.mock import patch
 
 import pytest
 from taskcluster_urls import test_root_url
 
+from taskgraph.task import Task
 from taskgraph.transforms import job
 from taskgraph.transforms.job import run_task  # noqa: F401
 from taskgraph.transforms.job.common import add_cache
 from taskgraph.transforms.task import payload_builders
 from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.taskcluster import get_root_url
+from taskgraph.util.templates import merge
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -125,3 +128,46 @@ def test_run_task_command_context(task, transform, workerfn, monkeypatch):
     del job_copy["run"]["command-context"]
     workerfn(config, job_copy, taskdesc)
     assert_cmd("echo '{output}'")
+
+
+def assert_use_fetches_toolchain_env(task):
+    assert task["worker"]["env"]["FOO"] == "1"
+
+
+@pytest.mark.parametrize(
+    "task,kind_dependencies_tasks",
+    (
+        pytest.param(
+            {"fetches": {"toolchain": ["foo"]}},
+            [
+                Task(
+                    kind="toolchain",
+                    label="toolchain-foo",
+                    attributes={
+                        "toolchain-artifact": "target.zip",
+                        "toolchain-env": {"FOO": "1"},
+                    },
+                    task={},
+                )
+            ],
+            id="toolchain_env",
+        ),
+    ),
+)
+def test_use_fetches(
+    request,
+    make_transform_config,
+    run_transform,
+    task,
+    kind_dependencies_tasks,
+):
+    transform_config = make_transform_config(
+        kind_dependencies_tasks=kind_dependencies_tasks
+    )
+    task = merge(TASK_DEFAULTS, task)
+    result = run_transform(job.use_fetches, task, config=transform_config)[0]
+    pprint(result)
+
+    param_id = request.node.callspec.id
+    assert_func = globals()[f"assert_use_fetches_{param_id}"]
+    assert_func(result)

@@ -169,21 +169,33 @@ def maketgg(monkeypatch, parameters):
 
 
 @pytest.fixture
-def transform_config(parameters):
+def make_transform_config(parameters):
     graph_config = fake_load_graph_config(str(here / "data" / "taskcluster" / "ci"))
-    return TransformConfig(
-        "test", str(here), {}, parameters, {}, graph_config, write_artifacts=False
-    )
+
+    def inner(kind_config=None, kind_dependencies_tasks=None):
+        kind_config = kind_config or {}
+        kind_dependencies_tasks = kind_dependencies_tasks or {}
+        return TransformConfig(
+            "test",
+            str(here),
+            kind_config,
+            parameters,
+            kind_dependencies_tasks,
+            graph_config,
+            write_artifacts=False,
+        )
+
+    return inner
 
 
 @pytest.fixture
-def run_transform(transform_config):
+def run_transform(make_transform_config):
     def inner(func, tasks, config=None):
         if not isinstance(tasks, list):
             tasks = [tasks]
 
         if not config:
-            config = transform_config
+            config = make_transform_config()
         return list(func(config, tasks))
 
     return inner
