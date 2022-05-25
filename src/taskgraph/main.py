@@ -455,9 +455,8 @@ def show_taskgraph(options):
             try:
                 proc = subprocess.run(
                     diffcmd + [base_path, cur_path],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    universal_newlines=True,
+                    capture_output=True,
+                    text=True,
                     check=True,
                 )
                 diff_output = proc.stdout
