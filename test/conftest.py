@@ -29,6 +29,11 @@ def patch_taskcluster_root_url(session_mocker):
     )
 
 
+@pytest.fixture(scope="session")
+def datadir():
+    return here / "data"
+
+
 def fake_loader(kind, path, config, parameters, loaded_tasks):
     for i in range(3):
         dependencies = {}
@@ -169,8 +174,8 @@ def maketgg(monkeypatch, parameters):
 
 
 @pytest.fixture
-def make_transform_config(parameters):
-    graph_config = fake_load_graph_config(str(here / "data" / "taskcluster" / "ci"))
+def make_transform_config(parameters, datadir):
+    graph_config = fake_load_graph_config(str(datadir / "taskcluster" / "ci"))
 
     def inner(kind_config=None, kind_dependencies_tasks=None):
         kind_config = kind_config or {}

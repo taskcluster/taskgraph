@@ -4,8 +4,9 @@
 
 from textwrap import dedent
 
-from taskgraph.test.mockedopen import MockedOpen
 from taskgraph.util import yaml
+
+from .mockedopen import MockedOpen
 
 
 def test_load():
