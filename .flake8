@@ -7,4 +7,4 @@ exclude =
     build
     src/taskgraph/run-task/robustcheckout.py
 per-file-ignores =
-    src/taskgraph/test/test_target_tasks.py: E501
+    test/test_target_tasks.py: E501
