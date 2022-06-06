@@ -52,7 +52,8 @@ def amend_taskgraph(taskgraph, label_to_taskid, to_add):
 def derive_index_task(task, taskgraph, label_to_taskid, parameters, graph_config):
     """Create the shell of a task that depends on `task` and on the given docker
     image."""
-    eager = graph_config["taskgraph"]["task-index"]["eager"]
+    task_index_config = graph_config["taskgraph"].get("task-index", {})
+    eager = task_index_config.get("eager", False)
     purpose = "index-task"
     label = f"{purpose}-{task.label}"
     provisioner_id, worker_type = get_worker_type(
@@ -164,8 +165,7 @@ def add_index_tasks(taskgraph, label_to_taskid, parameters, graph_config):
     directly, avoiding the limits on task.routes.
     """
     logger.debug("Morphing: adding index tasks")
-
-    task_index_config = graph_config["taskgraph"]["task-index"]
+    task_index_config = graph_config["taskgraph"].get("task-index", {})
     added = []
     for label, task in taskgraph.tasks.items():
         if (
