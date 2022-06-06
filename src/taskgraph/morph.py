@@ -49,7 +49,9 @@ def amend_taskgraph(taskgraph, label_to_taskid, to_add):
     return taskgraph, label_to_taskid
 
 
-def derive_index_task(task, taskgraph, label_to_taskid, parameters, graph_config, eager=False):
+def derive_index_task(
+    task, taskgraph, label_to_taskid, parameters, graph_config, eager=False
+):
     """Create the shell of a task that depends on `task` and on the given docker
     image."""
     purpose = "index-task"
