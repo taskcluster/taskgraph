@@ -165,6 +165,7 @@ def add_index_tasks(taskgraph, label_to_taskid, parameters, graph_config):
     directly, avoiding the limits on task.routes.
     """
     logger.debug("Morphing: adding index tasks")
+
     task_index_config = graph_config["taskgraph"].get("task-index", {})
     added = []
     for label, task in taskgraph.tasks.items():
