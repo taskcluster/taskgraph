@@ -21,7 +21,6 @@ the graph.
 import logging
 import os
 import re
-from xmlrpc.client import FastUnmarshaller
 
 from slugid import nice as slugid
 
