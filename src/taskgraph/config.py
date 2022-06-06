@@ -54,6 +54,15 @@ graph_config_schema = Schema(
                 description="The taskcluster index prefix to use for caching tasks. "
                 "Defaults to `trust-domain`.",
             ): str,
+            Optional(
+                "task-index",
+                description="Create index entries for kinds, labels, or all tasks. The task index can be eager or lazy.",
+            ): {
+                Optional("all"): bool,
+                Optional("labels"): list,
+                Optional("kinds"): list,
+                Optional("eager"): bool,
+            },
             Required("repositories"): All(
                 {
                     str: {

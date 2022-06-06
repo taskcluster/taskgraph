@@ -49,21 +49,19 @@ def amend_taskgraph(taskgraph, label_to_taskid, to_add):
     return taskgraph, label_to_taskid
 
 
-def derive_index_task(
-    task, taskgraph, label_to_taskid, parameters, graph_config, eager=False
-):
+def derive_index_task(task, taskgraph, label_to_taskid, parameters, graph_config):
     """Create the shell of a task that depends on `task` and on the given docker
     image."""
+    eager = graph_config["taskgraph"]["task-index"]["eager"]
     purpose = "index-task"
     label = f"{purpose}-{task.label}"
     provisioner_id, worker_type = get_worker_type(
         graph_config, "misc", parameters["level"]
     )
-
     task_def = {
         "provisionerId": provisioner_id,
         "workerType": worker_type,
-        "dependencies": [task.task_id],
+        "dependencies": [] if eager else [task.task_id],
         "created": {"relative-datestamp": "0 seconds"},
         "deadline": task.task["deadline"],
         # no point existing past the parent task's deadline
@@ -167,12 +165,22 @@ def add_index_tasks(taskgraph, label_to_taskid, parameters, graph_config):
     """
     logger.debug("Morphing: adding index tasks")
 
+    task_index_config = graph_config["taskgraph"]["task-index"]
     added = []
     for label, task in taskgraph.tasks.items():
-        if len(task.task.get("routes", [])) <= MAX_ROUTES:
+        if (
+            not task_index_config.get("all", False)
+            and not task.kind in task_index_config.get("kinds", [])
+            and not task.label in task_index_config.get("labels", [])
+            and len(task.task.get("routes", [])) <= MAX_ROUTES
+        ):
             continue
         task, taskgraph, label_to_taskid = make_index_task(
-            task, taskgraph, label_to_taskid, parameters, graph_config
+            task,
+            taskgraph,
+            label_to_taskid,
+            parameters,
+            graph_config,
         )
         added.append(task)
 
