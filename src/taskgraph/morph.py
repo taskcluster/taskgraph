@@ -171,8 +171,8 @@ def add_index_tasks(taskgraph, label_to_taskid, parameters, graph_config):
     for label, task in taskgraph.tasks.items():
         if (
             not task_index_config.get("all", False)
-            and not task.kind in task_index_config.get("kinds", [])
-            and not task.label in task_index_config.get("labels", [])
+            and task.kind not in task_index_config.get("kinds", [])
+            and task.label not in task_index_config.get("labels", [])
             and len(task.task.get("routes", [])) <= MAX_ROUTES
         ):
             continue

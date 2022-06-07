@@ -56,7 +56,8 @@ graph_config_schema = Schema(
             ): str,
             Optional(
                 "task-index",
-                description="Create index entries for kinds, labels, or all tasks. The task index can be eager or lazy.",
+                description="Create index entries for kinds, labels, or all tasks. "
+                "The task index can be eager or lazy.",
             ): {
                 Optional("all"): bool,
                 Optional("labels"): list,
