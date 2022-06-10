@@ -8,13 +8,13 @@ import io
 import json
 import os
 import re
-import requests_unixsocket
 import sys
 import urllib.parse
 
+import requests_unixsocket
+
 from .archive import create_tar_gz_from_files
 from .memoize import memoize
-
 
 IMAGE_DIR = os.path.join(".", "taskcluster", "docker")
 

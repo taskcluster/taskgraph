@@ -11,8 +11,8 @@ from taskgraph import morph
 from taskgraph.config import load_graph_config
 from taskgraph.graph import Graph
 from taskgraph.parameters import Parameters
-from taskgraph.taskgraph import TaskGraph
 from taskgraph.task import Task
+from taskgraph.taskgraph import TaskGraph
 
 
 @pytest.fixture(scope="module")

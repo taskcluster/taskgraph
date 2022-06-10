@@ -6,6 +6,7 @@ import datetime
 
 import pytest
 from taskcluster_urls import test_root_url
+
 from taskgraph.util.parameterization import resolve_task_references, resolve_timestamps
 from taskgraph.util.taskcluster import get_root_url
 

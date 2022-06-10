@@ -5,10 +5,8 @@ import pytest
 
 import taskgraph
 from taskgraph.graph import Graph
-from taskgraph.main import (
-    get_filtered_taskgraph,
-    main as taskgraph_main,
-)
+from taskgraph.main import get_filtered_taskgraph
+from taskgraph.main import main as taskgraph_main
 from taskgraph.task import Task
 from taskgraph.taskgraph import TaskGraph
 

@@ -3,7 +3,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-from io import BufferedRandom, BytesIO
 import os
 import shutil
 import stat
@@ -11,15 +10,15 @@ import sys
 import tarfile
 import tempfile
 import unittest
-
+from io import BufferedRandom, BytesIO
 from unittest import mock
+
 import pytest
 import taskcluster_urls as liburls
 
 from taskgraph.util import docker
 
 from .mockedopen import MockedOpen
-
 
 MODE_STANDARD = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
 

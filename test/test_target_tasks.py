@@ -7,8 +7,8 @@ import unittest
 
 from taskgraph import target_tasks
 from taskgraph.graph import Graph
-from taskgraph.taskgraph import TaskGraph
 from taskgraph.task import Task
+from taskgraph.taskgraph import TaskGraph
 
 
 class TestTargetTasks(unittest.TestCase):

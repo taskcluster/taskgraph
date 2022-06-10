@@ -3,16 +3,15 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-import os
 import json
+import os
 import shutil
-import unittest
 import tempfile
+import unittest
 from pathlib import Path
 
 from taskgraph import decision
 from taskgraph.util.yaml import load_yaml
-
 
 FAKE_GRAPH_CONFIG = {"product-dir": "browser", "taskgraph": {}}
 

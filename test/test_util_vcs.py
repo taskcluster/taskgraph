@@ -9,7 +9,7 @@ from textwrap import dedent
 
 import pytest
 
-from taskgraph.util.vcs import get_repository, HgRepository, Repository
+from taskgraph.util.vcs import HgRepository, Repository, get_repository
 
 _FORCE_COMMIT_DATE_TIME = "2019-11-04T10:03:58+00:00"
 

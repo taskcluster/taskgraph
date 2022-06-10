@@ -7,3 +7,6 @@ extend-exclude = """(\
 
 [tool.pytest.ini_options]
 xfail_strict = true
+
+[tool.isort]
+profile = "black"

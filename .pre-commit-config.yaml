@@ -13,6 +13,10 @@ repos:
     rev: 4.0.1
     hooks:
       - id: flake8
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.10.1
+    hooks:
+      - id: isort
   - repo: https://github.com/asottile/pyupgrade
     rev: v2.34.0
     hooks:

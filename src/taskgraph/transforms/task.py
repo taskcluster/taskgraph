@@ -16,23 +16,24 @@ import time
 from copy import deepcopy
 
 import attr
+from voluptuous import All, Any, Extra, NotIn, Optional, Required
 
+from taskgraph import MAX_DEPENDENCIES
+from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.hash import hash_path
 from taskgraph.util.keyed_by import evaluate_keyed_by
 from taskgraph.util.memoize import memoize
-from taskgraph.util.treeherder import split_symbol
-from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.schema import (
-    validate_schema,
+    OptimizationSchema,
     Schema,
     optionally_keyed_by,
     resolve_keyed_by,
-    OptimizationSchema,
     taskref_or_string,
+    validate_schema,
 )
+from taskgraph.util.treeherder import split_symbol
 from taskgraph.util.workertypes import worker_type_implementation
-from voluptuous import Any, Required, Optional, Extra, All, NotIn
-from taskgraph import MAX_DEPENDENCIES
+
 from ..util import docker as dockerutil
 from ..util.workertypes import get_worker_type
 

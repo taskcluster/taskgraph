@@ -7,10 +7,7 @@ import pytest
 from taskgraph.graph import Graph
 from taskgraph.task import Task
 from taskgraph.taskgraph import TaskGraph
-from taskgraph.util.verify import (
-    GraphVerification,
-    VerificationSequence,
-)
+from taskgraph.util.verify import GraphVerification, VerificationSequence
 
 
 def get_graph():

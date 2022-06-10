@@ -4,7 +4,8 @@
 
 
 import unittest
-from taskgraph.util.templates import merge_to, merge
+
+from taskgraph.util.templates import merge, merge_to
 
 
 class MergeTest(unittest.TestCase):

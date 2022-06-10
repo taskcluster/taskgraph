@@ -5,11 +5,12 @@
 
 import unittest
 from datetime import datetime
+
 from taskgraph.util.time import (
     InvalidString,
     UnknownTimeMeasurement,
-    value_of,
     json_time_from_now,
+    value_of,
 )
 
 

@@ -14,17 +14,13 @@ from subprocess import CalledProcessError
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
+from voluptuous import ALLOW_EXTRA, Optional, Required, Schema
+
 from taskgraph.util import yaml
 from taskgraph.util.readonlydict import ReadOnlyDict
 from taskgraph.util.schema import validate_schema
-from taskgraph.util.taskcluster import get_artifact_url, find_task_id
+from taskgraph.util.taskcluster import find_task_id, get_artifact_url
 from taskgraph.util.vcs import get_repository
-from voluptuous import (
-    ALLOW_EXTRA,
-    Required,
-    Optional,
-    Schema,
-)
 
 
 class ParameterMismatch(Exception):
