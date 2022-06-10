@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-with open("requirements/base.in", "r") as fp:
+with open("requirements/base.in") as fp:
     requirements = fp.read().splitlines()
 
 setup(

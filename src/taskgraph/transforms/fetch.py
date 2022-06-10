@@ -254,7 +254,7 @@ def create_fetch_url_task(config, name, fetch):
         sig_url = fetch["gpg-signature"]["sig-url"].format(url=fetch["url"])
         key_path = os.path.join(taskgraph.GECKO, fetch["gpg-signature"]["key-path"])
 
-        with open(key_path, "r") as fh:
+        with open(key_path) as fh:
             gpg_key = fh.read()
 
         env["FETCH_GPG_KEY"] = gpg_key
