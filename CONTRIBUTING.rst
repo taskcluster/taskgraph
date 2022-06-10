@@ -39,12 +39,11 @@ We use `tox`_ to run tests across multiple versions of Python.
 Running Checks
 --------------
 
-Linters and formatters are run via `pre-commit`_. To install a commit hook,
-run:
+Linters and formatters are run via `pre-commit`_. To install the hooks, run:
 
 .. code-block::
 
-   $ pre-commit install
+   $ pre-commit install -t pre-commit -t commit-msg
 
 Now checks will automatically run on every commit. If you prefer to run checks
 manually, you can use:
