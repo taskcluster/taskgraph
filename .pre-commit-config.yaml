@@ -30,6 +30,15 @@ repos:
     rev: v1.26.3
     hooks:
       - id: yamllint
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.1.0
+    hooks:
+      - id: codespell
+        entry: codespell -I .codespell-ignore-words.txt
+        exclude: >
+            (?x)^(
+                test/test_util_path.py
+            )$
 exclude: |
   (?x)^(
     src/taskgraph/run-task/|
