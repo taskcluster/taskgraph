@@ -9,10 +9,7 @@ import tarfile
 from io import BytesIO
 
 from taskgraph.util import docker
-from taskgraph.util.taskcluster import (
-    get_artifact_url,
-    get_session,
-)
+from taskgraph.util.taskcluster import get_artifact_url, get_session
 
 
 def get_image_digest(image_name):

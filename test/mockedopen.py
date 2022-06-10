@@ -5,8 +5,8 @@
 # Imported from
 # https://searchfox.org/mozilla-central/rev/c3ebaf6de2d481c262c04bb9657eaf76bf47e2ac/config/mozunit/mozunit/mozunit.py#116-232
 
-import sys
 import os
+import sys
 from io import StringIO
 
 

@@ -3,11 +3,11 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-import re
-import pprint
 import collections
-import voluptuous
+import pprint
+import re
 
+import voluptuous
 
 import taskgraph
 

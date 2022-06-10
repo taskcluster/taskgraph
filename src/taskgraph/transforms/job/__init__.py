@@ -11,28 +11,19 @@ run-using handlers in `taskcluster/taskgraph/transforms/job`.
 
 
 import copy
-import logging
 import json
+import logging
 import os
 
+from voluptuous import Any, Exclusive, Extra, Optional, Required
 
 from taskgraph.transforms.base import TransformSequence
-from taskgraph.util import path as mozpath
-from taskgraph.util.schema import (
-    validate_schema,
-    Schema,
-)
-from taskgraph.util.taskcluster import get_artifact_prefix
-from taskgraph.util.workertypes import worker_type_implementation
 from taskgraph.transforms.cached_tasks import order_tasks
 from taskgraph.transforms.task import task_description_schema
-from voluptuous import (
-    Extra,
-    Any,
-    Optional,
-    Required,
-    Exclusive,
-)
+from taskgraph.util import path as mozpath
+from taskgraph.util.schema import Schema, validate_schema
+from taskgraph.util.taskcluster import get_artifact_prefix
+from taskgraph.util.workertypes import worker_type_implementation
 
 logger = logging.getLogger(__name__)
 

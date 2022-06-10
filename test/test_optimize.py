@@ -6,10 +6,11 @@
 from functools import partial
 
 import pytest
+
 from taskgraph import graph, optimize
 from taskgraph.optimize import OptimizationStrategy
-from taskgraph.taskgraph import TaskGraph
 from taskgraph.task import Task
+from taskgraph.taskgraph import TaskGraph
 
 
 class Remove(OptimizationStrategy):

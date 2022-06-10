@@ -9,17 +9,17 @@ import os
 import unittest
 
 from taskgraph.util.path import (
-    relpath,
-    join,
-    normpath,
-    dirname,
-    commonprefix,
+    basedir,
     basename,
+    commonprefix,
+    dirname,
+    join,
+    match,
+    normpath,
+    rebase,
+    relpath,
     split,
     splitext,
-    basedir,
-    match,
-    rebase,
 )
 
 

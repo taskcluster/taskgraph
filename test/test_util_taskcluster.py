@@ -2,14 +2,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import os
 import datetime
+import os
 
 import pytest
-from responses import matchers
 from requests import Session
 from requests.exceptions import HTTPError
 from requests.packages.urllib3.util.retry import Retry
+from responses import matchers
 
 from taskgraph.task import Task
 from taskgraph.util import taskcluster as tc

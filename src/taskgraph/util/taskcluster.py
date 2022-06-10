@@ -3,16 +3,18 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-import os
 import datetime
 import functools
-import requests
 import logging
+import os
+
+import requests
 import taskcluster_urls as liburls
 from requests.packages.urllib3.util.retry import Retry
+
 from taskgraph.task import Task
-from taskgraph.util.memoize import memoize
 from taskgraph.util import yaml
+from taskgraph.util.memoize import memoize
 
 logger = logging.getLogger(__name__)
 

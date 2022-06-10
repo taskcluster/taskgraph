@@ -5,7 +5,7 @@
 
 import os
 import subprocess
-from abc import ABC, abstractproperty, abstractmethod
+from abc import ABC, abstractmethod, abstractproperty
 from shutil import which
 
 import requests

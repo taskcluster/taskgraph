@@ -2,10 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from taskgraph import (
-    generator,
-    graph,
-)
+from taskgraph import generator, graph
 from taskgraph.generator import load_tasks_for_kind
 
 from .conftest import FakeKind, WithFakeKind, fake_load_graph_config

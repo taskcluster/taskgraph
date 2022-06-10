@@ -9,10 +9,10 @@ from voluptuous import Invalid, MultipleInvalid
 
 import taskgraph
 from taskgraph.util.schema import (
+    Schema,
     optionally_keyed_by,
     resolve_keyed_by,
     validate_schema,
-    Schema,
 )
 
 schema = Schema(

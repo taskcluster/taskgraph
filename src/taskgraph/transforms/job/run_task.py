@@ -9,13 +9,13 @@ Support for running jobs that are invoked via the `run-task` script.
 import os
 
 import attr
+from voluptuous import Any, Optional, Required
 
-from taskgraph.transforms.task import taskref_or_string
 from taskgraph.transforms.job import run_job_using
+from taskgraph.transforms.job.common import support_vcs_checkout
+from taskgraph.transforms.task import taskref_or_string
 from taskgraph.util import path, taskcluster
 from taskgraph.util.schema import Schema
-from taskgraph.transforms.job.common import support_vcs_checkout
-from voluptuous import Required, Any, Optional
 
 EXEC_COMMANDS = {
     "bash": ["bash", "-cx"],

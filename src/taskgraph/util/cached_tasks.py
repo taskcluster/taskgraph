@@ -6,7 +6,6 @@
 import hashlib
 import time
 
-
 TARGET_CACHE_INDEX = "{cache_prefix}.cache.level-{level}.{type}.{name}.hash.{digest}"
 EXTRA_CACHE_INDEXES = [
     "{cache_prefix}.cache.level-{level}.{type}.{name}.latest",

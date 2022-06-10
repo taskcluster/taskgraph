@@ -7,8 +7,8 @@ import unittest
 
 from taskgraph.util.attributes import (
     attrmatch,
-    match_run_on_projects,
     match_run_on_git_branches,
+    match_run_on_projects,
 )
 
 

@@ -5,16 +5,14 @@
 
 import json
 import os
-from types import FunctionType
 from collections import namedtuple
-
+from types import FunctionType
 
 from taskgraph import create
 from taskgraph.config import load_graph_config
-from taskgraph.util import taskcluster, yaml, hash
 from taskgraph.parameters import Parameters
+from taskgraph.util import hash, taskcluster, yaml
 from taskgraph.util.memoize import memoize
-
 
 actions = []
 callbacks = {}

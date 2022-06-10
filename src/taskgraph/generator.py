@@ -2,26 +2,25 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import copy
 import logging
 import os
-import copy
-import attr
 from typing import AnyStr
 
+import attr
+
 from . import filter_tasks
+from .config import GraphConfig, load_graph_config
 from .graph import Graph
-from .taskgraph import TaskGraph
-from .task import Task
+from .morph import morph
 from .optimize import optimize_task_graph
 from .parameters import Parameters
-from .morph import morph
+from .task import Task
+from .taskgraph import TaskGraph
+from .transforms.base import TransformConfig, TransformSequence
 from .util.python_path import find_object
-from .transforms.base import TransformSequence, TransformConfig
-from .util.verify import (
-    verifications,
-)
+from .util.verify import verifications
 from .util.yaml import load_yaml
-from .config import load_graph_config, GraphConfig
 
 logger = logging.getLogger(__name__)
 

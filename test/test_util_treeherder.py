@@ -4,7 +4,8 @@
 
 
 import unittest
-from taskgraph.util.treeherder import split_symbol, join_symbol, add_suffix
+
+from taskgraph.util.treeherder import add_suffix, join_symbol, split_symbol
 
 
 class TestSymbols(unittest.TestCase):

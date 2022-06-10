@@ -4,14 +4,13 @@
 
 
 import unittest
-
 from unittest import mock
 
 from taskgraph import create
 from taskgraph.config import GraphConfig
 from taskgraph.graph import Graph
-from taskgraph.taskgraph import TaskGraph
 from taskgraph.task import Task
+from taskgraph.taskgraph import TaskGraph
 
 GRAPH_CONFIG = GraphConfig({"trust-domain": "domain"}, "/var/empty")
 
