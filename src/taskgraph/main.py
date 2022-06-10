@@ -163,7 +163,7 @@ def dump_output(out, path=None, params_spec=None):
         fh = open(path, "w")
     else:
         print(
-            "Dumping result with parameters from {}:".format(params_name),
+            f"Dumping result with parameters from {params_name}:",
             file=sys.stderr,
         )
     print(out + "\n", file=fh)
@@ -486,7 +486,7 @@ def show_taskgraph(options):
             )
 
     if len(parameters) > 1:
-        print("See '{}' for logs".format(logdir), file=sys.stderr)
+        print(f"See '{logdir}' for logs", file=sys.stderr)
 
 
 @command("build-image", help="Build a Docker image")

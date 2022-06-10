@@ -247,7 +247,7 @@ def stream_context_tar(topsrcdir, context_dir, out_file, image_name=None, args=N
 
     # Parse Dockerfile for special syntax of extra files to include.
     content = []
-    with open(os.path.join(context_dir, "Dockerfile"), "r") as fh:
+    with open(os.path.join(context_dir, "Dockerfile")) as fh:
         for line in fh:
             if line.startswith("# %ARG"):
                 p = line[len("# %ARG ") :].strip()

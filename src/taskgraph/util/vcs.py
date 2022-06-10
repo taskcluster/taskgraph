@@ -76,7 +76,7 @@ class HgRepository(Repository):
     tool = "hg"
 
     def __init__(self, *args, **kwargs):
-        super(HgRepository, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._env["HGPLAIN"] = "1"
 
     @property
