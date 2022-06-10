@@ -436,5 +436,5 @@ def import_all():
     """Import all modules that are siblings of this one, triggering the decorator
     above in the process."""
     for f in os.listdir(os.path.dirname(__file__)):
-        if f.endswith(".py") and f not in ("commmon.py", "__init__.py"):
+        if f.endswith(".py") and f not in ("common.py", "__init__.py"):
             __import__("taskgraph.transforms.job." + f[:-3])

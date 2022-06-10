@@ -125,7 +125,7 @@ class TaskGraphGenerator:
     ):
         """
         @param root_dir: root directory, with subdirectories for each kind
-        @param paramaters: parameters for this task-graph generation, or callable
+        @param parameters: parameters for this task-graph generation, or callable
             taking a `GraphConfig` and returning parameters
         @type parameters: Union[Parameters, Callable[[GraphConfig], Parameters]]
         """
@@ -171,7 +171,7 @@ class TaskGraphGenerator:
     @property
     def target_task_set(self):
         """
-        The set of targetted tasks (a graph without edges)
+        The set of targeted tasks (a graph without edges)
 
         @type: TaskGraph
         """
@@ -180,7 +180,7 @@ class TaskGraphGenerator:
     @property
     def target_task_graph(self):
         """
-        The set of targetted tasks and all of their dependencies
+        The set of targeted tasks and all of their dependencies
 
         @type: TaskGraph
         """
@@ -189,7 +189,7 @@ class TaskGraphGenerator:
     @property
     def optimized_task_graph(self):
         """
-        The set of targetted tasks and all of their dependencies; tasks that
+        The set of targeted tasks and all of their dependencies; tasks that
         have been optimized out are either omitted or replaced with a Task
         instance containing only a task_id.
 

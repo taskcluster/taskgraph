@@ -101,7 +101,7 @@ def register_callback_action(
             Otherwise, if ``context = [{'k': 'b', 'p': 'l'}, {'k': 't'}]`` will only
             be displayed in the context menu for tasks that has
             ``task.tags.k == 'b' && task.tags.p = 'l'`` or ``task.tags.k = 't'``.
-            Esentially, this allows filtering on ``task.tags``.
+            Essentially, this allows filtering on ``task.tags``.
 
             If this is a function, it is given the decision parameters and must return
             a value of the form described above.

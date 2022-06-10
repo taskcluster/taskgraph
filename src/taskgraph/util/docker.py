@@ -70,7 +70,7 @@ def post_to_docker(tar, api_path, **kwargs):
         # data is sometimes an empty dict.
         if not data:
             continue
-        # Mimick how docker itself presents the output. This code was tested
+        # Mimic how docker itself presents the output. This code was tested
         # with API version 1.18 and 1.26.
         if "status" in data:
             if "id" in data:

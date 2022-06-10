@@ -67,7 +67,7 @@ task_description_schema = Schema(
                 str,
                 NotIn(
                     ["self", "decision"],
-                    "Can't use 'self` or 'decision' as depdency names.",
+                    "Can't use 'self` or 'decision' as dependency names.",
                 ),
             ): object,
         },
@@ -119,7 +119,7 @@ task_description_schema = Schema(
             # Type of gecko v2 index to use
             "type": str,
             # The rank that the task will receive in the TaskCluster
-            # index.  A newly completed task supercedes the currently
+            # index.  A newly completed task supersedes the currently
             # indexed task iff it has a higher rank.  If unspecified,
             # 'by-tier' behavior will be used.
             "rank": Any(
@@ -318,7 +318,7 @@ def verify_index(config, index):
         # the exit status code(s) that indicates the caches used by the task
         # should be purged
         Optional("purge-caches-exit-status"): [int],
-        # Wether any artifacts are assigned to this worker
+        # Whether any artifacts are assigned to this worker
         Optional("skip-artifacts"): bool,
     },
 )
@@ -600,7 +600,7 @@ def build_docker_worker_payload(config, task, task_def):
         # optional features
         Required("chain-of-trust"): bool,
         Optional("taskcluster-proxy"): bool,
-        # Wether any artifacts are assigned to this worker
+        # Whether any artifacts are assigned to this worker
         Optional("skip-artifacts"): bool,
     },
 )
