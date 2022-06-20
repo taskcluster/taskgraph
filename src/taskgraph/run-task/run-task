@@ -1001,7 +1001,8 @@ def maybe_run_resource_monitoring():
 
 
 def main(args):
-    print_line(b'setup', b'run-task started in %s\n' % os.getcwd().encode('utf-8'))
+    os.environ["TASK_WORKDIR"] = os.getcwd()
+    print_line(b'setup', b'run-task started in %s\n' % os.environ["TASK_WORKDIR"].encode('utf-8'))
     running_as_root = IS_POSIX and os.getuid() == 0
 
     # Arguments up to '--' are ours. After are for the main task
