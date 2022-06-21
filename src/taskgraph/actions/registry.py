@@ -4,7 +4,6 @@
 
 
 import json
-import os
 from collections import namedtuple
 from types import FunctionType
 
@@ -13,6 +12,7 @@ from taskgraph.config import load_graph_config
 from taskgraph.parameters import Parameters
 from taskgraph.util import hash, taskcluster, yaml
 from taskgraph.util.memoize import memoize
+from taskgraph.util.python_path import import_sibling_modules
 
 actions = []
 callbacks = {}
@@ -342,10 +342,7 @@ def trigger_action_callback(
 def _load(graph_config):
     # Load all modules from this folder, relying on the side-effects of register_
     # functions to populate the action registry.
-    actions_dir = os.path.dirname(__file__)
-    for f in os.listdir(actions_dir):
-        if f.endswith(".py") and f not in ("__init__.py", "registry.py", "util.py"):
-            __import__("taskgraph.actions." + f[:-3])
+    import_sibling_modules(exceptions=("util.py",))
     return callbacks, actions
 
 

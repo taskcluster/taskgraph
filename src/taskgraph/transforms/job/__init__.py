@@ -13,7 +13,6 @@ run-using handlers in `taskcluster/taskgraph/transforms/job`.
 import copy
 import json
 import logging
-import os
 
 from voluptuous import Any, Exclusive, Extra, Optional, Required
 
@@ -21,6 +20,7 @@ from taskgraph.transforms.base import TransformSequence
 from taskgraph.transforms.cached_tasks import order_tasks
 from taskgraph.transforms.task import task_description_schema
 from taskgraph.util import path as mozpath
+from taskgraph.util.python_path import import_sibling_modules
 from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.taskcluster import get_artifact_prefix
 from taskgraph.util.workertypes import worker_type_implementation
@@ -337,7 +337,8 @@ def use_fetches(config, jobs):
 def make_task_description(config, jobs):
     """Given a build description, create a task description"""
     # import plugin modules first, before iterating over jobs
-    import_all()
+    import_sibling_modules(exceptions=("common.py",))
+
     for job in jobs:
         # always-optimized tasks never execute, so have no workdir
         if job["worker"]["implementation"] in ("docker-worker", "generic-worker"):
@@ -430,11 +431,3 @@ def configure_taskdesc_for_run(config, job, taskdesc, worker_implementation):
             ),
         )
     func(config, job, taskdesc)
-
-
-def import_all():
-    """Import all modules that are siblings of this one, triggering the decorator
-    above in the process."""
-    for f in os.listdir(os.path.dirname(__file__)):
-        if f.endswith(".py") and f not in ("common.py", "__init__.py"):
-            __import__("taskgraph.transforms.job." + f[:-3])
