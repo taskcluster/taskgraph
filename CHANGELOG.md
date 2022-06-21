@@ -1,5 +1,22 @@
 # Change Log
 
+## [1.7.0] - 2022-06-22
+
+### Added
+- `run-task` script sets a `TASK_WORKDIR` env pointing to the task specific working directory
+- Add `defer` and `enforce_single_match` arguments in `util.schema.resolve_keyed_by`
+
+### Fixed
+- Misspelling in job transforms causing utility file to be unnecessarily imported
+- Added `if-dependencies` to `job_description_schema` allowing it to be used with job transforms
+
+### Changed
+- Refactored logic for importing sibling modules into new `util.python_path.import_sibling_modules`
+
+### Perf
+- Skip schema validation when `taskgraph.fast` is set
+- Improved performance of `schema.optionally_keyed_by` function
+
 ## [1.6.0] - 2022-04-24
 
 ### Added
