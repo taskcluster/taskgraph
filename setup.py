@@ -5,7 +5,7 @@ with open("requirements/base.in") as fp:
 
 setup(
     name="taskcluster-taskgraph",
-    version="1.7.0",
+    version="1.7.1",
     description="Build taskcluster taskgraphs",
     url="https://github.com/taskcluster/taskgraph",
     packages=find_packages("src"),
