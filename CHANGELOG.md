@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.7.1] - 2022-06-22
+
+### Fixed
+- Allow JSON-e in schema identifiers
+
 ## [1.7.0] - 2022-06-22
 
 ### Added
