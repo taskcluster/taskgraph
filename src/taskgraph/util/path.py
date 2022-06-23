@@ -93,13 +93,8 @@ def basedir(path, bases):
 
 
 re_cache = {}
-# Python versions < 3.7 return r'\/' for re.escape('/').
-if re.escape("/") == "/":
-    MATCH_STAR_STAR_RE = re.compile(r"(^|/)\\\*\\\*/")
-    MATCH_STAR_STAR_END_RE = re.compile(r"(^|/)\\\*\\\*$")
-else:
-    MATCH_STAR_STAR_RE = re.compile(r"(^|\\\/)\\\*\\\*\\\/")
-    MATCH_STAR_STAR_END_RE = re.compile(r"(^|\\\/)\\\*\\\*$")
+MATCH_STAR_STAR_RE = re.compile(r"(^|/)\\\*\\\*/")
+MATCH_STAR_STAR_END_RE = re.compile(r"(^|/)\\\*\\\*$")
 
 
 def match(path, pattern):
