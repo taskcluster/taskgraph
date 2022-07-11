@@ -329,15 +329,22 @@ def extract_archive(path, dest_dir, typ):
         if sys.platform == 'win32':
             tar = tarfile.open(fileobj=ifh, mode='r|')
             tar.extractall(str(dest_dir))
-            args = []
+            args = None
         else:
             args = ['tar', 'xf', '-']
             pipe_stdin = True
     elif typ == 'zip':
-        # unzip from stdin has wonky behavior. We don't use a pipe for it.
-        ifh = open(os.devnull, 'rb')
-        args = ['unzip', '-o', str(path)]
-        pipe_stdin = False
+        # On Windows, the unzip program also can't handle natively generated
+        # zip files which contain backslash path separators.
+        if sys.platform == "win32":
+            with zipfile.ZipFile(str(path)) as archive:
+                archive.extractall(str(dest_dir))
+            args = None
+        else:
+            # unzip from stdin has wonky behavior. We don't use a pipe for it.
+            ifh = open(os.devnull, 'rb')
+            args = ['unzip', '-o', str(path)]
+            pipe_stdin = False
     else:
         raise ValueError('unknown archive format: %s' % path)
 
