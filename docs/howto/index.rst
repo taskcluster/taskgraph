@@ -9,3 +9,4 @@ A collection of how-to guides.
    run-locally
    debugging
    bootstrap-taskgraph
+   use-fetches
