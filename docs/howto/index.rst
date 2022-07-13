@@ -10,3 +10,4 @@ A collection of how-to guides.
    debugging
    bootstrap-taskgraph
    use-fetches
+   docker
