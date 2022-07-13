@@ -19,3 +19,4 @@ create the tasks.
    task-graphs
    taskcluster
    kind
+   loading
