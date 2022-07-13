@@ -5,4 +5,5 @@ Reference
    :maxdepth: 2
 
    cli
+   parameters
    source/modules

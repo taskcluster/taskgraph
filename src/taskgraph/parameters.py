@@ -27,7 +27,7 @@ class ParameterMismatch(Exception):
     """Raised when a parameters.yml has extra or missing parameters."""
 
 
-# Please keep this list sorted and in sync with taskcluster/docs/parameters.rst
+# Please keep this list sorted and in sync with docs/reference/parameters.rst
 base_schema = Schema(
     {
         Required("base_repository"): str,
