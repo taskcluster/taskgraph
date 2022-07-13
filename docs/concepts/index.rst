@@ -20,3 +20,4 @@ create the tasks.
    taskcluster
    kind
    loading
+   transforms
