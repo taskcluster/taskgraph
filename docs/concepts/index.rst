@@ -21,3 +21,4 @@ create the tasks.
    kind
    loading
    transforms
+   optimization
