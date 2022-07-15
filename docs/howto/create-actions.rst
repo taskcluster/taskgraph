@@ -273,6 +273,21 @@ The artifacts it can produce are:
   This is the mapping from label to ``taskid`` for all tasks involved in
   the task-graph. This includes dependencies.
 
+Testing Actions
+---------------
+
+If you are working on an action task and wish to test it out locally, use the
+``taskgraph test-action-callback`` command, e.g:
+
+.. code-block:: bash
+
+    taskgraph test-action-callback \
+        --task-id I4gu9KDmSZWu3KHx6ba6tw --task-group-id sMO4ybV9Qb2tmcI1sDHClQ \
+        --input input.yml hello_world_action
+
+This invocation will run the hello world callback with the given inputs and
+print any created tasks to stdout, rather than actually creating them.
+
 Scopes and More Information
 ---------------------------
 
