@@ -1,9 +1,9 @@
 import logging
-import os
+from datetime import datetime
 
 from taskgraph import files_changed
 from taskgraph.optimize.base import OptimizationStrategy, register_strategy
-from taskgraph.util.taskcluster import find_task_id
+from taskgraph.util.taskcluster import find_task_id, status_task
 
 logger = logging.getLogger(__name__)
 
@@ -21,13 +21,24 @@ class IndexSearch(OptimizationStrategy):
     # In every of those cases, we need to run the task to create or refresh
     # artifacts.
 
-    def should_replace_task(self, task, params, index_paths):
+    fmt = "%Y-%m-%dT%H:%M:%S.%fZ"
+
+    def should_replace_task(self, task, params, deadline, index_paths):
         "Look for a task with one of the given index paths"
         for index_path in index_paths:
             try:
-                task_id = find_task_id(
-                    index_path, use_proxy=bool(os.environ.get("TASK_ID"))
-                )
+                task_id = find_task_id(index_path)
+                status = status_task(task_id)
+                # status can be `None` if we're in `testing` mode
+                # (e.g. test-action-callback)
+                if not status or status.get("state") in ("exception", "failed"):
+                    continue
+
+                if deadline and datetime.strptime(
+                    status["expires"], self.fmt
+                ) < datetime.strptime(deadline, self.fmt):
+                    continue
+
                 return task_id
             except KeyError:
                 # 404 will end up here and go on to the next index path

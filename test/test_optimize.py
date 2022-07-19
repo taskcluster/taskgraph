@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-
+from datetime import datetime, timedelta
 from functools import partial
 
 import pytest
@@ -20,7 +20,10 @@ class Remove(OptimizationStrategy):
 
 
 class Replace(OptimizationStrategy):
-    def should_replace_task(self, task, params, taskid):
+    def should_replace_task(self, task, params, deadline, taskid):
+        expires = datetime.utcnow() + timedelta(days=1)
+        if deadline and expires < datetime.strptime(deadline, "%Y-%m-%dT%H:%M:%S.%fZ"):
+            return False
         return taskid
 
 
@@ -306,6 +309,26 @@ def test_remove_tasks(monkeypatch, graph, kwargs, exp_removed):
             {"t2", "t3"},
             {"t1": "e1"},
             id="tasks_removed",
+        ),
+        # A task which expires before a dependents deadline is not a valid replacement.
+        pytest.param(
+            make_graph(
+                make_task("t1", {"replace": "e1"}),
+                make_task(
+                    "t2", task_def={"deadline": {"relative-datestamp": "2 days"}}
+                ),
+                make_task(
+                    "t3", task_def={"deadline": {"relative-datestamp": "1 minute"}}
+                ),
+                ("t2", "t1", "dep1"),
+                ("t3", "t1", "dep2"),
+            ),
+            {},
+            # expectations
+            set(),
+            set(),
+            {},
+            id="deadline",
         ),
     ),
 )
