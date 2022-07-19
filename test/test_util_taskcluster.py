@@ -265,7 +265,17 @@ def test_status_task(responses, root_url):
         f"{root_url}/api/queue/v1/task/{tid}/status",
         json={"status": {"state": "running"}},
     )
-    assert tc.status_task(tid) == "running"
+    assert tc.status_task(tid) == {"state": "running"}
+
+
+def test_state_task(responses, root_url):
+    tid = "123"
+    responses.add(
+        responses.GET,
+        f"{root_url}/api/queue/v1/task/{tid}/status",
+        json={"status": {"state": "running"}},
+    )
+    assert tc.state_task(tid) == "running"
 
 
 def test_rerun_task(responses, proxy_root_url):
