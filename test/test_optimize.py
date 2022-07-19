@@ -7,8 +7,9 @@ from functools import partial
 
 import pytest
 
-from taskgraph import graph, optimize
+from taskgraph import graph
 from taskgraph.optimize import OptimizationStrategy
+from taskgraph.optimize import base as optimize_mod
 from taskgraph.task import Task
 from taskgraph.taskgraph import TaskGraph
 
@@ -220,7 +221,7 @@ def test_remove_tasks(monkeypatch, graph, kwargs, exp_removed):
     """
     # set up strategies
     strategies = default_strategies()
-    monkeypatch.setattr(optimize, "_make_default_strategies", default_strategies)
+    monkeypatch.setattr(optimize_mod, "registry", strategies)
     extra = kwargs.pop("strategies", None)
     if extra:
         if callable(extra):
@@ -230,9 +231,9 @@ def test_remove_tasks(monkeypatch, graph, kwargs, exp_removed):
     kwargs.setdefault("params", {})
     kwargs.setdefault("do_not_optimize", set())
 
-    got_removed = optimize.remove_tasks(
+    got_removed = optimize_mod.remove_tasks(
         target_task_graph=graph,
-        optimizations=optimize._get_optimizations(graph, strategies),
+        optimizations=optimize_mod._get_optimizations(graph, strategies),
         **kwargs
     )
     assert got_removed == exp_removed
@@ -331,9 +332,9 @@ def test_replace_tasks(
     kwargs.setdefault("removed_tasks", set())
     kwargs.setdefault("existing_tasks", {})
 
-    got_replaced = optimize.replace_tasks(
+    got_replaced = optimize_mod.replace_tasks(
         target_task_graph=graph,
-        optimizations=optimize._get_optimizations(graph, default_strategies()),
+        optimizations=optimize_mod._get_optimizations(graph, default_strategies()),
         **kwargs
     )
     assert got_replaced == exp_replaced
@@ -395,7 +396,7 @@ def test_get_subgraph(monkeypatch, graph, kwargs, exp_subgraph, exp_label_to_tas
     4. The expected label_to_taskid.
     """
     monkeypatch.setattr(
-        optimize, "slugid", partial(next, ("tid%d" % i for i in range(1, 10)))
+        optimize_mod, "slugid", partial(next, ("tid%d" % i for i in range(1, 10)))
     )
 
     kwargs.setdefault("removed_tasks", set())
@@ -403,7 +404,7 @@ def test_get_subgraph(monkeypatch, graph, kwargs, exp_subgraph, exp_label_to_tas
     kwargs.setdefault("label_to_taskid", {})
     kwargs.setdefault("decision_task_id", "DECISION-TASK")
 
-    got_subgraph = optimize.get_subgraph(graph, **kwargs)
+    got_subgraph = optimize_mod.get_subgraph(graph, **kwargs)
     assert got_subgraph.graph == exp_subgraph.graph
     assert got_subgraph.tasks == exp_subgraph.tasks
     assert kwargs["label_to_taskid"] == exp_label_to_taskid
@@ -413,4 +414,4 @@ def test_get_subgraph_removed_dep():
     "get_subgraph raises an Exception when a task depends on a removed task"
     graph = make_triangle()
     with pytest.raises(Exception):
-        optimize.get_subgraph(graph, {"t2"}, set(), {})
+        optimize_mod.get_subgraph(graph, {"t2"}, set(), {})

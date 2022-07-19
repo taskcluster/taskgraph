@@ -6,4 +6,5 @@ Reference
 
    cli
    parameters
+   optimization-strategies
    source/modules

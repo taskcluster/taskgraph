@@ -1,6 +1,9 @@
 taskgraph.util package
 ======================
 
+Submodules
+----------
+
 taskgraph.util.archive module
 -----------------------------
 
@@ -101,6 +104,14 @@ taskgraph.util.schema module
 ----------------------------
 
 .. automodule:: taskgraph.util.schema
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+taskgraph.util.shell module
+---------------------------
+
+.. automodule:: taskgraph.util.shell
    :members:
    :undoc-members:
    :show-inheritance:

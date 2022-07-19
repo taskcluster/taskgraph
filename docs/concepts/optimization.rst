@@ -14,7 +14,7 @@ Optimization Strategies
 
 Each task has a single named optimization strategy, and can provide an argument
 to that strategy. Each strategy is defined as an
-:class:`~taskgraph.optimize.OptimizationStrategy`.
+:class:`~taskgraph.optimize.base.OptimizationStrategy`.
 
 Each task has a ``task.optimization`` property describing the optimization
 strategy that applies, specified as a dictionary mapping strategy to argument. For
@@ -24,6 +24,9 @@ example::
 
 Strategy implementations are shared across all tasks, so they may cache
 commonly-used information as instance variables.
+
+See :doc:`/reference/optimization-strategies` for an overview of the strategies
+that are included with Taskgraph.
 
 Optimization Process
 --------------------

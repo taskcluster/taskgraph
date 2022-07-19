@@ -13,7 +13,7 @@ from . import filter_tasks
 from .config import GraphConfig, load_graph_config
 from .graph import Graph
 from .morph import morph
-from .optimize import optimize_task_graph
+from .optimize.base import optimize_task_graph
 from .parameters import Parameters
 from .task import Task
 from .taskgraph import TaskGraph
