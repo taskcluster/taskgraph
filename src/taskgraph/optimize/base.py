@@ -13,20 +13,28 @@ See ``taskcluster/docs/optimization.rst`` for more information.
 
 
 import logging
-import os
 from collections import defaultdict
 
 from slugid import nice as slugid
 
-from . import files_changed
-from .graph import Graph
-from .taskgraph import TaskGraph
-from .util.parameterization import resolve_task_references
-from .util.taskcluster import find_task_id
+from taskgraph.graph import Graph
+from taskgraph.taskgraph import TaskGraph
+from taskgraph.util.parameterization import resolve_task_references
+from taskgraph.util.python_path import import_sibling_modules
 
 logger = logging.getLogger(__name__)
+registry = {}
 
-TOPSRCDIR = os.path.abspath(os.path.join(__file__, "../../../"))
+
+def register_strategy(name, args=()):
+    def wrap(cls):
+        if name not in registry:
+            registry[name] = cls(*args)
+            if not hasattr(registry[name], "description"):
+                registry[name].description = name
+        return cls
+
+    return wrap
 
 
 def optimize_task_graph(
@@ -35,7 +43,7 @@ def optimize_task_graph(
     do_not_optimize,
     decision_task_id,
     existing_tasks=None,
-    strategies=None,
+    strategy_override=None,
 ):
     """
     Perform task optimization, returning a taskgraph and a map from label to
@@ -46,8 +54,9 @@ def optimize_task_graph(
         existing_tasks = {}
 
     # instantiate the strategies for this optimization process
-    if not strategies:
-        strategies = _make_default_strategies()
+    strategies = registry.copy()
+    if strategy_override:
+        strategies.update(strategy_override)
 
     optimizations = _get_optimizations(target_task_graph, strategies)
 
@@ -78,14 +87,6 @@ def optimize_task_graph(
         ),
         label_to_taskid,
     )
-
-
-def _make_default_strategies():
-    return {
-        "never": OptimizationStrategy(),  # "never" is the default behavior
-        "index-search": IndexSearch(),
-        "skip-unless-changed": SkipUnlessChanged(),
-    }
 
 
 def _get_optimizations(target_task_graph, strategies):
@@ -377,6 +378,7 @@ def get_subgraph(
     return TaskGraph(tasks_by_taskid, Graph(set(tasks_by_taskid), edges_by_taskid))
 
 
+@register_strategy("never")
 class OptimizationStrategy:
     def should_remove_task(self, task, params, arg):
         """Determine whether to optimize this task by removing it.  Returns
@@ -422,50 +424,5 @@ class Either(OptimizationStrategy):
         )
 
 
-class IndexSearch(OptimizationStrategy):
-
-    # A task with no dependencies remaining after optimization will be replaced
-    # if artifacts exist for the corresponding index_paths.
-    # Otherwise, we're in one of the following cases:
-    # - the task has un-optimized dependencies
-    # - the artifacts have expired
-    # - some changes altered the index_paths and new artifacts need to be
-    # created.
-    # In every of those cases, we need to run the task to create or refresh
-    # artifacts.
-
-    def should_replace_task(self, task, params, index_paths):
-        "Look for a task with one of the given index paths"
-        for index_path in index_paths:
-            try:
-                task_id = find_task_id(
-                    index_path, use_proxy=bool(os.environ.get("TASK_ID"))
-                )
-                return task_id
-            except KeyError:
-                # 404 will end up here and go on to the next index path
-                pass
-
-        return False
-
-
-class SkipUnlessChanged(OptimizationStrategy):
-    def should_remove_task(self, task, params, file_patterns):
-        if params.get("repository_type") != "hg":
-            raise RuntimeError(
-                "SkipUnlessChanged optimization only works with mercurial repositories"
-            )
-
-        # pushlog_id == -1 - this is the case when run from a cron.yml job
-        if params.get("pushlog_id") == -1:
-            return False
-
-        changed = files_changed.check(params, file_patterns)
-        if not changed:
-            logger.debug(
-                'no files found matching a pattern in `skip-unless-changed` for "{}"'.format(
-                    task.label
-                )
-            )
-            return True
-        return False
+# Trigger registration in sibling modules.
+import_sibling_modules()

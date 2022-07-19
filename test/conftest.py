@@ -5,11 +5,11 @@ import pytest
 from responses import RequestsMock
 
 from taskgraph import generator
-from taskgraph import optimize as optimize_mod
 from taskgraph import target_tasks as target_tasks_mod
 from taskgraph.config import GraphConfig
 from taskgraph.generator import Kind, TaskGraphGenerator
 from taskgraph.optimize import OptimizationStrategy
+from taskgraph.optimize import base as optimize_mod
 from taskgraph.transforms.base import TransformConfig
 from taskgraph.util.templates import merge
 
@@ -152,16 +152,12 @@ def maketgg(monkeypatch, parameters):
         def target_tasks_method(full_task_graph, parameters, graph_config):
             return target_tasks
 
-        def make_fake_strategies():
-            return {
-                mode: FakeOptimization(mode)
-                for mode in ("always", "never", "even", "odd")
-            }
+        fake_strategies = {
+            mode: FakeOptimization(mode) for mode in ("always", "never", "even", "odd")
+        }
 
         target_tasks_mod._target_task_methods["test_method"] = target_tasks_method
-        monkeypatch.setattr(
-            optimize_mod, "_make_default_strategies", make_fake_strategies
-        )
+        monkeypatch.setattr(optimize_mod, "registry", fake_strategies)
 
         parameters["_kinds"] = kinds
         parameters.update(params)
