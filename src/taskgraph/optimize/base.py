@@ -11,7 +11,7 @@ task.
 See ``taskcluster/docs/optimization.rst`` for more information.
 """
 
-
+import datetime
 import logging
 from collections import defaultdict
 
@@ -19,7 +19,7 @@ from slugid import nice as slugid
 
 from taskgraph.graph import Graph
 from taskgraph.taskgraph import TaskGraph
-from taskgraph.util.parameterization import resolve_task_references
+from taskgraph.util.parameterization import resolve_task_references, resolve_timestamps
 from taskgraph.util.python_path import import_sibling_modules
 
 logger = logging.getLogger(__name__)
@@ -253,7 +253,8 @@ def replace_tasks(
     """
     opt_counts = defaultdict(int)
     replaced = set()
-    links_dict = target_task_graph.graph.links_dict()
+    dependents_of = target_task_graph.graph.reverse_links_dict()
+    dependencies_of = target_task_graph.graph.links_dict()
 
     for label in target_task_graph.graph.visit_postorder():
         # if we're not allowed to optimize, that's easy..
@@ -261,7 +262,9 @@ def replace_tasks(
             continue
 
         # if this task depends on un-replaced, un-removed tasks, do not replace
-        if any(l not in replaced and l not in removed_tasks for l in links_dict[label]):
+        if any(
+            l not in replaced and l not in removed_tasks for l in dependencies_of[label]
+        ):
             continue
 
         # if the task already exists, that's an easy replacement
@@ -275,7 +278,16 @@ def replace_tasks(
         # call the optimization strategy
         task = target_task_graph.tasks[label]
         opt_by, opt, arg = optimizations(label)
-        repl = opt.should_replace_task(task, params, arg)
+
+        # compute latest deadline of dependents (if any)
+        dependents = [target_task_graph.tasks[l] for l in dependents_of[label]]
+        deadline = None
+        if dependents:
+            now = datetime.datetime.utcnow()
+            deadline = max(
+                resolve_timestamps(now, task.task["deadline"]) for task in dependents
+            )
+        repl = opt.should_replace_task(task, params, deadline, arg)
         if repl:
             if repl is True:
                 # True means remove this task; get_subgraph will catch any
@@ -385,7 +397,7 @@ class OptimizationStrategy:
         True to remove."""
         return False
 
-    def should_replace_task(self, task, params, arg):
+    def should_replace_task(self, task, params, deadline, arg):
         """Determine whether to optimize this task by replacing it.  Returns a
         taskId to replace this task, True to replace with nothing, or False to
         keep the task."""
@@ -418,9 +430,9 @@ class Either(OptimizationStrategy):
             arg, lambda sub, arg: sub.should_remove_task(task, params, arg)
         )
 
-    def should_replace_task(self, task, params, arg):
+    def should_replace_task(self, task, params, deadline, arg):
         return self._for_substrategies(
-            arg, lambda sub, arg: sub.should_replace_task(task, params, arg)
+            arg, lambda sub, arg: sub.should_replace_task(task, params, deadline, arg)
         )
 
 

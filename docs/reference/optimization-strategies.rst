@@ -39,6 +39,12 @@ index-search
 Given a list of index paths, this strategy will replace the target task with
 the first one that exists.
 
+In order for the indexed task to be considered for replacement, it must:
+
+1. Exist.
+2. Not have a ``state`` of ``failed`` or ``exception``.
+3. Not expire before the earliest deadline of all tasks depending on it.
+
 Example:
 
 .. code-block:: yaml
