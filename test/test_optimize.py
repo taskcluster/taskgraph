@@ -157,10 +157,27 @@ def make_triangle(deps=True, **opts):
                 ("t2", "t1", "dep"),
                 ("t4", "t1", "dep3"),
             ),
-            {},
+            {"requested_tasks": {"t3", "t4"}},
             # expectations
             {"t1", "t2", "t3", "t4"},
             id="if_deps_removed",
+        ),
+        # Parents of tasks with 'if_dependencies' are also removed even if requested
+        pytest.param(
+            make_graph(
+                make_task("t1", {"remove": None}),
+                make_task("t2", {"remove": None}),
+                make_task("t3", {"never": None}, if_dependencies=["t1", "t2"]),
+                make_task("t4", {"never": None}, if_dependencies=["t1"]),
+                ("t3", "t2", "dep"),
+                ("t3", "t1", "dep2"),
+                ("t2", "t1", "dep"),
+                ("t4", "t1", "dep3"),
+            ),
+            {},
+            # expectations
+            {"t1", "t2", "t3", "t4"},
+            id="if_deps_parents_removed",
         ),
         # Tasks with 'if_dependencies' are kept if at least one of said dependencies are kept
         pytest.param(
@@ -205,7 +222,7 @@ def make_triangle(deps=True, **opts):
                 ("t4", "t2", "e2"),
                 ("t4", "t3", "e3"),
             ),
-            {},
+            {"requested_tasks": {"t3", "t4"}},
             # expectations
             {"t1", "t2", "t3", "t4"},
             id="if_deps_edge_case_1",
@@ -233,6 +250,7 @@ def test_remove_tasks(monkeypatch, graph, kwargs, exp_removed):
 
     kwargs.setdefault("params", {})
     kwargs.setdefault("do_not_optimize", set())
+    kwargs.setdefault("requested_tasks", graph)
 
     got_removed = optimize_mod.remove_tasks(
         target_task_graph=graph,
