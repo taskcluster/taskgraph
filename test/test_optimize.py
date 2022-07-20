@@ -7,9 +7,9 @@ from functools import partial
 
 import pytest
 
-from taskgraph import graph
-from taskgraph.optimize import OptimizationStrategy
+from taskgraph.graph import Graph
 from taskgraph.optimize import base as optimize_mod
+from taskgraph.optimize.base import All, Any, Not, OptimizationStrategy
 from taskgraph.task import Task
 from taskgraph.taskgraph import TaskGraph
 
@@ -65,7 +65,7 @@ def make_task(
 def make_graph(*tasks_and_edges, **kwargs):
     tasks = {t.label: t for t in tasks_and_edges if isinstance(t, Task)}
     edges = {e for e in tasks_and_edges if not isinstance(e, Task)}
-    tg = TaskGraph(tasks, graph.Graph(set(tasks), edges))
+    tg = TaskGraph(tasks, Graph(set(tasks), edges))
 
     if kwargs.get("deps", True):
         # set dependencies based on edges
@@ -78,7 +78,7 @@ def make_graph(*tasks_and_edges, **kwargs):
 def make_opt_graph(*tasks_and_edges):
     tasks = {t.task_id: t for t in tasks_and_edges if isinstance(t, Task)}
     edges = {e for e in tasks_and_edges if not isinstance(e, Task)}
-    return TaskGraph(tasks, graph.Graph(set(tasks), edges))
+    return TaskGraph(tasks, Graph(set(tasks), edges))
 
 
 def make_triangle(deps=True, **opts):
@@ -121,6 +121,46 @@ def make_triangle(deps=True, **opts):
             # expectations
             {"t1", "t2", "t3"},
             id="all",
+        ),
+        # Tasks with the 'any' composite strategy are removed when any substrategy says to
+        pytest.param(
+            make_triangle(
+                t1={"any": None},
+                t2={"any": None},
+                t3={"any": None},
+            ),
+            {"strategies": lambda: {"any": Any("never", "remove")}},
+            # expectations
+            {"t1", "t2", "t3"},
+            id="composite_strategies_any",
+        ),
+        # Tasks with the 'all' composite strategy are removed when all substrategies say to
+        pytest.param(
+            make_triangle(
+                t1={"all": None},
+                t2={"all": None},
+                t3={"all": None},
+            ),
+            {"strategies": lambda: {"all": All("never", "remove")}},
+            # expectations
+            set(),
+            id="composite_strategies_all",
+        ),
+        # Tasks with the 'not' composite strategy are removed when the substrategy says not to
+        pytest.param(
+            make_graph(
+                make_task("t1", {"not-never": None}),
+                make_task("t2", {"not-remove": None}),
+            ),
+            {
+                "strategies": lambda: {
+                    "not-never": Not("never"),
+                    "not-remove": Not("remove"),
+                }
+            },
+            # expectations
+            {"t1"},
+            id="composite_strategies_not",
         ),
         # Removable tasks that are depended on by non-removable tasks are not removed
         pytest.param(
@@ -211,7 +251,7 @@ def make_triangle(deps=True, **opts):
             id="if_deps_ancestor_does_not_keep",
         ),
         # Unhandled edge case where 't1' and 't2' are kept even though they
-        # don't have any dependents.
+        # don't have any dependents and are not in 'requested_tasks'
         pytest.param(
             make_graph(
                 make_task("t1", {"never": None}),
@@ -300,7 +340,7 @@ def test_remove_tasks(monkeypatch, graph, kwargs, exp_removed):
             {},
             id="never",
         ),
-        # All repleacable tasks are replaced when strategy is 'replace'
+        # All replaceable tasks are replaced when strategy is 'replace'
         pytest.param(
             make_triangle(
                 t1={"replace": "e1"},
