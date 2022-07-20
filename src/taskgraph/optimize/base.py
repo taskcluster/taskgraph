@@ -39,6 +39,7 @@ def register_strategy(name, args=()):
 
 def optimize_task_graph(
     target_task_graph,
+    requested_tasks,
     params,
     do_not_optimize,
     decision_task_id,
@@ -62,6 +63,7 @@ def optimize_task_graph(
 
     removed_tasks = remove_tasks(
         target_task_graph=target_task_graph,
+        requested_tasks=requested_tasks,
         optimizations=optimizations,
         params=params,
         do_not_optimize=do_not_optimize,
@@ -117,7 +119,9 @@ def _log_optimization(verb, opt_counts, opt_reasons=None):
         logger.info(f"No tasks {verb} during optimization")
 
 
-def remove_tasks(target_task_graph, params, optimizations, do_not_optimize):
+def remove_tasks(
+    target_task_graph, requested_tasks, params, optimizations, do_not_optimize
+):
     """
     Implement the "Removing Tasks" phase, returning a set of task labels of all removed tasks.
     """
@@ -195,6 +199,12 @@ def remove_tasks(target_task_graph, params, optimizations, do_not_optimize):
             l for l in dependents_of[label] if l not in removed and l not in prune_deps
         ):
             _keep("dependent tasks")
+            continue
+
+        # Some tasks in the task graph only exist because they were required
+        # by a task that has just been optimized away. They can now be removed.
+        if label not in requested_tasks:
+            _remove("dependents optimized")
             continue
 
         # Call the optimization strategy.
