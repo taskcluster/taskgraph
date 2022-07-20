@@ -13,6 +13,7 @@ See ``taskcluster/docs/optimization.rst`` for more information.
 
 import datetime
 import logging
+from abc import ABCMeta, abstractmethod, abstractproperty
 from collections import defaultdict
 
 from slugid import nice as slugid
@@ -96,7 +97,10 @@ def _get_optimizations(target_task_graph, strategies):
         task = target_task_graph.tasks[label]
         if task.optimization:
             opt_by, arg = list(task.optimization.items())[0]
-            return (opt_by, strategies[opt_by], arg)
+            strategy = strategies[opt_by]
+            if hasattr(strategy, "description"):
+                opt_by += f" ({strategy.description})"
+            return (opt_by, strategy, arg)
         else:
             return ("never", strategies["never"], None)
 
@@ -414,36 +418,133 @@ class OptimizationStrategy:
         return False
 
 
-class Either(OptimizationStrategy):
-    """Given one or more optimization strategies, remove a task if any of them
-    says to, and replace with a task if any finds a replacement (preferring the
-    earliest).  By default, each substrategy gets the same arg, but split_args
-    can return a list of args for each strategy, if desired."""
+@register_strategy("always")
+class Always(OptimizationStrategy):
+    def should_remove_task(self, task, params, arg):
+        return True
 
+
+class CompositeStrategy(OptimizationStrategy, metaclass=ABCMeta):
     def __init__(self, *substrategies, **kwargs):
-        self.substrategies = substrategies
+        self.substrategies = []
+        missing = set()
+        for sub in substrategies:
+            if isinstance(sub, str):
+                if sub not in registry.keys():
+                    missing.add(sub)
+                    continue
+                sub = registry[sub]
+
+            self.substrategies.append(sub)
+
+        if missing:
+            raise TypeError(
+                "substrategies aren't registered: {}".format(
+                    ",  ".join(sorted(missing))
+                )
+            )
+
         self.split_args = kwargs.pop("split_args", None)
         if not self.split_args:
-            self.split_args = lambda arg: [arg] * len(substrategies)
+            self.split_args = lambda arg, substrategies: [arg] * len(substrategies)
         if kwargs:
             raise TypeError("unexpected keyword args")
 
-    def _for_substrategies(self, arg, fn):
-        for sub, arg in zip(self.substrategies, self.split_args(arg)):
-            rv = fn(sub, arg)
+    @abstractproperty
+    def description(self):
+        """A textual description of the combined substrategies."""
+
+    @abstractmethod
+    def reduce(self, results):
+        """Given all substrategy results as a generator, return the overall
+        result."""
+
+    def _generate_results(self, fname, *args):
+        *passthru, arg = args
+        for sub, arg in zip(
+            self.substrategies, self.split_args(arg, self.substrategies)
+        ):
+            yield getattr(sub, fname)(*passthru, arg)
+
+    def should_remove_task(self, *args):
+        results = self._generate_results("should_remove_task", *args)
+        return self.reduce(results)
+
+    def should_replace_task(self, *args):
+        results = self._generate_results("should_replace_task", *args)
+        return self.reduce(results)
+
+
+class Any(CompositeStrategy):
+    """Given one or more optimization strategies, remove or replace a task if any of them
+    says to.
+
+    Replacement will use the value returned by the first strategy that says to replace.
+    """
+
+    @property
+    def description(self):
+        return "-or-".join([s.description for s in self.substrategies])
+
+    @classmethod
+    def reduce(cls, results):
+        for rv in results:
             if rv:
                 return rv
         return False
 
-    def should_remove_task(self, task, params, arg):
-        return self._for_substrategies(
-            arg, lambda sub, arg: sub.should_remove_task(task, params, arg)
-        )
 
-    def should_replace_task(self, task, params, deadline, arg):
-        return self._for_substrategies(
-            arg, lambda sub, arg: sub.should_replace_task(task, params, deadline, arg)
-        )
+class All(CompositeStrategy):
+    """Given one or more optimization strategies, remove or replace a task if all of them
+    says to.
+
+    Replacement will use the value returned by the first strategy passed in.
+    Note the values used for replacement need not be the same, as long as they
+    all say to replace.
+    """
+
+    @property
+    def description(self):
+        return "-and-".join([s.description for s in self.substrategies])
+
+    @classmethod
+    def reduce(cls, results):
+        for rv in results:
+            if not rv:
+                return rv
+        return True
+
+
+class Alias(CompositeStrategy):
+    """Provides an alias to an existing strategy.
+
+    This can be useful to swap strategies in and out without needing to modify
+    the task transforms.
+    """
+
+    def __init__(self, strategy):
+        super().__init__(strategy)
+
+    @property
+    def description(self):
+        return self.substrategies[0].description
+
+    def reduce(self, results):
+        return next(results)
+
+
+class Not(CompositeStrategy):
+    """Given a strategy, returns the opposite."""
+
+    def __init__(self, strategy):
+        super().__init__(strategy)
+
+    @property
+    def description(self):
+        return "not-" + self.substrategies[0].description
+
+    def reduce(self, results):
+        return not next(results)
 
 
 # Trigger registration in sibling modules.
