@@ -8,3 +8,4 @@ Reference
    parameters
    optimization-strategies
    source/modules
+   migrations
