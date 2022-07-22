@@ -37,7 +37,7 @@ Populate the Config File
 ------------------------
 
 The config file lives at ``taskcluster/ci/config.yml`` and must conform to the
-:py:data:`-taskgraph.config.graph_config_schema`.
+:py:data:`~taskgraph.config.graph_config_schema`.
 
 Create the ``config.yml`` file to look like:
 
