@@ -8,6 +8,7 @@ responses
 # Downgrade sphinx to run the test suite on py3.6; remove once we stop supporting py3.6
 sphinx==4.3.1
 sphinx-argparse
+sphinx-book-theme
 sphinxcontrib-mermaid
 tox
 tox-pyenv
