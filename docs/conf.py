@@ -18,8 +18,8 @@
 # -- Project information -----------------------------------------------------
 
 project = "taskgraph"
-copyright = "2021, releng"
-author = "releng"
+copyright = "2022"
+author = "Release Engineering at Mozilla"
 
 
 # -- General configuration ---------------------------------------------------
@@ -48,4 +48,4 @@ exclude_patterns = ["docs/_build", "Thumbs.db", ".DS_Store"]
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "alabaster"
+html_theme = "sphinx_book_theme"
