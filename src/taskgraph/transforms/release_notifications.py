@@ -16,7 +16,7 @@ RELEASE_NOTIFICATIONS_SCHEMA = Schema(
         Optional("notifications"): {
             Required("emails"): optionally_keyed_by("project", "level", [str]),
             Required("subject"): str,
-            Required("message"): str,
+            Optional("message"): str,
             Optional("status-types"): [
                 Any(
                     "on-completed",
@@ -73,7 +73,8 @@ def add_notifications(config, jobs):
                 config=config.__dict__,
             )
             subject = titleformatter.format(notifications["subject"], **format_kwargs)
-            message = titleformatter.format(notifications["message"], **format_kwargs)
+            message = notifications.get("message", notifications["subject"])
+            message = titleformatter.format(message, **format_kwargs)
             emails = [email.format(**format_kwargs) for email in emails]
 
             # By default, we only send mail on success to avoid messages like 'blah is in the
@@ -90,11 +91,10 @@ def add_notifications(config, jobs):
                     "notify": {
                         "email": {
                             "subject": subject,
+                            "content": message,
                         }
                     }
                 }
             )
-            if message:
-                job["extra"]["notify"]["email"]["content"] = message
 
         yield job
