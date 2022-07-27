@@ -34,7 +34,13 @@ def add_notifications(config, jobs):
         notifications = job.pop("notifications", None)
         if notifications:
             resolve_keyed_by(
-                notifications, "emails", label, project=config.params["project"]
+                notifications,
+                "emails",
+                label,
+                **{
+                    "level": config.params["level"],
+                    "project": config.params["project"],
+                },
             )
             emails = notifications["emails"]
             format_kwargs = dict(
