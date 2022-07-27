@@ -6,11 +6,36 @@ Add notifications via taskcluster-notify for release tasks
 """
 from string import Formatter
 
+from voluptuous import ALLOW_EXTRA, Any, Optional, Required
+
 from taskgraph.transforms.base import TransformSequence
-from taskgraph.util.schema import resolve_keyed_by
-from taskgraph.util.scriptworker import get_release_config
+from taskgraph.util.schema import Schema, optionally_keyed_by, resolve_keyed_by
+
+RELEASE_NOTIFICATIONS_SCHEMA = Schema(
+    {
+        Optional("notifications"): {
+            Required("emails"): optionally_keyed_by("project", "level", [str]),
+            Required("subject"): str,
+            Required("message"): str,
+            Optional("status-types"): [
+                Any(
+                    "on-completed",
+                    "on-defined",
+                    "on-exception",
+                    "on-failed",
+                    "on-pending",
+                    "on-resolved",
+                    "on-running",
+                )
+            ],
+        },
+    },
+    extra=ALLOW_EXTRA,
+)
+
 
 transforms = TransformSequence()
+transforms.add_validate(RELEASE_NOTIFICATIONS_SCHEMA)
 
 
 class TitleCaseFormatter(Formatter):
