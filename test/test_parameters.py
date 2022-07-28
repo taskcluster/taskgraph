@@ -28,6 +28,7 @@ class TestParameters(TestCase):
     vals = {
         "base_repository": "repository",
         "build_date": 0,
+        "build_number": 1,
         "do_not_optimize": [],
         "existing_tasks": {},
         "filters": ["target_tasks_method"],

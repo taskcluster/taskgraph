@@ -32,6 +32,7 @@ base_schema = Schema(
     {
         Required("base_repository"): str,
         Required("build_date"): int,
+        Required("build_number"): int,
         Required("do_not_optimize"): [str],
         Required("existing_tasks"): {str: str},
         Required("filters"): [str],
@@ -71,6 +72,7 @@ def _get_defaults(repo_root=None):
     return {
         "base_repository": repo_url,
         "build_date": int(time.time()),
+        "build_number": 1,
         "do_not_optimize": [],
         "existing_tasks": {},
         "filters": ["target_tasks_method"],

@@ -173,6 +173,7 @@ def get_decision_parameters(graph_config, options):
     parameters["optimize_target_tasks"] = True
     parameters["existing_tasks"] = {}
     parameters["do_not_optimize"] = []
+    parameters["build_number"] = 1
 
     # owner must be an email, but sometimes (e.g., for ffxbld) it is not, in which
     # case, fake it
