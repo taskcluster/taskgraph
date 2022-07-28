@@ -52,6 +52,7 @@ base_schema = Schema(
         # used at run-time
         Required("target_tasks_method"): str,
         Required("tasks_for"): str,
+        Required("version"): Any(str, None),
         Optional("code-review"): {
             Required("phabricator-build-target"): str,
         },
@@ -59,8 +60,20 @@ base_schema = Schema(
 )
 
 
+def get_contents(path):
+    with open(path) as fh:
+        contents = fh.readline().rstrip()
+    return contents
+
+
+def get_version(repo_path):
+    version_path = os.path.join(repo_path, "version.txt")
+    return get_contents(version_path) if os.path.isfile(version_path) else None
+
+
 def _get_defaults(repo_root=None):
-    repo = get_repository(repo_root or os.getcwd())
+    repo_path = repo_root or os.getcwd()
+    repo = get_repository(repo_path)
     try:
         repo_url = repo.get_url()
         project = repo_url.rsplit("/", 1)[1]
@@ -90,6 +103,7 @@ def _get_defaults(repo_root=None):
         "repository_type": repo.tool,
         "target_tasks_method": "default",
         "tasks_for": "",
+        "version": get_version(repo_path),
     }
 
 
