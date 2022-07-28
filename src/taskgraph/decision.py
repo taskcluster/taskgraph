@@ -176,6 +176,7 @@ def get_decision_parameters(graph_config, options):
     parameters["do_not_optimize"] = []
     parameters["build_number"] = 1
     parameters["version"] = get_version(repo_path)
+    parameters["next_version"] = None
 
     # owner must be an email, but sometimes (e.g., for ffxbld) it is not, in which
     # case, fake it

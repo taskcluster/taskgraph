@@ -14,7 +14,7 @@ from subprocess import CalledProcessError
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
-from voluptuous import ALLOW_EXTRA, Optional, Required, Schema
+from voluptuous import ALLOW_EXTRA, Any, Optional, Required, Schema
 
 from taskgraph.util import yaml
 from taskgraph.util.readonlydict import ReadOnlyDict
@@ -42,6 +42,7 @@ base_schema = Schema(
         Required("head_tag"): str,
         Required("level"): str,
         Required("moz_build_date"): str,
+        Required("next_version"): Any(str, None),
         Required("optimize_target_tasks"): bool,
         Required("owner"): str,
         Required("project"): str,
@@ -95,6 +96,7 @@ def _get_defaults(repo_root=None):
         "head_tag": "",
         "level": "3",
         "moz_build_date": datetime.now().strftime("%Y%m%d%H%M%S"),
+        "next_version": None,
         "optimize_target_tasks": True,
         "owner": "nobody@mozilla.com",
         "project": project,
