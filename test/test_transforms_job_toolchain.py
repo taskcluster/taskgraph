@@ -67,7 +67,7 @@ def assert_docker_worker(job, taskdesc):
             "docker-image": {"in-tree": "toolchain-build"},
             "env": {
                 "MOZ_BUILD_DATE": 0,
-                "MOZ_SCM_LEVEL": 1,
+                "MOZ_SCM_LEVEL": "1",
                 "UPLOAD_DIR": "/builds/worker/artifacts/",
             },
             "implementation": "docker-worker",
@@ -109,7 +109,7 @@ def assert_docker_worker(job, taskdesc):
             "docker-image": {"in-tree": "toolchain-build"},
             "env": {
                 "MOZ_BUILD_DATE": 0,
-                "MOZ_SCM_LEVEL": 1,
+                "MOZ_SCM_LEVEL": "1",
                 "UPLOAD_DIR": "/builds/worker/artifacts/",
             },
             "implementation": "docker-worker",
@@ -135,7 +135,7 @@ def assert_generic_worker(job, taskdesc):
                 {"name": "public/build", "path": "public/build", "type": "directory"}
             ],
             "chain-of-trust": True,
-            "env": {"MOZ_BUILD_DATE": 0, "MOZ_SCM_LEVEL": 1},
+            "env": {"MOZ_BUILD_DATE": 0, "MOZ_SCM_LEVEL": "1"},
             "implementation": "generic-worker",
             "os": "windows",
         },
@@ -165,7 +165,7 @@ def assert_generic_worker(job, taskdesc):
                 {"name": "public/build", "path": "public/build", "type": "directory"}
             ],
             "chain-of-trust": True,
-            "env": {"MOZ_BUILD_DATE": 0, "MOZ_SCM_LEVEL": 1},
+            "env": {"MOZ_BUILD_DATE": 0, "MOZ_SCM_LEVEL": "1"},
             "implementation": "generic-worker",
             "os": "windows",
         },

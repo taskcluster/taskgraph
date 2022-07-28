@@ -132,7 +132,7 @@ def parameters():
             "head_repository": "http://hg.example.com",
             "head_rev": "abcdef",
             "head_ref": "abcdef",
-            "level": 1,
+            "level": "1",
             "moz_build_date": 0,
             "project": "",
             "repository_type": "hg",
