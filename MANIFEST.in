@@ -4,3 +4,4 @@ include requirements/test.in
 include requirements/test.txt
 include requirements/dev.in
 include requirements/dev.txt
+include version.txt

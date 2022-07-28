@@ -1,11 +1,19 @@
+import os
+
 from setuptools import find_packages, setup
 
-with open("requirements/base.in") as fp:
+project_dir = os.path.abspath(os.path.dirname(__file__))
+
+
+with open(os.path.join(project_dir, "requirements/base.in")) as fp:
     requirements = fp.read().splitlines()
+
+with open(os.path.join(project_dir, "version.txt")) as f:
+    version = f.read().rstrip()
 
 setup(
     name="taskcluster-taskgraph",
-    version="1.7.1",
+    version=version,
     description="Build taskcluster taskgraphs",
     url="https://github.com/taskcluster/taskgraph",
     packages=find_packages("src"),

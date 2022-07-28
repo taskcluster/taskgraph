@@ -139,6 +139,7 @@ def parameters():
             "target_tasks_method": "test_method",
             "tasks_for": "hg-push",
             "try_mode": None,
+            "version": "1.0.0",
         }
     )
 

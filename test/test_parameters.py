@@ -5,6 +5,7 @@
 
 import datetime
 import gzip
+import os
 from base64 import b64decode
 from unittest import TestCase, mock
 
@@ -21,6 +22,11 @@ from taskgraph.parameters import (
 )
 
 from .mockedopen import MockedOpen
+
+project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+with open(os.path.join(project_dir, "version.txt")) as f:
+    version = f.read().rstrip()
 
 
 class TestParameters(TestCase):
@@ -46,6 +52,7 @@ class TestParameters(TestCase):
         "repository_type": "hg",
         "target_tasks_method": "default",
         "tasks_for": "github-push",
+        "version": version,
     }
 
     def test_Parameters_immutable(self):
