@@ -44,6 +44,7 @@ class TestParameters(TestCase):
         "head_tag": "",
         "level": "3",
         "moz_build_date": "20191008095500",
+        "next_version": None,
         "optimize_target_tasks": True,
         "owner": "nobody@mozilla.com",
         "project": "project",
