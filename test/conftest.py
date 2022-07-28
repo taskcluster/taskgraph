@@ -128,6 +128,7 @@ def parameters():
         {
             "base_repository": "http://hg.example.com",
             "build_date": 0,
+            "build_number": 1,
             "head_repository": "http://hg.example.com",
             "head_rev": "abcdef",
             "head_ref": "abcdef",
