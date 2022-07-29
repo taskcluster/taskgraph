@@ -1,5 +1,21 @@
 # Change Log
 
+## [2.0.0] - TBD
+
+### Changed
+
+- BREAKING CHANGE: `taskgraph.util.taskcluster.status_task` now returns the status object rather than the string state.
+- BREAKING CHANGE: Replacement optimization strategies now take a `deadline` argument.
+- BREAKING CHANGE: Replaces `Either` base optimization strategy with an `Any` composite strategy.
+- BREAKING CHANGE: `taskgraph.util.WHITELISTED_SCHEMA_IDENTIFIERS` is now `taskgraph.util.EXCEPTED_SCHEMA_IDENTIFIERS`.
+- `default` now target filters out tasks that define a `shipping_phase`
+
+### Added
+- A new `taskgraph.util.taskcluster.state_task` returns the string state (like status_task used to).
+- The ability to register custom optimization strategies
+- `release_notifications` transforms. It enables a task to send e-mail notifications. It usually used in the context of releases when you want to inform a group of people about the completion of a phase of a release. Notifications can contain data about what project/version reached a given phase.
+- New parameters: `version`, `next_version`, `build_number`. As of now, they are be used by `release_notification` to send e-mails that can contain such data.
+
 ## [1.7.1] - 2022-06-22
 
 ### Fixed
