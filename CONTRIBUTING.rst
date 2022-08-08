@@ -126,7 +126,7 @@ In order to release a new version of Taskgraph, you will need permission to the
 `taskcluster-taskgraph`_ project in PyPI. The following are **required** steps:
 
 1. Update ``CHANGELOG.md``
-2. Update ``version`` in ``setup.py``
+2. Update ``version`` in ``version.txt``
 3. Commit, and land the above changes
 4. Make sure your ``git status`` is clean
 5. Checkout the latest public revision ``git checkout main``
