@@ -72,3 +72,18 @@ def test_make_index_tasks(make_taskgraph, graph_config):
 
     # check the scope summary
     assert index_task.task["scopes"] == ["index:insert-task:gecko.v2.mozilla-central.*"]
+
+
+def test_register_morph(monkeypatch, make_taskgraph):
+    taskgraph, label_to_taskid = make_taskgraph({})
+    monkeypatch.setattr(morph, "registered_morphs", [])
+
+    @morph.register_morph
+    def fake_morph(taskgraph, label_to_taskid, *args):
+        label_to_taskid.setdefault("count", 0)
+        label_to_taskid["count"] += 1
+        return taskgraph, label_to_taskid
+
+    assert label_to_taskid == {}
+    morph.morph(taskgraph, label_to_taskid, None, None)
+    assert label_to_taskid == {"count": 1}
