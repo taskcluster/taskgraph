@@ -304,6 +304,106 @@ def test_default_branch_cloned_metadata(tmpdir, repo):
         assert cloned_repo.default_branch == "master"
 
 
+def assert_files(actual, expected):
+    assert set(map(os.path.basename, actual)) == set(expected)
+
+
+def test_get_changed_files_no_changes(repo):
+    assert_files(repo.get_changed_files("A", "all"), [])
+    assert_files(repo.get_changed_files("M", "all"), [])
+    assert_files(repo.get_changed_files("D", "all"), [])
+    assert_files(repo.get_changed_files("AMD", "all"), [])
+
+
+def test_get_changed_files_one_modified_file(repo):
+    with open(os.path.join(repo.path, "first_file"), "w") as f:
+        f.write("some new data")
+
+    assert_files(repo.get_changed_files("A", "all"), [])
+    assert_files(repo.get_changed_files("M", "all"), ["first_file"])
+    assert_files(repo.get_changed_files("D", "all"), [])
+
+    if repo.tool == "git":
+        assert_files(repo.get_changed_files("M", "staged"), [])
+        assert_files(repo.get_changed_files("M", "unstaged"), ["first_file"])
+    repo.run("add", ".")
+    if repo.tool == "git":
+        assert_files(repo.get_changed_files("M", "staged"), ["first_file"])
+        assert_files(repo.get_changed_files("M", "unstaged"), [])
+
+    repo.run("commit", "-m", "Modify first_file")
+    assert_files(repo.get_changed_files("AMD", "all"), [])
+    revision = "HEAD" if repo.tool == "git" else "."
+    assert_files(repo.get_changed_files("M", "all", revision), ["first_file"])
+
+
+def test_get_changed_files_one_deleted_file(repo):
+    os.remove(os.path.join(repo.path, "first_file"))
+
+    assert_files(repo.get_changed_files("A", "all"), [])
+    assert_files(repo.get_changed_files("M", "all"), [])
+    assert_files(repo.get_changed_files("D", "all"), ["first_file"])
+
+    repo.run("rm", "first_file")
+    repo.run("commit", "-m", "Delete first_file")
+    assert_files(repo.get_changed_files("AMD", "all"), [])
+    revision = "HEAD" if repo.tool == "git" else "."
+    assert_files(repo.get_changed_files("D", "all", revision), ["first_file"])
+
+
+def test_get_changed_files_one_added_file(repo):
+    with open(os.path.join(repo.path, "second_file"), "w") as f:
+        f.write("some data for the second file")
+
+    assert_files(repo.get_changed_files("A", "all"), [])  # File is still untracked
+    assert_files(repo.get_changed_files("M", "all"), [])
+    assert_files(repo.get_changed_files("D", "all"), [])
+
+    repo.run("add", ".")
+    assert_files(repo.get_changed_files("A", "all"), ["second_file"])
+
+    repo.run("commit", "-m", "Add second_file")
+    assert_files(repo.get_changed_files("AMD", "all"), [])
+    revision = "HEAD" if repo.tool == "git" else "."
+    assert_files(repo.get_changed_files("A", "all", revision), ["second_file"])
+
+
+def test_get_changed_files_two_revisions(repo):
+    with open(os.path.join(repo.path, "second_file"), "w") as f:
+        f.write("some data for the second file")
+    repo.run("add", "second_file")
+    repo.run("commit", "-m", "Add second_file")
+
+    os.remove(os.path.join(repo.path, "first_file"))
+    with open(os.path.join(repo.path, "second_file"), "w") as f:
+        f.write("new data for second file")
+    with open(os.path.join(repo.path, "third_file"), "w") as f:
+        f.write("third type of data")
+
+    repo.run("rm", "first_file")
+    repo.run("add", ".")
+    repo.run("commit", "-m", "Remove first_file; modify second_file; add third_file")
+
+    last_revision = "HEAD" if repo.tool == "git" else "."
+    assert_files(repo.get_changed_files("A", "all", last_revision), ["third_file"])
+    assert_files(repo.get_changed_files("M", "all", last_revision), ["second_file"])
+    assert_files(repo.get_changed_files("D", "all", last_revision), ["first_file"])
+    assert_files(
+        repo.get_changed_files("AMD", "all", last_revision),
+        ["first_file", "second_file", "third_file"],
+    )
+
+    one_before_last_revision = "HEAD~1" if repo.tool == "git" else ".^"
+    assert_files(
+        repo.get_changed_files("A", "all", one_before_last_revision), ["second_file"]
+    )
+    assert_files(repo.get_changed_files("M", "all", one_before_last_revision), [])
+    assert_files(repo.get_changed_files("D", "all", one_before_last_revision), [])
+    assert_files(
+        repo.get_changed_files("AMD", "all", one_before_last_revision), ["second_file"]
+    )
+
+
 STEPS = {
     "hg": [
         """
@@ -370,10 +470,6 @@ STEPS = {
 }
 
 
-def assert_files(actual, expected):
-    assert set(map(os.path.basename, actual)) == set(expected)
-
-
 def shell(cmd, working_dir):
     for step in cmd.split(os.linesep):
         subprocess.check_call(step, shell=True, cwd=working_dir)
@@ -393,46 +489,21 @@ def test_workdir_outgoing(tmpdir, repo):
 
     # Mutate files.
     next(steps)
-
-    assert_files(repo.get_changed_files("A", "all"), ["baz"])
-    assert_files(repo.get_changed_files("AM", "all"), ["bar", "baz"])
-    assert_files(repo.get_changed_files("D", "all"), ["foo"])
-    if repo.tool == "git":
-        assert_files(repo.get_changed_files("AM", mode="staged"), ["baz"])
-    elif repo.tool == "hg":
-        # Mercurial does not use a staging area (and ignores the mode parameter.)
-        assert_files(repo.get_changed_files("AM", "unstaged"), ["bar", "baz"])
     assert_files(repo.get_outgoing_files("AMD"), [])
     assert_files(repo.get_outgoing_files("AMD", remote_path), [])
 
     # Create a commit.
     next(steps)
-
-    assert_files(repo.get_changed_files("AMD", "all"), [])
-    assert_files(repo.get_changed_files("AMD", "staged"), [])
     assert_files(repo.get_outgoing_files("AMD"), ["bar", "baz", "foo"])
     assert_files(repo.get_outgoing_files("AMD", remote_path), ["bar", "baz", "foo"])
 
     # Mutate again.
     next(steps)
-
-    assert_files(repo.get_changed_files("A", "all"), ["baby"])
-    assert_files(repo.get_changed_files("AM", "all"), ["baby", "baz"])
-    assert_files(repo.get_changed_files("D", "all"), [])
-
     # Create a second commit.
     next(steps)
 
     assert_files(repo.get_outgoing_files("AM"), ["bar", "baz", "baby"])
     assert_files(repo.get_outgoing_files("AM", remote_path), ["bar", "baz", "baby"])
-    if repo.tool == "git":
-        assert_files(repo.get_changed_files("AM", rev="HEAD~1"), ["bar", "baz"])
-        assert_files(repo.get_changed_files("AM", rev="HEAD"), ["baby", "baz"])
-    else:
-        assert_files(repo.get_changed_files("AM", rev=".^"), ["bar", "baz"])
-        assert_files(repo.get_changed_files("AM", rev="."), ["baby", "baz"])
-        assert_files(repo.get_changed_files("AM", rev=".^::"), ["bar", "baz", "baby"])
-        assert_files(repo.get_changed_files("AM", rev="modifies(baz)"), ["baz", "baby"])
 
 
 def test_working_directory_clean(repo):
