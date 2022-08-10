@@ -4,22 +4,19 @@
 
 import pytest
 
-from taskgraph.graph import Graph
 from taskgraph.task import Task
-from taskgraph.taskgraph import TaskGraph
 from taskgraph.util.verify import GraphVerification, VerificationSequence
+
+from .conftest import make_graph, make_task
 
 
 def get_graph():
-    tasks = {
-        "a": Task(kind=None, label="a", attributes={}, task={}),
-        "b": Task(kind=None, label="b", attributes={"at-at": "yep"}, task={}),
-        "c": Task(
-            kind=None, label="c", attributes={"run_on_projects": ["try"]}, task={}
-        ),
-    }
-    graph = Graph(nodes=set("abc"), edges=set())
-    return TaskGraph(tasks, graph)
+    tasks = [
+        make_task("a"),
+        make_task("b", attributes={"at-at": "yep"}),
+        make_task("c", attributes={"run_on_projects": ["try"]}),
+    ]
+    return make_graph(*tasks)
 
 
 def assert_graph_verification(task, tg, scratch_pad, graph_config, parameters):

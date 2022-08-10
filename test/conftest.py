@@ -8,8 +8,11 @@ from taskgraph import generator
 from taskgraph import target_tasks as target_tasks_mod
 from taskgraph.config import GraphConfig
 from taskgraph.generator import Kind, TaskGraphGenerator
+from taskgraph.graph import Graph
 from taskgraph.optimize import OptimizationStrategy
 from taskgraph.optimize import base as optimize_mod
+from taskgraph.task import Task
+from taskgraph.taskgraph import TaskGraph
 from taskgraph.transforms.base import TransformConfig
 from taskgraph.util.templates import merge
 
@@ -203,3 +206,44 @@ def run_transform(make_transform_config):
         return list(func(config, tasks))
 
     return inner
+
+
+def make_task(
+    label,
+    optimization=None,
+    optimized=None,
+    task_def=None,
+    task_id=None,
+    dependencies=None,
+    if_dependencies=None,
+    attributes=None,
+):
+    task_def = task_def or {
+        "sample": "task-def",
+        "deadline": {"relative-datestamp": "1 hour"},
+    }
+    task = Task(
+        attributes=attributes or {},
+        if_dependencies=if_dependencies or [],
+        kind="test",
+        label=label,
+        task=task_def,
+    )
+    task.optimization = optimization
+    task.task_id = task_id
+    if dependencies is not None:
+        task.task["dependencies"] = sorted(dependencies)
+    return task
+
+
+def make_graph(*tasks_and_edges, **kwargs):
+    tasks = {t.label: t for t in tasks_and_edges if isinstance(t, Task)}
+    edges = {e for e in tasks_and_edges if not isinstance(e, Task)}
+    tg = TaskGraph(tasks, Graph(set(tasks), edges))
+
+    if kwargs.get("deps", True):
+        # set dependencies based on edges
+        for l, r, name in tg.graph.edges:
+            tg.tasks[l].dependencies[name] = r
+
+    return tg
