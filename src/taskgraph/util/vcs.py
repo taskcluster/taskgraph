@@ -80,9 +80,11 @@ class Repository(ABC):
         """Commit message of specified revision or current commit."""
 
     @abstractmethod
-    def get_changed_files(self, diff_filter, mode="unstaged", rev=None):
-        """Return a list of files that are changed in this repository's
-        working copy.
+    def get_changed_files(self, diff_filter, mode="unstaged", rev=None, base_rev=None):
+        """Return a list of files that are changed in:
+         * either this repository's working copy,
+         * or at a given revision (``rev``)
+         * or between 2 revisions (``base_rev`` and ``rev``)
 
         ``diff_filter`` controls which kinds of modifications are returned.
         It is a string which may only contain the following characters:
@@ -98,6 +100,10 @@ class Repository(ABC):
 
         ``rev`` is a specifier for which changesets to consider for
         changes. The exact meaning depends on the vcs system being used.
+
+        ``base_rev`` specifies the range of changesets. This parameter cannot
+        be used without ``rev``. The range includes ``rev`` but excludes
+        ``base_rev``.
         """
 
     @abstractmethod
@@ -210,14 +216,19 @@ class HgRepository(Repository):
             template += "{file_mods % '{file}\\n'}"
         return template
 
-    def get_changed_files(self, diff_filter="ADM", mode="unstaged", rev=None):
+    def get_changed_files(
+        self, diff_filter="ADM", mode="unstaged", rev=None, base_rev=None
+    ):
         if rev is None:
+            if base_rev is not None:
+                raise ValueError("Cannot specify `base_rev` without `rev`")
             # Use --no-status to print just the filename.
             df = self._format_diff_filter(diff_filter, for_status=True)
             return self.run("status", "--no-status", f"-{df}").splitlines()
         else:
             template = self._files_template(diff_filter)
-            return self.run("log", "-r", rev, "-T", template).splitlines()
+            revision_argument = rev if base_rev is None else f"{base_rev}~-1::{rev}"
+            return self.run("log", "-r", revision_argument, "-T", template).splitlines()
 
     def get_outgoing_files(self, diff_filter="ADM", upstream=None):
         template = self._files_template(diff_filter)
@@ -377,22 +388,30 @@ class GitRepository(Repository):
         revision = revision or self.head_rev
         return self.run("log", "-n1", "--format=%B")
 
-    def get_changed_files(self, diff_filter="ADM", mode="unstaged", rev=None):
+    def get_changed_files(
+        self, diff_filter="ADM", mode="unstaged", rev=None, base_rev=None
+    ):
         assert all(f.lower() in self._valid_diff_filter for f in diff_filter)
 
         if rev is None:
+            if base_rev is not None:
+                raise ValueError("Cannot specify `base_rev` without `rev`")
             cmd = ["diff"]
             if mode == "staged":
                 cmd.append("--cached")
             elif mode == "all":
                 cmd.append("HEAD")
         else:
-            cmd = ["diff-tree", "-r", "--no-commit-id", rev]
+            revision_argument = (
+                f"{rev}~1..{rev}" if base_rev is None else f"{base_rev}..{rev}"
+            )
+            cmd = ["log", "--format=format:", revision_argument]
 
         cmd.append("--name-only")
         cmd.append("--diff-filter=" + diff_filter.upper())
 
-        return self.run(*cmd).splitlines()
+        files = self.run(*cmd).splitlines()
+        return [f for f in files if f]
 
     def get_outgoing_files(self, diff_filter="ADM", upstream=None):
         assert all(f.lower() in self._valid_diff_filter for f in diff_filter)
