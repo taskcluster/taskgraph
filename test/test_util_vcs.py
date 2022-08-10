@@ -403,6 +403,24 @@ def test_get_changed_files_two_revisions(repo):
         repo.get_changed_files("AMD", "all", one_before_last_revision), ["second_file"]
     )
 
+    two_before_last_revision = "HEAD~2" if repo.tool == "git" else ".^^"
+    assert_files(
+        repo.get_changed_files("A", "all", last_revision, two_before_last_revision),
+        ["third_file", "second_file"],
+    )
+    assert_files(
+        repo.get_changed_files("M", "all", last_revision, two_before_last_revision),
+        ["second_file"],
+    )
+    assert_files(
+        repo.get_changed_files("D", "all", last_revision, two_before_last_revision),
+        ["first_file"],
+    )
+    assert_files(
+        repo.get_changed_files("AMD", "all", last_revision, two_before_last_revision),
+        ["first_file", "second_file", "third_file"],
+    )
+
 
 @pytest.fixture
 def repo_with_upstream(tmpdir, repo):
