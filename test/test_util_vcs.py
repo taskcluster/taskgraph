@@ -304,6 +304,137 @@ def test_default_branch_cloned_metadata(tmpdir, repo):
         assert cloned_repo.default_branch == "master"
 
 
+STEPS = {
+    "hg": [
+        """
+        echo "foo" > foo
+        echo "bar" > bar
+        hg add *
+        hg rm first_file
+        hg commit -m "Add foo and bar"
+        hg phase --public .
+        """,
+        """
+        echo [paths] > .hg/hgrc
+        echo "default = {tmp_dir}/remoterepo" >> .hg/hgrc
+        """,
+        """
+        echo "bar" >> bar
+        echo "baz" > baz
+        hg add baz
+        hg rm foo
+        """,
+        """
+        hg commit -m "Remove foo; modify bar; add baz"
+        """,
+        """
+        echo ooka >> baz
+        echo newborn > baby
+        hg add baby
+        """,
+        """
+        hg commit -m "Modify baz; add baby"
+        """,
+    ],
+    "git": [
+        """
+        echo "foo" > foo
+        echo "bar" > bar
+        git add *
+        git rm first_file
+        git commit -m "Add foo and bar"
+        """,
+        """
+        git remote add upstream {tmp_dir}/remoterepo
+        git fetch upstream
+        git branch -u upstream/master
+        """,
+        """
+        echo "bar" >> bar
+        echo "baz" > baz
+        git add baz
+        git rm foo
+        """,
+        """
+        git commit -am "Remove foo; modify bar; add baz"
+        """,
+        """
+        echo ooka >> baz
+        echo newborn > baby
+        git add baz baby
+        """,
+        """
+        git commit -m "Modify baz; add baby"
+        """,
+    ],
+}
+
+
+def assert_files(actual, expected):
+    assert set(map(os.path.basename, actual)) == set(expected)
+
+
+def shell(cmd, working_dir):
+    for step in cmd.split(os.linesep):
+        subprocess.check_call(step, shell=True, cwd=working_dir)
+
+
+def get_steps(tmp_dir, tool, working_dir):
+    return (shell(cmd.format(tmp_dir=tmp_dir), working_dir) for cmd in STEPS[tool])
+
+
+def test_workdir_outgoing(tmpdir, repo):
+    steps = get_steps(tmpdir, repo.tool, repo.path)
+    next(steps)
+    shutil.copytree(repo.path, str(tmpdir / "remoterepo"))
+    next(steps)
+
+    remote_path = f"{tmpdir}/remoterepo" if repo.tool == "hg" else "upstream/master"
+
+    # Mutate files.
+    next(steps)
+
+    assert_files(repo.get_changed_files("A", "all"), ["baz"])
+    assert_files(repo.get_changed_files("AM", "all"), ["bar", "baz"])
+    assert_files(repo.get_changed_files("D", "all"), ["foo"])
+    if repo.tool == "git":
+        assert_files(repo.get_changed_files("AM", mode="staged"), ["baz"])
+    elif repo.tool == "hg":
+        # Mercurial does not use a staging area (and ignores the mode parameter.)
+        assert_files(repo.get_changed_files("AM", "unstaged"), ["bar", "baz"])
+    assert_files(repo.get_outgoing_files("AMD"), [])
+    assert_files(repo.get_outgoing_files("AMD", remote_path), [])
+
+    # Create a commit.
+    next(steps)
+
+    assert_files(repo.get_changed_files("AMD", "all"), [])
+    assert_files(repo.get_changed_files("AMD", "staged"), [])
+    assert_files(repo.get_outgoing_files("AMD"), ["bar", "baz", "foo"])
+    assert_files(repo.get_outgoing_files("AMD", remote_path), ["bar", "baz", "foo"])
+
+    # Mutate again.
+    next(steps)
+
+    assert_files(repo.get_changed_files("A", "all"), ["baby"])
+    assert_files(repo.get_changed_files("AM", "all"), ["baby", "baz"])
+    assert_files(repo.get_changed_files("D", "all"), [])
+
+    # Create a second commit.
+    next(steps)
+
+    assert_files(repo.get_outgoing_files("AM"), ["bar", "baz", "baby"])
+    assert_files(repo.get_outgoing_files("AM", remote_path), ["bar", "baz", "baby"])
+    if repo.tool == "git":
+        assert_files(repo.get_changed_files("AM", rev="HEAD~1"), ["bar", "baz"])
+        assert_files(repo.get_changed_files("AM", rev="HEAD"), ["baby", "baz"])
+    else:
+        assert_files(repo.get_changed_files("AM", rev=".^"), ["bar", "baz"])
+        assert_files(repo.get_changed_files("AM", rev="."), ["baby", "baz"])
+        assert_files(repo.get_changed_files("AM", rev=".^::"), ["bar", "baz", "baby"])
+        assert_files(repo.get_changed_files("AM", rev="modifies(baz)"), ["baz", "baby"])
+
+
 def test_working_directory_clean(repo):
     assert repo.working_directory_clean()
 

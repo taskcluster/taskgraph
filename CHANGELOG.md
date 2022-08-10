@@ -10,6 +10,8 @@
 - `head_ref` parameter now points to a named branch and if needed, falls back to the revision hash
 
 ### Added
+- `vcs.get_changed_files()` which returns a list of files that are changed in this repository's working copy.
+- `vcs.get_outgoing_files()` which returns a list of changed files compared to upstream.
 - `vcs.remote_name` that tracks the name of the remote repository (e.g.: `default` on `hg` or `origin` on `git`)
 - `base_ref` parameter that points to the reference (e.g.: a branch) on the base repository
 - `vcs.find_latest_common_revision()` which finds the common ancestor between a provided `base_ref` and the current `head_rev`

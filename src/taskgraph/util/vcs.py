@@ -30,14 +30,22 @@ class Repository(ABC):
         self.binary = which(self.tool)
         if self.binary is None:
             raise OSError(f"{self.tool} not found!")
+        self._valid_diff_filter = ("m", "a", "d")
 
         self._env = os.environ.copy()
 
     def run(self, *args: str, **kwargs):
+        return_codes = kwargs.pop("return_codes", [])
         cmd = (self.binary,) + args
-        return subprocess.check_output(
-            cmd, cwd=self.path, env=self._env, encoding="utf-8", **kwargs
-        )
+
+        try:
+            return subprocess.check_output(
+                cmd, cwd=self.path, env=self._env, encoding="utf-8", **kwargs
+            )
+        except subprocess.CalledProcessError as e:
+            if e.returncode in return_codes:
+                return ""
+            raise
 
     @abstractproperty
     def tool(self) -> str:
@@ -70,6 +78,37 @@ class Repository(ABC):
     @abstractmethod
     def get_commit_message(self, revision=None):
         """Commit message of specified revision or current commit."""
+
+    @abstractmethod
+    def get_changed_files(self, diff_filter, mode="unstaged", rev=None):
+        """Return a list of files that are changed in this repository's
+        working copy.
+
+        ``diff_filter`` controls which kinds of modifications are returned.
+        It is a string which may only contain the following characters:
+
+            A - Include files that were added
+            D - Include files that were deleted
+            M - Include files that were modified
+
+        By default, all three will be included.
+
+        ``mode`` can be one of 'unstaged', 'staged' or 'all'. Only has an
+        effect on git. Defaults to 'unstaged'.
+
+        ``rev`` is a specifier for which changesets to consider for
+        changes. The exact meaning depends on the vcs system being used.
+        """
+
+    @abstractmethod
+    def get_outgoing_files(self, diff_filter, upstream):
+        """Return a list of changed files compared to upstream.
+
+        ``diff_filter`` works the same as `get_changed_files`.
+        ``upstream`` is a remote ref to compare against. If unspecified,
+        this will be determined automatically. If there is no remote ref,
+        a MissingUpstreamRepo exception will be raised.
+        """
 
     @abstractmethod
     def working_directory_clean(self, untracked=False, ignored=False):
@@ -150,6 +189,54 @@ class HgRepository(Repository):
     def get_commit_message(self, revision=None):
         revision = revision or self.head_rev
         return self.run("log", "-r", ".", "-T", "{desc}")
+
+    def _format_diff_filter(self, diff_filter, for_status=False):
+        df = diff_filter.lower()
+        assert all(f in self._valid_diff_filter for f in df)
+
+        # When looking at the changes in the working directory, the hg status
+        # command uses 'd' for files that have been deleted with a non-hg
+        # command, and 'r' for files that have been `hg rm`ed. Use both.
+        return df.replace("d", "dr") if for_status else df
+
+    def _files_template(self, diff_filter):
+        template = ""
+        df = self._format_diff_filter(diff_filter)
+        if "a" in df:
+            template += "{file_adds % '{file}\\n'}"
+        if "d" in df:
+            template += "{file_dels % '{file}\\n'}"
+        if "m" in df:
+            template += "{file_mods % '{file}\\n'}"
+        return template
+
+    def get_changed_files(self, diff_filter="ADM", mode="unstaged", rev=None):
+        if rev is None:
+            # Use --no-status to print just the filename.
+            df = self._format_diff_filter(diff_filter, for_status=True)
+            return self.run("status", "--no-status", f"-{df}").splitlines()
+        else:
+            template = self._files_template(diff_filter)
+            return self.run("log", "-r", rev, "-T", template).splitlines()
+
+    def get_outgoing_files(self, diff_filter="ADM", upstream=None):
+        template = self._files_template(diff_filter)
+
+        if not upstream:
+            return self.run(
+                "log", "-r", "draft() and ancestors(.)", "--template", template
+            ).split()
+
+        return self.run(
+            "outgoing",
+            "-r",
+            ".",
+            "--quiet",
+            "--template",
+            template,
+            upstream,
+            return_codes=(1,),
+        ).split()
 
     def working_directory_clean(self, untracked=False, ignored=False):
         args = ["status", "--modified", "--added", "--removed", "--deleted"]
@@ -289,6 +376,40 @@ class GitRepository(Repository):
     def get_commit_message(self, revision=None):
         revision = revision or self.head_rev
         return self.run("log", "-n1", "--format=%B")
+
+    def get_changed_files(self, diff_filter="ADM", mode="unstaged", rev=None):
+        assert all(f.lower() in self._valid_diff_filter for f in diff_filter)
+
+        if rev is None:
+            cmd = ["diff"]
+            if mode == "staged":
+                cmd.append("--cached")
+            elif mode == "all":
+                cmd.append("HEAD")
+        else:
+            cmd = ["diff-tree", "-r", "--no-commit-id", rev]
+
+        cmd.append("--name-only")
+        cmd.append("--diff-filter=" + diff_filter.upper())
+
+        return self.run(*cmd).splitlines()
+
+    def get_outgoing_files(self, diff_filter="ADM", upstream=None):
+        assert all(f.lower() in self._valid_diff_filter for f in diff_filter)
+
+        not_condition = upstream if upstream else "--remotes"
+
+        files = self.run(
+            "log",
+            "--name-only",
+            f"--diff-filter={diff_filter.upper()}",
+            "--oneline",
+            "--pretty=format:",
+            "HEAD",
+            "--not",
+            not_condition,
+        ).splitlines()
+        return [f for f in files if f]
 
     def working_directory_clean(self, untracked=False, ignored=False):
         args = ["status", "--porcelain"]
