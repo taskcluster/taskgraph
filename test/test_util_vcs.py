@@ -404,106 +404,71 @@ def test_get_changed_files_two_revisions(repo):
     )
 
 
-STEPS = {
-    "hg": [
-        """
-        echo "foo" > foo
-        echo "bar" > bar
-        hg add *
-        hg rm first_file
-        hg commit -m "Add foo and bar"
-        hg phase --public .
-        """,
-        """
-        echo [paths] > .hg/hgrc
-        echo "default = {tmp_dir}/remoterepo" >> .hg/hgrc
-        """,
-        """
-        echo "bar" >> bar
-        echo "baz" > baz
-        hg add baz
-        hg rm foo
-        """,
-        """
-        hg commit -m "Remove foo; modify bar; add baz"
-        """,
-        """
-        echo ooka >> baz
-        echo newborn > baby
-        hg add baby
-        """,
-        """
-        hg commit -m "Modify baz; add baby"
-        """,
-    ],
-    "git": [
-        """
-        echo "foo" > foo
-        echo "bar" > bar
-        git add *
-        git rm first_file
-        git commit -m "Add foo and bar"
-        """,
-        """
-        git remote add upstream {tmp_dir}/remoterepo
-        git fetch upstream
-        git branch -u upstream/master
-        """,
-        """
-        echo "bar" >> bar
-        echo "baz" > baz
-        git add baz
-        git rm foo
-        """,
-        """
-        git commit -am "Remove foo; modify bar; add baz"
-        """,
-        """
-        echo ooka >> baz
-        echo newborn > baby
-        git add baz baby
-        """,
-        """
-        git commit -m "Modify baz; add baby"
-        """,
-    ],
-}
+@pytest.fixture
+def repo_with_upstream(tmpdir, repo):
+    with open(os.path.join(repo.path, "second_file"), "w") as f:
+        f.write("some data for the second file")
 
+    repo.run("add", ".")
+    repo.run("commit", "-m", "Add second_file")
 
-def shell(cmd, working_dir):
-    for step in cmd.split(os.linesep):
-        subprocess.check_call(step, shell=True, cwd=working_dir)
+    if repo.tool == "hg":
+        repo.run("phase", "--public", ".")
 
-
-def get_steps(tmp_dir, tool, working_dir):
-    return (shell(cmd.format(tmp_dir=tmp_dir), working_dir) for cmd in STEPS[tool])
-
-
-def test_workdir_outgoing(tmpdir, repo):
-    steps = get_steps(tmpdir, repo.tool, repo.path)
-    next(steps)
     shutil.copytree(repo.path, str(tmpdir / "remoterepo"))
-    next(steps)
+    upstream_location = None
 
-    remote_path = f"{tmpdir}/remoterepo" if repo.tool == "hg" else "upstream/master"
+    if repo.tool == "git":
+        upstream_location = "upstream/master"
+        repo.run("remote", "add", "upstream", f"{tmpdir}/remoterepo")
+        repo.run("fetch", "upstream")
+        repo.run("branch", "--set-upstream-to", upstream_location)
+    if repo.tool == "hg":
+        upstream_location = f"{tmpdir}/remoterepo"
+        with open(os.path.join(repo.path, ".hg/hgrc"), "w") as f:
+            f.write(f"[paths]\ndefault = {upstream_location}")
 
-    # Mutate files.
-    next(steps)
+    return repo, upstream_location
+
+
+def test_workdir_outgoing(repo_with_upstream):
+    repo, upstream_location = repo_with_upstream
+
+    os.remove(os.path.join(repo.path, "first_file"))
+    with open(os.path.join(repo.path, "second_file"), "w") as f:
+        f.write("new data for second file")
+    with open(os.path.join(repo.path, "third_file"), "w") as f:
+        f.write("third type of data")
+
     assert_files(repo.get_outgoing_files("AMD"), [])
-    assert_files(repo.get_outgoing_files("AMD", remote_path), [])
+    assert_files(repo.get_outgoing_files("AMD", upstream_location), [])
 
-    # Create a commit.
-    next(steps)
-    assert_files(repo.get_outgoing_files("AMD"), ["bar", "baz", "foo"])
-    assert_files(repo.get_outgoing_files("AMD", remote_path), ["bar", "baz", "foo"])
+    repo.run("rm", "first_file")
+    repo.run("add", ".")
+    assert_files(repo.get_outgoing_files("AMD"), [])
+    assert_files(repo.get_outgoing_files("AMD", upstream_location), [])
 
-    # Mutate again.
-    next(steps)
-    # Create a second commit.
-    next(steps)
+    repo.run("commit", "-m", "Remove first_file; modify second_file; add third_file")
+    assert_files(repo.get_outgoing_files("A"), ["third_file"])
+    assert_files(repo.get_outgoing_files("M"), ["second_file"])
+    assert_files(repo.get_outgoing_files("D"), ["first_file"])
+    assert_files(repo.get_outgoing_files("A", upstream_location), ["third_file"])
+    assert_files(repo.get_outgoing_files("M", upstream_location), ["second_file"])
+    assert_files(repo.get_outgoing_files("D", upstream_location), ["first_file"])
 
-    assert_files(repo.get_outgoing_files("AM"), ["bar", "baz", "baby"])
-    assert_files(repo.get_outgoing_files("AM", remote_path), ["bar", "baz", "baby"])
+    with open(os.path.join(repo.path, "fourth_file"), "w") as f:
+        f.write("breaking the fourth wall")
+    repo.run("add", ".")
+    repo.run("commit", "-m", "Add fourth file")
+
+    assert_files(repo.get_outgoing_files("A"), ["fourth_file", "third_file"])
+    assert_files(repo.get_outgoing_files("M"), ["second_file"])
+    assert_files(repo.get_outgoing_files("D"), ["first_file"])
+    assert_files(
+        repo.get_outgoing_files("A", upstream_location), ["fourth_file", "third_file"]
+    )
+    assert_files(repo.get_outgoing_files("M", upstream_location), ["second_file"])
+    assert_files(repo.get_outgoing_files("D", upstream_location), ["first_file"])
 
 
 def test_working_directory_clean(repo):
