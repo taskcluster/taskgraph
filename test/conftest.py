@@ -106,6 +106,11 @@ def fake_load_graph_config(root_dir):
     return graph_config
 
 
+@pytest.fixture
+def graph_config(datadir):
+    return fake_load_graph_config(str(datadir / "taskcluster" / "ci"))
+
+
 class FakeParameters(dict):
     strict = True
 
@@ -176,9 +181,7 @@ def maketgg(monkeypatch, parameters):
 
 
 @pytest.fixture
-def make_transform_config(parameters, datadir):
-    graph_config = fake_load_graph_config(str(datadir / "taskcluster" / "ci"))
-
+def make_transform_config(parameters, graph_config):
     def inner(kind_config=None, kind_dependencies_tasks=None):
         kind_config = kind_config or {}
         kind_dependencies_tasks = kind_dependencies_tasks or {}
