@@ -9,6 +9,9 @@
 - `run-task` now checks out a revision as a named branch that matches `${PROJECT}_HEAD_REF`
 - `head_ref` parameter now points to a named branch and if needed, falls back to the revision hash
 
+### Added
+- `vcs.remote_name` that tracks the name of the remote repository (e.g.: `default` on `hg` or `origin` on `git`)
+
 ## [2.0.0] - 2022-08-01
 
 ### Changed

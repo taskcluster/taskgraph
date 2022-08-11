@@ -4,6 +4,7 @@
 
 
 import os
+import shutil
 import subprocess
 from textwrap import dedent
 
@@ -86,6 +87,28 @@ def repo(request, hg_repo, git_repo):
     if request.param == "hg":
         return get_repository(hg_repo)
     return get_repository(git_repo)
+
+
+def _create_remote_repo(tmpdir, repo, remote_name, remote_path):
+    if repo.tool == "hg":
+        repo.run("phase", "--public", ".")
+
+    shutil.copytree(repo.path, str(tmpdir / remote_path))
+
+    if repo.tool == "git":
+        repo.run("remote", "add", remote_name, f"{tmpdir}/{remote_path}")
+        repo.run("fetch", remote_name)
+        repo.run("branch", "--set-upstream-to", f"{remote_name}/master")
+    if repo.tool == "hg":
+        with open(os.path.join(repo.path, ".hg/hgrc"), "a") as f:
+            f.write(f"[paths]\n{remote_name} = {tmpdir}/{remote_path}\n")
+
+
+@pytest.fixture
+def repo_with_remote(tmpdir, repo):
+    remote_name = "upstream"
+    _create_remote_repo(tmpdir, repo, remote_name, "remote_repo")
+    return repo, remote_name
 
 
 def test_get_repository(repo):
@@ -218,6 +241,67 @@ def test_branch(repo):
 
     repo.update("test")
     assert repo.branch == "test"
+
+
+def test_remote_name_no_remote(repo):
+    with pytest.raises(RuntimeError):
+        repo.remote_name
+
+
+def test_remote_name(repo_with_remote):
+    repo, remote_name = repo_with_remote
+    assert repo.remote_name == remote_name
+
+    if repo.tool == "git":
+        repo.run("branch", "--unset-upstream")
+        assert repo.remote_name == remote_name
+
+
+def test_remote_name_too_many_remotes(tmpdir, repo_with_remote):
+    repo, _ = repo_with_remote
+    _create_remote_repo(tmpdir, repo, "upstream2", "remote_path2")
+
+    if repo.tool == "git":
+        assert repo.remote_name == "upstream2"  # Branch is set to an upstream one
+        repo.run("branch", "--unset-upstream")
+
+    with pytest.raises(RuntimeError):
+        repo.remote_name
+
+
+def test_remote_name_default_and_origin(tmpdir, repo_with_remote):
+    repo, _ = repo_with_remote
+    remote_name = "origin" if repo.tool == "git" else "default"
+    _create_remote_repo(tmpdir, repo, remote_name, "remote_path2")
+
+    if repo.tool == "git":
+        repo.run("branch", "--unset-upstream")
+
+    assert repo.remote_name == remote_name
+
+
+def test_default_branch_guess(repo):
+    if repo.tool == "git":
+        assert repo.default_branch == "master"
+    else:
+        assert repo.default_branch == "default"
+
+
+def test_default_branch_remote_query(repo_with_remote):
+    repo, _ = repo_with_remote
+    if repo.tool == "git":
+        assert repo.default_branch == "master"
+    else:
+        assert repo.default_branch == "default"
+
+
+def test_default_branch_cloned_metadata(tmpdir, repo):
+    if repo.tool == "git":
+        clone_repo_path = tmpdir / "cloned_repo"
+        command = ("git", "clone", repo.path, clone_repo_path)
+        subprocess.check_output(command, cwd=tmpdir)
+        cloned_repo = get_repository(clone_repo_path)
+        assert cloned_repo.default_branch == "master"
 
 
 def test_working_directory_clean(repo):

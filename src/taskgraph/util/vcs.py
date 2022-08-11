@@ -47,6 +47,10 @@ class Repository(ABC):
     def branch(self):
         """Current branch or bookmark the checkout has active."""
 
+    @abstractproperty
+    def remote_name(self):
+        """Name of the remote repository."""
+
     @abstractmethod
     def get_url(self, remote=None):
         """Get URL of the upstream repository."""
@@ -97,6 +101,19 @@ class HgRepository(Repository):
 
         return None
 
+    @property
+    def remote_name(self):
+        remotes = self.run("paths", "--quiet").splitlines()
+        if len(remotes) == 1:
+            return remotes[0]
+
+        if "default" in remotes:
+            return "default"
+
+        raise RuntimeError(
+            f"Cannot determine remote repository name. Candidate remotes: {remotes}"
+        )
+
     def get_url(self, remote="default"):
         return self.run("path", "-T", "{url}", remote).strip()
 
@@ -138,6 +155,30 @@ class GitRepository(Repository):
     @property
     def branch(self):
         return self.run("branch", "--show-current").strip() or None
+
+    @property
+    def remote_name(self):
+        try:
+            remote_branch_name = self.run(
+                "rev-parse", "--verify", "--abbrev-ref", "--symbolic-full-name", "@{u}"
+            ).strip()
+            return remote_branch_name.split("/")[0]
+        except subprocess.CalledProcessError as e:
+            # Error code 128 comes with the message:
+            # "fatal: no upstream configured for branch $BRANCH"
+            if e.returncode != 128:
+                raise
+
+        remotes = self.run("remote").splitlines()
+        if len(remotes) == 1:
+            return remotes[0]
+
+        if "origin" in remotes:
+            return "origin"
+
+        raise RuntimeError(
+            f"Cannot determine remote repository name. Candidate remotes: {remotes}"
+        )
 
     def get_url(self, remote="origin"):
         return self.run("remote", "get-url", remote).strip()
