@@ -90,7 +90,7 @@ def _get_defaults(repo_root=None):
         "do_not_optimize": [],
         "existing_tasks": {},
         "filters": ["target_tasks_method"],
-        "head_ref": repo.head_rev,
+        "head_ref": repo.branch or repo.head_rev,
         "head_repository": repo_url,
         "head_rev": repo.head_rev,
         "head_tag": "",

@@ -139,7 +139,7 @@ def parameters():
             "build_number": 1,
             "head_repository": "http://hg.example.com",
             "head_rev": "abcdef",
-            "head_ref": "abcdef",
+            "head_ref": "default",
             "level": "1",
             "moz_build_date": 0,
             "next_version": "1.0.1",

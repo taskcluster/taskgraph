@@ -69,7 +69,7 @@ def assert_docker_worker(task):
             ],
             "env": {
                 "CI_BASE_REPOSITORY": "http://hg.example.com",
-                "CI_HEAD_REF": "abcdef",
+                "CI_HEAD_REF": "default",
                 "CI_HEAD_REPOSITORY": "http://hg.example.com",
                 "CI_HEAD_REV": "abcdef",
                 "CI_REPOSITORY_TYPE": "hg",
@@ -104,7 +104,7 @@ def assert_generic_worker(task):
             ],
             "env": {
                 "CI_BASE_REPOSITORY": "http://hg.example.com",
-                "CI_HEAD_REF": "abcdef",
+                "CI_HEAD_REF": "default",
                 "CI_HEAD_REPOSITORY": "http://hg.example.com",
                 "CI_HEAD_REV": "abcdef",
                 "CI_REPOSITORY_TYPE": "hg",
