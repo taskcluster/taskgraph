@@ -33,6 +33,7 @@ class TestParameters(TestCase):
 
     vals = {
         "base_repository": "repository",
+        "base_ref": "base_ref",
         "build_date": 0,
         "build_number": 1,
         "do_not_optimize": [],

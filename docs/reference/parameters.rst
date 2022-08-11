@@ -28,6 +28,10 @@ head_rev
 ~~~~~~~~
    The revision to check out, this can be a short revision string.
 
+base_ref
+~~~~~~~~
+   Reference where ``head_rev`` got merged into. It is usually a branch or a tag.
+
 head_ref
 ~~~~~~~~
    Reference that contains the ``head_rev``. It defaults to the current branch,

@@ -11,6 +11,7 @@
 
 ### Added
 - `vcs.remote_name` that tracks the name of the remote repository (e.g.: `default` on `hg` or `origin` on `git`)
+- `base_ref` parameter that points to the reference (e.g.: a branch) on the base repository
 
 ## [2.0.0] - 2022-08-01
 

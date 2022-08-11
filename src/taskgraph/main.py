@@ -594,6 +594,9 @@ def image_digest(args):
 )
 @argument("--base-repository", required=True, help='URL for "base" repository to clone')
 @argument(
+    "--base-ref", default="", help='Reference of the revision in the "base" repository'
+)
+@argument(
     "--head-repository",
     required=True,
     help='URL for "head" repository to fetch revision from',

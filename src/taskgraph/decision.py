@@ -21,7 +21,7 @@ from taskgraph.parameters import Parameters, get_version
 from taskgraph.taskgraph import TaskGraph
 from taskgraph.util.python_path import find_object
 from taskgraph.util.schema import Schema, validate_schema
-from taskgraph.util.vcs import get_repository
+from taskgraph.util.vcs import Repository, get_repository
 from taskgraph.util.yaml import load_yaml
 
 logger = logging.getLogger(__name__)
@@ -143,6 +143,7 @@ def get_decision_parameters(graph_config, options):
         n: options[n]
         for n in [
             "base_repository",
+            "base_ref",
             "head_repository",
             "head_rev",
             "head_ref",
@@ -165,6 +166,13 @@ def get_decision_parameters(graph_config, options):
         commit_message = repo.get_commit_message()
     except UnicodeDecodeError:
         commit_message = ""
+
+    parameters["base_ref"] = _determine_more_accurate_base_ref(
+        repo,
+        candidate_base_ref=options.get("base_ref"),
+        head_ref=options.get("head_ref"),
+        base_rev=options.get("base_rev"),
+    )
 
     # Define default filter list, as most configurations shouldn't need
     # custom filters.
@@ -234,6 +242,26 @@ def get_decision_parameters(graph_config, options):
     result = Parameters(**parameters)
     result.check()
     return result
+
+
+def _determine_more_accurate_base_ref(repo, candidate_base_ref, head_ref, base_rev):
+    base_ref = candidate_base_ref
+
+    if not candidate_base_ref:
+        base_ref = repo.default_branch
+    elif candidate_base_ref == head_ref and base_rev == Repository.NULL_REVISION:
+        logger.info(
+            "base_ref and head_ref are identical but base_rev equals the null revision. "
+            "This is a new branch but Github didn't identify its actual base."
+        )
+        base_ref = repo.default_branch
+
+    if base_ref != candidate_base_ref:
+        logger.info(
+            f'base_ref has been reset from "{candidate_base_ref}" to "{base_ref}".'
+        )
+
+    return base_ref
 
 
 def set_try_config(parameters, task_config_file):

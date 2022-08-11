@@ -4,6 +4,7 @@
 
 
 import os
+import re
 import subprocess
 from abc import ABC, abstractmethod, abstractproperty
 from shutil import which
@@ -50,6 +51,10 @@ class Repository(ABC):
     @abstractproperty
     def remote_name(self):
         """Name of the remote repository."""
+
+    @abstractproperty
+    def default_branch(self):
+        """Name of the default branch."""
 
     @abstractmethod
     def get_url(self, remote=None):
@@ -114,6 +119,12 @@ class HgRepository(Repository):
             f"Cannot determine remote repository name. Candidate remotes: {remotes}"
         )
 
+    @property
+    def default_branch(self):
+        # Mercurial recommends keeping "default"
+        # https://www.mercurial-scm.org/wiki/StandardBranching#Don.27t_use_a_name_other_than_default_for_your_main_development_branch
+        return "default"
+
     def get_url(self, remote="default"):
         return self.run("path", "-T", "{url}", remote).strip()
 
@@ -138,6 +149,8 @@ class HgRepository(Repository):
 
 class GitRepository(Repository):
     tool = "git"
+
+    _LS_REMOTE_PATTERN = re.compile(r"ref:\s+refs/heads/(?P<branch_name>\S+)\s+HEAD")
 
     @property
     def head_rev(self):
@@ -179,6 +192,58 @@ class GitRepository(Repository):
         raise RuntimeError(
             f"Cannot determine remote repository name. Candidate remotes: {remotes}"
         )
+
+    @property
+    def default_branch(self):
+        try:
+            # this one works if the current repo was cloned from an existing
+            # repo elsewhere
+            return self._get_default_branch_from_cloned_metadata()
+        except (subprocess.CalledProcessError, RuntimeError):
+            pass
+
+        try:
+            # This call works if you have (network) access to the repo
+            return self._get_default_branch_from_remote_query()
+        except (subprocess.CalledProcessError, RuntimeError):
+            pass
+
+        # this one is the last resort in case the remote is not accessible and
+        # the local repo is where `git init` was made
+        return self._guess_default_branch()
+
+    def _get_default_branch_from_remote_query(self):
+        # This function requires network access to the repo
+        output = self.run("ls-remote", "--symref", self.remote_name, "HEAD")
+        matches = self._LS_REMOTE_PATTERN.search(output)
+        if not matches:
+            raise RuntimeError(
+                f'Could not find the default branch of remote repository "{self.remote_name}". '
+                "Got: {output}"
+            )
+
+        return matches.group("branch_name")
+
+    def _get_default_branch_from_cloned_metadata(self):
+        output = self.run(
+            "rev-parse", "--abbrev-ref", f"{self.remote_name}/HEAD"
+        ).strip()
+        return "/".join(output.split("/")[1:])
+
+    def _guess_default_branch(self):
+        branches = [
+            candidate_branch
+            for line in self.run(
+                "branch", "--all", "--no-color", "--format=%(refname:short)"
+            ).splitlines()
+            for candidate_branch in ("main", "master")
+            if candidate_branch == line.strip()
+        ]
+
+        if branches:
+            return branches[0]
+
+        raise RuntimeError(f"Unable to find default branch. Got: {branches}")
 
     def get_url(self, remote="origin"):
         return self.run("remote", "get-url", remote).strip()

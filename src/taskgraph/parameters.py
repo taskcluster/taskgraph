@@ -31,6 +31,7 @@ class ParameterMismatch(Exception):
 base_schema = Schema(
     {
         Required("base_repository"): str,
+        Required("base_ref"): str,
         Required("build_date"): int,
         Required("build_number"): int,
         Required("do_not_optimize"): [str],
@@ -85,6 +86,7 @@ def _get_defaults(repo_root=None):
 
     return {
         "base_repository": repo_url,
+        "base_ref": repo.default_branch,
         "build_date": int(time.time()),
         "build_number": 1,
         "do_not_optimize": [],
