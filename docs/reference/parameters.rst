@@ -30,10 +30,8 @@ head_rev
 
 head_ref
 ~~~~~~~~
-   For Mercurial repositories, this is the same as ``head_rev``. For
-   Git repositories which do not allow pulling explicit revisions, this gives
-   the symbolic ref containing ``head_rev`` that should be pulled from
-   ``head_repository``.
+   Reference that contains the ``head_rev``. It defaults to the current branch,
+   then to the current revision if no branch is found.
 
 head_tag
 ~~~~~~~~

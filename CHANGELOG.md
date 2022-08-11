@@ -7,6 +7,7 @@
 - BREAKING CHANGE: Similarly, `vcs.base_ref` was renamed into `vcs.base_rev`.
 - `run-task` now clones all git-submodules at the same time as cloning the base/head repository.
 - `run-task` now checks out a revision as a named branch that matches `${PROJECT}_HEAD_REF`
+- `head_ref` parameter now points to a named branch and if needed, falls back to the revision hash
 
 ## [2.0.0] - 2022-08-01
 

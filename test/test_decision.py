@@ -49,7 +49,7 @@ class TestGetDecisionParameters(unittest.TestCase):
             "base_repository": "https://hg.mozilla.org/mozilla-unified",
             "head_repository": "https://hg.mozilla.org/mozilla-central",
             "head_rev": "abcd",
-            "head_ref": "ef01",
+            "head_ref": "default",
             "head_tag": "v0.0.1",
             "project": "mozilla-central",
             "pushlog_id": "143",
