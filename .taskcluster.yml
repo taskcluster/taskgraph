@@ -268,10 +268,10 @@ tasks:
                                     --level='${level}'
                                     --repository-type=git
                                     --tasks-for='${tasks_for}'
-                                    --base-repository="${repoUrl}"
-                                    --head-repository="${repoUrl}"
-                                    --head-ref="${head_sha}"
-                                    --head-rev="${head_sha}"
+                                    --base-repository='${baseRepoUrl}'
+                                    --head-repository='${repoUrl}'
+                                    --head-ref='${head_branch}'
+                                    --head-rev='${head_sha}'
                                     ${extraArgs}
 
                       artifacts:
