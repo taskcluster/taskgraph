@@ -10,6 +10,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 from taskgraph import decision
 from taskgraph.util.yaml import load_yaml
 
@@ -71,3 +73,25 @@ class TestGetDecisionParameters(unittest.TestCase):
         self.options["owner"] = "ffxbld"
         params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
         self.assertEqual(params["owner"], "ffxbld@noreply.mozilla.org")
+
+
+@pytest.mark.parametrize(
+    "candidate_base_ref, base_rev, expected_base_ref",
+    (
+        ("", "base-rev", "default-branch"),
+        ("head-ref", "base-rev", "head-ref"),
+        ("head-ref", "0000000000000000000000000000000000000000", "default-branch"),
+    ),
+)
+def test_determine_more_accurate_base_ref(
+    candidate_base_ref, base_rev, expected_base_ref
+):
+    repo_mock = unittest.mock.MagicMock()
+    repo_mock.default_branch = "default-branch"
+
+    assert (
+        decision._determine_more_accurate_base_ref(
+            repo_mock, candidate_base_ref, "head-ref", base_rev
+        )
+        == expected_base_ref
+    )
