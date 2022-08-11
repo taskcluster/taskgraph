@@ -343,7 +343,7 @@ def show_taskgraph(options):
         logging.root.setLevel(logging.DEBUG)
 
     repo = None
-    cur_ref = None
+    cur_rev = None
     diffdir = None
     output_file = options["output_file"]
 
@@ -361,16 +361,16 @@ def show_taskgraph(options):
         # as best we can after we're done. In all known cases, using
         # branch or bookmark (which are both available on the VCS object)
         # as `branch` is preferable to a specific revision.
-        cur_ref = repo.branch or repo.head_ref[:12]
+        cur_rev = repo.branch or repo.head_rev[:12]
 
         diffdir = tempfile.mkdtemp()
         atexit.register(
             shutil.rmtree, diffdir
         )  # make sure the directory gets cleaned up
         options["output_file"] = os.path.join(
-            diffdir, f"{options['graph_attr']}_{cur_ref}"
+            diffdir, f"{options['graph_attr']}_{cur_rev}"
         )
-        print(f"Generating {options['graph_attr']} @ {cur_ref}", file=sys.stderr)
+        print(f"Generating {options['graph_attr']} @ {cur_rev}", file=sys.stderr)
 
     parameters: List[Any[str, Parameters]] = options.pop("parameters")
     if not parameters:
@@ -424,14 +424,14 @@ def show_taskgraph(options):
 
         try:
             repo.update(base_ref)
-            base_ref = repo.head_ref[:12]
+            base_ref = repo.head_rev[:12]
             options["output_file"] = os.path.join(
                 diffdir, f"{options['graph_attr']}_{base_ref}"
             )
             print(f"Generating {options['graph_attr']} @ {base_ref}", file=sys.stderr)
             generate_taskgraph(options, parameters, logdir)
         finally:
-            repo.update(cur_ref)
+            repo.update(cur_rev)
 
         # Generate diff(s)
         diffcmd = [
@@ -439,12 +439,12 @@ def show_taskgraph(options):
             "-U20",
             "--report-identical-files",
             f"--label={options['graph_attr']}@{base_ref}",
-            f"--label={options['graph_attr']}@{cur_ref}",
+            f"--label={options['graph_attr']}@{cur_rev}",
         ]
 
         for spec in parameters:
             base_path = os.path.join(diffdir, f"{options['graph_attr']}_{base_ref}")
-            cur_path = os.path.join(diffdir, f"{options['graph_attr']}_{cur_ref}")
+            cur_path = os.path.join(diffdir, f"{options['graph_attr']}_{cur_rev}")
 
             params_name = None
             if len(parameters) > 1:

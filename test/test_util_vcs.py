@@ -151,11 +151,11 @@ def test_get_commit_message(repo, commit_message):
     assert repo.get_commit_message().strip() == commit_message
 
 
-def test_calculate_head_ref(repo):
+def test_calculate_head_rev(repo):
     if repo.tool == "hg":
-        assert repo.head_ref == "c6ef323128f7ba6fd47147743e882d9fc6d72a4e"
+        assert repo.head_rev == "c6ef323128f7ba6fd47147743e882d9fc6d72a4e"
     else:
-        assert repo.head_ref == "c34844580592fcf4575b8f1174285b853b566d85"
+        assert repo.head_rev == "c34844580592fcf4575b8f1174285b853b566d85"
 
 
 def test_get_repo_path(repo):
@@ -183,16 +183,16 @@ def test_update(repo):
     with open(bar, "w") as fh:
         fh.write("bar")
 
-    first_ref = repo.head_ref
+    first_rev = repo.head_rev
     repo.run("add", bar)
     repo.run("commit", "-m", "Second commit")
 
-    second_ref = repo.head_ref
-    repo.update(first_ref)
-    assert repo.head_ref == first_ref
+    second_rev = repo.head_rev
+    repo.update(first_rev)
+    assert repo.head_rev == first_rev
 
-    repo.update(second_ref)
-    assert repo.head_ref == second_ref
+    repo.update(second_rev)
+    assert repo.head_rev == second_rev
 
 
 def test_branch(repo):
@@ -213,7 +213,7 @@ def test_branch(repo):
     repo.run("commit", "-m", "Second commit")
     assert repo.branch == "test"
 
-    repo.update(repo.head_ref)
+    repo.update(repo.head_rev)
     assert repo.branch is None
 
     repo.update("test")

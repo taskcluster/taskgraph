@@ -36,7 +36,7 @@ class Repository(ABC):
         """Version control system being used, either 'hg' or 'git'."""
 
     @abstractproperty
-    def head_ref(self) -> str:
+    def head_rev(self) -> str:
         """Hash of HEAD revision."""
 
     @abstractproperty
@@ -80,7 +80,7 @@ class HgRepository(Repository):
         self._env["HGPLAIN"] = "1"
 
     @property
-    def head_ref(self):
+    def head_rev(self):
         return self.run("log", "-r", ".", "-T", "{node}").strip()
 
     @property
@@ -101,7 +101,7 @@ class HgRepository(Repository):
         return self.run("path", "-T", "{url}", remote).strip()
 
     def get_commit_message(self, revision=None):
-        revision = revision or self.head_ref
+        revision = revision or self.head_rev
         return self.run("log", "-r", ".", "-T", "{desc}")
 
     def working_directory_clean(self, untracked=False, ignored=False):
@@ -123,7 +123,7 @@ class GitRepository(Repository):
     tool = "git"
 
     @property
-    def head_ref(self):
+    def head_rev(self):
         return self.run("rev-parse", "--verify", "HEAD").strip()
 
     @property
@@ -133,7 +133,7 @@ class GitRepository(Repository):
         ).splitlines()
         if refs:
             return refs[-1][1:]  # boundary starts with a prefix `-`
-        return self.head_ref
+        return self.head_rev
 
     @property
     def branch(self):
@@ -143,7 +143,7 @@ class GitRepository(Repository):
         return self.run("remote", "get-url", remote).strip()
 
     def get_commit_message(self, revision=None):
-        revision = revision or self.head_ref
+        revision = revision or self.head_rev
         return self.run("log", "-n1", "--format=%B")
 
     def working_directory_clean(self, untracked=False, ignored=False):
