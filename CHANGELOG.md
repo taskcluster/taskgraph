@@ -3,6 +3,7 @@
 ## [3.0.0] - TBD
 
 ### Changed
+- BREAKING CHANGE: `vcs.head_ref` was renamed into `vcs.head_rev` to clarify that the function returns a revision. This also matches `--head-rev`.
 - `run-task` now clones all git-submodules at the same time as cloning the base/head repository.
 
 ## [2.0.0] - 2022-08-01
