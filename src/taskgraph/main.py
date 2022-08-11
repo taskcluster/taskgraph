@@ -418,17 +418,17 @@ def show_taskgraph(options):
                 del sys.modules[mod]
 
         if options["diff"] == "default":
-            base_ref = repo.base_ref
+            base_rev = repo.base_rev
         else:
-            base_ref = options["diff"]
+            base_rev = options["diff"]
 
         try:
-            repo.update(base_ref)
-            base_ref = repo.head_rev[:12]
+            repo.update(base_rev)
+            base_rev = repo.head_rev[:12]
             options["output_file"] = os.path.join(
-                diffdir, f"{options['graph_attr']}_{base_ref}"
+                diffdir, f"{options['graph_attr']}_{base_rev}"
             )
-            print(f"Generating {options['graph_attr']} @ {base_ref}", file=sys.stderr)
+            print(f"Generating {options['graph_attr']} @ {base_rev}", file=sys.stderr)
             generate_taskgraph(options, parameters, logdir)
         finally:
             repo.update(cur_rev)
@@ -438,12 +438,12 @@ def show_taskgraph(options):
             "diff",
             "-U20",
             "--report-identical-files",
-            f"--label={options['graph_attr']}@{base_ref}",
+            f"--label={options['graph_attr']}@{base_rev}",
             f"--label={options['graph_attr']}@{cur_rev}",
         ]
 
         for spec in parameters:
-            base_path = os.path.join(diffdir, f"{options['graph_attr']}_{base_ref}")
+            base_path = os.path.join(diffdir, f"{options['graph_attr']}_{base_rev}")
             cur_path = os.path.join(diffdir, f"{options['graph_attr']}_{cur_rev}")
 
             params_name = None

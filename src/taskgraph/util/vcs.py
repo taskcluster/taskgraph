@@ -40,7 +40,7 @@ class Repository(ABC):
         """Hash of HEAD revision."""
 
     @abstractproperty
-    def base_ref(self):
+    def base_rev(self):
         """Hash of revision the current topic branch is based on."""
 
     @abstractproperty
@@ -84,7 +84,7 @@ class HgRepository(Repository):
         return self.run("log", "-r", ".", "-T", "{node}").strip()
 
     @property
-    def base_ref(self):
+    def base_rev(self):
         return self.run("log", "-r", "last(ancestors(.) and public())", "-T", "{node}")
 
     @property
@@ -127,7 +127,7 @@ class GitRepository(Repository):
         return self.run("rev-parse", "--verify", "HEAD").strip()
 
     @property
-    def base_ref(self):
+    def base_rev(self):
         refs = self.run(
             "rev-list", "HEAD", "--topo-order", "--boundary", "--not", "--remotes"
         ).splitlines()
