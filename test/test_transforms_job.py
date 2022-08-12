@@ -162,7 +162,7 @@ def test_use_fetches(
     kind_dependencies_tasks,
 ):
     transform_config = make_transform_config(
-        kind_dependencies_tasks=kind_dependencies_tasks
+        kind_dependencies_tasks={t.label: t for t in kind_dependencies_tasks}
     )
     task = merge(TASK_DEFAULTS, task)
     result = run_transform(job.use_fetches, task, config=transform_config)[0]
