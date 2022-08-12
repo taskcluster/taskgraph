@@ -75,6 +75,15 @@ tasks:
                   else:
                       $if: 'tasks_for in ["cron", "action"]'
                       then: '${push.branch}'
+          base_sha:
+              $if: 'tasks_for == "github-push"'
+              then: '${event.before}'
+              else:
+                  $if: 'tasks_for == "github-pull-request"'
+                  then: '${event.pull_request.base.sha}'
+                  else:
+                      $if: 'tasks_for in ["cron", "action"]'
+                      then: '${push.revision}'
           head_sha:
               $if: 'tasks_for == "github-push"'
               then: '${event.after}'
@@ -232,6 +241,7 @@ tasks:
                           $merge:
                               - TASKGRAPH_BASE_REPOSITORY: '${baseRepoUrl}'
                                 TASKGRAPH_BASE_REF: '${base_ref}'
+                                TASKGRAPH_BASE_REV: '${base_sha}'
                                 TASKGRAPH_HEAD_REPOSITORY: '${repoUrl}'
                                 TASKGRAPH_HEAD_REF: '${head_ref}'
                                 TASKGRAPH_HEAD_REV: '${head_sha}'
@@ -288,6 +298,7 @@ tasks:
                                     --tasks-for='${tasks_for}'
                                     --base-repository='${baseRepoUrl}'
                                     --base-ref='${base_ref}'
+                                    --base-rev='${base_sha}'
                                     --head-repository='${repoUrl}'
                                     --head-ref='${head_ref}'
                                     --head-rev='${head_sha}'
