@@ -85,6 +85,13 @@ class Repository(ABC):
         """Find the latest revision that is common to both the given
         ``head_rev`` and ``base_ref_or_rev``"""
 
+    @abstractmethod
+    def does_revision_exist_locally(self, revision):
+        """Check whether this revision exists in the local repository.
+
+        If this function returns an unexpected value, then make sure
+        the revision was fetched from the remote repository."""
+
 
 class HgRepository(Repository):
     tool = "hg"
@@ -159,6 +166,16 @@ class HgRepository(Repository):
             "--template",
             "{node}",
         ).strip()
+
+    def does_revision_exist_locally(self, revision):
+        try:
+            return self.run("log", "-r", revision).strip() != ""
+        except subprocess.CalledProcessError as e:
+            # Error code 255 comes with the message:
+            # "abort: unknown revision $REVISION"
+            if e.returncode == 255:
+                return False
+            raise
 
 
 class GitRepository(Repository):
@@ -289,6 +306,16 @@ class GitRepository(Repository):
 
     def find_latest_common_revision(self, base_ref_or_rev, head_rev):
         return self.run("merge-base", base_ref_or_rev, head_rev).strip()
+
+    def does_revision_exist_locally(self, revision):
+        try:
+            return self.run("cat-file", "-t", revision).strip() == "commit"
+        except subprocess.CalledProcessError as e:
+            # Error code 128 comes with the message:
+            # "git cat-file: could not get object info"
+            if e.returncode == 128:
+                return False
+            raise
 
 
 def get_repository(path):

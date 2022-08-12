@@ -12,7 +12,8 @@
 ### Added
 - `vcs.remote_name` that tracks the name of the remote repository (e.g.: `default` on `hg` or `origin` on `git`)
 - `base_ref` parameter that points to the reference (e.g.: a branch) on the base repository
-- `vcs.find_latest_common_revision()` which find the common ancestor between a provided `base_ref` and the current `head_rev`
+- `vcs.find_latest_common_revision()` which finds the common ancestor between a provided `base_ref` and the current `head_rev`
+- `vcs.does_revision_exist_locally()` to find out if a changeset/commit exists in the locally cloned repository
 
 ## [2.0.0] - 2022-08-01
 
