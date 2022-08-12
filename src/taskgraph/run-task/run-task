@@ -557,6 +557,7 @@ def git_checkout(
     destination_path: str,
     head_repo: str,
     base_repo: Optional[str],
+    base_ref: Optional[str],
     ref: Optional[str],
     commit: Optional[str],
     ssh_key_file: Optional[Path],
@@ -590,6 +591,26 @@ def git_checkout(
         ]
 
         retry_required_command(b'vcs', args, extra_env=env)
+
+    if base_ref:
+        args = [
+            'git',
+            'fetch',
+            'origin',
+            base_ref
+        ]
+
+        retry_required_command(b'vcs', args, cwd=destination_path, extra_env=env)
+
+        # Create local branch so that taskgraph is able to compute differences
+        # between the head branch and the base one, if needed
+        args = [
+            'git',
+            'checkout',
+            base_ref
+        ]
+
+        retry_required_command(b'vcs', args, cwd=destination_path, extra_env=env)
 
     # If a ref isn't provided, we fetch all refs from head_repo, which may be slow
     args = [
@@ -838,6 +859,7 @@ def collect_vcs_options(args, project, name):
 
     repo_type = os.environ.get('%s_REPOSITORY_TYPE' % env_prefix)
     base_repo = os.environ.get('%s_BASE_REPOSITORY' % env_prefix)
+    base_ref = os.environ.get('%s_BASE_REF' % env_prefix)
     head_repo = os.environ.get('%s_HEAD_REPOSITORY' % env_prefix)
     revision = os.environ.get('%s_HEAD_REV' % env_prefix)
     ref = os.environ.get('%s_HEAD_REF' % env_prefix)
@@ -869,6 +891,7 @@ def collect_vcs_options(args, project, name):
         'checkout': checkout,
         'sparse-profile': sparse_profile,
         'base-repo': base_repo,
+        'base-ref': base_ref,
         'head-repo': head_repo,
         'revision': revision,
         'ref': ref,
@@ -916,6 +939,7 @@ def vcs_checkout_from_args(options, *, hgmo_fingerprint):
                 options['checkout'],
                 options['head-repo'],
                 options['base-repo'],
+                options['base-ref'],
                 ref,
                 revision,
                 ssh_key_file,

@@ -132,6 +132,8 @@ def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
 
     expected = {
         "base-repo": env.get("BASE_REPOSITORY"),
+        "base-ref": env.get("BASE_REF"),
+        "base-rev": env.get("BASE_REV"),
         "checkout": os.path.join(os.getcwd(), "checkout"),
         "env-prefix": name.upper(),
         "head-repo": env.get("HEAD_REPOSITORY"),
