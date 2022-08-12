@@ -144,6 +144,7 @@ def get_decision_parameters(graph_config, options):
         for n in [
             "base_repository",
             "base_ref",
+            "base_rev",
             "head_repository",
             "head_rev",
             "head_ref",
@@ -172,6 +173,14 @@ def get_decision_parameters(graph_config, options):
         candidate_base_ref=options.get("base_ref"),
         head_ref=options.get("head_ref"),
         base_rev=options.get("base_rev"),
+    )
+
+    parameters["base_rev"] = _determine_more_accurate_base_rev(
+        repo,
+        base_ref=parameters["base_ref"],
+        candidate_base_rev=options.get("base_rev"),
+        head_rev=options.get("head_rev"),
+        env_prefix=_get_env_prefix(graph_config),
     )
 
     # Define default filter list, as most configurations shouldn't need
@@ -262,6 +271,48 @@ def _determine_more_accurate_base_ref(repo, candidate_base_ref, head_ref, base_r
         )
 
     return base_ref
+
+
+def _determine_more_accurate_base_rev(
+    repo, base_ref, candidate_base_rev, head_rev, env_prefix
+):
+    if not candidate_base_rev:
+        logger.info("base_rev is not set.")
+        base_ref_or_rev = base_ref
+    elif candidate_base_rev == Repository.NULL_REVISION:
+        logger.info("base_rev equals the null revision. This branch is a new one.")
+        base_ref_or_rev = base_ref
+    elif not repo.does_revision_exist_locally(candidate_base_rev):
+        logger.warning(
+            "base_rev does not exist locally. It is likely because the branch was force-pushed. "
+            "taskgraph is not able to assess how many commits were changed and assumes it is only "
+            f"the last one. Please set the {env_prefix.upper()}_BASE_REV environment variable "
+            "in the decision task and provide `--base-rev` to taskgraph."
+        )
+        base_ref_or_rev = base_ref
+    else:
+        base_ref_or_rev = candidate_base_rev
+
+    if base_ref_or_rev == base_ref:
+        logger.info(
+            f'Using base_ref "{base_ref}" to determine latest common revision...'
+        )
+
+    base_rev = repo.find_latest_common_revision(base_ref_or_rev, head_rev)
+    if base_rev != candidate_base_rev:
+        if base_ref_or_rev == candidate_base_rev:
+            logger.info("base_rev is not an ancestor of head_rev.")
+
+        logger.info(
+            f'base_rev has been reset from "{candidate_base_rev}" to "{base_rev}".'
+        )
+
+    return base_rev
+
+
+def _get_env_prefix(graph_config):
+    repo_keys = list(graph_config["taskgraph"].get("repositories", {}).keys())
+    return repo_keys[0] if repo_keys else ""
 
 
 def set_try_config(parameters, task_config_file):

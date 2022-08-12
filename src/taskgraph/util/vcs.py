@@ -18,6 +18,13 @@ PUSHLOG_TMPL = "{}/json-pushes?version=2&changeset={}&tipsonly=1&full=1"
 
 
 class Repository(ABC):
+    # Both mercurial and git use sha1 as revision idenfiers. Luckily, both define
+    # the same value as the null revision.
+    #
+    # https://github.com/git/git/blob/dc04167d378fb29d30e1647ff6ff51dd182bc9a3/t/oid-info/hash-info#L7
+    # https://www.mercurial-scm.org/repo/hg-stable/file/82efc31bd152/mercurial/node.py#l30
+    NULL_REVISION = "0000000000000000000000000000000000000000"
+
     def __init__(self, path):
         self.path = path
         self.binary = which(self.tool)

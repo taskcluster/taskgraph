@@ -597,6 +597,12 @@ def image_digest(args):
     "--base-ref", default="", help='Reference of the revision in the "base" repository'
 )
 @argument(
+    "--base-rev",
+    default="",
+    help="Taskgraph decides what to do based on the revision range between "
+    "`--base-rev` and `--head-rev`. Value is determined automatically if not provided",
+)
+@argument(
     "--head-repository",
     required=True,
     help='URL for "head" repository to fetch revision from',

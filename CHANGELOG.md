@@ -14,6 +14,7 @@
 - `base_ref` parameter that points to the reference (e.g.: a branch) on the base repository
 - `vcs.find_latest_common_revision()` which finds the common ancestor between a provided `base_ref` and the current `head_rev`
 - `vcs.does_revision_exist_locally()` to find out if a changeset/commit exists in the locally cloned repository
+- `base_rev` parameter that points to the most common ancestor between the ancestors of `head_rev` and `base_ref`
 
 ## [2.0.0] - 2022-08-01
 

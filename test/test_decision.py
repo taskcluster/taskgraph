@@ -61,6 +61,15 @@ class TestGetDecisionParameters(unittest.TestCase):
             "tasks_for": "hg-push",
             "level": "3",
         }
+        self.old_determine_more_accurate_base_rev = (
+            decision._determine_more_accurate_base_rev
+        )
+        decision._determine_more_accurate_base_rev = lambda *_, **__: "abcd"
+
+    def tearDown(self):
+        decision._determine_more_accurate_base_rev = (
+            self.old_determine_more_accurate_base_rev
+        )
 
     def test_simple_options(self):
         params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
@@ -95,3 +104,51 @@ def test_determine_more_accurate_base_ref(
         )
         == expected_base_ref
     )
+
+
+@pytest.mark.parametrize(
+    "common_rev, candidate_base_rev, expected_base_ref_or_rev, expected_base_rev",
+    (
+        ("found-rev", "", "base-ref", "found-rev"),
+        (
+            "found-rev",
+            "0000000000000000000000000000000000000000",
+            "base-ref",
+            "found-rev",
+        ),
+        ("found-rev", "non-existing-rev", "base-ref", "found-rev"),
+        ("existing-rev", "existing-rev", "existing-rev", "existing-rev"),
+    ),
+)
+def test_determine_more_accurate_base_rev(
+    common_rev, candidate_base_rev, expected_base_ref_or_rev, expected_base_rev
+):
+    repo_mock = unittest.mock.MagicMock()
+    repo_mock.find_latest_common_revision.return_value = common_rev
+    repo_mock.does_revision_exist_locally = lambda rev: rev == "existing-rev"
+
+    assert (
+        decision._determine_more_accurate_base_rev(
+            repo_mock, "base-ref", candidate_base_rev, "head-rev", env_prefix="PREFIX"
+        )
+        == expected_base_rev
+    )
+    repo_mock.find_latest_common_revision.assert_called_once_with(
+        expected_base_ref_or_rev, "head-rev"
+    )
+
+
+@pytest.mark.parametrize(
+    "graph_config, expected_value",
+    (
+        ({"taskgraph": {}}, ""),
+        ({"taskgraph": {"repositories": {}}}, ""),
+        ({"taskgraph": {"repositories": {"mobile": {}}}}, "mobile"),
+        (
+            {"taskgraph": {"repositories": {"mobile": {}, "some-other-repo": {}}}},
+            "mobile",
+        ),
+    ),
+)
+def test_get_env_prefix(graph_config, expected_value):
+    assert decision._get_env_prefix(graph_config) == expected_value
