@@ -334,3 +334,32 @@ def test_working_directory_clean(repo):
     # removed file
     repo.run("rm", bar)
     assert not repo.working_directory_clean()
+
+
+def test_find_latest_common_revision(repo_with_remote):
+    repo, remote_name = repo_with_remote
+
+    expected_latest_common_revision = repo.head_rev
+
+    with open(os.path.join(repo.path, "some_file"), "w") as f:
+        f.write("some content")
+
+    repo.run("add", ".")
+    repo.run("commit", "-m", "Add new revision")
+
+    assert repo.head_rev != expected_latest_common_revision
+
+    if repo.tool == "git":
+        base_ref = f"{remote_name}/{repo.branch}"
+        assert (
+            repo.find_latest_common_revision(base_ref, repo.head_rev)
+            == expected_latest_common_revision
+        )
+    else:
+        # hg doesn't have the concept of remote branches
+        assert (
+            repo.find_latest_common_revision(
+                expected_latest_common_revision, repo.head_rev
+            )
+            == expected_latest_common_revision
+        )

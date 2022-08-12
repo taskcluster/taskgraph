@@ -80,6 +80,11 @@ class Repository(ABC):
     def update(self, ref):
         """Update the working directory to the specified reference."""
 
+    @abstractmethod
+    def find_latest_common_revision(self, base_ref_or_rev, head_rev):
+        """Find the latest revision that is common to both the given
+        ``head_rev`` and ``base_ref_or_rev``"""
+
 
 class HgRepository(Repository):
     tool = "hg"
@@ -145,6 +150,15 @@ class HgRepository(Repository):
 
     def update(self, ref):
         return self.run("update", "--check", ref)
+
+    def find_latest_common_revision(self, base_ref_or_rev, head_rev):
+        return self.run(
+            "log",
+            "-r",
+            f"last(ancestors('{base_ref_or_rev}') and ancestors('{head_rev}'))",
+            "--template",
+            "{node}",
+        ).strip()
 
 
 class GitRepository(Repository):
@@ -272,6 +286,9 @@ class GitRepository(Repository):
 
     def update(self, ref):
         self.run("checkout", ref)
+
+    def find_latest_common_revision(self, base_ref_or_rev, head_rev):
+        return self.run("merge-base", base_ref_or_rev, head_rev).strip()
 
 
 def get_repository(path):
