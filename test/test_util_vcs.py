@@ -363,3 +363,18 @@ def test_find_latest_common_revision(repo_with_remote):
             )
             == expected_latest_common_revision
         )
+
+
+def test_does_revision_exist_locally(repo):
+    first_revision = repo.head_rev
+
+    with open(os.path.join(repo.path, "some_file"), "w") as f:
+        f.write("some content")
+
+    repo.run("add", ".")
+    repo.run("commit", "-m", "Add new revision")
+
+    last_revision = repo.head_rev
+    assert repo.does_revision_exist_locally(first_revision)
+    assert repo.does_revision_exist_locally(last_revision)
+    assert not repo.does_revision_exist_locally("deadbeef")
