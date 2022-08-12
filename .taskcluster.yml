@@ -49,6 +49,23 @@ tasks:
                   else:
                       $if: 'tasks_for in ["cron", "action"]'
                       then: '${repository.project}'
+          base_ref:
+              $if: 'tasks_for == "github-pull-request"'
+              then: ${event.pull_request.base.ref}
+              else:
+                  # event.base_ref is barely documented[1]. Testing showed it's only
+                  # defined when creating a new branch. It's null when pushing to an
+                  # existing branch
+                  #
+                  # [1] https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
+                  $if: 'tasks_for == "github-push" && event.base_ref'
+                  then: ${event.base_ref}
+                  else:
+                      $if: 'tasks_for == "github-push"'
+                      then: ${event.ref}
+                      else:
+                          $if: 'tasks_for in ["cron", "action"]'
+                          then: '${push.branch}'
           head_branch:
               $if: 'tasks_for == "github-pull-request"'
               then: ${event.pull_request.head.ref}
@@ -214,6 +231,7 @@ tasks:
                           # to `mach taskgraph decision` are all on the command line.
                           $merge:
                               - TASKGRAPH_BASE_REPOSITORY: '${baseRepoUrl}'
+                                TASKGRAPH_BASE_REF: '${base_ref}'
                                 TASKGRAPH_HEAD_REPOSITORY: '${repoUrl}'
                                 TASKGRAPH_HEAD_REF: '${head_branch}'
                                 TASKGRAPH_HEAD_REV: '${head_sha}'
@@ -269,6 +287,7 @@ tasks:
                                     --repository-type=git
                                     --tasks-for='${tasks_for}'
                                     --base-repository='${baseRepoUrl}'
+                                    --base-ref='${base_ref}'
                                     --head-repository='${repoUrl}'
                                     --head-ref='${head_branch}'
                                     --head-rev='${head_sha}'
