@@ -283,7 +283,7 @@ here is the recommended method:
 
        then:
            payload:
-               feature:
+               features:
                    taskclusterProxy: true
 
    c. Define the environment and command. The Taskgraph docker images have a
