@@ -611,6 +611,23 @@ def git_checkout(
 
     run_required_command(b'vcs', args, cwd=destination_path)
 
+    if os.path.exists(os.path.join(destination_path, '.gitmodules')):
+        args = [
+            'git',
+            'submodule',
+            'init',
+        ]
+
+        run_required_command(b'vcs', args, cwd=destination_path)
+
+        args = [
+            'git',
+            'submodule',
+            'update',
+        ]
+
+        run_required_command(b'vcs', args, cwd=destination_path)
+
     _clean_git_checkout(destination_path)
 
     args = [
