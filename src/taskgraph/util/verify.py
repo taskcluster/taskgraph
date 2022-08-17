@@ -6,6 +6,7 @@
 import logging
 import sys
 from abc import ABC, abstractmethod
+from textwrap import dedent
 
 import attr
 
@@ -13,6 +14,7 @@ from taskgraph.config import GraphConfig
 from taskgraph.parameters import Parameters
 from taskgraph.taskgraph import TaskGraph
 from taskgraph.util.attributes import match_run_on_projects
+from taskgraph.util.taskcluster import get_current_scopes
 from taskgraph.util.treeherder import join_symbol
 
 logger = logging.getLogger(__name__)
@@ -281,3 +283,46 @@ def verify_always_optimized(task, taskgraph, scratch_pad, graph_config, paramete
         return
     if task.task.get("workerType") == "always-optimized":
         raise Exception(f"Could not optimize the task {task.label!r}")
+
+
+@verifications.add("decision")
+def verify_scopes_satisfaction(task, taskgraph, scratch_pad, graph_config, parameters):
+    if task is None:
+        if not scratch_pad:
+            return
+
+        s = "s" if len(scratch_pad) else ""
+        are = "are" if len(scratch_pad) else "is"
+
+        failstr = ""
+        for label, scopes in scratch_pad.items():
+            failstr += "\n" + f"  {label}:"
+            failstr += (
+                "    \n" + "\n    ".join([f"    {s}" for s in sorted(scopes)]) + "\n"
+            )
+
+        msg = dedent(
+            f"""
+        Required scopes are missing!
+
+        The Decision task does not have all of the scopes necessary to
+        perform this request. The following task{s} {are} requesting scopes
+        the Decision task does not have:
+        """
+        )
+        msg += failstr
+        raise Exception(msg)
+
+    current_scopes = get_current_scopes()
+    missing = set()
+    for required in task.task["scopes"]:
+        for current in current_scopes:
+            if current == required:
+                break
+            if current[-1] == "*" and required.startswith(current[:-1]):
+                break
+        else:
+            missing.add(required)
+
+    if missing:
+        scratch_pad[task.label] = sorted(missing)

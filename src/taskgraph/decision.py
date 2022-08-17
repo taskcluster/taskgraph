@@ -22,6 +22,7 @@ from taskgraph.taskgraph import TaskGraph
 from taskgraph.util.python_path import find_object
 from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.vcs import Repository, get_repository
+from taskgraph.util.verify import verifications
 from taskgraph.util.yaml import load_yaml
 
 logger = logging.getLogger(__name__)
@@ -122,6 +123,9 @@ def taskgraph_decision(options, parameters=None):
     RUN_TASK_DIR = pathlib.Path(__file__).parent / "run-task"
     shutil.copy2(RUN_TASK_DIR / "run-task", ARTIFACTS_DIR)
     shutil.copy2(RUN_TASK_DIR / "fetch-content", ARTIFACTS_DIR)
+
+    # run 'decision' verifications
+    verifications("decision", tgg.morphed_task_graph, tgg.graph_config, tgg.parameters)
 
     # actually create the graph
     create_tasks(
