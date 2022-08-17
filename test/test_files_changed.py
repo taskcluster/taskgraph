@@ -6,6 +6,7 @@
 import json
 import os
 import unittest
+from unittest.mock import MagicMock
 
 from taskgraph import files_changed
 
@@ -46,14 +47,18 @@ class TestGetChangedFiles(unittest.TestCase):
 
         files_changed.requests.get = fake_get
 
+        self.repo_mock = MagicMock()
+        files_changed.get_repository = lambda _: self.repo_mock
+
     def tearDown(self):
         files_changed.requests.get = self.old_get
         files_changed.get_changed_files.clear()
 
-    def test_get_changed_files(self):
+    def test_get_changed_files_automationrelevance(self):
         """Get_changed_files correctly gets the list of changed files in a push.
         This tests against the production hg.mozilla.org so that it will detect
         any changes in the format of the returned data."""
+        self.repo_mock.tool = "hg"
         self.assertEqual(
             sorted(
                 files_changed.get_changed_files(
@@ -63,11 +68,30 @@ class TestGetChangedFiles(unittest.TestCase):
             FILES_CHANGED,
         )
 
+    def test_get_changed_files_vcs(self):
+        """Get_changed_files correctly gets the list of changed files in a push.
+        This tests against the production hg.mozilla.org so that it will detect
+        any changes in the format of the returned data."""
+        self.repo_mock.tool = "git"
+        self.repo_mock.get_changed_files = lambda *_, **__: [
+            "some/file",
+            "some/other/file",
+        ]
+        self.assertEqual(
+            sorted(
+                files_changed.get_changed_files(
+                    PARAMS["head_repository"],
+                    PARAMS["head_rev"],
+                )
+            ),
+            ["some/file", "some/other/file"],
+        )
+
 
 class TestCheck(unittest.TestCase):
     def setUp(self):
         files_changed.get_changed_files[
-            PARAMS["head_repository"], PARAMS["head_rev"]
+            PARAMS["head_repository"], PARAMS["head_rev"], None
         ] = FILES_CHANGED
 
     def tearDown(self):
