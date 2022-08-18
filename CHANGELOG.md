@@ -1,5 +1,10 @@
 # Change Log
 
+## [3.0.0] - TBD
+
+### Changed
+- `run-task` now clones all git-submodules at the same time as cloning the base/head repository.
+
 ## [2.0.0] - 2022-08-01
 
 ### Changed
