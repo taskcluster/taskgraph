@@ -94,7 +94,7 @@ class TestCreate(unittest.TestCase):
 
         def fail(*args):
             print("UHOH")
-            raise RuntimeError("oh noes!")
+            raise RuntimeError("oh no!")
 
         create_task.side_effect = fail
 
