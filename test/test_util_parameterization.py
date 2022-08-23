@@ -25,7 +25,7 @@ def test_timestamps_buried_replacement():
     now = datetime.datetime(2018, 1, 1)
     input = {"key": [{"key2": [{"relative-datestamp": "1 day"}]}]}
     assert resolve_timestamps(now, input) == {
-        "key": [{"key2": ["2018-01-02T00:00:00Z"]}]
+        "key": [{"key2": ["2018-01-02T00:00:00.000Z"]}]
     }
 
 
