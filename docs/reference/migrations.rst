@@ -3,6 +3,15 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+
+2.x -> 3.x
+----------
+
+* Rename ``config.kind_dependencies_tasks`` to ``config.kind_dependencies_tasks.values()``
+* Rename ``vcs.head_ref`` to ``vcs.head_rev``. ``vcs.head_ref`` still exists but points to the actual reference instead of the revision.
+* Rename ``vcs.base_ref`` to ``vcs.base_rev``. Same rationale as above.
+
+
 1.x -> 2.x
 ----------
 
