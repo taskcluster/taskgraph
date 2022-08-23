@@ -1,8 +1,9 @@
 # Change Log
 
-## [3.0.0] - TBD
+## [3.0.0] - 2022-08-23
 
 ### Changed
+- BREAKING CHANGE: `TransformConfig.kind_dependencies_tasks` is now a dictionary keyed by task label.
 - BREAKING CHANGE: `vcs.head_ref` was renamed into `vcs.head_rev` to clarify that the function returns a revision. This also matches `--head-rev`.
 - BREAKING CHANGE: Similarly, `vcs.base_ref` was renamed into `vcs.base_rev`.
 - `run-task` now clones all git-submodules at the same time as cloning the base/head repository.
@@ -17,6 +18,10 @@
 - `vcs.find_latest_common_revision()` which finds the common ancestor between a provided `base_ref` and the current `head_rev`
 - `vcs.does_revision_exist_locally()` to find out if a changeset/commit exists in the locally cloned repository
 - `base_rev` parameter that points to the most common ancestor between the ancestors of `head_rev` and `base_ref`
+- `@register_morph` decorator which does what the name implies.
+
+### Fixed
+- Regression in 2.0.0: action tasks that created new tasks are now green again. ([#99](https://github.com/taskcluster/taskgraph/pull/99)/[#100](https://github.com/taskcluster/taskgraph/pull/100))
 
 ## [2.0.0] - 2022-08-01
 
