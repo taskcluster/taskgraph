@@ -28,14 +28,17 @@ Taskgraph
 
 Taskgraph is a Python library to generate graphs of tasks for the `Taskcluster
 CI`_ service. It is the recommended approach for configuring tasks once your
-project outgrows a single `.taskcluster.yml`_ file.
+project outgrows a single `.taskcluster.yml`_ file and is what powers the over
+30,000 tasks and counting that make up Firefox's CI.
+
+For more information and usage instructions, `see the docs`_.
 
 How It Works
 ------------
 
-Unlike most CI offerings, Taskcluster is a generic task execution platform.
-This means that tasks can be scheduled via its `comprehensive API`_, and aren't
-limited to being triggered in response to supported events.
+Taskgraph leverages the fact that Taskcluster is a generic task execution
+platform. This means that tasks can be scheduled via its `comprehensive API`_,
+and aren't limited to being triggered in response to supported events.
 
 Taskgraph leverages this execution platform to allow CI systems to scale to any
 size or complexity.
@@ -55,8 +58,6 @@ Taskgraph's combination of declarative task configuration combined with
 programmatic alteration are what allow it to support CI systems of any scale.
 Taskgraph is the library that powers the 30,000+ tasks making up `Firefox's
 CI`_.
-
-For more information and usage instructions, `see the docs`_.
 
 .. _Taskcluster CI: https://taskcluster.net/
 .. _comprehensive API: https://docs.taskcluster.net/docs/reference/platform/queue/api
