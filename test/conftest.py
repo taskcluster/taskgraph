@@ -100,9 +100,7 @@ def fake_load_graph_config(root_dir):
                 }
             },
             "task-priority": "low",
-            "treeherder": {
-                "group-names": []
-            },
+            "treeherder": {"group-names": []},
         },
         root_dir,
     )
@@ -117,6 +115,7 @@ def graph_config(datadir):
 
 class FakeParameters(dict):
     strict = True
+
     def is_try(self):
         return False
 

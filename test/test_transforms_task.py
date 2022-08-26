@@ -7,10 +7,11 @@ from pathlib import Path
 from pprint import pprint
 
 import pytest
-from .conftest import FakeParameters
 
 from taskgraph.transforms import task
 from taskgraph.transforms.base import TransformConfig
+
+from .conftest import FakeParameters
 
 TASK_DEFAULTS = {
     "description": "fake description",
@@ -54,67 +55,67 @@ def assert_github_pull_request_dot_git(task_dict):
     (
         pytest.param(
             {
-                'base_repository': 'http://hg.example.com',
-                'build_date': 0, 
-                'build_number': 1,
-                'head_repository': 'http://hg.example.com',
-                'head_rev': 'abcdef',
-                'head_ref': 'default',
-                'level': '1',
-                'moz_build_date': 0,
-                'next_version': '1.0.1',
-                'owner': 'some-owner',
-                'project': 'some-project',
-                'pushlog_id': 1,
-                'repository_type': 'hg',
-                'target_tasks_method': 'test_method',
-                'tasks_for': 'hg-push',
-                'try_mode': None,
-                'version': '1.0.0'
+                "base_repository": "http://hg.example.com",
+                "build_date": 0,
+                "build_number": 1,
+                "head_repository": "http://hg.example.com",
+                "head_rev": "abcdef",
+                "head_ref": "default",
+                "level": "1",
+                "moz_build_date": 0,
+                "next_version": "1.0.1",
+                "owner": "some-owner",
+                "project": "some-project",
+                "pushlog_id": 1,
+                "repository_type": "hg",
+                "target_tasks_method": "test_method",
+                "tasks_for": "hg-push",
+                "try_mode": None,
+                "version": "1.0.0",
             },
             id="hg-push",
         ),
         pytest.param(
             {
-                'base_repository': 'http://github.com/mozilla/example',
-                'build_date': 0, 
-                'build_number': 1,
-                'head_repository': 'http://github.com/mozilla/example',
-                'head_rev': 'abcdef',
-                'head_ref': 'default',
-                'level': '1',
-                'moz_build_date': 0,
-                'next_version': '1.0.1',
-                'owner': 'some-owner',
-                'project': 'some-project',
-                'pushlog_id': 1,
-                'repository_type': 'git',
-                'target_tasks_method': 'test_method',
-                'tasks_for': 'github-pull-request',
-                'try_mode': None,
-                'version': '1.0.0'
+                "base_repository": "http://github.com/mozilla/example",
+                "build_date": 0,
+                "build_number": 1,
+                "head_repository": "http://github.com/mozilla/example",
+                "head_rev": "abcdef",
+                "head_ref": "default",
+                "level": "1",
+                "moz_build_date": 0,
+                "next_version": "1.0.1",
+                "owner": "some-owner",
+                "project": "some-project",
+                "pushlog_id": 1,
+                "repository_type": "git",
+                "target_tasks_method": "test_method",
+                "tasks_for": "github-pull-request",
+                "try_mode": None,
+                "version": "1.0.0",
             },
             id="github-pull-request",
         ),
         pytest.param(
             {
-                'base_repository': 'git@github.com://github.com/mozilla/example.git',
-                'build_date': 0, 
-                'build_number': 1,
-                'head_repository': 'git@github.com://github.com/mozilla/example.git',
-                'head_rev': 'abcdef',
-                'head_ref': 'default',
-                'level': '1',
-                'moz_build_date': 0,
-                'next_version': '1.0.1',
-                'owner': 'some-owner',
-                'project': 'some-project',
-                'pushlog_id': 1,
-                'repository_type': 'git',
-                'target_tasks_method': 'test_method',
-                'tasks_for': 'github-pull-request',
-                'try_mode': None,
-                'version': '1.0.0'
+                "base_repository": "git@github.com://github.com/mozilla/example.git",
+                "build_date": 0,
+                "build_number": 1,
+                "head_repository": "git@github.com://github.com/mozilla/example.git",
+                "head_rev": "abcdef",
+                "head_ref": "default",
+                "level": "1",
+                "moz_build_date": 0,
+                "next_version": "1.0.1",
+                "owner": "some-owner",
+                "project": "some-project",
+                "pushlog_id": 1,
+                "repository_type": "git",
+                "target_tasks_method": "test_method",
+                "tasks_for": "github-pull-request",
+                "try_mode": None,
+                "version": "1.0.0",
             },
             id="github-pull-request-dot-git",
         ),
@@ -124,14 +125,14 @@ def test_transforms(request, run_transform, graph_config, task_params):
     # instead of make_transform_config fixture, to get custom parameters
     params = FakeParameters(task_params)
     transform_config = TransformConfig(
-            "test",
-            str(here),
-            {},
-            params,
-            {},
-            graph_config,
-            write_artifacts=False,
-        )
+        "test",
+        str(here),
+        {},
+        params,
+        {},
+        graph_config,
+        write_artifacts=False,
+    )
     task_dict = deepcopy(TASK_DEFAULTS)
 
     task_dict = run_transform(task.transforms, task_dict, config=transform_config)[0]
