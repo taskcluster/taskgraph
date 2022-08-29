@@ -92,13 +92,15 @@ def fake_load_graph_config(root_dir):
             "workers": {
                 "aliases": {
                     "t-linux": {
-                        "provisioners": "taskgraph-t",
+                        "provisioner": "taskgraph-t",
                         "implementation": "docker-worker",
                         "os": "linux",
                         "worker-type": "linux",
                     }
                 }
             },
+            "task-priority": "low",
+            "treeherder": {"group-names": []},
         },
         root_dir,
     )
@@ -113,6 +115,12 @@ def graph_config(datadir):
 
 class FakeParameters(dict):
     strict = True
+
+    def is_try(self):
+        return False
+
+    def file_url(self, path, pretty=False):
+        return path
 
 
 class FakeOptimization(OptimizationStrategy):
@@ -143,7 +151,9 @@ def parameters():
             "level": "1",
             "moz_build_date": 0,
             "next_version": "1.0.1",
+            "owner": "some-owner",
             "project": "some-project",
+            "pushlog_id": 1,
             "repository_type": "hg",
             "target_tasks_method": "test_method",
             "tasks_for": "hg-push",
