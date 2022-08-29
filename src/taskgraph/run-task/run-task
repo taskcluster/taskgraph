@@ -640,7 +640,7 @@ def git_checkout(
     args = [
         'git',
         'fetch',
-        '--tags',
+        '--no-tags',
         head_repo,
         ref if ref else '+refs/heads/*:refs/remotes/work/*'
     ]
