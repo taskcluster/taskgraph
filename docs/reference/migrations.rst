@@ -7,7 +7,8 @@ This page can help when migrating Taskgraph across major versions.
 2.x -> 3.x
 ----------
 
-* Rename ``config.kind_dependencies_tasks`` to ``config.kind_dependencies_tasks.values()``
+* Use a `decision image <https://hub.docker.com/r/mozillareleases/taskgraph/tags>`_ at least as recent as `this one <https://hub.docker.com/layers/taskgraph/mozillareleases/taskgraph/decision-e878f3e1534b0fd8584921db9eb0f194c243566649667eedaf21ed5055f06a42/images/sha256-4c8cf846d6be5dfd61624121f75d62d828b0e5fcbd49950fce23bf5389720a70>`_.
+* Rename ``config.kind_dependencies_tasks`` to ``config.kind_dependencies_tasks.values()``.
 * Rename ``vcs.head_ref`` to ``vcs.head_rev``. ``vcs.head_ref`` still exists but points to the actual reference instead of the revision.
 * Rename ``vcs.base_ref`` to ``vcs.base_rev``. Same rationale as above.
 
