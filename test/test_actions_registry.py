@@ -1,6 +1,7 @@
-from contextlib import nullcontext as does_not_raise
+from test import does_not_raise
 
 import pytest
+from mozilla_repo_urls import InvalidRepoUrlError
 
 from taskgraph.actions import registry
 
@@ -13,7 +14,7 @@ from taskgraph.actions import registry
             "retrigger",
             {"head_repository": "https://some.git.repo"},
             [],
-            pytest.raises(ValueError),
+            pytest.raises(InvalidRepoUrlError),
         ),
         (
             "retrigger",
@@ -31,6 +32,12 @@ from taskgraph.actions import registry
             "retrigger",
             {"head_repository": "https://github.com/taskcluster/taskgraph"},
             ["assume:repo:github.com/taskcluster/taskgraph:action:generic"],
+            does_not_raise(),
+        ),
+        (
+            "retrigger",
+            {"head_repository": "git@github.com:mozilla-mobile/firefox-android.git"},
+            ["assume:repo:github.com/mozilla-mobile/firefox-android:action:generic"],
             does_not_raise(),
         ),
     ),
