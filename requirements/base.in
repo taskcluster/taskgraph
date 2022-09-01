@@ -1,6 +1,7 @@
 appdirs>=1.4
 attrs>=19.1.0
 json-e>=2.7
+mozilla-repo-urls
 PyYAML>=5.4
 redo>=2.0
 requests>=2.25
