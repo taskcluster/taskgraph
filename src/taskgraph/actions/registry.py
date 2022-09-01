@@ -291,14 +291,14 @@ def sanity_check_task_scope(callback, parameters, graph_config):
         if action.cb_name == callback:
             break
     else:
-        raise Exception(f"No action with cb_name {callback}")
+        raise ValueError(f"No action with cb_name {callback}")
 
     actionPerm = "generic" if action.generic else action.cb_name
 
     repo_param = "head_repository"
     head_repository = parameters[repo_param]
     if not head_repository.startswith(("https://hg.mozilla.org", "https://github.com")):
-        raise Exception(
+        raise ValueError(
             "{} is not either https://hg.mozilla.org or https://github.com !"
         )
 
@@ -308,7 +308,7 @@ def sanity_check_task_scope(callback, parameters, graph_config):
     # get_current_scopes here calls the auth service through the Taskcluster Proxy, giving
     # the precise scopes available to this task.
     if expected_scope not in taskcluster.get_current_scopes():
-        raise Exception(f"Expected task scope {expected_scope} for this action")
+        raise ValueError(f"Expected task scope {expected_scope} for this action")
 
 
 def trigger_action_callback(
