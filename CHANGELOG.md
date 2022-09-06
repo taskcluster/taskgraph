@@ -1,13 +1,18 @@
 # Change Log
 
+## [3.1.0] - 2022-09-06
+
+### Added
+- SSH repositories are now supported in action tasks
+
 ## [3.0.1] - 2022-08-30
 
 ### Changed
-* `run-task` doesn't pull tags from git `head_repository`
+- `run-task` doesn't pull tags from git `head_repository`
 
 ### Fixed
-* `util.time.json_time_from_now()` and `util.time.current_json_time()` now always returns milliseconds instead of sometimes rounding it up
-* Trimmed `.git` from tc-treeherder route's project
+- `util.time.json_time_from_now()` and `util.time.current_json_time()` now always returns milliseconds instead of sometimes rounding it up
+- Trimmed `.git` from tc-treeherder route's project
 
 ## [3.0.0] - 2022-08-23
 
