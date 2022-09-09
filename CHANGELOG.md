@@ -1,5 +1,11 @@
 # Change Log
 
+## [3.2.0] - TBD
+
+### Fixed
+
+- `vcs.remote_name` returns the first available remote and warns about it
+
 ## [3.1.0] - 2022-09-06
 
 ### Added
