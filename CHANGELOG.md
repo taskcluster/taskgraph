@@ -5,6 +5,7 @@
 ### Fixed
 
 - `vcs.remote_name` returns the first available remote and warns about it
+- `vcs.default_branch` returns the remote branch because the local one may not exist
 
 ## [3.1.0] - 2022-09-06
 
