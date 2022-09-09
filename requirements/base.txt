@@ -33,9 +33,9 @@ json-e==4.4.3 \
     --hash=sha256:604cc506746ece244e5f4c66ce1b77887b0340749f9f10f58f311caf5701315f \
     --hash=sha256:8ed3974faa887ca96a7987298f6550cf2ad35472419a980766b3abe48258de0a
     # via -r requirements/base.in
-mozilla-repo-urls==0.0.2 \
-    --hash=sha256:0b9f44c60624d943df064fe58843eadb6fc38bfcb939cb87dc2190e9fdbdec76 \
-    --hash=sha256:e96702cf7b232d351fc431e9fad24ef361f585e713da49b1cc77daaecf02fb13
+mozilla-repo-urls==0.0.3 \
+    --hash=sha256:3b2f9b42111ce3d50ecdcd081a62229e1fdc8f5472adbf405abe12d3ba8e8af5 \
+    --hash=sha256:673c80a4d0ed449093203b88e119e0bf1074026f891c1dd50aa04d534fd0658c
     # via -r requirements/base.in
 pyyaml==6.0 \
     --hash=sha256:0283c35a6a9fbf047493e3a0ce8d79ef5030852c51e9d911a27badfde0605293 \

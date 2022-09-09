@@ -14,6 +14,7 @@ from subprocess import CalledProcessError
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
+from mozilla_repo_urls import parse
 from voluptuous import ALLOW_EXTRA, Any, Optional, Required, Schema
 
 from taskgraph.util import yaml
@@ -79,7 +80,8 @@ def _get_defaults(repo_root=None):
     repo = get_repository(repo_path)
     try:
         repo_url = repo.get_url()
-        project = repo_url.rsplit("/", 1)[1]
+        parsed_url = parse(repo_url)
+        project = parsed_url.repo_name
     except (CalledProcessError, IndexError):
         # IndexError is raised if repo url doesn't have any slashes.
         repo_url = ""
