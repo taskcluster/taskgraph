@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
+import logging
 import os
 import re
 import subprocess
@@ -15,6 +16,8 @@ from redo import retry
 from taskgraph.util.path import ancestors
 
 PUSHLOG_TMPL = "{}/json-pushes?version=2&changeset={}&tipsonly=1&full=1"
+
+logger = logging.getLogger(__name__)
 
 
 class Repository(ABC):
@@ -64,8 +67,36 @@ class Repository(ABC):
         """Current branch or bookmark the checkout has active."""
 
     @abstractproperty
+    def all_remote_names(self):
+        """Name of all configured remote repositories."""
+
+    @abstractproperty
+    def default_remote_name(self):
+        """Name the VCS defines for the remote repository when cloning
+        it for the first time. This name may not exist anymore if users
+        changed the default configuration, for instance."""
+
+    @abstractproperty
     def remote_name(self):
         """Name of the remote repository."""
+
+    def _get_most_suitable_remote(self, remote_instructions):
+        remotes = self.all_remote_names
+        if len(remotes) == 1:
+            return remotes[0]
+
+        if self.default_remote_name in remotes:
+            return self.default_remote_name
+
+        first_remote = remotes[0]
+        logger.warning(
+            f"Unable to determine which remote repository to use between: {remotes}. "
+            f'Arbitrarily using the first one "{first_remote}". Please set an '
+            f"`{self.default_remote_name}` remote if the arbitrarily selected one "
+            f"is not right. To do so: {remote_instructions}"
+        )
+
+        return first_remote
 
     @abstractproperty
     def default_branch(self):
@@ -147,6 +178,7 @@ class Repository(ABC):
 
 class HgRepository(Repository):
     tool = "hg"
+    default_remote_name = "default"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -171,16 +203,16 @@ class HgRepository(Repository):
         return None
 
     @property
-    def remote_name(self):
+    def all_remote_names(self):
         remotes = self.run("paths", "--quiet").splitlines()
-        if len(remotes) == 1:
-            return remotes[0]
+        if not remotes:
+            raise RuntimeError("No remotes defined")
+        return remotes
 
-        if "default" in remotes:
-            return "default"
-
-        raise RuntimeError(
-            f"Cannot determine remote repository name. Candidate remotes: {remotes}"
+    @property
+    def remote_name(self):
+        return self._get_most_suitable_remote(
+            "Edit .hg/hgrc and add:\n\n[paths]\ndefault = $URL",
         )
 
     @property
@@ -285,6 +317,7 @@ class HgRepository(Repository):
 
 class GitRepository(Repository):
     tool = "git"
+    default_remote_name = "origin"
 
     _LS_REMOTE_PATTERN = re.compile(r"ref:\s+refs/heads/(?P<branch_name>\S+)\s+HEAD")
 
@@ -306,6 +339,13 @@ class GitRepository(Repository):
         return self.run("branch", "--show-current").strip() or None
 
     @property
+    def all_remote_names(self):
+        remotes = self.run("remote").splitlines()
+        if not remotes:
+            raise RuntimeError("No remotes defined")
+        return remotes
+
+    @property
     def remote_name(self):
         try:
             remote_branch_name = self.run(
@@ -318,16 +358,7 @@ class GitRepository(Repository):
             if e.returncode != 128:
                 raise
 
-        remotes = self.run("remote").splitlines()
-        if len(remotes) == 1:
-            return remotes[0]
-
-        if "origin" in remotes:
-            return "origin"
-
-        raise RuntimeError(
-            f"Cannot determine remote repository name. Candidate remotes: {remotes}"
-        )
+        return self._get_most_suitable_remote("`git remote add origin $URL`")
 
     @property
     def default_branch(self):

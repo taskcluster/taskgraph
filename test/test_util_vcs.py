@@ -257,7 +257,14 @@ def test_remote_name(repo_with_remote):
         assert repo.remote_name == remote_name
 
 
-def test_remote_name_too_many_remotes(tmpdir, repo_with_remote):
+def test_all_remote_names(tmpdir, repo_with_remote):
+    repo, remote_name = repo_with_remote
+    assert repo.all_remote_names == [remote_name]
+    _create_remote_repo(tmpdir, repo, "upstream2", "remote_path2")
+    assert repo.all_remote_names == [remote_name, "upstream2"]
+
+
+def test_remote_name_many_remotes(tmpdir, repo_with_remote):
     repo, _ = repo_with_remote
     _create_remote_repo(tmpdir, repo, "upstream2", "remote_path2")
 
@@ -265,8 +272,7 @@ def test_remote_name_too_many_remotes(tmpdir, repo_with_remote):
         assert repo.remote_name == "upstream2"  # Branch is set to an upstream one
         repo.run("branch", "--unset-upstream")
 
-    with pytest.raises(RuntimeError):
-        repo.remote_name
+    assert repo.remote_name == "upstream"
 
 
 def test_remote_name_default_and_origin(tmpdir, repo_with_remote):
