@@ -381,33 +381,32 @@ class GitRepository(Repository):
 
     def _get_default_branch_from_remote_query(self):
         # This function requires network access to the repo
-        output = self.run("ls-remote", "--symref", self.remote_name, "HEAD")
+        remote_name = self.remote_name
+        output = self.run("ls-remote", "--symref", remote_name, "HEAD")
         matches = self._LS_REMOTE_PATTERN.search(output)
         if not matches:
             raise RuntimeError(
-                f'Could not find the default branch of remote repository "{self.remote_name}". '
+                f'Could not find the default branch of remote repository "{remote_name}". '
                 "Got: {output}"
             )
 
-        return matches.group("branch_name")
+        branch_name = matches.group("branch_name")
+        return f"{remote_name}/{branch_name}"
 
     def _get_default_branch_from_cloned_metadata(self):
-        output = self.run(
-            "rev-parse", "--abbrev-ref", f"{self.remote_name}/HEAD"
-        ).strip()
-        return "/".join(output.split("/")[1:])
+        return self.run("rev-parse", "--abbrev-ref", f"{self.remote_name}/HEAD").strip()
 
     def _guess_default_branch(self):
         branches = [
-            candidate_branch
+            line.strip()
             for line in self.run(
-                "branch", "--all", "--no-color", "--format=%(refname:short)"
+                "branch", "--all", "--no-color", "--format=%(refname)"
             ).splitlines()
             for candidate_branch in ("main", "master")
-            if candidate_branch == line.strip()
+            if line.strip().endswith(candidate_branch)
         ]
 
-        if branches:
+        if len(branches) == 1:
             return branches[0]
 
         raise RuntimeError(f"Unable to find default branch. Got: {branches}")

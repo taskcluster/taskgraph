@@ -288,7 +288,7 @@ def test_remote_name_default_and_origin(tmpdir, repo_with_remote):
 
 def test_default_branch_guess(repo):
     if repo.tool == "git":
-        assert repo.default_branch == "master"
+        assert repo.default_branch == "refs/heads/master"
     else:
         assert repo.default_branch == "default"
 
@@ -296,7 +296,7 @@ def test_default_branch_guess(repo):
 def test_default_branch_remote_query(repo_with_remote):
     repo, _ = repo_with_remote
     if repo.tool == "git":
-        assert repo.default_branch == "master"
+        assert repo.default_branch == "upstream/master"
     else:
         assert repo.default_branch == "default"
 
@@ -307,7 +307,7 @@ def test_default_branch_cloned_metadata(tmpdir, repo):
         command = ("git", "clone", repo.path, clone_repo_path)
         subprocess.check_output(command, cwd=tmpdir)
         cloned_repo = get_repository(clone_repo_path)
-        assert cloned_repo.default_branch == "master"
+        assert cloned_repo.default_branch == "origin/master"
 
 
 def assert_files(actual, expected):
