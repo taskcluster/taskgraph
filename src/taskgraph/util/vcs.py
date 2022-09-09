@@ -402,7 +402,7 @@ class GitRepository(Repository):
             for line in self.run(
                 "branch", "--all", "--no-color", "--format=%(refname)"
             ).splitlines()
-            for candidate_branch in ("main", "master")
+            for candidate_branch in ("main", "master", "branches/default/tip")
             if line.strip().endswith(candidate_branch)
         ]
 
