@@ -309,6 +309,7 @@ def rerun_task(task_id):
         _do_request(get_task_url(task_id, use_proxy=True) + "/rerun", json={})
 
 
+@memoize
 def get_current_scopes():
     """Get the current scopes.  This only makes sense in a task with the Taskcluster
     proxy enabled, where it returns the actual scopes accorded to the task."""
