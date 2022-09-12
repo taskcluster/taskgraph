@@ -1,11 +1,12 @@
 # Change Log
 
-## [3.2.0] - TBD
+## [3.2.0] - 2022-09-13
 
 ### Fixed
 
 - `vcs.remote_name` returns the first available remote and warns about it
 - `vcs.default_branch` returns the remote branch because the local one may not exist
+- `taskgraph.parameters._get_defaults` trims `.git` from project when repository URL ends with `.git`
 
 ### Added
 
