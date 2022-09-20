@@ -18,4 +18,4 @@ pushdate: 0
 pushlog_id: '0'
 repository_type: git
 target_tasks_method: default
-tasks_for: github-pull-request
+tasks_for: github-pull-request-untrusted

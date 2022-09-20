@@ -35,6 +35,7 @@ tasks:
                 - codecov-uploader
             tests:
                 - coverage.xml
+        run-on-tasks-for: ["github-push", "github-pull-request"]
         run:
             using: run-task
             cwd: '{checkout}'
