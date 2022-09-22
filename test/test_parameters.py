@@ -9,6 +9,7 @@ import os
 from base64 import b64decode
 from unittest import TestCase, mock
 
+import mozilla_repo_urls
 import pytest
 from voluptuous import Optional, Required, Schema
 
@@ -280,3 +281,137 @@ def test_extend_parameters_schema(monkeypatch):
     params.check()
     assert params["foo"] == "1"
     assert params["bar"] is False
+
+
+@pytest.mark.parametrize(
+    "repo_root, raises, expected_repo_root, expected",
+    (
+        (
+            "/some/repo/",
+            False,
+            "/some/repo/",
+            {
+                "base_ref": "a-default-branch",
+                "base_repository": "https://some.url",
+                "base_rev": "baserev",
+                "build_date": 1663804800,
+                "build_number": 1,
+                "do_not_optimize": [],
+                "existing_tasks": {},
+                "filters": ["target_tasks_method"],
+                "head_ref": "some-branch",
+                "head_repository": "https://some.url",
+                "head_rev": "headrev",
+                "head_tag": "",
+                "level": "3",
+                "moz_build_date": "20220922000000",
+                "next_version": None,
+                "optimize_target_tasks": True,
+                "owner": "nobody@mozilla.com",
+                "project": "some-repo-name",
+                "pushdate": 1663804800,
+                "pushlog_id": "0",
+                "repository_type": "git",
+                "target_tasks_method": "default",
+                "tasks_for": "",
+                "version": "1.0.0",
+            },
+        ),
+        (
+            None,
+            False,
+            os.getcwd(),
+            {
+                "base_ref": "a-default-branch",
+                "base_repository": "https://some.url",
+                "base_rev": "baserev",
+                "build_date": 1663804800,
+                "build_number": 1,
+                "do_not_optimize": [],
+                "existing_tasks": {},
+                "filters": ["target_tasks_method"],
+                "head_ref": "some-branch",
+                "head_repository": "https://some.url",
+                "head_rev": "headrev",
+                "head_tag": "",
+                "level": "3",
+                "moz_build_date": "20220922000000",
+                "next_version": None,
+                "optimize_target_tasks": True,
+                "owner": "nobody@mozilla.com",
+                "project": "some-repo-name",
+                "pushdate": 1663804800,
+                "pushlog_id": "0",
+                "repository_type": "git",
+                "target_tasks_method": "default",
+                "tasks_for": "",
+                "version": "1.0.0",
+            },
+        ),
+        (
+            "/some/repo/",
+            True,
+            "/some/repo/",
+            {
+                "base_ref": "a-default-branch",
+                "base_repository": "",
+                "base_rev": "baserev",
+                "build_date": 1663804800,
+                "build_number": 1,
+                "do_not_optimize": [],
+                "existing_tasks": {},
+                "filters": ["target_tasks_method"],
+                "head_ref": "some-branch",
+                "head_repository": "",
+                "head_rev": "headrev",
+                "head_tag": "",
+                "level": "3",
+                "moz_build_date": "20220922000000",
+                "next_version": None,
+                "optimize_target_tasks": True,
+                "owner": "nobody@mozilla.com",
+                "project": "",
+                "pushdate": 1663804800,
+                "pushlog_id": "0",
+                "repository_type": "git",
+                "target_tasks_method": "default",
+                "tasks_for": "",
+                "version": "1.0.0",
+            },
+        ),
+    ),
+)
+def test_get_defaults(monkeypatch, repo_root, raises, expected_repo_root, expected):
+    def mock_get_repository(repo_root):
+        assert repo_root == expected_repo_root
+        repo_mock = mock.MagicMock(
+            default_branch="a-default-branch",
+            branch="some-branch",
+            head_rev="headrev",
+            tool="git",
+        )
+        repo_mock.get_url.return_value = "https://some.url"
+        repo_mock.find_latest_common_revision.return_value = "baserev"
+        return repo_mock
+
+    monkeypatch.setattr(parameters, "get_repository", mock_get_repository)
+
+    def mock_parse(url):
+        assert url == "https://some.url"
+        if raises:
+            raise mozilla_repo_urls.errors.InvalidRepoUrlError("https://unknown.url")
+        return mock.MagicMock(repo_name="some-repo-name")
+
+    monkeypatch.setattr(mozilla_repo_urls, "parse", mock_parse)
+
+    monkeypatch.setattr(
+        parameters.time, "time", lambda: 1663804800
+    )  # Same date as below
+    datetime_mock = mock.MagicMock(wrap=datetime.datetime)
+    datetime_mock.now.return_value = datetime.datetime(
+        2022, 9, 22, 0, 0, 0, tzinfo=datetime.timezone.utc
+    )
+    monkeypatch.setattr(parameters, "datetime", datetime_mock)
+    monkeypatch.setattr(parameters, "get_version", lambda *_, **__: "1.0.0")
+
+    assert parameters._get_defaults(repo_root) == expected
