@@ -1,5 +1,12 @@
 # Change Log
 
+## [3.2.1] - 2022-09-22
+
+### Fixed
+- `parameters._get_defaults` doesn't fail if `mozilla-repo-urls` didn't manage to parse the URL. Instead, it just provides empty `base_repository`, `head_repository`, and `project`.
+- Similarly, `parameters._get_defaults` doesn't try to determine an accurate `base_rev` and `base_ref` anymore. This caused too many issues on developers' laptops. It provides now empty strings too.
+
+
 ## [3.2.0] - 2022-09-13
 
 ### Fixed
