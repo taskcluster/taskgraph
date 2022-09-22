@@ -291,9 +291,9 @@ def test_extend_parameters_schema(monkeypatch):
             False,
             "/some/repo/",
             {
-                "base_ref": "a-default-branch",
+                "base_ref": "",
                 "base_repository": "https://some.url",
-                "base_rev": "baserev",
+                "base_rev": "",
                 "build_date": 1663804800,
                 "build_number": 1,
                 "do_not_optimize": [],
@@ -322,9 +322,9 @@ def test_extend_parameters_schema(monkeypatch):
             False,
             os.getcwd(),
             {
-                "base_ref": "a-default-branch",
+                "base_ref": "",
                 "base_repository": "https://some.url",
-                "base_rev": "baserev",
+                "base_rev": "",
                 "build_date": 1663804800,
                 "build_number": 1,
                 "do_not_optimize": [],
@@ -353,9 +353,9 @@ def test_extend_parameters_schema(monkeypatch):
             True,
             "/some/repo/",
             {
-                "base_ref": "a-default-branch",
+                "base_ref": "",
                 "base_repository": "",
-                "base_rev": "baserev",
+                "base_rev": "",
                 "build_date": 1663804800,
                 "build_number": 1,
                 "do_not_optimize": [],
@@ -385,13 +385,11 @@ def test_get_defaults(monkeypatch, repo_root, raises, expected_repo_root, expect
     def mock_get_repository(repo_root):
         assert repo_root == expected_repo_root
         repo_mock = mock.MagicMock(
-            default_branch="a-default-branch",
             branch="some-branch",
             head_rev="headrev",
             tool="git",
         )
         repo_mock.get_url.return_value = "https://some.url"
-        repo_mock.find_latest_common_revision.return_value = "baserev"
         return repo_mock
 
     monkeypatch.setattr(parameters, "get_repository", mock_get_repository)

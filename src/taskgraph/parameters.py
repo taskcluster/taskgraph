@@ -86,11 +86,10 @@ def _get_defaults(repo_root=None):
         repo_url = ""
         project = ""
 
-    default_base_ref = repo.default_branch
     return {
         "base_repository": repo_url,
-        "base_ref": default_base_ref,
-        "base_rev": repo.find_latest_common_revision(default_base_ref, repo.head_rev),
+        "base_ref": "",
+        "base_rev": "",
         "build_date": int(time.time()),
         "build_number": 1,
         "do_not_optimize": [],
