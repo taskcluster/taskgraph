@@ -14,7 +14,7 @@ from .config import GraphConfig, load_graph_config
 from .graph import Graph
 from .morph import morph
 from .optimize.base import optimize_task_graph
-from .parameters import Parameters
+from .parameters import parameters_loader
 from .task import Task
 from .taskgraph import TaskGraph
 from .transforms.base import TransformConfig, TransformSequence
@@ -437,7 +437,7 @@ def load_tasks_for_kind(parameters, kind, root_dir=None):
     # make parameters read-write
     parameters = dict(parameters)
     parameters["target-kind"] = kind
-    parameters = Parameters(strict=False, **parameters)
+    parameters = parameters_loader(spec=None, strict=False, overrides=parameters)
     tgg = TaskGraphGenerator(root_dir=root_dir, parameters=parameters)
     return {
         task.task["metadata"]["name"]: task
