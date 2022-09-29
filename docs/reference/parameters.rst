@@ -119,6 +119,11 @@ Optimization
 These parameters are used at the ``optimization`` phase of :ref:`graph generation
 <Graph Generation>`.
 
+optimize_strategies
+~~~~~~~~~~~~~~~~~~~
+   A Python path of the form ``<module>:<object>`` pointing to a dictionary of
+   optimization strategies to use, overwriting the defaults.
+
 optimize_target_tasks
 ~~~~~~~~~~~~~~~~~~~~~
    If true, then target tasks are eligible for optimization.

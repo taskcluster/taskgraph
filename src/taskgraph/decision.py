@@ -188,6 +188,7 @@ def get_decision_parameters(graph_config, options):
     parameters["filters"] = [
         "target_tasks_method",
     ]
+    parameters["optimize_strategies"] = None
     parameters["optimize_target_tasks"] = True
     parameters["existing_tasks"] = {}
     parameters["do_not_optimize"] = []
