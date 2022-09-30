@@ -96,10 +96,11 @@ def _get_defaults(repo_root=None):
         supported domains in the error message.
         """
         raise RuntimeError(
-           f"{str(err)}\n\n  Hint: your default remote is `{repo_remote}`, which points to"
-           f"{repo_url}"
-           f"\n  This script requires the `{repo_remote}` remote to point to a repository"
-           f"on one of these domains: {err.supported_platforms}")
+            f"{str(err)}\n\n  Hint: your default remote is `{repo_remote}`, which points to"
+            f"{repo_url}"
+            f"\n  This script requires the `{repo_remote}` remote to point to a repository"
+            f"on one of these domains: {err.supported_platforms}"
+        )
     return {
         "base_repository": repo_url,
         "base_ref": "",
