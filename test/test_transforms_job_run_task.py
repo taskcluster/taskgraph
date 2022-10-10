@@ -47,7 +47,7 @@ def assert_docker_worker(task):
         "extra": {},
         "label": "fake-task-label",
         "routes": [],
-        "scopes": ["secrets:get:project/taskcluster/gecko/hgfingerprint"],
+        "scopes": [],
         "soft-dependencies": [],
         "worker": {
             "caches": [
@@ -61,7 +61,6 @@ def assert_docker_worker(task):
             "command": [
                 "/usr/local/bin/run-task",
                 "--ci-checkout=/builds/worker/checkouts/vcs/",
-                "--fetch-hgfingerprint",
                 "--",
                 "bash",
                 "-cx",
@@ -94,7 +93,7 @@ def assert_generic_worker(task):
         "extra": {},
         "label": "fake-task-label",
         "routes": [],
-        "scopes": ["secrets:get:project/taskcluster/gecko/hgfingerprint"],
+        "scopes": [],
         "soft-dependencies": [],
         "worker": {
             "command": [
@@ -133,7 +132,6 @@ def assert_exec_with(task):
     assert task["worker"]["command"] == [
         "/usr/local/bin/run-task",
         "--ci-checkout=/builds/worker/checkouts/vcs/",
-        "--fetch-hgfingerprint",
         "--",
         "powershell.exe",
         "-ExecutionPolicy",
