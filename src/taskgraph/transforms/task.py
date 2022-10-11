@@ -992,7 +992,7 @@ def build_task(config, tasks):
 
             branch_rev = get_branch_rev(config)
 
-            if config.params["tasks_for"] == "github-pull-request":
+            if config.params["tasks_for"].startswith("github-pull-request"):
                 # In the past we used `project` for this, but that ends up being
                 # set to the repository name of the _head_ repo, which is not correct
                 # (and causes scope issues) if it doesn't match the name of the
