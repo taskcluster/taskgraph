@@ -1,5 +1,18 @@
 # Change Log
 
+## [3.3.0] - 2022-10-12
+
+### Added
+- Ability to override optimization strategies via parameter
+
+### Removed
+- Support for pinning hg.mozilla.org fingerprint in `run-task` as it is no longer necessary
+
+### Fixed
+- Use proper Treeherder route for `github-pull-request-untrusted`
+- Use `parameters_loader` in `generator.load_tasks_for_kind`
+- Run initial verifications after calling `register`
+
 ## [3.2.1] - 2022-09-22
 
 ### Fixed
