@@ -42,11 +42,6 @@ import urllib.request
 from threading import Thread
 
 SECRET_BASEURL_TPL = 'http://taskcluster/secrets/v1/secret/{}'
-FINGERPRINT_URL = SECRET_BASEURL_TPL.format('project/taskcluster/gecko/hgfingerprint')
-FALLBACK_FINGERPRINT = {
-    'fingerprints':
-        "sha256:17:38:aa:92:0b:84:3e:aa:8e:52:52:e9:4c:2f:98:a9:0e:bf:6c:3e:e9"
-        ":15:ff:0a:29:80:f7:06:02:5b:e8:48"}
 
 GITHUB_SSH_FINGERPRINT = (
     b"github.com ssh-rsa "
@@ -711,27 +706,6 @@ def git_checkout(
     return commit_hash
 
 
-def fetch_hgfingerprint():
-    try:
-        print_line(b'vcs', b'fetching hg.mozilla.org fingerprint from %s\n' %
-                   FINGERPRINT_URL.encode('utf-8'))
-        res = urllib.request.urlopen(FINGERPRINT_URL, timeout=10)
-        secret = res.read()
-        try:
-            secret = json.loads(secret.decode('utf-8'))
-        except ValueError:
-            print_line(b'vcs', b'invalid JSON in hg fingerprint secret')
-            sys.exit(1)
-    except (urllib.error.URLError, socket.timeout):
-        print_line(b'vcs', b'Unable to retrieve current hg.mozilla.org fingerprint'
-                           b'using the secret service, using fallback instead.')
-        # XXX This fingerprint will not be accurate if running on an old
-        #     revision after the server fingerprint has changed.
-        secret = {'secret': FALLBACK_FINGERPRINT}
-
-    return secret['secret']['fingerprints']
-
-
 def fetch_ssh_secret(secret_name):
     """ Retrieves the private ssh key, and returns it as a StringIO object
     """
@@ -758,7 +732,6 @@ def hg_checkout(
     head_repo: str,
     base_repo: Optional[str],
     store_path: str,
-    hgmo_fingerprint: str,
     sparse_profile: Optional[str],
     branch: Optional[str],
     revision: Optional[str]
@@ -782,31 +755,6 @@ def hg_checkout(
         '--sharebase', store_path,
         '--purge',
     ]
-
-    # Obtain certificate fingerprints.  Without this, the checkout will use the fingerprint
-    # on the system, which is managed some other way (such as puppet)
-    if hgmo_fingerprint:
-        try:
-            print_line(b'vcs', b'fetching hg.mozilla.org fingerprint from %s\n' %
-                       FINGERPRINT_URL.encode('utf-8'))
-            res = urllib.request.urlopen(FINGERPRINT_URL, timeout=10)
-            secret = res.read()
-            try:
-                secret = json.loads(secret.decode('utf-8'))
-            except ValueError:
-                print_line(b'vcs', b'invalid JSON in hg fingerprint secret')
-                sys.exit(1)
-        except (urllib.error.URLError, socket.timeout):
-            print_line(b'vcs', b'Unable to retrieve current hg.mozilla.org fingerprint'
-                               b'using the secret service, using fallback instead.')
-            # XXX This fingerprint will not be accurate if running on an old
-            #     revision after the server fingerprint has changed.
-            secret = {'secret': FALLBACK_FINGERPRINT}
-
-        hgmo_fingerprint = secret['secret']['fingerprints']
-        args.extend([
-            '--config', 'hostsecurity.hg.mozilla.org:fingerprints=%s' % hgmo_fingerprint,
-        ])
 
     if base_repo:
         args.extend(['--upstream', base_repo])
@@ -927,7 +875,7 @@ def collect_vcs_options(args, project, name):
     }
 
 
-def vcs_checkout_from_args(options, *, hgmo_fingerprint):
+def vcs_checkout_from_args(options):
 
     if not options['checkout']:
         if options['ref'] and not options['revision']:
@@ -982,7 +930,6 @@ def vcs_checkout_from_args(options, *, hgmo_fingerprint):
                 options['head-repo'],
                 options['base-repo'],
                 options['store-path'],
-                hgmo_fingerprint,
                 options['sparse-profile'],
                 ref,
                 revision
@@ -1101,8 +1048,7 @@ def main(args):
         add_vcs_arguments(parser, repository, name)
 
     parser.add_argument('--fetch-hgfingerprint', action='store_true',
-                        help='Fetch the latest hgfingerprint from the secrets store, '
-                        'using the taskclsuerProxy')
+                        help=argparse.SUPPRESS)
 
     args = parser.parse_args(our_args)
 
@@ -1253,13 +1199,10 @@ def main(args):
             continue
         prepare_checkout_dir(repo['checkout'])
 
-    hgmo_fingerprint = None
     if any(
         repo['checkout'] and repo['repo-type'] == 'hg' for repo in repositories
     ):
         prepare_hg_store_path()
-        if args.fetch_hgfingerprint:
-            hgmo_fingerprint = fetch_hgfingerprint()
 
     if IS_POSIX and running_as_root:
         # Drop permissions to requested user.
@@ -1275,7 +1218,7 @@ def main(args):
         os.setresuid(uid, uid, uid)
 
     for repo in repositories:
-        vcs_checkout_from_args(repo, hgmo_fingerprint=hgmo_fingerprint)
+        vcs_checkout_from_args(repo)
 
     resource_process = None
 
