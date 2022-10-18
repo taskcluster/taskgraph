@@ -49,6 +49,18 @@ tasks:
                   else:
                       $if: 'tasks_for in ["cron", "action"]'
                       then: '${repository.project}'
+          head_branch:
+              $if: 'tasks_for[:19] == "github-pull-request"'
+              then: ${event.pull_request.head.ref}
+              else:
+                  $if: 'tasks_for == "github-push"'
+                  then: ${event.ref}
+                  else:
+                      $if: 'tasks_for == "github-release"'
+                      then: '${event.release.target_commitish}'
+                      else:
+                          $if: 'tasks_for in ["action", "cron"]'
+                          then: '${push.branch}'
           base_ref:
               $if: 'tasks_for[:19] == "github-pull-request"'
               then: ${event.pull_request.base.ref}
