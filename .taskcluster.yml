@@ -108,7 +108,7 @@ tasks:
       in:
           $if: >
             tasks_for in ["action", "cron"]
-            || (tasks_for == "github-push" && head_ref[:10] != "refs/tags/")
+            || (tasks_for == "github-push" && head_branch == "refs/heads/main")
             || (isPullRequest && pullRequestAction in ["opened", "reopened", "synchronize"])
           then:
               $let:
