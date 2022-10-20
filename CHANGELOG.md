@@ -1,5 +1,10 @@
 # Change Log
 
+## [3.3.1] - TBD
+
+### Fixed
+- `taskgraph load-image` CLI command can now run without raising a `ModuleNotFoundError`.
+
 ## [3.3.0] - 2022-10-12
 
 ### Added
