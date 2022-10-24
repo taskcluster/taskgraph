@@ -31,6 +31,11 @@ try:
 except ImportError:
     zstandard = None
 
+try:
+    import certifi
+except ImportError:
+    certifi = None
+
 
 CONCURRENCY = multiprocessing.cpu_count()
 
@@ -179,7 +184,7 @@ def stream_download(url, sha256=None, size=None, headers=None):
         req_headers[key.strip()] = val.strip()
 
     req = urllib.request.Request(url, None, req_headers)
-    with urllib.request.urlopen(req) as fh:
+    with urllib.request.urlopen(req, cafile=certifi.where()) if certifi else urllib.request.urlopen(req) as fh:
         if not url.endswith('.gz') and fh.info().get('Content-Encoding') == 'gzip':
             fh = gzip.GzipFile(fileobj=fh)
 
