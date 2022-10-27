@@ -360,11 +360,14 @@ class TaskGraphGenerator:
             if t.attributes["kind"] == "docker-image"
         }
         # include all tasks with `always_target` set
-        always_target_tasks = {
-            t.label
-            for t in full_task_graph.tasks.values()
-            if t.attributes.get("always_target")
-        }
+        if parameters["enable_always_target"]:
+            always_target_tasks = {
+                t.label
+                for t in full_task_graph.tasks.values()
+                if t.attributes.get("always_target")
+            }
+        else:
+            always_target_tasks = set()
         logger.info(
             "Adding %d tasks with `always_target` attribute"
             % (len(always_target_tasks) - len(always_target_tasks & target_tasks))
