@@ -102,6 +102,14 @@ Target Set
 These parameters are used at the ``target_task`` phase of :ref:`graph generation
 <Graph Generation>`.
 
+enable_always_target
+~~~~~~~~~~~~~~~~~~~~
+    When ``True``, any task with the ``always_target`` attribute will be
+    included in the ``target_task_graph`` regardless of whether they were
+    filtered out by the ``target_tasks_method`` or not. Because they are not
+    part of the ``target_set``, they will still be eligible for optimization
+    when the ``optimize_target_tasks`` parameter is ``False``.
+
 filters
 ~~~~~~~
     List of filter functions (from ``taskcluster/gecko_taskgraph/filter_tasks.py``) to

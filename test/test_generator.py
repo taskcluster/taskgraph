@@ -94,6 +94,19 @@ def test_always_target_tasks(maketgg):
         ["_fake-t-0", "_fake-t-1", "_ignore-t-0", "_ignore-t-1"]
     )
 
+    # Test `enable_always_target: False`
+    tgg_args["params"]["enable_always_target"] = False
+    tgg = maketgg(**tgg_args)
+    assert sorted(tgg.target_task_set.tasks.keys()) == sorted(
+        ["_fake-t-0", "_fake-t-1", "_ignore-t-0", "_ignore-t-1"]
+    )
+    assert sorted(tgg.target_task_graph.tasks.keys()) == sorted(
+        ["_fake-t-0", "_fake-t-1", "_ignore-t-0", "_ignore-t-1"]
+    )
+    assert sorted(t.label for t in tgg.optimized_task_graph.tasks.values()) == sorted(
+        ["_fake-t-0", "_fake-t-1", "_ignore-t-0", "_ignore-t-1"]
+    )
+
 
 def test_optimized_task_graph(maketgg):
     "The optimized task graph contains task ids"
