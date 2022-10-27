@@ -268,6 +268,7 @@ def verify_index(config, index):
         Required("loopback-audio"): bool,
         Required("docker-in-docker"): bool,  # (aka 'dind')
         Required("privileged"): bool,
+        Required("disable-seccomp"): bool,
         # Paths to Docker volumes.
         #
         # For in-tree Docker images, volumes can be parsed from Dockerfile.
@@ -405,6 +406,10 @@ def build_docker_worker_payload(config, task, task_def):
     if worker.get("privileged"):
         capabilities["privileged"] = True
         task_def["scopes"].append("docker-worker:capability:privileged")
+
+    if worker.get("disable-seccomp"):
+        capabilities["disableSeccomp"] = True
+        task_def["scopes"].append("docker-worker:capability:disableSeccomp")
 
     task_def["payload"] = payload = {
         "image": image,
@@ -831,6 +836,7 @@ def set_defaults(config, tasks):
             worker.setdefault("loopback-audio", False)
             worker.setdefault("docker-in-docker", False)
             worker.setdefault("privileged", False)
+            worker.setdefault("disable-seccomp", False)
             worker.setdefault("volumes", [])
             worker.setdefault("env", {})
             if "caches" in worker:
