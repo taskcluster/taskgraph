@@ -1,6 +1,17 @@
 # Change Log
 
-## [3.3.1] - TBD
+## [3.4.0] - 2022-10-28
+
+### Added
+- `fetch-content` has improved support for git submodules
+- `fetch-content` can fetch private git repositories over ssh
+- `fetch-content` can optionally use chain-of-trust artifacts to validate downloads
+- `fetch-content` supports repacking tar archives containing symbolic links
+- `fetch-content` repacks now use the same format as the original archive
+- `fetch-content` can be told to keep the `.git` directory
+- `fetch-content` takes care to log git commit ids even when pointed at a branch name
+- `fetch-content` uses github's archive generator to speed up cloning
+- Support for the disableSeccomp capability in docker-worker v44.22.0
 
 ### Fixed
 - `taskgraph load-image` CLI command can now run without raising a `ModuleNotFoundError`.
