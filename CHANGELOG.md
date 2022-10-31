@@ -1,5 +1,11 @@
 # Change Log
 
+## [3.5.0] - 2022-10-31
+
+### Added
+
+- Ability to enable/disable the `always_target` attribute via a new `enable_always_target` parameter
+
 ## [3.4.0] - 2022-10-28
 
 ### Added
