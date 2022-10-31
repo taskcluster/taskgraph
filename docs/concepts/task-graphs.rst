@@ -118,33 +118,111 @@ Dependencies
 ------------
 
 Dependencies between tasks are represented as labeled edges in the task graph.
-For example, a test task must depend on the build task creating the artifact it
-tests, and this dependency edge is named 'build'. The task graph generation
-process later resolves these dependencies to specific task ids.
+They are specified via the ``dependencies`` key which is an object of the form
+``{ "<edge>": "<label>"}``. The ``edge`` is an arbitrary name which can be used
+to refer to the dependency later on. The ``label`` is the task label of the
+dependency.
+
+Taskgraph is only able to add a dependency to tasks that have already been
+generated. The ``kind-dependencies`` key must be used to determine the order in
+which different kinds of tasks are generated. It is specified as a list of
+kinds that are guaranteed to be generated before the current kind. It is an
+error to depend on a task of the same kind, or to create any cycles in the
+``kind-dependencies`` chain.
+
+.. note::
+   All examples assume ``build-linux`` and ``build-windows`` tasks have been
+   defined elsewhere in a ``build`` kind.
+
+For example, a test task might depend on the artifacts a build task creates. This
+might be expressed as follows:
+
+.. code-block:: yaml
+
+   kind-dependencies:
+     - build
+
+   tasks:
+     test-linux:
+       dependencies:
+         build: build-linux
+       # .. rest of task definition ..
+     test-windows:
+       dependencies:
+         build: build-windows
+       # .. rest of task definition ..
+
+First, note the ``kind-dependencies`` key. This ensures the tasks in the
+``build`` kind have already been generated, and are candidates to be added as
+dependencies.
+
+Second, notice how both the ``test-linux`` and ``test-windows`` task use the
+same edge name to reference their build dependency. This will allow
+:term:`transforms <Transform>` later on to find their build dependency even
+without knowing which specific task it is they depend on.
+
+Other Types of Dependencies
+...........................
 
 Dependencies are typically used to ensure that prerequisites to a task, such as
 creation of binary artifacts, are completed before that task runs. But
 dependencies can also be used to schedule follow-up work such as summarizing
-test results. In the latter case, the summarization task will "pull in" all of
-the tasks it depends on, even if those tasks might otherwise be optimized away.
+results of dependencies, sending notifications that dependencies are completed
+or uploading artifacts to a server. In many of these cases, it may not be desired
+for the dependent task to "pull in" the dependency as would normally be the case.
+
+To help with these uses cases, there are two additional types of dependencies.
 
 If Dependencies
-...............
+```````````````
 
 The ``if-dependencies`` key (list) can be used to denote a task that should
 only run if at least one of these specified dependencies are also run.
 Dependencies specified by this key will not be “pulled in”. This makes it
 suitable for things like signing builds or uploading symbols.
 
-This key is specified as a list of dependency names (e.g, ``build`` rather than
-the label of the build).
+This key is specified as a list of dependency edge names (e.g, ``build`` rather
+than the label of the build), which means the original dependency must be specified
+as normal. For example:
+
+.. code-block:: yaml
+
+   kind-dependencies:
+     - build
+
+   tasks:
+    upload-build:
+      dependencies:
+        build: build-windows
+      if-dependencies:
+        - build
+
+In the above example, the ``upload-build`` task will only run if the ``build``
+task would have run anyway. It will not cause the ``build`` task to get "pulled
+into" the graph.
 
 Soft Dependencies
-.................
+`````````````````
 
 To add a task depending on arbitrary tasks remaining after the optimization
 process is complete, you can use ``soft-dependencies``, as a list of optimized
-tasks labels.  This is useful for tasks that need to perform some action on N
+tasks labels. This is useful for tasks that need to perform some action on N
 other tasks and it is not known how many. Unlike ``if-dependencies``, tasks
 that specify ``soft-dependencies`` will still be scheduled, even if none of the
 candidate dependencies are.
+
+For example:
+
+.. code-block:: yaml
+
+   tasks:
+     notify-build:
+       soft-dependencies:
+         - build-linux
+         - build-windows
+
+Note that neither the ``kind-dependencies`` nor ``dependencies`` keys are used
+here. This is because the dependency edge is created *after* the optimization
+phase of the task graph, rather than in the full task graph phase. If either or
+both of ``build-linux`` / ``build-windows`` end up being optimized away, the
+dependency links will simply not be created.
