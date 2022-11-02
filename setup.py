@@ -19,6 +19,9 @@ setup(
     packages=find_packages("src"),
     package_dir={"": "src"},
     install_requires=requirements,
+    extras_require={
+        "load-image": ["zstandard"],
+    },
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Environment :: Console",
