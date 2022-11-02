@@ -9,4 +9,3 @@ requests_unixsocket>=0.2
 slugid>=2.0
 taskcluster-urls>=11.0
 voluptuous>=0.12.1
-zstandard
