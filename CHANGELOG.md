@@ -1,5 +1,10 @@
 # Change Log
 
+## [3.5.1] - 2022-11-02
+
+### Fixed
+- Only depend on zstandard in the 'load-image' extra to avoid large (likely unused) binaries
+
 ## [3.5.0] - 2022-10-31
 
 ### Added
