@@ -1,5 +1,10 @@
 # Change Log
 
+## [3.5.2] - 2022-11-04
+
+### Fixed
+- `taskgraph.parameters._get_defaults` catches `mozilla_repo_urls.errors.UnsupportedPlatformError` in order not to bust `mach` commands
+
 ## [3.5.1] - 2022-11-02
 
 ### Fixed
