@@ -91,6 +91,7 @@ def _get_defaults(repo_root=None):
     ):
         repo_url = ""
         project = ""
+
     return {
         "base_repository": repo_url,
         "base_ref": "",
