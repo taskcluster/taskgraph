@@ -84,23 +84,13 @@ def _get_defaults(repo_root=None):
         repo_url = repo.get_url()
         parsed_url = mozilla_repo_urls.parse(repo_url)
         project = parsed_url.repo_name
-    except (CalledProcessError, mozilla_repo_urls.errors.InvalidRepoUrlError):
+    except (
+        CalledProcessError,
+        mozilla_repo_urls.errors.InvalidRepoUrlError,
+        mozilla_repo_urls.errors.UnsupportedPlatformError,
+    ):
         repo_url = ""
         project = ""
-    except (mozilla_repo_urls.errors.UnsupportedPlatformError) as err:
-        repo_remote = repo.remote_name
-        """
-        Combine the error message printed by `UnsupportedPlatformError` with a hint
-        about what to do to fix the error: set the expected remote, as determined by
-        the `Repository` class, to a URL whose domain is supported. Include the list of
-        supported domains in the error message.
-        """
-        raise RuntimeError(
-            f"{str(err)}\n\n  Hint: your default remote is `{repo_remote}`, which points to"
-            f"{repo_url}"
-            f"\n  This script requires the `{repo_remote}` remote to point to a repository"
-            f"on one of these domains: {err.supported_platforms}"
-        )
     return {
         "base_repository": repo_url,
         "base_ref": "",
