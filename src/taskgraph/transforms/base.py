@@ -2,7 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-
+import asyncio
+import inspect
 import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Union
@@ -107,6 +108,12 @@ class TransformConfig:
         return repo_configs
 
 
+async def convert_async(it):
+    """Convert a synchronous iterator to an async one."""
+    for i in it:
+        yield i
+
+
 @dataclass()
 class TransformSequence:
     """
@@ -121,11 +128,29 @@ class TransformSequence:
 
     _transforms: List = field(default_factory=list)
 
-    def __call__(self, config, items):
+    async def __call__(self, config, items):
         for xform in self._transforms:
-            items = xform(config, items)
+            if isinstance(xform, TransformSequence):
+                items = await xform(config, items)
+            elif inspect.isasyncgenfunction(xform):
+                # Async generator transforms require async generator inputs.
+                # This can happen if a synchronous transform ran immediately
+                # prior.
+                if not inspect.isasyncgen(items):
+                    items = convert_async(items)
+                items = xform(config, items)
+            else:
+                # Creating a synchronous generator from an asynchronous context
+                # doesn't appear possible, so unfortunately we need to convert
+                # to a list.
+                if inspect.isasyncgen(items):
+                    items = [i async for i in items]
+                items = xform(config, items)
             if items is None:
                 raise Exception(f"Transform {xform} is not a generator")
+
+        if not inspect.isasyncgen(items):
+            items = convert_async(items)
         return items
 
     def add(self, func):
