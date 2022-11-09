@@ -162,7 +162,7 @@ tasks:
                                     description: 'Created by a [cron task](https://firefox-ci-tc.services.mozilla.com/tasks/${cron.task_id})'
 
                   provisionerId: "${trustDomain}-${level}"
-                  workerType: "decision"
+                  workerType: "decision-gcp"
 
                   tags:
                       $if: 'tasks_for == "github-push" || isPullRequest'
