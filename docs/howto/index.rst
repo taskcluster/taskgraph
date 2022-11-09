@@ -12,3 +12,4 @@ A collection of how-to guides.
    use-fetches
    docker
    create-actions
+   send-notifications
