@@ -17,12 +17,65 @@ TASK_DEFAULTS = {
 @pytest.mark.parametrize(
     "task_input, extra_params, expected_task_output",
     (
-        (
+        pytest.param({}, {}, {}, id="null"),
+        pytest.param(
+            {
+                "owner": "me",
+                "notify": {
+                    "recipients": [
+                        {"type": "email", "address": "some@email.address"},
+                        {
+                            "type": "email",
+                            "address": "{task[owner]}@email.address",
+                            "status-type": "on-running",
+                        },
+                        {"type": "matrix-room", "room-id": "!room"},
+                        {
+                            "type": "pulse",
+                            "routing-key": "{config[params][tasks_for]}.foo.bar",
+                        },
+                        {"type": "slack-channel", "channel-id": "123"},
+                    ],
+                    "content": {
+                        "matrix": {
+                            "body": "Hello {task[owner]}!",
+                            "msg-type": "notification",
+                        },
+                        "slack": {
+                            "text": "Hello {task[owner]}!",
+                            "blocks": [{"foo": "bar"}],
+                        },
+                        "email": {
+                            "content": "Hello {task[owner]}!",
+                        },
+                    },
+                },
+            },
             {},
-            {},
-            {},
+            {
+                "owner": "me",
+                "routes": [
+                    "notify.email.some@email.address.on-completed",
+                    "notify.email.me@email.address.on-running",
+                    "notify.matrix-room.!room.on-completed",
+                    "notify.pulse.hg-push.foo.bar.on-completed",
+                    "notify.slack-channel.123.on-completed",
+                ],
+                "extra": {
+                    "notify": {
+                        "email": {
+                            "content": "Hello me!",
+                        },
+                        "matrixBody": "Hello me!",
+                        "matrixMsgType": "notification",
+                        "slackText": "Hello me!",
+                        "slackBlocks": [{"foo": "bar"}],
+                    }
+                },
+            },
+            id="basic",
         ),
-        (
+        pytest.param(
             {
                 "notifications": {
                     "subject": "Email about {config[params][project]} {config[params][version]} build{config[params][build_number]}",  # noqa E501
@@ -41,8 +94,9 @@ TASK_DEFAULTS = {
                 },
                 "routes": ["notify.email.some@email.address.on-completed"],
             },
+            id="legacy",
         ),
-        (
+        pytest.param(
             {
                 "notifications": {
                     "subject": "Some subject",
@@ -66,8 +120,9 @@ TASK_DEFAULTS = {
                 },
                 "routes": ["notify.email.default@email.address.on-completed"],
             },
+            id="legacy",
         ),
-        (
+        pytest.param(
             {
                 "notifications": {
                     "subject": "Some subject",
@@ -97,8 +152,9 @@ TASK_DEFAULTS = {
                     "notify.email.level-3@email.address.on-exception",
                 ],
             },
+            id="legacy",
         ),
-        (
+        pytest.param(
             {
                 "notifications": {
                     "subject": "Some subject",
@@ -128,6 +184,7 @@ TASK_DEFAULTS = {
                     "notify.email.secondary@email.address.on-completed",
                 ],
             },
+            id="legacy",
         ),
     ),
 )

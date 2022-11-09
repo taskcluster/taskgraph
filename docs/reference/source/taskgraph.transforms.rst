@@ -52,6 +52,14 @@ taskgraph.transforms.fetch module
    :undoc-members:
    :show-inheritance:
 
+taskgraph.transforms.notify module
+----------------------------------
+
+.. automodule:: taskgraph.transforms.notify
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 taskgraph.transforms.task module
 --------------------------------
 
