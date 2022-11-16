@@ -1,5 +1,14 @@
 # Change Log
 
+## [3.6.0] - 2022-11-16
+
+### Added
+- Support for Matrix, Slack and pulse in notify transforms
+
+### Changed
+- Renamed `taskcluster.transforms.release_notifications` to `taskcluster.transforms.notify`
+  (including backwards compatible shim)
+
 ## [3.5.2] - 2022-11-04
 
 ### Fixed
