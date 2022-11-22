@@ -2,9 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-# %ARG PYTHON_VERSION
-FROM python:$PYTHON_VERSION
-MAINTAINER Andrew Halberstadt <ahal@mozilla.com>
+FROM python:3.9
+LABEL maintainer="Andrew Halberstadt <ahal@mozilla.com>"
 
 # Add worker user
 RUN mkdir /builds && \
