@@ -13,10 +13,11 @@ eval "\$(pyenv init -)"
 eval "\$(pyenv virtualenv-init -)"
 EOF
 source /builds/worker/.bashrc
-git clone https://github.com/momo-lab/xxenv-latest.git "$(pyenv root)"/plugins/xxenv-latest
+
 for i in ${1//,/ }
 do
-    pyenv latest install $i
+    version=$(pyenv latest --known $i)
+    pyenv install $version
 done
 chmod 777 /builds/worker/.pyenv/shims
 pyenv rehash
