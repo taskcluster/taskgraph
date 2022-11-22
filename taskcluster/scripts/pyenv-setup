@@ -3,6 +3,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+set -e
+
 curl -L "https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer" -o /builds/worker/pyenv-installer
 chmod +x /builds/worker/pyenv-installer
 /builds/worker/pyenv-installer
@@ -13,10 +15,11 @@ eval "\$(pyenv init -)"
 eval "\$(pyenv virtualenv-init -)"
 EOF
 source /builds/worker/.bashrc
-git clone https://github.com/momo-lab/xxenv-latest.git "$(pyenv root)"/plugins/xxenv-latest
+
 for i in ${1//,/ }
 do
-    pyenv latest install $i
+    version=$(pyenv latest --known $i)
+    pyenv install $version
 done
 chmod 777 /builds/worker/.pyenv/shims
 pyenv rehash
