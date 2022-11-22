@@ -19,7 +19,8 @@ source /builds/worker/.bashrc
 for i in ${1//,/ }
 do
     version=$(pyenv latest --known $i)
-    pyenv install $version
+    pyenv install $version &
 done
+wait
 chmod 777 /builds/worker/.pyenv/shims
 pyenv rehash
