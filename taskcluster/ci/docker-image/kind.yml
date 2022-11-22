@@ -26,9 +26,7 @@ tasks:
         symbol: I(fetch)
     index-task:
         symbol: I(idx)
-    python3.7:
-        symbol: I(py3.7)
-        definition: python
+    python:
+        symbol: I(py)
         args:
-            PYTHON_VERSION: "3.7"
             PYENV_VERSIONS: "3.10, 3.9, 3.8, 3.7, 3.6"
