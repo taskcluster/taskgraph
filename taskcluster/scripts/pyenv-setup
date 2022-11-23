@@ -3,6 +3,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+set -ex
+
 curl -L "https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer" -o /builds/worker/pyenv-installer
 chmod +x /builds/worker/pyenv-installer
 /builds/worker/pyenv-installer
@@ -13,6 +15,10 @@ eval "\$(pyenv init -)"
 eval "\$(pyenv virtualenv-init -)"
 EOF
 source /builds/worker/.bashrc
+
+# Log some debugging info
+pyenv --version
+git -C "$(pyenv root)" rev-parse HEAD
 
 for i in ${1//,/ }
 do
