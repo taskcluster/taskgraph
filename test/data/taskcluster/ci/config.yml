@@ -1,0 +1,9 @@
+---
+trust-domain: test
+task-priority: low
+taskgraph:
+    repositories:
+        ci:
+            name: Taskgraph
+workers:
+    aliases: {}
