@@ -50,5 +50,5 @@ tasks:
             command: >-
                 pip install --user -r requirements/test.txt &&
                 pip install --user --no-deps . &&
-                pyenv local 3.10 3.9 3.8 3.7 3.6 &&
+                pyenv local 3.11 3.10 3.9 3.8 3.7 3.6 &&
                 tox --parallel
