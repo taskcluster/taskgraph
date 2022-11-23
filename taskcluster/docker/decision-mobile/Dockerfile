@@ -1,6 +1,8 @@
 ARG DOCKER_IMAGE_PARENT
 FROM $DOCKER_IMAGE_PARENT
 
+VOLUME /builds/worker/.gradle
+
 RUN apt-get update && \
     apt-get install -y --force-yes --no-install-recommends \
     # We need java 8 for sdkmanager
