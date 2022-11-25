@@ -1,5 +1,15 @@
 # Change Log
 
+## [3.7.0] - 2022-11-25
+
+### Added
+
+- New `rebuild_cached_tasks` action to facilitate regenerating long-lived tasks
+
+### Changed
+
+- Updated `image_builder` Docker image to version 5.0.0
+
 ## [3.6.0] - 2022-11-16
 
 ### Added
