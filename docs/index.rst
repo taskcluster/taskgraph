@@ -7,8 +7,8 @@ Taskgraph
 =========
 
 Taskgraph is a Python library to generate `DAGs`_ of tasks for `Taskcluster`_,
-Mozilla's `CI`_ service. The nodes of the DAG represent tasks, while the edges
-represent the dependencies between them.
+the task execution framework which underpins Mozilla's `CI`_. The nodes of the
+DAG represent tasks, while the edges represent the dependencies between them.
 
 Taskgraph is designed to scale to any level of complexity. From a handful of
 tasks, to the over 30,000 tasks and counting that make up Firefox's CI.
