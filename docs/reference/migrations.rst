@@ -3,6 +3,10 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+3.x -> 4.x
+----------
+
+* Remove all uses of the `disable-seccomp` key in the `worker` section of task definitions.
 
 2.x -> 3.x
 ----------
