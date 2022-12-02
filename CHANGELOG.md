@@ -1,5 +1,12 @@
 # Change Log
 
+## [4.0.0] - 2022-12-02
+
+### Removed
+
+- Support for `disableSeccomp` capability. This was removed in Taskcluster 45.0.0 as it was
+  determined to be unnecessary.
+
 ## [3.7.0] - 2022-11-25
 
 ### Added
