@@ -1,5 +1,11 @@
 # Change Log
 
+## [4.1.0] - 2022-12-05
+
+### Added
+
+- `shipping-phase` attribute in `task` and `job` transforms.
+
 ## [4.0.0] - 2022-12-02
 
 ### Removed
