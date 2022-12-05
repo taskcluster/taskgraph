@@ -142,6 +142,15 @@ task_description_schema = Schema(
         Optional("run-on-projects"): optionally_keyed_by("build-platform", [str]),
         Optional("run-on-tasks-for"): [str],
         Optional("run-on-git-branches"): [str],
+        # The `shipping_phase` attribute, defaulting to None. This specifies the
+        # release promotion phase that this task belongs to.
+        Optional("shipping-phase"): Any(
+            None,
+            "build",
+            "promote",
+            "push",
+            "ship",
+        ),
         # The `always-target` attribute will cause the task to be included in the
         # target_task_graph regardless of filtering. Tasks included in this manner
         # will be candidates for optimization even when `optimize_target_tasks` is
@@ -1089,6 +1098,14 @@ def build_task(config, tasks):
             attributes["run_on_git_branches"] = task["run-on-git-branches"]
 
         attributes["always_target"] = task["always-target"]
+        # This logic is here since downstream tasks don't always match their
+        # upstream dependency's shipping_phase.
+        # A text_type task['shipping-phase'] takes precedence, then
+        # an existing attributes['shipping_phase'], then fall back to None.
+        if task.get("shipping-phase") is not None:
+            attributes["shipping_phase"] = task["shipping-phase"]
+        else:
+            attributes.setdefault("shipping_phase", None)
 
         # Set MOZ_AUTOMATION on all jobs.
         if task["worker"]["implementation"] in (
