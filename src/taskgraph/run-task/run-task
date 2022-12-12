@@ -666,7 +666,9 @@ def git_checkout(
 
     if ref:
         args.extend(["-B", ref])
-    args.append(commit if commit else "FETCH_HEAD")  # Set by git fetch
+
+    # `git fetch` set `FETCH_HEAD` reference to the last commit of the desired branch
+    args.append(commit if commit else "FETCH_HEAD")
 
     run_required_command(b"vcs", args, cwd=destination_path)
 
