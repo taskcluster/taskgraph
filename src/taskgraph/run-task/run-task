@@ -641,7 +641,7 @@ def git_checkout(
     # between the previous state before the force-push and the current state.
     #
     # Unlike base_ref just above, there is no need to checkout the revision:
-    # it's immediately avaiable after the fetch.
+    # it's immediately available after the fetch.
     if base_rev and base_rev != NULL_REVISION:
         args = ["git", "fetch", "origin", base_rev]
 
@@ -666,7 +666,7 @@ def git_checkout(
 
     if ref:
         args.extend(["-B", ref])
-    args.append(commit if commit else ref)
+    args.append(commit if commit else "FETCH_HEAD")  # Set by git fetch
 
     run_required_command(b"vcs", args, cwd=destination_path)
 
@@ -1090,7 +1090,7 @@ def main(args):
     # Sort repositories so that parent checkout paths come before children
     repositories.sort(key=lambda repo: Path(repo["checkout"] or "/").parts)
 
-    uid = gid = gids = None
+    uid = gid = gids = user = group = None
     if IS_POSIX and running_as_root:
         user, group, gids = get_posix_user_group(args.user, args.group)
         uid = user.pw_uid
