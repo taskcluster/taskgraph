@@ -47,6 +47,18 @@ def patch_run_command(monkeypatch, run_task_mod):
     return inner
 
 
+@pytest.fixture()
+def mock_stdin(monkeypatch):
+    _stdin = Mock(
+        fileno=lambda: 3,
+    )
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        _stdin,
+    )
+
+
 def test_install_pip_requirements(
     tmp_path,
     patch_run_command,
@@ -205,7 +217,7 @@ def _mark_readonly(path):
     os.chmod(path, mode & ~stat.S_IWUSR & ~stat.S_IWGRP & ~stat.S_IWOTH)
 
 
-def test_clean_git_checkout(monkeypatch, run_task_mod):
+def test_clean_git_checkout(monkeypatch, mock_stdin, run_task_mod):
     prefix = "Would remove "
     root_dir = tempfile.TemporaryDirectory()
     untracked_dir = tempfile.TemporaryDirectory(dir=root_dir.name)
@@ -240,20 +252,10 @@ def test_clean_git_checkout(monkeypatch, run_task_mod):
             wait=lambda: 0,
         )
 
-    _stdin = Mock(
-        fileno=lambda: 3,
-    )
-
     monkeypatch.setattr(
         subprocess,
         "Popen",
         _Popen,
-    )
-
-    monkeypatch.setattr(
-        sys,
-        "stdin",
-        _stdin,
     )
 
     assert os.path.isdir(root_dir.name) is True
@@ -270,3 +272,113 @@ def test_clean_git_checkout(monkeypatch, run_task_mod):
 
     assert os.path.isdir(untracked_dir.name) is False
     assert os.path.isfile(untracked_file.name) is False
+
+
+def git_current_rev(cwd):
+    return subprocess.check_output(
+        args=["git", "rev-parse", "--verify", "HEAD"],
+        cwd=cwd,
+        universal_newlines=True,
+    ).strip()
+
+
+@pytest.fixture(scope="session")  # Tests shouldn't change this repo
+def mock_git_repo():
+    "Mock repository with files, commits and branches for using as source"
+    with tempfile.TemporaryDirectory() as repo:
+        repo_path = str(repo)
+        # Init git repo and setup user config
+        subprocess.check_call(["git", "init", "-b", "main"], cwd=repo_path)
+        subprocess.check_call(["git", "config", "user.name", "pytest"], cwd=repo_path)
+        subprocess.check_call(
+            ["git", "config", "user.email", "py@tes.t"], cwd=repo_path
+        )
+
+        def _commit_file(message, filename):
+            with open(os.path.join(repo, filename), "w") as fout:
+                fout.write("test file content")
+            subprocess.check_call(["git", "add", filename], cwd=repo_path)
+            subprocess.check_call(["git", "commit", "-m", message], cwd=repo_path)
+            return git_current_rev(repo_path)
+
+        # Commit mainfile (to main branch)
+        main_commit = _commit_file("Initial commit", "mainfile")
+
+        # New branch mybranch
+        subprocess.check_call(["git", "checkout", "-b", "mybranch"], cwd=repo_path)
+        # Commit branchfile to mybranch branch
+        branch_commit = _commit_file("File in mybranch", "branchfile")
+
+        # Set current branch back to main
+        subprocess.check_call(["git", "checkout", "main"], cwd=repo_path)
+        yield {"path": repo_path, "main": main_commit, "branch": branch_commit}
+
+
+@pytest.mark.parametrize(
+    "base_ref,ref,files,hash_key",
+    [
+        (None, None, ["mainfile"], "main"),
+        (None, "main", ["mainfile"], "main"),
+        (None, "mybranch", ["mainfile", "branchfile"], "branch"),
+        ("main", "main", ["mainfile"], "main"),
+        ("main", "mybranch", ["mainfile", "branchfile"], "branch"),
+    ],
+)
+def test_git_checkout(
+    mock_stdin,
+    run_task_mod,
+    mock_git_repo,
+    base_ref,
+    ref,
+    files,
+    hash_key,
+):
+    with tempfile.TemporaryDirectory() as workdir:
+        destination = os.path.join(workdir, "destination")
+        run_task_mod.git_checkout(
+            destination_path=destination,
+            head_repo=mock_git_repo["path"],
+            base_repo=mock_git_repo["path"],
+            base_ref=base_ref,
+            base_rev=None,
+            ref=ref,
+            commit=None,
+            ssh_key_file=None,
+            ssh_known_hosts_file=None,
+        )
+
+        # Check desired files exist
+        for filename in files:
+            assert os.path.exists(os.path.join(destination, filename))
+
+        # Check repo is on the right branch
+        if ref:
+            current_branch = subprocess.check_output(
+                args=["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                cwd=destination,
+                universal_newlines=True,
+            ).strip()
+            assert current_branch == ref
+
+            current_rev = git_current_rev(destination)
+            assert current_rev == mock_git_repo[hash_key]
+
+
+def test_git_checkout_with_commit(
+    mock_stdin,
+    run_task_mod,
+    mock_git_repo,
+):
+    with tempfile.TemporaryDirectory() as workdir:
+        destination = os.path.join(workdir, "destination")
+        run_task_mod.git_checkout(
+            destination_path=destination,
+            head_repo=mock_git_repo["path"],
+            base_repo=mock_git_repo["path"],
+            base_ref="mybranch",
+            base_rev=mock_git_repo["main"],
+            ref=mock_git_repo["branch"],
+            commit=mock_git_repo["branch"],
+            ssh_key_file=None,
+            ssh_known_hosts_file=None,
+        )
