@@ -1,5 +1,11 @@
 # Change Log
 
+## [4.2.0] - 2022-12-05
+
+### Added
+
+- v3 firefox-android indexes are now factorized
+
 ## [4.1.0] - 2022-12-05
 
 ### Added
