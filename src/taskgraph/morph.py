@@ -113,13 +113,7 @@ def derive_index_task(task, taskgraph, label_to_taskid, parameters, graph_config
 # these regular expressions capture route prefixes for which we have a star
 # scope, allowing them to be summarized.  Each should correspond to a star scope
 # in each Gecko `assume:repo:hg.mozilla.org/...` role.
-_SCOPE_SUMMARY_REGEXPS = [
-    # TODO Bug 1631839 - Remove these scopes once the migration is done
-    re.compile(r"(index:insert-task:project\.mobile\.fenix\.v2\.[^.]*\.).*"),
-    re.compile(
-        r"(index:insert-task:project\.mobile\.reference-browser\.v3\.[^.]*\.).*"
-    ),
-]
+_SCOPE_SUMMARY_REGEXPS = []
 
 
 def make_index_task(parent_task, taskgraph, label_to_taskid, parameters, graph_config):
