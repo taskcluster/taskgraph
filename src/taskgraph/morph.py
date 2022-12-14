@@ -113,7 +113,10 @@ def derive_index_task(task, taskgraph, label_to_taskid, parameters, graph_config
 # these regular expressions capture route prefixes for which we have a star
 # scope, allowing them to be summarized.  Each should correspond to a star scope
 # in each Gecko `assume:repo:hg.mozilla.org/...` role.
-_SCOPE_SUMMARY_REGEXPS = []
+_SCOPE_SUMMARY_REGEXPS = [
+    # TODO Bug 1805651: let the firefox-android repository specify this route
+    re.compile(r"(index:insert-task:mobile\.v3.[^.]*\.).*"),
+]
 
 
 def make_index_task(parent_task, taskgraph, label_to_taskid, parameters, graph_config):
