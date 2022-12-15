@@ -1,0 +1,8 @@
+# Note: Sphinx isn't supported in py36
+
+-r base.in
+sphinx
+sphinx-autobuild
+sphinx-argparse
+sphinx-book-theme
+sphinxcontrib-mermaid

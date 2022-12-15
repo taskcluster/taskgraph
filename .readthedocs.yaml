@@ -6,7 +6,7 @@ build:
         python: "3.9"
 python:
     install:
-        - requirements: requirements/test.txt
+        - requirements: requirements/docs.txt
         - method: pip
           path: .
 sphinx:

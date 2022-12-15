@@ -12,7 +12,9 @@ from pprint import pprint
 from unittest.mock import patch
 
 import pytest
-from taskcluster_urls import test_root_url
+
+# prevent pytest thinking this is a test
+from taskcluster_urls import test_root_url as _test_root_url
 
 from taskgraph.task import Task
 from taskgraph.transforms import job
@@ -108,7 +110,7 @@ def test_worker_caches(task, transform):
 )
 def test_run_task_command_context(task, transform, workerfn, monkeypatch):
     if "TASKCLUSTER_ROOT_URL" not in os.environ:
-        monkeypatch.setenv("TASKCLUSTER_ROOT_URL", test_root_url())
+        monkeypatch.setenv("TASKCLUSTER_ROOT_URL", _test_root_url())
     # Clear memoized function
     get_root_url.clear()
 
