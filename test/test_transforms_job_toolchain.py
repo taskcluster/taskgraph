@@ -27,7 +27,7 @@ TASK_DEFAULTS = {
 
 @pytest.fixture
 def run_job_using(mocker, run_transform):
-    m = mocker.patch("taskgraph.util.hash._find_files")
+    m = mocker.patch("taskgraph.util.hash._get_all_files")
     m.return_value = [
         "taskcluster/scripts/toolchain/run.sh",
         "taskcluster/scripts/toolchain/run.ps1",
