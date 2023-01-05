@@ -1,5 +1,12 @@
 # Change Log
 
+## [4.1.1] - 2022-01-05
+
+### Fixed
+
+- `run-task` is able to git-checkout non-default branch
+- `util.hash.hash_paths()` takes much less time to run when provided with 10+ patterns.
+
 ## [4.1.0] - 2022-12-05
 
 ### Added
