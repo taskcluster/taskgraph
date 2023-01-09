@@ -9,3 +9,8 @@ xfail_strict = true
 
 [tool.isort]
 profile = "black"
+
+[tool.coverage.run]
+parallel = true
+branch = true
+source = ["src/taskgraph/", "taskgraph", "src/taskgraph/run-task/"]
