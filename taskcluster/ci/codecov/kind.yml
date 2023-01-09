@@ -40,5 +40,5 @@ tasks:
             using: run-task
             cwd: '{checkout}'
             command: >-
-                pip install --user -r requirements/test.txt &&
+                pip install --user -r requirements/test.txt --require-hashes &&
                 python taskcluster/scripts/codecov-upload.py

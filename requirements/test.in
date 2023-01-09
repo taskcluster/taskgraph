@@ -1,16 +1,9 @@
 -r base.in
-dataclasses; python_version < "3.7"  # not a direct dependency
 mock
 pytest
 pytest-cov
 pytest-mock
+pytest-xdist[psutil]  # uses psutil to find out number of CPUs available
 responses
-# Downgrade sphinx to run the test suite on py3.6; remove once we stop supporting py3.6
-sphinx==4.3.1
-sphinx-argparse
-sphinx-book-theme
-sphinxcontrib-mermaid
-tox
+tox<4.0.0
 tox-pyenv
-# Black dependency; remove once we stop supporting py3.7
-typed-ast>=1.4.2; python_version < "3.8"

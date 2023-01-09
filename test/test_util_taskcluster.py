@@ -7,7 +7,7 @@ import os
 
 import pytest
 from requests import Session
-from requests.exceptions import HTTPError
+from requests.exceptions import HTTPError, RetryError
 from requests.packages.urllib3.util.retry import Retry
 from responses import matchers
 
@@ -194,7 +194,7 @@ def test_find_task_id(responses, root_url):
         f"{root_url}/api/index/v1/task/{index}",
         status=500,
     )
-    with pytest.raises(HTTPError):
+    with pytest.raises(RetryError):
         tc.find_task_id(index)
 
 

@@ -15,10 +15,9 @@ from taskgraph.util.vcs import HgRepository, Repository, get_repository
 _FORCE_COMMIT_DATE_TIME = "2019-11-04T10:03:58+00:00"
 
 
-@pytest.fixture(scope="function")
-def hg_repo(tmpdir, monkeypatch):
-    # Set HGPLAIN to ensure local .hgrc configs don't cause test failures.
-    monkeypatch.setenv("HGPLAIN", "1")
+@pytest.fixture(scope="package")
+def hg_repo(tmpdir_factory):
+    tmpdir = tmpdir_factory.mktemp("hgrepo")
     repo_dir = _init_repo(tmpdir, "hg")
     with open(os.path.join(repo_dir, ".hg", "hgrc"), "a") as f:
         f.write(
@@ -38,10 +37,10 @@ username = Integration Tests <integration@tests.test>
 _GIT_DATE_ENV_VARS = ("GIT_AUTHOR_DATE", "GIT_COMMITTER_DATE")
 
 
-@pytest.fixture(scope="function")
-def git_repo(tmpdir):
+@pytest.fixture(scope="package")
+def git_repo(tmpdir_factory):
     env = _build_env_with_git_date_env_vars(_FORCE_COMMIT_DATE_TIME)
-
+    tmpdir = tmpdir_factory.mktemp("gitrepo")
     repo_dir = _init_repo(tmpdir, "git")
 
     subprocess.check_output(
@@ -83,10 +82,18 @@ def _init_repo(tmpdir, repo_type):
 
 
 @pytest.fixture(params=("git", "hg"))
-def repo(request, hg_repo, git_repo):
+def repo(request, hg_repo, git_repo, monkeypatch, tmpdir):
+    """
+    The repo fixture depends on the session-scoped git and hg repo fixtures, and
+        copies the contents of the initialized repos to a temp folder
+    """
+    repodir = tmpdir.join(request.param)
     if request.param == "hg":
-        return get_repository(hg_repo)
-    return get_repository(git_repo)
+        monkeypatch.setenv("HGPLAIN", "1")
+        shutil.copytree(hg_repo, repodir)
+        return get_repository(repodir)
+    shutil.copytree(git_repo, repodir)
+    return get_repository(repodir)
 
 
 def _create_remote_repo(tmpdir, repo, remote_name, remote_path):
