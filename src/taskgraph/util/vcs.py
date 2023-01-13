@@ -225,8 +225,8 @@ class HgRepository(Repository):
         return self.run("path", "-T", "{url}", remote).strip()
 
     def get_commit_message(self, revision=None):
-        revision = revision or self.head_rev
-        return self.run("log", "-r", ".", "-T", "{desc}")
+        revision = revision or "."
+        return self.run("log", "-r", revision, "-T", "{desc}")
 
     def _format_diff_filter(self, diff_filter, for_status=False):
         df = diff_filter.lower()
@@ -415,8 +415,8 @@ class GitRepository(Repository):
         return self.run("remote", "get-url", remote).strip()
 
     def get_commit_message(self, revision=None):
-        revision = revision or self.head_rev
-        return self.run("log", "-n1", "--format=%B")
+        revision = revision or "HEAD"
+        return self.run("log", "-n1", "--format=%B", revision)
 
     def get_changed_files(
         self, diff_filter="ADM", mode="unstaged", rev=None, base_rev=None
