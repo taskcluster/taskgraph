@@ -10,17 +10,17 @@ cfgv==3.3.1 \
     --hash=sha256:c6a0883f3917a037485059700b9e75da2464e6c27051014ad85ba6aaa5884426 \
     --hash=sha256:f5a830efb9ce7a445376bb66ec94c638a9787422f96264c98edc6bdeed8ab736
     # via pre-commit
-identify==2.5.10 \
-    --hash=sha256:dce9e31fee7dbc45fea36a9e855c316b8fbf807e65a862f160840bb5a2bf5dfd \
-    --hash=sha256:fb7c2feaeca6976a3ffa31ec3236a6911fbc51aec9acc111de2aed99f244ade2
+identify==2.5.13 \
+    --hash=sha256:8aa48ce56e38c28b6faa9f261075dea0a942dfbb42b341b4e711896cbb40f3f7 \
+    --hash=sha256:abb546bca6f470228785338a01b539de8a85bbf46491250ae03363956d8ebb10
     # via pre-commit
 nodeenv==1.7.0 \
     --hash=sha256:27083a7b96a25f2f5e1d8cb4b6317ee8aeda3bdd121394e5ac54e498028a042e \
     --hash=sha256:e0e7f7dfb85fc5394c6fe1e8fa98131a2473e04311a45afb6508f7cf1836fa2b
     # via pre-commit
-pre-commit==2.20.0 \
-    --hash=sha256:51a5ba7c480ae8072ecdb6933df22d2f812dc897d5fe848778116129a681aac7 \
-    --hash=sha256:a978dac7bc9ec0bcee55c18a277d553b0f419d259dadb4b9418ff2d00eb43959
+pre-commit==2.21.0 \
+    --hash=sha256:31ef31af7e474a8d8995027fefdfcf509b5c913ff31f2015b4ec4beb26a6f658 \
+    --hash=sha256:e2f91727039fc39a92f58a588a25b87f936de6567eed4f0e673e0507edc75bad
     # via -r requirements/dev.in
 
 # WARNING: The following packages were not pinned, but pip requires them to be
