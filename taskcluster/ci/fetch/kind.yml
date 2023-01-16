@@ -14,8 +14,8 @@ tasks:
         description: uploader for codecov.io
         fetch:
             type: "static-url"
-            url: https://uploader.codecov.io/v0.1.22/linux/codecov
-            sha256: 8d2bd62336bf931ce36ee4267fbe013ebc2f94dcff694db0b15256640871112f
-            size: 41660666
+            url: https://uploader.codecov.io/v0.3.2/linux/codecov
+            sha256: 20f9c9d78483fce977b6cc39e231a734a23bcd36f4d536bb7355222fb88d02bc
+            size: 43316140
             headers:
                 User-Agent: Mozilla
