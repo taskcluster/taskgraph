@@ -1,6 +1,16 @@
 # Change Log
 
-## [4.1.1] - 2022-01-05
+## [4.1.2] - 2023-01-16
+
+### Added
+
+- Added testing on python 3.11
+- Prefer `$switch` over `$if/else` in `.taskcluster.yml`
+- Updated requirement packages + Drop python 3.6 testing
+
+### Fixed
+
+## [4.1.1] - 2023-01-05
 
 ### Fixed
 
