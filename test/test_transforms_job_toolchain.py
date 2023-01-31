@@ -184,6 +184,11 @@ def assert_powershell(job, _):
     }
 
 
+def assert_forward(job, _):
+    """Assert unknown schema args are forwarded to run_task"""
+    assert job["run"]["foo"] == "bar"
+
+
 @pytest.mark.parametrize(
     "task",
     (
@@ -221,6 +226,10 @@ def assert_powershell(job, _):
                 },
             },
             id="powershell",
+        ),
+        pytest.param(
+            {"run": {"foo": "bar"}},
+            id="forward",
         ),
     ),
 )
