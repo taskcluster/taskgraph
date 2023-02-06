@@ -11,7 +11,6 @@ from taskgraph.taskgraph import TaskGraph
 
 
 class TestTaskGraph(unittest.TestCase):
-
     maxDiff = None
 
     def test_taskgraph_to_json(self):

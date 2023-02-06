@@ -31,7 +31,6 @@ with open(os.path.join(project_dir, "version.txt")) as f:
 
 
 class TestParameters(TestCase):
-
     vals = {
         "base_repository": "repository",
         "base_ref": "base_ref",

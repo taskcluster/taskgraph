@@ -32,7 +32,6 @@ def run_task_mod():
 
 @pytest.fixture
 def patch_run_command(monkeypatch, run_task_mod):
-
     called_with = []
 
     def fake_run_command(*args, **kwargs):

@@ -33,7 +33,6 @@ class KindNotFound(Exception):
 
 @attr.s(frozen=True)
 class Kind:
-
     name = attr.ib(type=AnyStr)
     path = attr.ib(type=AnyStr)
     config = attr.ib(type=dict)

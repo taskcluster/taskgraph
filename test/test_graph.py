@@ -9,7 +9,6 @@ from taskgraph.graph import Graph
 
 
 class TestGraph(unittest.TestCase):
-
     tree = Graph(
         {"a", "b", "c", "d", "e", "f", "g"},
         {

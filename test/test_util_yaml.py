@@ -20,7 +20,6 @@ def test_load():
             )
         }
     ):
-
         assert yaml.load_yaml("/dir1/dir2", "foo.yml") == {"prop": ["val1"]}
 
 
