@@ -41,7 +41,6 @@ def proxy_root_url(monkeypatch, mock_environ):
 
 
 def test_get_root_url(monkeypatch):
-
     tc.get_root_url.clear()
     assert tc.get_root_url(False) == tc.PRODUCTION_TASKCLUSTER_ROOT_URL
 
