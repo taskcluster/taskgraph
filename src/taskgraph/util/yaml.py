@@ -5,6 +5,7 @@
 
 import os
 
+from .memoize import memoize
 from yaml.loader import SafeLoader
 
 
@@ -28,6 +29,7 @@ def load_stream(stream):
         loader.dispose()
 
 
+@memoize
 def load_yaml(*parts):
     """Convenience function to load a YAML file in the given path.  This is
     useful for loading kind configuration files from the kind path."""
