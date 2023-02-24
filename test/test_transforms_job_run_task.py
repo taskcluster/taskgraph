@@ -3,10 +3,13 @@ Tests for the 'toolchain' transforms.
 """
 from pprint import pprint
 
+import os.path
 import pytest
 
 from taskgraph.transforms.job import make_task_description
 from taskgraph.util.templates import merge
+
+here = os.path.abspath(os.path.dirname(__file__))
 
 TASK_DEFAULTS = {
     "description": "fake description",
@@ -19,7 +22,10 @@ TASK_DEFAULTS = {
     },
     "run": {
         "using": "run-task",
-        "command": "echo hello world",
+        "command": "echo hello {extra_string}",
+        "command-context": {
+            "from-file": f"{here}/data/command_context.yaml",
+        },
     },
 }
 
