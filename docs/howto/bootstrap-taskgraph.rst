@@ -34,7 +34,7 @@ Next, create the ``requirements.in`` file:
    cd taskcluster
    echo "taskcluster-taskgraph" > requirements.in
    # This works best if you use the same Python as the one used in the Decision
-   # image (currently 3.6).
+   # image (currently 3.8).
    pip-compile --generate-hashes --output-file requirements.txt requirements.in
 
 .. note::
