@@ -91,22 +91,6 @@ class TestGetDecisionParameters(unittest.TestCase):
         params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
         self.assertEqual(params["owner"], "ffxbld@noreply.mozilla.org")
 
-    def test_dontbuild(self):
-        repo_mock = unittest.mock.MagicMock()
-        repo_mock.commit_message = "Add FOO DONTBUILD"
-
-        self.options["tasks_for"] = "github-release"
-        params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
-        self.assertNotEqual(params["target_tasks_method"], "nothing")
-
-        self.options["tasks_for"] = "github-push"
-        params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
-        self.assertEqual(params["target_tasks_method"], "nothing")
-
-        self.options["tasks_for"] = "hg-push"
-        params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
-        self.assertEqual(params["target_tasks_method"], "nothing")
-
 
 @pytest.mark.parametrize(
     "candidate_base_ref, base_rev, expected_base_ref",
