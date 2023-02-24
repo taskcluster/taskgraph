@@ -5,8 +5,9 @@
 
 import os
 
-from .memoize import memoize
 from yaml.loader import SafeLoader
+
+from .memoize import memoize
 
 
 class UnicodeLoader(SafeLoader):
