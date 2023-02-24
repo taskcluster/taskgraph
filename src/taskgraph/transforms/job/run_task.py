@@ -15,8 +15,8 @@ from taskgraph.transforms.job import run_job_using
 from taskgraph.transforms.job.common import support_vcs_checkout
 from taskgraph.transforms.task import taskref_or_string
 from taskgraph.util import path, taskcluster
-from taskgraph.util.yaml import load_yaml
 from taskgraph.util.schema import Schema
+from taskgraph.util.yaml import load_yaml
 
 EXEC_COMMANDS = {
     "bash": ["bash", "-cx"],
