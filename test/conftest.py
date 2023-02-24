@@ -18,6 +18,13 @@ from taskgraph.util.templates import merge
 
 here = Path(__file__).parent
 
+# Disable as much system/user level configuration as we can to avoid
+# interference with tests.
+# This ignores ~/.hgrc
+os.environ["HGRCPATH"] = ""
+# This ignores system-level git config (eg: in /etc). There apperas to be
+# no way to ignore ~/.gitconfig other than overriding $HOME, which is overkill.
+os.environ["GIT_CONFIG_NOSYSTEM"] = "1"
 
 @pytest.fixture
 def responses():
