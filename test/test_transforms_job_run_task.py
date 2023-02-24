@@ -1,9 +1,9 @@
 """
 Tests for the 'toolchain' transforms.
 """
+import os.path
 from pprint import pprint
 
-import os.path
 import pytest
 
 from taskgraph.transforms.job import make_task_description
