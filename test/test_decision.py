@@ -66,10 +66,17 @@ class TestGetDecisionParameters(unittest.TestCase):
             decision._determine_more_accurate_base_rev
         )
         decision._determine_more_accurate_base_rev = lambda *_, **__: "abcd"
+        self.old_determine_more_accurate_base_ref = (
+            decision._determine_more_accurate_base_ref
+        )
+        decision._determine_more_accurate_base_ref = lambda *_, **__: "abcd"
 
     def tearDown(self):
         decision._determine_more_accurate_base_rev = (
             self.old_determine_more_accurate_base_rev
+        )
+        decision._determine_more_accurate_base_ref = (
+            self.old_determine_more_accurate_base_ref
         )
 
     def test_simple_options(self):
