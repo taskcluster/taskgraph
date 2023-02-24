@@ -26,6 +26,7 @@ os.environ["HGRCPATH"] = ""
 # no way to ignore ~/.gitconfig other than overriding $HOME, which is overkill.
 os.environ["GIT_CONFIG_NOSYSTEM"] = "1"
 
+
 @pytest.fixture
 def responses():
     with RequestsMock() as rsps:
