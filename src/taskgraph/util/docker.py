@@ -299,7 +299,6 @@ def stream_context_tar(topsrcdir, context_dir, out_file, image_name=None, args=N
     return writer.hexdigest()
 
 
-@memoize
 def image_paths():
     """Return a map of image name to paths containing their Dockerfile."""
     config = load_yaml("taskcluster", "ci", "docker-image", "kind.yml")
