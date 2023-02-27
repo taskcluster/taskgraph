@@ -1,10 +1,6 @@
 ---
-loader: taskgraph.loader.transform:loader
-
 transforms:
   - {{cookiecutter.project_slug}}_taskgraph.transforms.hello:transforms
-  - taskgraph.transforms.job:transforms
-  - taskgraph.transforms.task:transforms
 
 task-defaults:
   worker-type: t-linux-large

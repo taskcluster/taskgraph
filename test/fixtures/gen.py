@@ -41,6 +41,8 @@ def fake_loader(kind, path, config, parameters, loaded_tasks):
 
 
 class FakeKind(Kind):
+    loaded_kinds = []
+
     def _get_loader(self):
         return fake_loader
 
