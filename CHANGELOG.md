@@ -1,5 +1,20 @@
 # Change Log
 
+## [4.2.0] - 2022-02-28
+
+### Added
+
+- Python 3.11 is now tested in CI
+- Support for `.tgz` file extension in `fetch-content` script
+- Extra arguments now forwarded from `job.toolchain` transforms to `job.run_task`
+- All calls to `util.yaml.load_yaml` are now memoized
+- Support for `command-context.from-file` in `run_task` transforms
+- Worker provisioner / type can be formatted with alias and trust-domain in `config.yml`
+
+### Fixed
+
+- `util.vcs.get_commit_message` actually uses its `revision` parameter
+
 ## [4.1.1] - 2022-01-05
 
 ### Fixed
