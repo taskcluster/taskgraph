@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from taskgraph import decision
+from taskgraph.util.vcs import GitRepository, HgRepository
 from taskgraph.util.yaml import load_yaml
 
 FAKE_GRAPH_CONFIG = {"product-dir": "browser", "taskgraph": {}}
@@ -90,6 +91,55 @@ class TestGetDecisionParameters(unittest.TestCase):
         self.options["owner"] = "ffxbld"
         params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
         self.assertEqual(params["owner"], "ffxbld@noreply.mozilla.org")
+
+    @unittest.mock.patch.object(
+        GitRepository,
+        "get_commit_message",
+        unittest.mock.MagicMock(return_value="Add Foo"),
+    )
+    @unittest.mock.patch.object(
+        HgRepository,
+        "get_commit_message",
+        unittest.mock.MagicMock(return_value="Add Foo"),
+    )
+    def test_regular_commit_message_yields_default_target_tasks_method(self):
+        """
+        Ensures `target_tasks_method` is `default` when the commit message does not contain
+        `DONTBUILD`.
+        """
+        self.options["tasks_for"] = "github-push"
+        params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
+        self.assertEqual(params["target_tasks_method"], "default")
+
+        self.options["tasks_for"] = "hg-push"
+        params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
+        self.assertEqual(params["target_tasks_method"], "default")
+
+    @unittest.mock.patch.object(
+        GitRepository,
+        "get_commit_message",
+        unittest.mock.MagicMock(return_value="DONTBUILD"),
+    )
+    @unittest.mock.patch.object(
+        HgRepository,
+        "get_commit_message",
+        unittest.mock.MagicMock(return_value="DONTBUILD"),
+    )
+    def test_dontbuild_commit_message_yields_default_target_tasks_method(self):
+        """
+        Ensures `target_tasks_method` is `nothing` when the commit message contains `DONTBUILD`.
+        """
+        self.options["tasks_for"] = "github-release"
+        params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
+        self.assertNotEqual(params["target_tasks_method"], "nothing")
+
+        self.options["tasks_for"] = "github-push"
+        params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
+        self.assertEqual(params["target_tasks_method"], "nothing")
+
+        self.options["tasks_for"] = "hg-push"
+        params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
+        self.assertEqual(params["target_tasks_method"], "nothing")
 
 
 @pytest.mark.parametrize(
