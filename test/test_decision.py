@@ -102,7 +102,7 @@ class TestGetDecisionParameters(unittest.TestCase):
         "get_commit_message",
         unittest.mock.MagicMock(return_value="Add Foo"),
     )
-    def test_default(self):
+    def test_regular_commit_message_yields_default_target_tasks_method(self):
         """
         Ensures `target_tasks_method` is `default` when the commit message does not contain
         `DONTBUILD`.
@@ -125,7 +125,7 @@ class TestGetDecisionParameters(unittest.TestCase):
         "get_commit_message",
         unittest.mock.MagicMock(return_value="DONTBUILD"),
     )
-    def test_dontbuild(self):
+    def test_dontbuild_commit_message_yields_default_target_tasks_method(self):
         """
         Ensures `target_tasks_method` is `nothing` when the commit message contains `DONTBUILD`.
         """
