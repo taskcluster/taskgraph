@@ -25,8 +25,7 @@ Taskgraph is on Pypi and can be installed via:
    pip install taskcluster-taskgraph
 
 This provides the ``taskgraph`` binary, see ``taskgraph --help`` for available
-commands. To integrate Taskgraph in your project, see
-:doc:`tutorials/creating-a-task-graph`.
+commands.
 
 Alternatively you can install it by cloning the repo. This is useful if you
 need to test against a specific revision:
@@ -37,32 +36,100 @@ need to test against a specific revision:
    cd taskgraph
    python setup.py develop
 
+Getting Started
+---------------
+
+Once installed, you can quickly bootstrap a new Taskgraph setup by running the
+following command within an existing repository:
+
+.. code-block::
+
+   taskgraph init
+
+.. warning::
+
+   Taskgraph currently only supports repositories hosted on Github or hg.mozilla.org.
+
+You should notice a couple changes:
+
+1. A new file called ``.taskcluster.yml``. This file is rendered via `JSON-e`_
+   with context passed in from a Github webhook event (if your repository is
+   hosted on Github). The rendered result contains a `task definition`_ for a
+   special task called the :term:`Decision Task`.
+2. A new directory called ``taskcluster``. This contains the :term:`kind
+   <Kind>` definitions and :term:`transform <Transform>` files that will define
+   your tasks.
+
+In short, the Decision task will invoke ``taskgraph`` in your repository. This
+command will then process the ``taskcluster`` directory, turn it into a graph
+of tasks, and submit them all to Taskcluster. But you can also test out the
+``taskgraph`` command locally! From the root of your repo, try running:
+
+.. code-block::
+
+   taskgraph full
+
+You'll notice that ``taskgraph init`` has created a couple of tasks for us
+already, namely ``build-docker-image-linux`` and ``hello-world``.
+
+.. note::
+
+   By default the ``taskgraph`` command will only output task labels. Try
+   adding ``--json`` to the command to see the actual definitions.
+
+See if you can create a new task by editing ``taskcluster/ci/hello/kind.yml``,
+and re-run ``taskgraph full`` to verify.
 
 How It Works
 ------------
 
-Taskcluster tasks are defined in the ``tasks`` section of a `.taskcluster.yml`_
-file at the repository root. This is adequate for simple CI systems which only
-have a few tasks. But as the complexity of a CI system grows, trying to fit
-all task definitions into a single file becomes difficult to maintain.
+Taskgraph starts by loading :term:`kinds <Kind>`, which are logical groupings
+of similar tasks. Each kind is defined in a ``taskcluster/ci/<kind
+name>/kind.yml`` file.
 
-Instead of defining everything in the `.taskcluster.yml`_, Taskgraph consumers
-define only a single task called the :ref:`decision task`. This task runs the
-command ``taskgraph decision`` which at a very high level:
+Once a kind has been loaded, Taskgraph passes each task defined therein through
+a series of :term:`transforms <Transform>`. These are a functions that can
+modify tasks, or even split one task into many! Transforms are defined in the
+``kind.yml`` file and are applied in order one after the other. Along the way,
+many transform files define schemas, allowing task authors to easily reason
+about the state of a task as it marches towards its final definition.
 
-1. Reads a set of input YAML files defining :term:`tasks <Task>`.
-2. Runs each task definition through a set of :term:`transforms <Transform>`.
-3. Submits the resulting DAG of tasks (with Decision task as the root) to
-   Taskcluster via its REST API.
+Transforms can be defined within a project (like the ``hello.py``
+transforms the ``init`` command created for us), or they can live in an
+external module (like Taskgraph itself). By convention, most tasks in Taskgraph
+end with the transforms defined at ``taskgraph.transforms.task``, or the
+"task" transforms. These special transforms perform the final changes necessary
+to format them according to Taskcluster's `task definition`_ schema.
 
 Taskgraph's combination of static configuration with logic layered on top,
 allows a project's CI to grow to arbitrary complexity.
 
 
+Next Steps and Further Reading
+------------------------------
+
+After you have a working Taskgraph setup, you'll still need to integrate it with
+Taskcluster. See :ref:`configure your project` for more details.
+
+Here are some more resources to help get you started:
+
+* Learn about :doc:`task graphs and how they are generated
+  <concepts/task-graphs>`.
+* Create a new Taskgraph setup from scratch to better understand what
+  ``taskgraph init`` accomplished for us by following the tutorials:
+
+  * :doc:`tutorials/creating-a-task-graph`
+  * :doc:`tutorials/connecting-taskcluster`
+* Read more details about :doc:`kinds <concepts/kind>` and :doc:`transforms <concepts/transforms>`.
+* Learn more advanced tips for :doc:`running <howto/run-locally>` and :doc:`debugging
+  <howto/debugging>` Taskgraph locally.
+
 .. _DAGs: https://en.wikipedia.org/wiki/Directed_acyclic_graph
 .. _CI: https://en.wikipedia.org/wiki/Continuous_integration
 .. _Taskcluster: https://taskcluster.net
-.. _.taskcluster.yml: https://docs.taskcluster.net/docs/reference/integrations/github/taskcluster-yml-v1
+.. _JSON-e: https://json-e.js.org/
+.. _task definition: https://docs.taskcluster.net/docs/reference/platform/queue/task-schema
+
 
 Table of Contents
 -----------------

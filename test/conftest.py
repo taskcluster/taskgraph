@@ -34,3 +34,8 @@ def patch_taskcluster_root_url(session_mocker):
 @pytest.fixture(scope="session")
 def datadir():
     return here / "data"
+
+
+@pytest.fixture(scope="session")
+def project_root():
+    return here.parent

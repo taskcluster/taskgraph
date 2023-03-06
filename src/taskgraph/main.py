@@ -728,6 +728,80 @@ def test_action_callback(options):
         sys.exit(1)
 
 
+@command(
+    "init", description="Initialize a new Taskgraph setup in a new or existing project."
+)
+@argument(
+    "-f",
+    "--force",
+    action="store_true",
+    default=False,
+    help="Bypass safety checks.",
+)
+@argument(
+    "--prompt",
+    dest="no_input",
+    action="store_false",
+    default=True,
+    help="Prompt for input rather than using default values (advanced).",
+)
+@argument(
+    "--template",
+    default="gh:taskcluster/taskgraph",
+    help=argparse.SUPPRESS,  # used for testing
+)
+def init_taskgraph(options):
+    from cookiecutter.main import cookiecutter
+
+    from taskgraph.util.vcs import get_repository
+
+    repo = get_repository(os.getcwd())
+    root = Path(repo.path)
+
+    # Clean up existing installations if necessary.
+    tc_yml = root.joinpath(".taskcluster.yml")
+    if tc_yml.is_file():
+        if not options["force"]:
+            proceed = input(
+                "A Taskcluster setup already exists in this repository, "
+                "would you like to overwrite it? [y/N]: "
+            ).lower()
+            while proceed not in ("y", "yes", "n", "no"):
+                proceed = input(f"Invalid option '{proceed}'! Try again: ")
+
+            if proceed[0] == "n":
+                sys.exit(1)
+
+        tc_yml.unlink()
+        tg_dir = root.joinpath("taskcluster")
+        if tg_dir.is_dir():
+            shutil.rmtree(tg_dir)
+
+    # Populate some defaults from the current repository.
+    context = {"project_name": root.name}
+
+    repo_url = repo.get_url()
+    if repo.tool == "git" and "github.com" in repo_url:
+        context["repo_host"] = "github"
+    elif repo.tool == "hg" and "hg.mozilla.org" in repo_url:
+        context["repo_host"] = "hgmo"
+    else:
+        raise RuntimeError(
+            "Repository not supported! Taskgraph currently only "
+            "supports repositories hosted on Github or hg.mozilla.org."
+        )
+
+    # Generate the project.
+    cookiecutter(
+        options["template"],
+        directory="template",
+        extra_context=context,
+        no_input=options["no_input"],
+        output_dir=root.parent,
+        overwrite_if_exists=True,
+    )
+
+
 def create_parser():
     parser = argparse.ArgumentParser(description="Interact with taskgraph")
     subparsers = parser.add_subparsers()
