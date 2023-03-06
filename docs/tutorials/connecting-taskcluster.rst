@@ -6,6 +6,8 @@ create a :term:`Decision Task` to generate and submit your graph. This tutorial
 assumes you have a functional Taskgraph setup. If you don't already have one,
 see :doc:`creating-a-task-graph`.
 
+.. _configure your project:
+
 Configuring your Project
 ------------------------
 
@@ -20,10 +22,8 @@ them to help get your repository configured.
    dedicated repository. Here are some configuration repositories for known
    Taskcluster instances:
 
-   * `Firefox-CI configuration`_ (managed by the Release Engineering team)
-   * `Community configuration`_ (managed by the Taskcluster team)
-
-
+   * `Firefox-CI configuration`_ (managed by the Release Engineering team in `#firefox-ci`_)
+   * `Community configuration`_ (managed by the Taskcluster team in `#taskcluster`_)
 
 If using Github, you'll also need to install the `Taskcluster Github
 integration`_. Please note that only org administrators can enable the
@@ -43,6 +43,8 @@ integration.
 .. _Taskcluster Github integration: https://docs.taskcluster.net/docs/manual/using/github
 .. _Firefox-CI Github integration: https://github.com/apps/firefoxci-taskcluster
 .. _Community Github integration: https://github.com/apps/community-tc-integration
+.. _#firefox-ci: https://matrix.to/#/#firefox-ci:mozilla.org
+.. _#taskcluster: https://matrix.to/#/#taskcluster:mozilla.org
 
 Populate the Requirements
 -------------------------
