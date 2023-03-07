@@ -753,6 +753,7 @@ def test_action_callback(options):
 def init_taskgraph(options):
     from cookiecutter.main import cookiecutter
 
+    import taskgraph
     from taskgraph.util.vcs import get_repository
 
     repo = get_repository(os.getcwd())
@@ -794,6 +795,7 @@ def init_taskgraph(options):
     # Generate the project.
     cookiecutter(
         options["template"],
+        checkout=taskgraph.__version__,
         directory="template",
         extra_context=context,
         no_input=options["no_input"],
