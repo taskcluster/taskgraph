@@ -26,9 +26,6 @@ from .mockedopen import MockedOpen
 
 project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-with open(os.path.join(project_dir, "version.txt")) as f:
-    version = f.read().rstrip()
-
 
 class TestParameters(TestCase):
     vals = {
@@ -57,7 +54,7 @@ class TestParameters(TestCase):
         "repository_type": "hg",
         "target_tasks_method": "default",
         "tasks_for": "github-push",
-        "version": version,
+        "version": taskgraph.__version__,
     }
 
     def test_Parameters_immutable(self):

@@ -1,19 +1,21 @@
 import os
+from distutils.util import convert_path
 
 from setuptools import find_packages, setup
 
 project_dir = os.path.abspath(os.path.dirname(__file__))
 
+namespace = {}
+version_file = convert_path("src/taskgraph/__init__.py")
+with open(version_file) as fh:
+    exec(fh.read(), namespace)
 
 with open(os.path.join(project_dir, "requirements/base.in")) as fp:
     requirements = fp.read().splitlines()
 
-with open(os.path.join(project_dir, "version.txt")) as f:
-    version = f.read().rstrip()
-
 setup(
     name="taskcluster-taskgraph",
-    version=version,
+    version=namespace["__version__"],
     description="Build taskcluster taskgraphs",
     url="https://github.com/taskcluster/taskgraph",
     packages=find_packages("src"),
