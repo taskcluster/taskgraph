@@ -1,6 +1,20 @@
 # Change Log
 
-## [4.2.0] - 2022-02-28
+## [4.3.0] - 2023-03-09
+
+### Added
+
+- A `taskgraph init` command to bootstrap projects on Firefox-CI
+
+### Fixed
+
+- DONTBUILD in a commit message now works for Github pushes
+
+### Changed
+
+- `fetch-content` script now uses `unzip -q` to avoid polluting logs
+
+## [4.2.0] - 2023-02-28
 
 ### Added
 
@@ -15,7 +29,7 @@
 
 - `util.vcs.get_commit_message` actually uses its `revision` parameter
 
-## [4.1.1] - 2022-01-05
+## [4.1.1] - 2023-01-05
 
 ### Fixed
 
