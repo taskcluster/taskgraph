@@ -7,10 +7,24 @@ extend-exclude = """(\
 [tool.pytest.ini_options]
 xfail_strict = true
 
-[tool.isort]
-profile = "black"
-
 [tool.coverage.run]
 parallel = true
 branch = true
 source = ["src/taskgraph/", "taskgraph", "src/taskgraph/run-task/"]
+
+[tool.ruff]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort
+    "UP",       # pyupgrade
+]
+ignore = [
+    "E402",
+    "E501",  # let black handle line-length
+    "E741",
+]
+target-version = "py37"
+
+[tool.ruff.isort]
+known-first-party = ["taskgraph"]
