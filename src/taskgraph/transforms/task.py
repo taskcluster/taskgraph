@@ -1283,17 +1283,17 @@ def check_run_task_caches(config, tasks):
 
             if not run_task:
                 raise Exception(
-                    "%s is using a cache (%s) reserved for run-task "
+                    f"{task['label']} is using a cache ({cache}) reserved for run-task "
                     "change the task to use run-task or use a different "
-                    "cache name" % (task["label"], cache)
+                    "cache name"
                 )
 
             if not cache.endswith(suffix):
                 raise Exception(
-                    "%s is using a cache (%s) reserved for run-task "
+                    f"{task['label']} is using a cache ({cache}) reserved for run-task "
                     "but the cache name is not dependent on the contents "
                     "of run-task; change the cache name to conform to the "
-                    "naming requirements" % (task["label"], cache)
+                    "naming requirements"
                 )
 
         yield task
