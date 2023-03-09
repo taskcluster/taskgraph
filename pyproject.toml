@@ -14,10 +14,11 @@ source = ["src/taskgraph/", "taskgraph", "src/taskgraph/run-task/"]
 
 [tool.ruff]
 select = [
-    "E", "W",   # pycodestyle
-    "F",        # pyflakes
-    "I",        # isort
-    "UP",       # pyupgrade
+    "E", "W",       # pycodestyle
+    "F",            # pyflakes
+    "I",            # isort
+    "PLC", "PLE",   # pylint
+    "UP",           # pyupgrade
 ]
 ignore = [
     "E402",
