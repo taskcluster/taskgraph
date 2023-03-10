@@ -352,12 +352,6 @@ class TaskGraphGenerator:
         yield self.verify("target_task_set", target_task_set, graph_config, parameters)
 
         logger.info("Generating target task graph")
-        # include all docker-image build tasks here, in case they are needed for a graph morph
-        docker_image_tasks = {
-            t.label
-            for t in full_task_graph.tasks.values()
-            if t.attributes["kind"] == "docker-image"
-        }
         # include all tasks with `always_target` set
         if parameters["enable_always_target"]:
             always_target_tasks = {
@@ -371,7 +365,7 @@ class TaskGraphGenerator:
             "Adding %d tasks with `always_target` attribute"
             % (len(always_target_tasks) - len(always_target_tasks & target_tasks))
         )
-        requested_tasks = target_tasks | docker_image_tasks | always_target_tasks
+        requested_tasks = target_tasks | always_target_tasks
         target_graph = full_task_graph.graph.transitive_closure(requested_tasks)
         target_task_graph = TaskGraph(
             {l: all_tasks[l] for l in target_graph.nodes}, target_graph
