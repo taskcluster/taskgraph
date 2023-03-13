@@ -28,7 +28,7 @@ repos:
       - id: yamllint
         exclude: template
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.2
+    rev: v2.2.4
     hooks:
       - id: codespell
         entry: codespell -I .codespell-ignore-words.txt
