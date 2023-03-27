@@ -1,5 +1,15 @@
 # Change Log
 
+## [5.0.0] - 2023-03-27
+
+### Removed
+
+- Support for python 3.6
+
+### Changed
+
+- Updated github ssh host key (per https://github.blog/2023-03-23-we-updated-our-rsa-ssh-host-key/)
+
 ## [4.3.0] - 2023-03-09
 
 ### Added
