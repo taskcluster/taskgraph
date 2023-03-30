@@ -144,6 +144,9 @@ def make_index_task(parent_task, taskgraph, label_to_taskid, parameters, graph_c
         )
     )
     all_scopes_summary_regexps = _SCOPE_SUMMARY_REGEXPS + [domain_scope_regex]
+    if "scope-summaries" in graph_config["taskgraph"]:
+        for summary in graph_config["taskgraph"]["scope-summaries"]:
+            all_scopes_summary_regexps.append(re.compile(summary))
     for path in index_paths:
         scope = f"index:insert-task:{path}"
         for summ_re in all_scopes_summary_regexps:
