@@ -59,8 +59,9 @@ def fetch_content_mod():
 def test_stream_download(
     monkeypatch, fetch_content_mod, url, sha256, size, headers, raises
 ):
-    def mock_urlopen(req, *, cafile=None):
+    def mock_urlopen(req, timeout=None, *, cafile=None):
         assert req._full_url == url
+        assert timeout is not None
         if headers:
             assert len(req.headers) == len(headers)
             for header in headers:
