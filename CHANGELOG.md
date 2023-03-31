@@ -1,5 +1,11 @@
 # Change Log
 
+## [5.0.1] - 2023-03-31
+
+### Changed
+
+- `fetch-content` and `robustcheckout` time out on idle http connections
+
 ## [5.0.0] - 2023-03-27
 
 ### Removed
