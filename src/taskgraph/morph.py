@@ -126,12 +126,12 @@ def make_index_task(parent_task, taskgraph, label_to_taskid, parameters, graph_c
     # namespace-heavy index task might have more scopes than can fit in a
     # temporary credential.
     scopes = set()
-    domain_scope_regex = re.compile(
+    domain_index_regex = re.compile(
         r"({trust_domain}\.v2\.[^.]*\.).*".format(
             trust_domain=re.escape(graph_config["trust-domain"])
         )
     )
-    index_path_res = [domain_scope_regex]
+    index_path_res = [domain_index_regex]
     for path in graph_config["taskgraph"].get("index-path-regexes", ()):
         index_path_res.append(re.compile(path))
     for path in index_paths:
