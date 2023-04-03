@@ -55,6 +55,10 @@ graph_config_schema = Schema(
                 description="The taskcluster index prefix to use for caching tasks. "
                 "Defaults to `trust-domain`.",
             ): str,
+            Optional(
+                "index-path-regexes",
+                description="Regular expressions matching index paths to be summarized.",
+            ): [str],
             Required("repositories"): All(
                 {
                     str: {
