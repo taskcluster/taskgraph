@@ -143,7 +143,7 @@ def create_tasks(
     If you wish to create the tasks in a new group, leave out decision_task_id.
 
     Returns an updated label_to_taskid containing the new tasks"""
-    if suffix != "":
+    if suffix:
         suffix = f"-{suffix}"
     to_run = set(to_run)
 

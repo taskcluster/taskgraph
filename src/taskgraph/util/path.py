@@ -88,7 +88,7 @@ def basedir(path, bases):
     if path in bases:
         return path
     for b in sorted(bases, reverse=True):
-        if b == "" or path.startswith(b + "/"):
+        if not b or path.startswith(b + "/"):
             return b
 
 

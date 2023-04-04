@@ -306,7 +306,7 @@ class HgRepository(Repository):
 
     def does_revision_exist_locally(self, revision):
         try:
-            return self.run("log", "-r", revision).strip() != ""
+            return bool(self.run("log", "-r", revision).strip())
         except subprocess.CalledProcessError as e:
             # Error code 255 comes with the message:
             # "abort: unknown revision $REVISION"
