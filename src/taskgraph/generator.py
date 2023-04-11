@@ -42,7 +42,7 @@ class Kind:
         try:
             loader = self.config["loader"]
         except KeyError:
-            raise KeyError(f"{self.path!r} does not define `loader`")
+            loader = "taskgraph.loader.default:loader"
         return find_object(loader)
 
     def load_tasks(self, parameters, loaded_tasks, write_artifacts):

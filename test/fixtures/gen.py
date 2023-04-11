@@ -41,6 +41,8 @@ def fake_loader(kind, path, config, parameters, loaded_tasks):
 
 
 class FakeKind(Kind):
+    loaded_kinds = []
+
     def _get_loader(self):
         return fake_loader
 
@@ -71,16 +73,22 @@ def fake_load_graph_config(root_dir):
             },
             "workers": {
                 "aliases": {
+                    "b-linux": {
+                        "provisioner": "taskgraph-b",
+                        "implementation": "docker-worker",
+                        "os": "linux",
+                        "worker-type": "linux",
+                    },
                     "t-linux": {
                         "provisioner": "taskgraph-t",
                         "implementation": "docker-worker",
                         "os": "linux",
                         "worker-type": "linux",
-                    }
+                    },
                 }
             },
             "task-priority": "low",
-            "treeherder": {"group-names": []},
+            "treeherder": {"group-names": {"T": "tests"}},
         },
         root_dir,
     )

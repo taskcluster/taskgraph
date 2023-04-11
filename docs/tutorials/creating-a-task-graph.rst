@@ -83,26 +83,17 @@ starting definitions of the tasks themselves. If you followed the layout above,
 you have a ``hello`` kind. For this next section we'll be editing
 ``taskcluster/ci/hello/kind.yml``.
 
-#. First declare a loader. Loaders determine how the task definitions get read.
-   The most common is the :func:`transform loader
-   <taskgraph.loader.transform.loader>`:
-
-   .. code-block:: yaml
-
-    loader: taskgraph.loader.transform:loader
-
-#. Next declare the set of :term:`transforms <transform>` that will be applied
-   to tasks. Usually there is at least a kind specific set of transforms, as
-   well as the general purpose :mod:`-taskgraph.transforms.task` transforms.
-   Practically every task should use the latter, as they perform the final
-   steps to modify the tasks into the `format Taskcluster expects`_. In our
-   example:
+#. Declare the set of :term:`transforms <transform>` that will be applied
+   to tasks. By default, taskgraph will include the
+   :mod:`-taskgraph.transforms.job` and :mod:`-taskgraph.transforms.tasks`
+   transforms, which are used by the vast majority of simple tasks. It is also
+   quite common for kind-specific transforms to be used, which we will do here
+   for the purpose of demonstration. In our example:
 
    .. code-block:: yaml
 
     transforms:
         - myrepo_taskgraph.transforms.hello:transforms
-        - taskgraph.transforms.task:transforms
 
 #. Finally we define the task under the ``tasks`` key. The format for the
    initial definition here can vary wildly from one kind to another, it all
@@ -123,10 +114,8 @@ Here is the combined ``kind.yml`` file:
 
 .. code-block:: yaml
 
- loader: taskgraph.loader.transform:loader
  transforms:
      - myrepo_taskgraph.transforms.hello:transforms
-     - taskgraph.transforms.task:transforms
  tasks:
      taskcluster:
          description: "Says hello to Taskcluster"

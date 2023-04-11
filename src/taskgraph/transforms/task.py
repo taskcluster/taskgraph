@@ -31,7 +31,7 @@ from taskgraph.util.schema import (
     taskref_or_string,
     validate_schema,
 )
-from taskgraph.util.treeherder import split_symbol
+from taskgraph.util.treeherder import split_symbol, treeherder_defaults
 from taskgraph.util.workertypes import worker_type_implementation
 
 from ..util import docker as dockerutil
@@ -95,20 +95,34 @@ task_description_schema = Schema(
         Optional("extra"): {str: object},
         # treeherder-related information; see
         # https://schemas.taskcluster.net/taskcluster-treeherder/v1/task-treeherder-config.json
+        # This may be provided in one of two ways:
+        # 1) A simple `true` will cause taskgraph to generate the required information
+        # 2) A dictionary with one or more of the required keys. Any key not present
+        #    will use a default as described below.
         # If not specified, no treeherder extra information or routes will be
         # added to the task
-        Optional("treeherder"): {
-            # either a bare symbol, or "grp(sym)".
-            "symbol": str,
-            # the job kind
-            "kind": Any("build", "test", "other"),
-            # tier for this task
-            "tier": int,
-            # task platform, in the form platform/collection, used to set
-            # treeherder.machine.platform and treeherder.collection or
-            # treeherder.labels
-            "platform": str,
-        },
+        Optional("treeherder"): Any(
+            True,
+            {
+                # either a bare symbol, or "grp(sym)".
+                # The default symbol is the uppercased first letter of each
+                # section of the kind (delimited by "-") all smooshed together.
+                # Eg: "test" becomes "T", "docker-image" becomes "DI", etc.
+                "symbol": Optional(str),
+                # the job kind
+                # If "build" or "test" is found in the kind name, this defaults
+                # to the appropriate value. Otherwise, defaults to "other"
+                "kind": Optional(Any("build", "test", "other")),
+                # tier for this task
+                # Defaults to 1
+                "tier": Optional(int),
+                # task platform, in the form platform/collection, used to set
+                # treeherder.machine.platform and treeherder.collection or
+                # treeherder.labels
+                # Defaults to "default/opt"
+                "platform": Optional(str),
+            },
+        ),
         # information for indexing this build so its artifacts can be discovered;
         # if omitted, the build will not be indexed.
         Optional("index"): {
@@ -918,38 +932,6 @@ def add_generic_index_routes(config, task):
 
 
 @transforms.add
-def add_index_routes(config, tasks):
-    for task in tasks:
-        index = task.get("index", {})
-
-        # The default behavior is to rank tasks according to their tier
-        extra_index = task.setdefault("extra", {}).setdefault("index", {})
-        rank = index.get("rank", "by-tier")
-
-        if rank == "by-tier":
-            # rank is zero for non-tier-1 tasks and based on pushid for others;
-            # this sorts tier-{2,3} builds below tier-1 in the index
-            tier = task.get("treeherder", {}).get("tier", 3)
-            extra_index["rank"] = 0 if tier > 1 else int(config.params["build_date"])
-        elif rank == "build_date":
-            extra_index["rank"] = int(config.params["build_date"])
-        else:
-            extra_index["rank"] = rank
-
-        if not index:
-            yield task
-            continue
-
-        index_type = index.get("type", "generic")
-        if index_type not in index_builders:
-            raise ValueError(f"Unknown index-type {index_type}")
-        task = index_builders[index_type](config, task)
-
-        del task["index"]
-        yield task
-
-
-@transforms.add
 def build_task(config, tasks):
     for task in tasks:
         level = str(config.params["level"])
@@ -972,15 +954,20 @@ def build_task(config, tasks):
         extra["parent"] = os.environ.get("TASK_ID", "")
         task_th = task.get("treeherder")
         if task_th:
-            extra.setdefault("treeherder-platform", task_th["platform"])
-            treeherder = extra.setdefault("treeherder", {})
+            treeherder = extra.setdefault(
+                "treeherder", treeherder_defaults(config.kind, task["label"])
+            )
+            if isinstance(task_th, dict):
+                treeherder.update(task_th)
 
-            machine_platform, collection = task_th["platform"].split("/", 1)
+            extra.setdefault("treeherder-platform", treeherder["platform"])
+
+            machine_platform, collection = treeherder["platform"].split("/", 1)
             treeherder["machine"] = {"platform": machine_platform}
             treeherder["collection"] = {collection: True}
 
             group_names = config.graph_config["treeherder"]["group-names"]
-            groupSymbol, symbol = split_symbol(task_th["symbol"])
+            groupSymbol, symbol = split_symbol(treeherder["symbol"])
             if groupSymbol != "?":
                 treeherder["groupSymbol"] = groupSymbol
                 if groupSymbol not in group_names:
@@ -992,12 +979,12 @@ def build_task(config, tasks):
                 raise RuntimeError(
                     "Treeherder group and symbol names must not be longer than "
                     "25 characters: {} (see {})".format(
-                        task_th["symbol"],
+                        treeherder["symbol"],
                         TC_TREEHERDER_SCHEMA_URL,
                     )
                 )
-            treeherder["jobKind"] = task_th["kind"]
-            treeherder["tier"] = task_th["tier"]
+            treeherder["jobKind"] = treeherder["kind"]
+            treeherder["tier"] = treeherder["tier"]
 
             branch_rev = get_branch_rev(config)
 
@@ -1142,6 +1129,38 @@ def build_task(config, tasks):
             "attributes": attributes,
             "optimization": task.get("optimization", None),
         }
+
+
+@transforms.add
+def add_index_routes(config, tasks):
+    for task in tasks:
+        index = task.get("index", {})
+
+        # The default behavior is to rank tasks according to their tier
+        extra_index = task.setdefault("extra", {}).setdefault("index", {})
+        rank = index.get("rank", "by-tier")
+
+        if rank == "by-tier":
+            # rank is zero for non-tier-1 tasks and based on pushid for others;
+            # this sorts tier-{2,3} builds below tier-1 in the index
+            tier = task.get("treeherder", {}).get("tier", 3)
+            extra_index["rank"] = 0 if tier > 1 else int(config.params["build_date"])
+        elif rank == "build_date":
+            extra_index["rank"] = int(config.params["build_date"])
+        else:
+            extra_index["rank"] = rank
+
+        if not index:
+            yield task
+            continue
+
+        index_type = index.get("type", "generic")
+        if index_type not in index_builders:
+            raise ValueError(f"Unknown index-type {index_type}")
+        task = index_builders[index_type](config, task)
+
+        del task["index"]
+        yield task
 
 
 @transforms.add

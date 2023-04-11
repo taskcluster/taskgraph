@@ -30,7 +30,10 @@ look at a simple build kind example, you'll notice at the top the `loader` and
 `transforms` are defined. These point to standard taskgraph, but if you wanted
 to use a custom loader or transform it would be defined here pointing to
 `your_project_name_taskgraph` directory, eg
-`my_project_name_taskgraph.transforms.job`.
+`my_project_name_taskgraph.transforms.job`. If no loader is specified,
+`taskgraph.loader.default:loader` will be used, which will bring with it
+`taskgraph.transforms.job` and `taskgraph.transforms.task` as default
+transforms.
 
 This can also be a clue of where to look if you are trying to understand what a
 specific yaml attribute does in an existing kind file (keeping in mind that
