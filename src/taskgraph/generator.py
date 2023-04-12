@@ -58,6 +58,9 @@ class Kind:
 
         transforms = TransformSequence()
         for xform_path in config["transforms"]:
+            if ":" not in xform_path:
+                xform_path = f"{xform_path}:transforms"
+
             transform = find_object(xform_path)
             transforms.add(transform)
 

@@ -202,3 +202,31 @@ def test_default_loader_errors(config):
         return
 
     assert False, "Should've raised a KeyError"
+
+
+@pytest.mark.parametrize(
+    "kind_config",
+    (
+        pytest.param(
+            {
+                "loader": "taskgraph.loader.transform:loader",
+                "transforms": ["test_taskgraph.transforms.foo:transforms"],
+            },
+            id="load transform",
+        ),
+        pytest.param(
+            {
+                "loader": "taskgraph.loader.transform:loader",
+                "transforms": ["test_taskgraph.transforms.foo"],
+            },
+            id="load transform no object",
+        ),
+    ),
+)
+def test_kind_load_tasks(monkeypatch, graph_config, parameters, datadir, kind_config):
+    monkeypatch.syspath_prepend(datadir / "taskcluster")
+    kind = Kind(
+        name="fake", path="foo/bar", config=kind_config, graph_config=graph_config
+    )
+    tasks = kind.load_tasks(parameters, [], False)
+    assert tasks
