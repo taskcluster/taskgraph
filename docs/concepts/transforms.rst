@@ -9,7 +9,7 @@ Overview
 --------
 
 To begin, a kind implementation generates a collection of tasks; see
-:doc:`loading`. These are Python dictionaries that describe "semantically"
+:doc:`loading`. These are Python dictionaries that describe semantically
 what the task should do.
 
 The kind also defines a sequence of transformations. These are applied in order
@@ -17,6 +17,47 @@ to each task. Early transforms might apply default values or break tasks up
 into smaller tasks (for example, chunking a test suite). Later transforms
 rewrite the tasks entirely, with the final result being a task definition conforming
 to the `Taskcluster task schema`_.
+
+Specifying Transforms
+.....................
+
+Transforms are specified as a list of strings, where each string references a
+:class:`taskgraph.transforms.base.TransformSequence`. For example, in a ``kind.yml``
+file, you may add:
+
+.. code-block:: yaml
+
+   transforms:
+     - project_taskgraph.transforms:transforms
+     - taskgraph.transforms.task:transforms
+
+The format of the reference is ``<module path>:<object>``. So the above example
+will first load the ``transforms`` object from the
+``project_taskgraph.transforms`` module, then the ``transforms`` object from
+the ``taskgraph.transforms.task`` module. All referenced modules must be
+available in the Python path. Note how transforms can be defined both within
+the project that needs them, or in third party packages (like Taskgraph itself).
+
+The ``taskgraph.transforms.task`` transforms are a special set of transforms that
+nearly every task should use. These transforms are responsible for formatting a task
+into a `valid Taskcluster task definition`_.
+
+.. _valid Taskcluster task definition: https://docs.taskcluster.net/docs/reference/platform/queue/task-schema
+
+Default Object
+``````````````
+
+Using the name ``transforms`` for the object is a convention, and Taskgraph will
+use that by default if no object is specified. So the following example is equivalent
+to the previous one:
+
+.. code-block:: yaml
+
+   transforms:
+     - project_taskgraph.transforms
+     - taskgraph.transforms.task
+
+
 
 Transform Functions
 ...................
