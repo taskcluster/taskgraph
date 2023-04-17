@@ -146,6 +146,33 @@ def assert_exec_with(task):
     ]
 
 
+def assert_run_task_command_docker_worker(task):
+    assert task["worker"]["command"] == [
+        "/foo/bar/python3",
+        "run-task",
+        "--ci-checkout=/builds/worker/checkouts/vcs/",
+        "--",
+        "bash",
+        "-cx",
+        "echo hello world",
+    ]
+
+
+def assert_run_task_command_generic_worker(task):
+    assert task["worker"]["command"] == [
+        ["chmod", "+x", "run-task"],
+        [
+            "/foo/bar/python3",
+            "run-task",
+            "--ci-checkout=./checkouts/vcs/",
+            "--",
+            "bash",
+            "-cx",
+            "echo hello world",
+        ],
+    ]
+
+
 @pytest.mark.parametrize(
     "task",
     (
@@ -170,6 +197,21 @@ def assert_exec_with(task):
                 },
             },
             id="exec_with",
+        ),
+        pytest.param(
+            {
+                "run": {"run-task-command": ["/foo/bar/python3", "run-task"]},
+            },
+            id="run_task_command_docker_worker",
+        ),
+        pytest.param(
+            {
+                "run": {"run-task-command": ["/foo/bar/python3", "run-task"]},
+                "worker": {
+                    "implementation": "generic-worker",
+                },
+            },
+            id="run_task_command_generic_worker",
         ),
     ),
 )
