@@ -59,6 +59,9 @@ run_task_schema = Schema(
         },
         # What to execute the command with in the event command is a string.
         Optional("exec-with"): Any(*list(EXEC_COMMANDS)),
+        # Command used to invoke the `run-task` script. Can be used if the script
+        # or Python installation is in a non-standard location on the workers.
+        Optional("run-task-command"): list,
         # Base work directory used to set up the task.
         Required("workdir"): str,
         # Whether to run as root. (defaults to False)
@@ -160,7 +163,7 @@ def substitute_command_context(command_context, command):
 def docker_worker_run_task(config, job, taskdesc):
     run = job["run"]
     worker = taskdesc["worker"] = job["worker"]
-    command = ["/usr/local/bin/run-task"]
+    command = run.pop("run-task-command", ["/usr/local/bin/run-task"])
     common_setup(config, job, taskdesc, command)
 
     if run.get("cache-dotcache"):
@@ -203,12 +206,14 @@ def generic_worker_run_task(config, job, taskdesc):
     is_mac = worker["os"] == "macosx"
     is_bitbar = worker["os"] == "linux-bitbar"
 
-    if is_win:
-        command = ["C:/mozilla-build/python3/python3.exe", "run-task"]
-    elif is_mac:
-        command = ["/tools/python36/bin/python3", "run-task"]
-    else:
-        command = ["./run-task"]
+    command = run.pop("run-task-command", None)
+    if not command:
+        if is_win:
+            command = ["C:/mozilla-build/python3/python3.exe", "run-task"]
+        elif is_mac:
+            command = ["/tools/python36/bin/python3", "run-task"]
+        else:
+            command = ["./run-task"]
 
     common_setup(config, job, taskdesc, command)
 
