@@ -1,5 +1,19 @@
 # Change Log
 
+## [5.1.0] - 2023-04-18
+
+### Added
+
+- New `default` loader which implicitly uses the `job` and `task` transforms
+- Support for a custom command to invoke `run-task` in the `job.run_task` transforms
+- Can omit object (default: `transforms`) when listing transforms in a kind config
+- Ability to specify `treeherder: true` which will auto-populate Treeherder metadata
+- Added `index-path-regexes` key to `config.yml` which can be used with `make_index_task` morph
+
+### Fixed
+
+- Stop injecting `docker-image` tasks when DONTBUILD is used in commit message
+
 ## [5.0.1] - 2023-03-31
 
 ### Changed
