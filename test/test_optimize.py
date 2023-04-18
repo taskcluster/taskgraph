@@ -51,9 +51,9 @@ def make_triangle(deps=True, **opts):
        `---- t2 --'
     """
     return make_graph(
-        make_task("t1", opts.get("t1")),
-        make_task("t2", opts.get("t2")),
-        make_task("t3", opts.get("t3")),
+        make_task("t1", optimization=opts.get("t1")),
+        make_task("t2", optimization=opts.get("t2")),
+        make_task("t3", optimization=opts.get("t3")),
         ("t3", "t2", "dep"),
         ("t3", "t1", "dep2"),
         ("t2", "t1", "dep"),
@@ -111,8 +111,8 @@ def make_triangle(deps=True, **opts):
         # Tasks with the 'not' composite strategy are removed when the substrategy says not to
         pytest.param(
             make_graph(
-                make_task("t1", {"not-never": None}),
-                make_task("t2", {"not-remove": None}),
+                make_task("t1", optimization={"not-never": None}),
+                make_task("t2", optimization={"not-remove": None}),
             ),
             {
                 "strategies": lambda: {
@@ -150,10 +150,12 @@ def make_triangle(deps=True, **opts):
         # Tasks with 'if_dependencies' are removed when deps are not run
         pytest.param(
             make_graph(
-                make_task("t1", {"remove": None}),
-                make_task("t2", {"remove": None}),
-                make_task("t3", {"never": None}, if_dependencies=["t1", "t2"]),
-                make_task("t4", {"never": None}, if_dependencies=["t1"]),
+                make_task("t1", optimization={"remove": None}),
+                make_task("t2", optimization={"remove": None}),
+                make_task(
+                    "t3", optimization={"never": None}, if_dependencies=["t1", "t2"]
+                ),
+                make_task("t4", optimization={"never": None}, if_dependencies=["t1"]),
                 ("t3", "t2", "dep"),
                 ("t3", "t1", "dep2"),
                 ("t2", "t1", "dep"),
@@ -167,10 +169,12 @@ def make_triangle(deps=True, **opts):
         # Parents of tasks with 'if_dependencies' are also removed even if requested
         pytest.param(
             make_graph(
-                make_task("t1", {"remove": None}),
-                make_task("t2", {"remove": None}),
-                make_task("t3", {"never": None}, if_dependencies=["t1", "t2"]),
-                make_task("t4", {"never": None}, if_dependencies=["t1"]),
+                make_task("t1", optimization={"remove": None}),
+                make_task("t2", optimization={"remove": None}),
+                make_task(
+                    "t3", optimization={"never": None}, if_dependencies=["t1", "t2"]
+                ),
+                make_task("t4", optimization={"never": None}, if_dependencies=["t1"]),
                 ("t3", "t2", "dep"),
                 ("t3", "t1", "dep2"),
                 ("t2", "t1", "dep"),
@@ -184,10 +188,12 @@ def make_triangle(deps=True, **opts):
         # Tasks with 'if_dependencies' are kept if at least one of said dependencies are kept
         pytest.param(
             make_graph(
-                make_task("t1", {"never": None}),
-                make_task("t2", {"remove": None}),
-                make_task("t3", {"never": None}, if_dependencies=["t1", "t2"]),
-                make_task("t4", {"never": None}, if_dependencies=["t1"]),
+                make_task("t1", optimization={"never": None}),
+                make_task("t2", optimization={"remove": None}),
+                make_task(
+                    "t3", optimization={"never": None}, if_dependencies=["t1", "t2"]
+                ),
+                make_task("t4", optimization={"never": None}, if_dependencies=["t1"]),
                 ("t3", "t2", "dep"),
                 ("t3", "t1", "dep2"),
                 ("t2", "t1", "dep"),
@@ -201,9 +207,9 @@ def make_triangle(deps=True, **opts):
         # Ancestor of task with 'if_dependencies' does not cause it to be kept
         pytest.param(
             make_graph(
-                make_task("t1", {"never": None}),
-                make_task("t2", {"remove": None}),
-                make_task("t3", {"never": None}, if_dependencies=["t2"]),
+                make_task("t1", optimization={"never": None}),
+                make_task("t2", optimization={"remove": None}),
+                make_task("t3", optimization={"never": None}, if_dependencies=["t2"]),
                 ("t3", "t2", "dep"),
                 ("t2", "t1", "dep2"),
             ),
@@ -216,10 +222,10 @@ def make_triangle(deps=True, **opts):
         # don't have any dependents and are not in 'requested_tasks'
         pytest.param(
             make_graph(
-                make_task("t1", {"never": None}),
-                make_task("t2", {"never": None}, if_dependencies=["t1"]),
-                make_task("t3", {"remove": None}),
-                make_task("t4", {"never": None}, if_dependencies=["t3"]),
+                make_task("t1", optimization={"never": None}),
+                make_task("t2", optimization={"never": None}, if_dependencies=["t1"]),
+                make_task("t3", optimization={"remove": None}),
+                make_task("t4", optimization={"never": None}, if_dependencies=["t3"]),
                 ("t2", "t1", "e1"),
                 ("t4", "t2", "e2"),
                 ("t4", "t3", "e3"),
@@ -333,7 +339,7 @@ def test_remove_tasks(monkeypatch, graph, kwargs, exp_removed):
         # A task which expires before a dependents deadline is not a valid replacement.
         pytest.param(
             make_graph(
-                make_task("t1", {"replace": "e1"}),
+                make_task("t1", optimization={"replace": "e1"}),
                 make_task(
                     "t2", task_def={"deadline": {"relative-datestamp": "2 days"}}
                 ),

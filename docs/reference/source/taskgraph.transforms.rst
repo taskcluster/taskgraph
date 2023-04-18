@@ -20,6 +20,14 @@ taskgraph.transforms.base module
    :undoc-members:
    :show-inheritance:
 
+taskgraph.transforms.from\_deps module
+--------------------------------------
+
+.. automodule:: taskgraph.transforms.from_deps
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 taskgraph.transforms.cached\_tasks module
 -----------------------------------------
 
