@@ -6,6 +6,7 @@ Reference
 
    cli
    parameters
+   transforms/index
    optimization-strategies
    source/modules
    migrations

@@ -217,8 +217,8 @@ def run_transform(make_transform_config):
 
 def make_task(
     label,
+    kind="test",
     optimization=None,
-    optimized=None,
     task_def=None,
     task_id=None,
     dependencies=None,
@@ -232,7 +232,7 @@ def make_task(
     task = Task(
         attributes=attributes or {},
         if_dependencies=if_dependencies or [],
-        kind="test",
+        kind=kind,
         label=label,
         task=task_def,
     )
