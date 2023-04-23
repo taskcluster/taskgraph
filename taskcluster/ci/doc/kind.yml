@@ -25,6 +25,8 @@ task-defaults:
 
 tasks:
     generate:
+#        dependencies:
+#            build: build-linux
         description: "Generate documentation and fail on warnings"
         treeherder:
             symbol: doc(gen)
