@@ -932,42 +932,30 @@ def add_generic_index_routes(config, task):
 
 
 @transforms.add
-def build_task(config, tasks):
+def process_treeherder_metadata(config, tasks):
     for task in tasks:
-        level = str(config.params["level"])
-
-        provisioner_id, worker_type = get_worker_type(
-            config.graph_config,
-            task["worker-type"],
-            level,
-        )
-        task["worker-type"] = "/".join([provisioner_id, worker_type])
-        project = config.params["project"]
-
         routes = task.get("routes", [])
-        scopes = [
-            s.format(level=level, project=project) for s in task.get("scopes", [])
-        ]
-
-        # set up extra
         extra = task.get("extra", {})
-        extra["parent"] = os.environ.get("TASK_ID", "")
         task_th = task.get("treeherder")
+
         if task_th:
-            treeherder = extra.setdefault(
-                "treeherder", treeherder_defaults(config.kind, task["label"])
-            )
+            # This `merged_th` object is just an intermediary that combines
+            # the defaults and whatever is in the task. Ultimately, the task
+            # transforms this data a bit in the `treeherder` object that is
+            # eventually set in the task.
+            merged_th = treeherder_defaults(config.kind, task["label"])
             if isinstance(task_th, dict):
-                treeherder.update(task_th)
+                merged_th.update(task_th)
 
-            extra.setdefault("treeherder-platform", treeherder["platform"])
+            treeherder = extra.setdefault("treeherder", {})
+            extra.setdefault("treeherder-platform", merged_th["platform"])
 
-            machine_platform, collection = treeherder["platform"].split("/", 1)
+            machine_platform, collection = merged_th["platform"].split("/", 1)
             treeherder["machine"] = {"platform": machine_platform}
             treeherder["collection"] = {collection: True}
 
             group_names = config.graph_config["treeherder"]["group-names"]
-            groupSymbol, symbol = split_symbol(treeherder["symbol"])
+            groupSymbol, symbol = split_symbol(merged_th["symbol"])
             if groupSymbol != "?":
                 treeherder["groupSymbol"] = groupSymbol
                 if groupSymbol not in group_names:
@@ -983,8 +971,8 @@ def build_task(config, tasks):
                         TC_TREEHERDER_SCHEMA_URL,
                     )
                 )
-            treeherder["jobKind"] = treeherder["kind"]
-            treeherder["tier"] = treeherder["tier"]
+            treeherder["jobKind"] = merged_th["kind"]
+            treeherder["tier"] = merged_th["tier"]
 
             branch_rev = get_branch_rev(config)
 
@@ -1009,6 +997,65 @@ def build_task(config, tasks):
                     config.params["pushlog_id"],
                 )
             )
+
+        task["routes"] = routes
+        task["extra"] = extra
+        yield task
+
+
+@transforms.add
+def add_index_routes(config, tasks):
+    for task in tasks:
+        index = task.get("index", {})
+
+        # The default behavior is to rank tasks according to their tier
+        extra_index = task.setdefault("extra", {}).setdefault("index", {})
+        rank = index.get("rank", "by-tier")
+
+        if rank == "by-tier":
+            # rank is zero for non-tier-1 tasks and based on pushid for others;
+            # this sorts tier-{2,3} builds below tier-1 in the index
+            tier = task.get("extra", {}).get("treeherder", {}).get("tier", 3)
+            extra_index["rank"] = 0 if tier > 1 else int(config.params["build_date"])
+        elif rank == "build_date":
+            extra_index["rank"] = int(config.params["build_date"])
+        else:
+            extra_index["rank"] = rank
+
+        if not index:
+            yield task
+            continue
+
+        index_type = index.get("type", "generic")
+        if index_type not in index_builders:
+            raise ValueError(f"Unknown index-type {index_type}")
+        task = index_builders[index_type](config, task)
+
+        del task["index"]
+        yield task
+
+
+@transforms.add
+def build_task(config, tasks):
+    for task in tasks:
+        level = str(config.params["level"])
+
+        provisioner_id, worker_type = get_worker_type(
+            config.graph_config,
+            task["worker-type"],
+            level,
+        )
+        task["worker-type"] = "/".join([provisioner_id, worker_type])
+        project = config.params["project"]
+
+        routes = task.get("routes", [])
+        scopes = [
+            s.format(level=level, project=project) for s in task.get("scopes", [])
+        ]
+
+        # set up extra
+        extra = task.get("extra", {})
+        extra["parent"] = os.environ.get("TASK_ID", "")
 
         if "expires-after" not in task:
             task["expires-after"] = "28 days" if config.params.is_try() else "1 year"
@@ -1052,7 +1099,21 @@ def build_task(config, tasks):
         if task.get("requires", None):
             task_def["requires"] = task["requires"]
 
-        if task_th:
+        if task.get("extra", {}).get("treeherder"):
+            branch_rev = get_branch_rev(config)
+            if config.params["tasks_for"].startswith("github-pull-request"):
+                # In the past we used `project` for this, but that ends up being
+                # set to the repository name of the _head_ repo, which is not correct
+                # (and causes scope issues) if it doesn't match the name of the
+                # base repo
+                base_project = config.params["base_repository"].split("/")[-1]
+                if base_project.endswith(".git"):
+                    base_project = base_project[:-4]
+                th_project_suffix = "-pr"
+            else:
+                base_project = config.params["project"]
+                th_project_suffix = ""
+
             # link back to treeherder in description
             th_push_link = (
                 "https://treeherder.mozilla.org/#/jobs?repo={}&revision={}".format(
@@ -1129,38 +1190,6 @@ def build_task(config, tasks):
             "attributes": attributes,
             "optimization": task.get("optimization", None),
         }
-
-
-@transforms.add
-def add_index_routes(config, tasks):
-    for task in tasks:
-        index = task.get("index", {})
-
-        # The default behavior is to rank tasks according to their tier
-        extra_index = task.setdefault("extra", {}).setdefault("index", {})
-        rank = index.get("rank", "by-tier")
-
-        if rank == "by-tier":
-            # rank is zero for non-tier-1 tasks and based on pushid for others;
-            # this sorts tier-{2,3} builds below tier-1 in the index
-            tier = task.get("treeherder", {}).get("tier", 3)
-            extra_index["rank"] = 0 if tier > 1 else int(config.params["build_date"])
-        elif rank == "build_date":
-            extra_index["rank"] = int(config.params["build_date"])
-        else:
-            extra_index["rank"] = rank
-
-        if not index:
-            yield task
-            continue
-
-        index_type = index.get("type", "generic")
-        if index_type not in index_builders:
-            raise ValueError(f"Unknown index-type {index_type}")
-        task = index_builders[index_type](config, task)
-
-        del task["index"]
-        yield task
 
 
 @transforms.add
