@@ -596,7 +596,12 @@ def git_checkout(
     ssh_key_file: Optional[Path],
     ssh_known_hosts_file: Optional[Path],
 ):
-    env = {"PYTHONUNBUFFERED": "1"}
+    env = {
+        # abort if transfer speed is lower than 1kB/s for 1 minute
+        "GIT_HTTP_LOW_SPEED_LIMIT": "1024",
+        "GIT_HTTP_LOW_SPEED_TIME": "60",
+        "PYTHONUNBUFFERED": "1",
+    }
 
     if ssh_key_file and ssh_known_hosts_file:
         if not ssh_key_file.exists():
