@@ -326,14 +326,17 @@ class TaskGraphGenerator:
 
         logger.info("Generating full task graph")
         edges = set()
+        is_invalid_dependency = False
         for t in full_task_set:
             for depname, dep in t.dependencies.items():
                 if dep not in all_tasks.keys():
-                    raise Exception(
-                        f" Task '{t.label}' lists a dependency that does not exist: '{dep}'"
+                    is_invalid_dependency = True
+                    print(
+                        f"Task '{t.label}' lists a dependency that does not exist: '{dep}'"
                     )
-                else:
-                    edges.add((t.label, dep, depname))
+                edges.add((t.label, dep, depname))
+            if is_invalid_dependency:
+                raise Exception("Tasks have some dependencies that does not exist: ")
 
         full_task_graph = TaskGraph(all_tasks, Graph(full_task_set.graph.nodes, edges))
         logger.info(
