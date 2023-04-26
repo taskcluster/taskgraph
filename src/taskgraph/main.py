@@ -364,13 +364,14 @@ def show_taskgraph(options):
         # branch or bookmark (which are both available on the VCS object)
         # as `branch` is preferable to a specific revision.
         cur_rev = repo.branch or repo.head_rev[:12]
+        cur_rev_file = cur_rev.replace("/", "_")
 
         diffdir = tempfile.mkdtemp()
         atexit.register(
             shutil.rmtree, diffdir
         )  # make sure the directory gets cleaned up
         options["output_file"] = os.path.join(
-            diffdir, f"{options['graph_attr']}_{cur_rev}"
+            diffdir, f"{options['graph_attr']}_{cur_rev_file}"
         )
         print(f"Generating {options['graph_attr']} @ {cur_rev}", file=sys.stderr)
 
@@ -423,12 +424,13 @@ def show_taskgraph(options):
             base_rev = repo.base_rev
         else:
             base_rev = options["diff"]
+        base_rev_file = base_rev.replace("/", "_")
 
         try:
             repo.update(base_rev)
             base_rev = repo.head_rev[:12]
             options["output_file"] = os.path.join(
-                diffdir, f"{options['graph_attr']}_{base_rev}"
+                diffdir, f"{options['graph_attr']}_{base_rev_file}"
             )
             print(f"Generating {options['graph_attr']} @ {base_rev}", file=sys.stderr)
             generate_taskgraph(options, parameters, logdir)
@@ -445,8 +447,8 @@ def show_taskgraph(options):
         ]
 
         for spec in parameters:
-            base_path = os.path.join(diffdir, f"{options['graph_attr']}_{base_rev}")
-            cur_path = os.path.join(diffdir, f"{options['graph_attr']}_{cur_rev}")
+            base_path = os.path.join(diffdir, f"{options['graph_attr']}_{base_rev_file}")
+            cur_path = os.path.join(diffdir, f"{options['graph_attr']}_{cur_rev_file}")
 
             params_name = None
             if len(parameters) > 1:
