@@ -89,6 +89,11 @@ def fake_load_graph_config(root_dir):
             },
             "task-priority": "low",
             "treeherder": {"group-names": {"T": "tests"}},
+            "index": {
+                "products": [
+                    "fake",
+                ],
+            },
         },
         root_dir,
     )

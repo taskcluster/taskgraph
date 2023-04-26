@@ -27,6 +27,11 @@ TASK_DEFAULTS = {
         "platform": "some-th-platform/some-th-collection",
         "kind": "build",
     },
+    "index": {
+        "rank": "by-tier",
+        "product": "fake",
+        "job-name": "fake-job",
+    },
 }
 here = Path(__file__).parent
 
@@ -36,6 +41,23 @@ def assert_common(task_dict):
     assert "task" in task_dict
     assert "extra" in task_dict["task"]
     assert "payload" in task_dict["task"]
+    assert "routes" in task_dict["task"]
+    assert (
+        "index.test-domain.v2.some-project.latest.fake.fake-job"
+        in task_dict["task"]["routes"]
+    )
+    assert (
+        "index.test-domain.v2.some-project.pushdate.1970.01.01.19700101000000.fake.fake-job"
+        in task_dict["task"]["routes"]
+    )
+    assert (
+        "index.test-domain.v2.some-project.pushlog-id.1.fake.fake-job"
+        in task_dict["task"]["routes"]
+    )
+    assert (
+        "index.test-domain.v2.some-project.revision.abcdef.fake.fake-job"
+        in task_dict["task"]["routes"]
+    )
 
 
 def assert_hg_push(task_dict):
@@ -177,9 +199,7 @@ def test_transforms(request, run_transform, graph_config, task_params):
             {
                 "symbol": "T",
                 "tier": 1,
-                "kind": "test",
                 "jobKind": "test",
-                "platform": "default/opt",
                 "collection": {
                     "opt": True,
                 },
@@ -204,9 +224,7 @@ def test_transforms(request, run_transform, graph_config, task_params):
             {
                 "symbol": "ST",
                 "tier": 1,
-                "kind": "test",
                 "jobKind": "test",
-                "platform": "default/opt",
                 "collection": {
                     "opt": True,
                 },
@@ -233,9 +251,7 @@ def test_transforms(request, run_transform, graph_config, task_params):
             {
                 "symbol": "Test",
                 "tier": 1,
-                "kind": "test",
                 "jobKind": "test",
-                "platform": "default/opt",
                 "collection": {
                     "opt": True,
                 },
@@ -264,9 +280,7 @@ def test_transforms(request, run_transform, graph_config, task_params):
                 "groupSymbol": "T",
                 "groupName": "tests",
                 "tier": 1,
-                "kind": "test",
                 "jobKind": "test",
-                "platform": "default/opt",
                 "collection": {
                     "opt": True,
                 },
@@ -291,9 +305,7 @@ def test_transforms(request, run_transform, graph_config, task_params):
             {
                 "symbol": "B",
                 "tier": 1,
-                "kind": "build",
                 "jobKind": "build",
-                "platform": "default/opt",
                 "collection": {
                     "opt": True,
                 },
@@ -318,9 +330,7 @@ def test_transforms(request, run_transform, graph_config, task_params):
             {
                 "symbol": "S",
                 "tier": 1,
-                "kind": "other",
                 "jobKind": "other",
-                "platform": "default/opt",
                 "collection": {
                     "opt": True,
                 },
@@ -347,9 +357,7 @@ def test_transforms(request, run_transform, graph_config, task_params):
             {
                 "symbol": "TB",
                 "tier": 1,
-                "kind": "build",
                 "jobKind": "build",
-                "platform": "default/opt",
                 "collection": {
                     "opt": True,
                 },
@@ -376,9 +384,7 @@ def test_transforms(request, run_transform, graph_config, task_params):
             {
                 "symbol": "T",
                 "tier": 1,
-                "kind": "test",
                 "jobKind": "test",
-                "platform": "default/opt",
                 "collection": {
                     "opt": True,
                 },
@@ -405,9 +411,7 @@ def test_transforms(request, run_transform, graph_config, task_params):
             {
                 "symbol": "T",
                 "tier": 3,
-                "kind": "test",
                 "jobKind": "test",
-                "platform": "default/opt",
                 "collection": {
                     "opt": True,
                 },
@@ -434,9 +438,7 @@ def test_transforms(request, run_transform, graph_config, task_params):
             {
                 "symbol": "T",
                 "tier": 1,
-                "kind": "test",
                 "jobKind": "test",
-                "platform": "linux/debug",
                 "collection": {
                     "debug": True,
                 },
@@ -461,9 +463,7 @@ def test_transforms(request, run_transform, graph_config, task_params):
             {
                 "symbol": "T",
                 "tier": 1,
-                "kind": "test",
                 "jobKind": "test",
-                "platform": "default/opt",
                 "collection": {
                     "opt": True,
                 },
@@ -488,9 +488,7 @@ def test_transforms(request, run_transform, graph_config, task_params):
             {
                 "symbol": "T",
                 "tier": 1,
-                "kind": "test",
                 "jobKind": "test",
-                "platform": "default/opt",
                 "collection": {
                     "opt": True,
                 },
@@ -515,9 +513,7 @@ def test_transforms(request, run_transform, graph_config, task_params):
             {
                 "symbol": "T",
                 "tier": 1,
-                "kind": "test",
                 "jobKind": "test",
-                "platform": "default/opt",
                 "collection": {
                     "opt": True,
                 },
@@ -542,9 +538,7 @@ def test_transforms(request, run_transform, graph_config, task_params):
             {
                 "symbol": "T",
                 "tier": 1,
-                "kind": "test",
                 "jobKind": "test",
-                "platform": "default/opt",
                 "collection": {
                     "opt": True,
                 },
@@ -569,9 +563,7 @@ def test_transforms(request, run_transform, graph_config, task_params):
             {
                 "symbol": "T",
                 "tier": 1,
-                "kind": "test",
                 "jobKind": "test",
-                "platform": "default/opt",
                 "collection": {
                     "opt": True,
                 },
@@ -596,9 +588,7 @@ def test_transforms(request, run_transform, graph_config, task_params):
             {
                 "symbol": "T",
                 "tier": 1,
-                "kind": "test",
                 "jobKind": "test",
-                "platform": "default/opt",
                 "collection": {
                     "opt": True,
                 },
@@ -623,9 +613,7 @@ def test_transforms(request, run_transform, graph_config, task_params):
             {
                 "symbol": "T",
                 "tier": 1,
-                "kind": "test",
                 "jobKind": "test",
-                "platform": "default/opt",
                 "collection": {
                     "opt": True,
                 },
@@ -650,9 +638,7 @@ def test_transforms(request, run_transform, graph_config, task_params):
             {
                 "symbol": "T",
                 "tier": 1,
-                "kind": "test",
                 "jobKind": "test",
-                "platform": "default/opt",
                 "collection": {
                     "opt": True,
                 },
@@ -677,9 +663,7 @@ def test_transforms(request, run_transform, graph_config, task_params):
             {
                 "symbol": "T",
                 "tier": 1,
-                "kind": "test",
                 "jobKind": "test",
-                "platform": "default/opt",
                 "collection": {
                     "opt": True,
                 },
