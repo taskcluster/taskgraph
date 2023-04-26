@@ -447,7 +447,9 @@ def show_taskgraph(options):
         ]
 
         for spec in parameters:
-            base_path = os.path.join(diffdir, f"{options['graph_attr']}_{base_rev_file}")
+            base_path = os.path.join(
+                diffdir, f"{options['graph_attr']}_{base_rev_file}"
+            )
             cur_path = os.path.join(diffdir, f"{options['graph_attr']}_{cur_rev_file}")
 
             params_name = None
