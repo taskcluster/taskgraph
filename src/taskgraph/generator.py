@@ -8,7 +8,6 @@ import os
 from typing import AnyStr
 
 import attr
-from exceptiongroup import ExceptionGroup
 
 from . import filter_tasks
 from .config import GraphConfig, load_graph_config
@@ -327,27 +326,13 @@ class TaskGraphGenerator:
 
         logger.info("Generating full task graph")
         edges = set()
-        is_invalid_dependency = False
-        invalid_dependencies = {}
         for t in full_task_set:
             for depname, dep in t.dependencies.items():
                 if dep not in all_tasks.keys():
-                    is_invalid_dependency = True
-                    if t.label in invalid_dependencies.keys():
-                        invalid_dependencies[t.label].append(dep)
-                    else:
-                        invalid_dependencies[t.label] = [dep]
-
+                    raise Exception(
+                        f"Task '{t.label}' lists a dependency that does not exist: '{dep}'"
+                    )
                 edges.add((t.label, dep, depname))
-            if is_invalid_dependency:
-                raise ExceptionGroup(
-                    "Some tasks have dependencies that do not exist!",
-                    [
-                        Exception(f"task {t} depends on: \n -- {d}")
-                        for t, d in invalid_dependencies.items()
-                    ],
-                )
-
         full_task_graph = TaskGraph(all_tasks, Graph(full_task_set.graph.nodes, edges))
         logger.info(
             "Full task graph contains %d tasks and %d dependencies"
