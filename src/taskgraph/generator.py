@@ -328,6 +328,10 @@ class TaskGraphGenerator:
         edges = set()
         for t in full_task_set:
             for depname, dep in t.dependencies.items():
+                if dep not in all_tasks.keys():
+                    raise Exception(
+                        f"Task '{t.label}' lists a dependency that does not exist: '{dep}'"
+                    )
                 edges.add((t.label, dep, depname))
 
         full_task_graph = TaskGraph(all_tasks, Graph(full_task_set.graph.nodes, edges))
