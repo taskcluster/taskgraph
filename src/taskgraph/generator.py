@@ -333,12 +333,14 @@ class TaskGraphGenerator:
                         f"Task '{t.label}' lists a dependency that does not exist: '{dep}'"
                     )
                 edges.add((t.label, dep, depname))
+
         full_task_graph = TaskGraph(all_tasks, Graph(full_task_set.graph.nodes, edges))
         logger.info(
             "Full task graph contains %d tasks and %d dependencies"
             % (len(full_task_set.graph.nodes), len(edges))
         )
         yield self.verify("full_task_graph", full_task_graph, graph_config, parameters)
+
         logger.info("Generating target task set")
         target_task_set = TaskGraph(
             dict(all_tasks), Graph(set(all_tasks.keys()), set())
