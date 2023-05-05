@@ -508,6 +508,7 @@ def show_taskgraph(options):
 def build_image(args):
     from taskgraph.docker import build_context, build_image
 
+    validate_docker()
     if args["context_only"] is None:
         build_image(args["image_name"], args["tag"], os.environ)
     else:
@@ -544,6 +545,7 @@ def load_image(args):
     if not args.get("image_name") and not args.get("task_id"):
         print("Specify either IMAGE-NAME or TASK-ID")
         sys.exit(1)
+    validate_docker()
     try:
         if args["task_id"]:
             ok = load_image_by_task_id(args["task_id"], args.get("tag"))
@@ -553,6 +555,13 @@ def load_image(args):
             sys.exit(1)
     except Exception:
         traceback.print_exc()
+        sys.exit(1)
+
+
+def validate_docker():
+    p = subprocess.run(["docker", "ps"], capture_output=True)
+    if p.returncode != 0:
+        print("Error connecting to Docker:", p.stderr)
         sys.exit(1)
 
 
