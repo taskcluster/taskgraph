@@ -559,18 +559,9 @@ def load_image(args):
 
 
 def validate_docker():
-    try:
-        p = subprocess.run(["docker", "ps"])
-        if p.returncode != 0:
-            print(
-                "Error: Cannot connect to the Docker daemon. Is the docker daemon running?"
-            )
-            sys.exit(1)
-    except Exception:
-        traceback.print_exc()
-        print(
-            "Error: Cannot connect to the Docker daemon. Is the docker daemon running?"
-        )
+    p = subprocess.run(["docker", "ps"], capture_output=True)
+    if p.returncode != 0:
+        print("Error connecting to Docker:", p.stderr)
         sys.exit(1)
 
 
