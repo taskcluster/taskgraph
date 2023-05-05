@@ -559,13 +559,15 @@ def load_image(args):
 
 
 def validate_docker():
-    import docker
-
     try:
-        client = docker.from_env()
-        containers = client.containers.list()
-        print(containers)
+        p = subprocess.run(["docker", "ps"])
+        if p.returncode != 0:
+            print(
+                "Error: Cannot connect to the Docker daemon. Is the docker daemon running?"
+            )
+            sys.exit(1)
     except Exception:
+        traceback.print_exc()
         print(
             "Error: Cannot connect to the Docker daemon. Is the docker daemon running?"
         )
