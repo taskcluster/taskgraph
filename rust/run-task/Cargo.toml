@@ -1,0 +1,16 @@
+[package]
+name = "run-task"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "run-task"
+path = "src/run_task/main.rs"
+
+[[bin]]
+name = "fetch-content"
+path = "src/fetch_content/main.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
