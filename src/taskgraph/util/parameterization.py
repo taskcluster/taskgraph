@@ -79,11 +79,6 @@ def resolve_task_references(label, task_def, task_id, decision_task_id, dependen
                         )
                     )
 
-            assert artifact_name.startswith(
-                "public/"
-            ), "artifact-reference only supports public artifacts, not `{}`".format(
-                artifact_name
-            )
             return get_artifact_url(task_id, artifact_name)
 
         return ARTIFACT_REFERENCE_PATTERN.sub(repl, val)
