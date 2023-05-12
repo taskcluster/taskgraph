@@ -1,5 +1,5 @@
-from contextlib import suppress
 import re
+from contextlib import suppress
 from typing import Iterable, NamedTuple
 
 from .color import Color
@@ -199,9 +199,9 @@ class AnsiDecoder:
 
 
 if __name__ == "__main__":  # pragma: no cover
-    import pty
     import io
     import os
+    import pty
     import sys
 
     decoder = AnsiDecoder()

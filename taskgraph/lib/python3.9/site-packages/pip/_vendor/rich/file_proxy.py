@@ -1,5 +1,5 @@
 import io
-from typing import List, Any, IO, TYPE_CHECKING
+from typing import IO, TYPE_CHECKING, Any, List
 
 from .ansi import AnsiDecoder
 from .text import Text

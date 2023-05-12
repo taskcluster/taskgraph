@@ -1,14 +1,13 @@
-from typing import Optional, TYPE_CHECKING
-
-from .box import Box, ROUNDED
+from typing import TYPE_CHECKING, Optional
 
 from .align import AlignMethod
+from .box import ROUNDED, Box
 from .jupyter import JupyterMixin
 from .measure import Measurement, measure_renderables
 from .padding import Padding, PaddingDimensions
+from .segment import Segment
 from .style import StyleType
 from .text import Text, TextType
-from .segment import Segment
 
 if TYPE_CHECKING:
     from .console import Console, ConsoleOptions, RenderableType, RenderResult
@@ -235,8 +234,8 @@ if __name__ == "__main__":  # pragma: no cover
 
     c = Console()
 
+    from .box import DOUBLE, ROUNDED
     from .padding import Padding
-    from .box import ROUNDED, DOUBLE
 
     p = Panel(
         "Hello, World!",

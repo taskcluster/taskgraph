@@ -4,7 +4,7 @@ import re
 import sys
 
 # for compatibility with easy_install; see #2198
-__requires__ = 'redo'
+__requires__ = "redo"
 
 try:
     from importlib.metadata import distribution
@@ -16,7 +16,7 @@ except ImportError:
 
 
 def importlib_load_entry_point(spec, group, name):
-    dist_name, _, _ = spec.partition('==')
+    dist_name, _, _ = spec.partition("==")
     matches = (
         entry_point
         for entry_point in distribution(dist_name).entry_points
@@ -25,9 +25,9 @@ def importlib_load_entry_point(spec, group, name):
     return next(matches).load()
 
 
-globals().setdefault('load_entry_point', importlib_load_entry_point)
+globals().setdefault("load_entry_point", importlib_load_entry_point)
 
 
-if __name__ == '__main__':
-    sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
-    sys.exit(load_entry_point('redo', 'console_scripts', 'retry')())
+if __name__ == "__main__":
+    sys.argv[0] = re.sub(r"(-script\.pyw?|\.exe)?$", "", sys.argv[0])
+    sys.exit(load_entry_point("redo", "console_scripts", "retry")())

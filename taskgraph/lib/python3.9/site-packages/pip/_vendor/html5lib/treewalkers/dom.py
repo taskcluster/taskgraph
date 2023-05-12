@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, unicode_literals
-
 from xml.dom import Node
 
 from . import base
@@ -21,8 +19,13 @@ class TreeWalker(base.NonRecursiveTreeWalker):
                     attrs[(attr.namespaceURI, attr.localName)] = attr.value
                 else:
                     attrs[(None, attr.name)] = attr.value
-            return (base.ELEMENT, node.namespaceURI, node.nodeName,
-                    attrs, node.hasChildNodes())
+            return (
+                base.ELEMENT,
+                node.namespaceURI,
+                node.nodeName,
+                attrs,
+                node.hasChildNodes(),
+            )
 
         elif node.nodeType == Node.COMMENT_NODE:
             return base.COMMENT, node.nodeValue

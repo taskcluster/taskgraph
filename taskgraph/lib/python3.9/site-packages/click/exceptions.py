@@ -7,8 +7,7 @@ from ._compat import get_text_stderr
 from .utils import echo
 
 if t.TYPE_CHECKING:
-    from .core import Context
-    from .core import Parameter
+    from .core import Context, Parameter
 
 
 def _join_param_hints(

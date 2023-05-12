@@ -5,17 +5,14 @@ from datetime import datetime
 from gettext import gettext as _
 from gettext import ngettext
 
-from ._compat import _get_argv_encoding
-from ._compat import get_filesystem_encoding
-from ._compat import open_stream
+from ._compat import _get_argv_encoding, get_filesystem_encoding, open_stream
 from .exceptions import BadParameter
-from .utils import LazyFile
-from .utils import safecall
+from .utils import LazyFile, safecall
 
 if t.TYPE_CHECKING:
     import typing_extensions as te
-    from .core import Context
-    from .core import Parameter
+
+    from .core import Context, Parameter
     from .shell_completion import CompletionItem
 
 
