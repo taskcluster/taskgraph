@@ -713,11 +713,9 @@ def test_treeherder_defaults(run_transform, graph_config, kind, task_def, expect
     pprint(task_dict, indent=2)
 
     assert task_dict["task"].get("extra", {}).get("treeherder", {}) == expected_th
-    
 
 
 def test_check_task_dependencies(graph_config):
-
     params = FakeParameters(
         {
             "base_repository": "git@github.com://github.com/mozilla/example.git",
@@ -739,7 +737,7 @@ def test_check_task_dependencies(graph_config):
             "version": "1.0.0",
         },
     )
-    
+
     transform_config = TransformConfig(
         "check_task_dependencies",
         str(here),
@@ -749,18 +747,38 @@ def test_check_task_dependencies(graph_config):
         graph_config,
         write_artifacts=False,
     )
-    
-        
-    task1 = {"label": "task1", "dependencies": ["dependency1", "dependency2"], "soft-dependencies": ["dependency3"], "if-dependencies": ["dependency4"]}
-    task2 = {"label": "task2", "dependencies": ["dependency"]*97, "soft-dependencies": ["dependency"], "if-dependencies": ["dependency"]}
-    
-    # Test tasks with less than 100 dependencies(task1) including exactly 99 dependencies(task2)
-    assert len(list(task.check_task_dependencies(transform_config,[task1,task2]))) == 2
 
-    
-    task3 = {"label": "task3", "dependencies": ["dependency"]*98, "soft-dependencies": ["dependency"], "if-dependencies": ["dependency"]}
-    task4 = {"label": "task4", "dependencies": ["dependency"]*99, "soft-dependencies": ["dependency"], "if-dependencies": ["dependency"]}
-    
+    task1 = {
+        "label": "task1",
+        "dependencies": ["dependency1", "dependency2"],
+        "soft-dependencies": ["dependency3"],
+        "if-dependencies": ["dependency4"],
+    }
+    task2 = {
+        "label": "task2",
+        "dependencies": ["dependency"] * 97,
+        "soft-dependencies": ["dependency"],
+        "if-dependencies": ["dependency"],
+    }
+
+    # Test tasks with less than 100 dependencies(task1) including exactly 99 dependencies(task2)
+    assert (
+        len(list(task.check_task_dependencies(transform_config, [task1, task2]))) == 2
+    )
+
+    task3 = {
+        "label": "task3",
+        "dependencies": ["dependency"] * 98,
+        "soft-dependencies": ["dependency"],
+        "if-dependencies": ["dependency"],
+    }
+    task4 = {
+        "label": "task4",
+        "dependencies": ["dependency"] * 99,
+        "soft-dependencies": ["dependency"],
+        "if-dependencies": ["dependency"],
+    }
+
     # Test tasks with 100 or more than 100 dependencies(task4) and exactly 100 dependencies(task3)
     with pytest.raises(Exception):
-        list(task.check_task_dependencies(transform_config, [task3,task4]))
+        list(task.check_task_dependencies(transform_config, [task3, task4]))
