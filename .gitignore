@@ -25,3 +25,6 @@ artifacts/
 
 #Idea
 .idea
+
+#metadata
+.DS_Store
