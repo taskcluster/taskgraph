@@ -5,6 +5,7 @@ Tests for the 'task' transforms.
 from copy import deepcopy
 from pathlib import Path
 from pprint import pprint
+from contextlib import nullcontext as does_not_raise
 
 import pytest
 
@@ -715,7 +716,76 @@ def test_treeherder_defaults(run_transform, graph_config, kind, task_def, expect
     assert task_dict["task"].get("extra", {}).get("treeherder", {}) == expected_th
 
 
-def test_check_task_dependencies(graph_config):
+
+
+@pytest.mark.parametrize("no_exception_tasks",
+    (
+            pytest.param(
+            {
+                "label": "task1",
+                "dependencies": ["dependency"] * 2,
+                "soft-dependencies": ["dependency"] * 1,
+                "if-dependencies": ["dependency"] * 4,
+            },
+            
+            ),
+            pytest.param(
+            {
+                "label": "task2",
+                "dependencies": ["dependency"] * 97,
+                "soft-dependencies": ["dependency"],
+                "if-dependencies": ["dependency"],
+            },
+         
+            ),
+          
+        )
+            
+   
+    
+)
+
+@pytest.mark.parametrize("exception_tasks",
+    (
+          
+            pytest.param(
+            {
+                "label": "task3",
+                "dependencies": ["dependency"] * 98,
+                "soft-dependencies": ["dependency"],
+                "if-dependencies": ["dependency"],
+            },
+                        ),
+            pytest.param(
+            {
+                "label": "task4",
+                "dependencies": ["dependency"] * 99,
+                "soft-dependencies": ["dependency"],
+                "if-dependencies": ["dependency"],
+            },
+      
+            ),
+        )
+            
+   
+    
+)
+
+@pytest.mark.parametrize("noexception",
+        (
+            does_not_raise(),
+        )
+
+)
+
+@pytest.mark.parametrize("exception",
+        (
+            pytest.raises(Exception),
+        )
+
+)
+
+def test_check_task_dependencies(graph_config,no_exception_tasks,noexception,exception_tasks,exception):
     params = FakeParameters(
         {
             "base_repository": "git@github.com://github.com/mozilla/example.git",
@@ -737,6 +807,7 @@ def test_check_task_dependencies(graph_config):
             "version": "1.0.0",
         },
     )
+    
 
     transform_config = TransformConfig(
         "check_task_dependencies",
@@ -747,38 +818,11 @@ def test_check_task_dependencies(graph_config):
         graph_config,
         write_artifacts=False,
     )
-
-    task1 = {
-        "label": "task1",
-        "dependencies": ["dependency1", "dependency2"],
-        "soft-dependencies": ["dependency3"],
-        "if-dependencies": ["dependency4"],
-    }
-    task2 = {
-        "label": "task2",
-        "dependencies": ["dependency"] * 97,
-        "soft-dependencies": ["dependency"],
-        "if-dependencies": ["dependency"],
-    }
-
-    # Test tasks with less than 100 dependencies(task1) including exactly 99 dependencies(task2)
-    assert (
-        len(list(task.check_task_dependencies(transform_config, [task1, task2]))) == 2
-    )
-
-    task3 = {
-        "label": "task3",
-        "dependencies": ["dependency"] * 98,
-        "soft-dependencies": ["dependency"],
-        "if-dependencies": ["dependency"],
-    }
-    task4 = {
-        "label": "task4",
-        "dependencies": ["dependency"] * 99,
-        "soft-dependencies": ["dependency"],
-        "if-dependencies": ["dependency"],
-    }
-
-    # Test tasks with 100 or more than 100 dependencies(task4) and exactly 100 dependencies(task3)
-    with pytest.raises(Exception):
-        list(task.check_task_dependencies(transform_config, [task3, task4]))
+    
+    
+    with noexception:
+        assert len(list(task.check_task_dependencies(transform_config,[no_exception_tasks]))) == 1
+        
+    with exception:
+        assert len(list(task.check_task_dependencies(transform_config,[exception_tasks]))) == 1
+    
