@@ -17,6 +17,9 @@ __pycache__/
 .ruff_cache/
 .tox/
 
+#python virtual environement
+taskgraph/
+
 # Coverage
 .coverage
 
