@@ -2,10 +2,10 @@
 Tests for the 'task' transforms.
 """
 
+from contextlib import nullcontext as does_not_raise
 from copy import deepcopy
 from pathlib import Path
 from pprint import pprint
-from contextlib import nullcontext as does_not_raise
 
 import pytest
 
@@ -716,76 +716,53 @@ def test_treeherder_defaults(run_transform, graph_config, kind, task_def, expect
     assert task_dict["task"].get("extra", {}).get("treeherder", {}) == expected_th
 
 
-
-
-@pytest.mark.parametrize("no_exception_tasks",
+@pytest.mark.parametrize(
+    "no_exception_tasks",
     (
-            pytest.param(
+        pytest.param(
             {
                 "label": "task1",
                 "dependencies": ["dependency"] * 2,
                 "soft-dependencies": ["dependency"] * 1,
                 "if-dependencies": ["dependency"] * 4,
             },
-            
-            ),
-            pytest.param(
+        ),
+        pytest.param(
             {
                 "label": "task2",
                 "dependencies": ["dependency"] * 97,
                 "soft-dependencies": ["dependency"],
                 "if-dependencies": ["dependency"],
             },
-         
-            ),
-          
-        )
-            
-   
-    
+        ),
+    ),
 )
-
-@pytest.mark.parametrize("exception_tasks",
+@pytest.mark.parametrize(
+    "exception_tasks",
     (
-          
-            pytest.param(
+        pytest.param(
             {
                 "label": "task3",
                 "dependencies": ["dependency"] * 98,
                 "soft-dependencies": ["dependency"],
                 "if-dependencies": ["dependency"],
             },
-                        ),
-            pytest.param(
+        ),
+        pytest.param(
             {
                 "label": "task4",
                 "dependencies": ["dependency"] * 99,
                 "soft-dependencies": ["dependency"],
                 "if-dependencies": ["dependency"],
             },
-      
-            ),
-        )
-            
-   
-    
+        ),
+    ),
 )
-
-@pytest.mark.parametrize("noexception",
-        (
-            does_not_raise(),
-        )
-
-)
-
-@pytest.mark.parametrize("exception",
-        (
-            pytest.raises(Exception),
-        )
-
-)
-
-def test_check_task_dependencies(graph_config,no_exception_tasks,noexception,exception_tasks,exception):
+@pytest.mark.parametrize("noexception", (does_not_raise(),))
+@pytest.mark.parametrize("exception", (pytest.raises(Exception),))
+def test_check_task_dependencies(
+    graph_config, no_exception_tasks, noexception, exception_tasks, exception
+):
     params = FakeParameters(
         {
             "base_repository": "git@github.com://github.com/mozilla/example.git",
@@ -807,7 +784,6 @@ def test_check_task_dependencies(graph_config,no_exception_tasks,noexception,exc
             "version": "1.0.0",
         },
     )
-    
 
     transform_config = TransformConfig(
         "check_task_dependencies",
@@ -818,11 +794,19 @@ def test_check_task_dependencies(graph_config,no_exception_tasks,noexception,exc
         graph_config,
         write_artifacts=False,
     )
-    
-    
+
     with noexception:
-        assert len(list(task.check_task_dependencies(transform_config,[no_exception_tasks]))) == 1
-        
+        assert (
+            len(
+                list(
+                    task.check_task_dependencies(transform_config, [no_exception_tasks])
+                )
+            )
+            == 1
+        )
+
     with exception:
-        assert len(list(task.check_task_dependencies(transform_config,[exception_tasks]))) == 1
-    
+        assert (
+            len(list(task.check_task_dependencies(transform_config, [exception_tasks])))
+            == 1
+        )
