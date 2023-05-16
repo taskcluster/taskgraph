@@ -1244,8 +1244,12 @@ def check_task_identifiers(config, tasks):
 def check_task_dependencies(config, tasks):
     """Ensures that tasks don't have more than 100 dependencies."""
     for task in tasks:
-        number_of_dependencies=len(task["dependencies"])+len(task["if-dependencies"])+len(task["soft-dependencies"])
-        if (number_of_dependencies> MAX_DEPENDENCIES):
+        number_of_dependencies = (
+            len(task["dependencies"])
+            + len(task["if-dependencies"])
+            + len(task["soft-dependencies"])
+        )
+        if number_of_dependencies > MAX_DEPENDENCIES:
             raise Exception(
                 "task {}/{} has too many dependencies ({} > {})".format(
                     config.kind,
