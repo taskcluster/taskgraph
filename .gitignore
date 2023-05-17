@@ -25,3 +25,6 @@ artifacts/
 
 #Idea
 .idea
+
+# MacOS specific
+.DS_Store
