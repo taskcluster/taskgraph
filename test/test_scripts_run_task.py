@@ -388,4 +388,4 @@ def test_display_pyhton_version_should_output_python_versions_title(
 ):
     run_task_mod._display_pyhton_version()
 
-    assert ("Python " in capsys.readouterr().out) is True
+    assert ("Python version:" in capsys.readouterr().out) is True
