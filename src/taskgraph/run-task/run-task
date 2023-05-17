@@ -1055,7 +1055,7 @@ def maybe_run_resource_monitoring():
     return process
 
 def _display_pyhton_version():
-    print("Python versions: ")
+    print("Python version: ")
     print(platform.python_version())
 
 
