@@ -381,3 +381,11 @@ def test_git_checkout_with_commit(
             ssh_key_file=None,
             ssh_known_hosts_file=None,
         )
+
+
+def test_display_pyhton_version_should_output_python_versions(run_task_mod, capsys):
+    run_task_mod._display_pyhton_version()
+
+    print("test")
+    print(capsys.readouterr())
+    assert ("Python " in capsys.readouterr().out) is True

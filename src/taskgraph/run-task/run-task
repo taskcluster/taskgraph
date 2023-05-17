@@ -1053,6 +1053,8 @@ def maybe_run_resource_monitoring():
     monitor_process.start()
     return process
 
+def _display_pyhton_version():
+    print("Python version:")
 
 def main(args):
     os.environ["TASK_WORKDIR"] = os.getcwd()
