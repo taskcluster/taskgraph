@@ -383,7 +383,9 @@ def test_git_checkout_with_commit(
         )
 
 
-def test_display_pyhton_version_should_output_python_versions(run_task_mod, capsys):
+def test_display_pyhton_version_should_output_python_versions_title(
+    run_task_mod, capsys
+):
     run_task_mod._display_pyhton_version()
 
     assert ("Python " in capsys.readouterr().out) is True
