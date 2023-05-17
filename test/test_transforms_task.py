@@ -716,52 +716,49 @@ def test_treeherder_defaults(run_transform, graph_config, kind, task_def, expect
     assert task_dict["task"].get("extra", {}).get("treeherder", {}) == expected_th
 
 
+
 @pytest.mark.parametrize(
-    "no_exception_tasks",
+    "test_task, expectation", (
     (
-        pytest.param(
-            {
-                "label": "task1",
-                "dependencies": ["dependency"] * 2,
-                "soft-dependencies": ["dependency"] * 1,
-                "if-dependencies": ["dependency"] * 4,
-            },
-        ),
-        pytest.param(
-            {
-                "label": "task2",
-                "dependencies": ["dependency"] * 97,
-                "soft-dependencies": ["dependency"],
-                "if-dependencies": ["dependency"],
-            },
-        ),
+        {
+            "label": "task1",
+            "dependencies": ["dependency"] * 2,
+            "soft-dependencies": ["dependency"] * 1,
+            "if-dependencies": ["dependency"] * 4,
+        },
+        does_not_raise(),
     ),
-)
-@pytest.mark.parametrize(
-    "exception_tasks",
+    
     (
-        pytest.param(
-            {
-                "label": "task3",
-                "dependencies": ["dependency"] * 98,
-                "soft-dependencies": ["dependency"],
-                "if-dependencies": ["dependency"],
-            },
-        ),
-        pytest.param(
-            {
-                "label": "task4",
-                "dependencies": ["dependency"] * 99,
-                "soft-dependencies": ["dependency"],
-                "if-dependencies": ["dependency"],
-            },
-        ),
+        {
+            "label": "task2",
+            "dependencies": ["dependency"] * 97,
+            "soft-dependencies": ["dependency"] * 1,
+            "if-dependencies": ["dependency"] * 1,
+        },
+        does_not_raise(),
     ),
-)
-@pytest.mark.parametrize("noexception", (does_not_raise(),))
-@pytest.mark.parametrize("exception", (pytest.raises(Exception),))
+    (
+        {
+            "label": "task3",
+            "dependencies": ["dependency"] * 98,
+            "soft-dependencies": ["dependency"] * 1,
+            "if-dependencies": ["dependency"] * 1,
+        },
+        pytest.raises(Exception),
+    ),
+     (
+        {
+            "label": "task3",
+            "dependencies": ["dependency"] * 99,
+            "soft-dependencies": ["dependency"],
+            "if-dependencies": ["dependency"],
+        },
+        pytest.raises(Exception),
+    ),
+))
 def test_check_task_dependencies(
-    graph_config, no_exception_tasks, noexception, exception_tasks, exception
+    graph_config, test_task, expectation
 ):
     params = FakeParameters(
         {
@@ -794,19 +791,15 @@ def test_check_task_dependencies(
         graph_config,
         write_artifacts=False,
     )
-
-    with noexception:
+    
+    with expectation:
         assert (
             len(
                 list(
-                    task.check_task_dependencies(transform_config, [no_exception_tasks])
+                    task.check_task_dependencies(transform_config, [test_task])
                 )
             )
             == 1
         )
+    
 
-    with exception:
-        assert (
-            len(list(task.check_task_dependencies(transform_config, [exception_tasks])))
-            == 1
-        )
