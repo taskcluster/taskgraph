@@ -1061,6 +1061,7 @@ def _display_pyhton_version():
 
 def main(args):
     os.environ["TASK_WORKDIR"] = os.getcwd()
+    _display_pyhton_version()
     print_line(
         b"setup",
         b"run-task started in %s\n" % os.environ["TASK_WORKDIR"].encode("utf-8"),
