@@ -28,6 +28,7 @@ import io
 import json
 import os
 from pathlib import Path
+import platform
 import re
 import shutil
 import signal
@@ -1054,7 +1055,9 @@ def maybe_run_resource_monitoring():
     return process
 
 def _display_pyhton_version():
-    print("Python version:")
+    print("Python versions: ")
+    print(platform.python_version())
+
 
 def main(args):
     os.environ["TASK_WORKDIR"] = os.getcwd()
