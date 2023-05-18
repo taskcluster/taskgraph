@@ -395,6 +395,4 @@ def test_display_pyhton_version_should_output_python_versions(run_task_mod, caps
     run_task_mod._display_pyhton_version()
 
     output = capsys.readouterr().out
-    assert ("Python version: \n3." in output) or (
-        "Python version: \n2." in output
-    ) is True
+    assert ("Python version: 3." in output) or ("Python version: 2." in output) is True
