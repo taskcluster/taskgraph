@@ -383,7 +383,7 @@ def test_git_checkout_with_commit(
         )
 
 
-def test_display_pyhton_version_should_output_python_versions_title(
+def test_display_python_version_should_output_python_versions_title(
     run_task_mod, capsys
 ):
     run_task_mod._display_pyhton_version()
@@ -391,7 +391,7 @@ def test_display_pyhton_version_should_output_python_versions_title(
     assert ("Python version:" in capsys.readouterr().out) is True
 
 
-def test_display_pyhton_version_should_output_python_versions(run_task_mod, capsys):
+def test_display_python_version_should_output_python_versions(run_task_mod, capsys):
     run_task_mod._display_pyhton_version()
 
     output = capsys.readouterr().out
