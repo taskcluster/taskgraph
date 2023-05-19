@@ -1055,10 +1055,9 @@ def maybe_run_resource_monitoring():
     return process
 
 def _display_pyhton_version():
-    pythonVersionOutput = "Python version: "+platform.python_version()
     print_line(
         b"setup",
-        bytes(pythonVersionOutput, encoding='utf8')
+        b"Python version: "+ bytes(platform.python_version(), 'utf-8')
     )
 
 
