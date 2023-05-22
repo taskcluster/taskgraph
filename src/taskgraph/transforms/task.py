@@ -1280,10 +1280,11 @@ def check_caches_are_volumes(task):
         return
 
     raise Exception(
-        "task %s (image %s) has caches that are not declared as "
-        "Docker volumes: %s "
-        "(have you added them as VOLUMEs in the Dockerfile?)"
-        % (task["label"], task["worker"]["docker-image"], ", ".join(sorted(missing)))
+        "task {} (image {}) has caches that are not declared as "
+        "Docker volumes: {} "
+        "(have you added them as VOLUMEs in the Dockerfile?)".format(
+            task["label"], task["worker"]["docker-image"], ", ".join(sorted(missing))
+        )
     )
 
 
