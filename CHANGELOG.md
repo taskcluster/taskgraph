@@ -1,5 +1,16 @@
 # Change Log
 
+## [5.1.1] - 2023-05-23
+
+### Fixed
+
+- Regression around make index transform running out of order
+- Counted `if-dependencies` and `soft-dependencies` towards dependency limit check
+- Error messaging when Docker is stopped
+- Error messaging when invalid non-existent dependencies are added
+- Command line exception when branch name contains a `/`
+- Abort long running Git clone / fetch when transfer is too slow
+
 ## [5.1.0] - 2023-04-18
 
 ### Added
