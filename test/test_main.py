@@ -29,8 +29,10 @@ def run_show_taskgraph(maketgg, monkeypatch):
         monkeypatch.setattr(
             taskgraph.main, "get_taskgraph_generator", fake_get_taskgraph_generator
         )
-        taskgraph_main(args)
-        return tgg
+        try:
+            return taskgraph_main(args)
+        except SystemExit as e:
+            return e.code
 
     return inner
 
@@ -47,10 +49,27 @@ def run_show_taskgraph(maketgg, monkeypatch):
     ),
 )
 def test_show_taskgraph(run_show_taskgraph, capsys, attr, expected):
-    run_show_taskgraph([attr])
+    res = run_show_taskgraph([attr])
+    assert res == 0
+
     out, err = capsys.readouterr()
     assert out.strip() == "\n".join(expected)
     assert "Dumping result" in err
+
+    # Craft params to cause an exception
+    res = run_show_taskgraph(["full"], params={"_kinds": None})
+    assert res == 1
+
+
+def test_show_taskgraph_parallel(run_show_taskgraph):
+    res = run_show_taskgraph(["full", "-p", "taskcluster/test/params"])
+    assert res == 0
+
+    # Craft params to cause an exception
+    res = run_show_taskgraph(
+        ["full", "-p", "taskcluster/test/params"], params={"_kinds": None}
+    )
+    assert res == 1
 
 
 def test_tasks_regex(run_show_taskgraph, capsys):

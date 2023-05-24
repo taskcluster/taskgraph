@@ -189,7 +189,7 @@ def generate_taskgraph(options, parameters, logdir):
         spec = parameters[0]
         out = format_taskgraph(options, spec, logfile(spec))
         dump_output(out, options["output_file"])
-        return
+        return 0
 
     futures = {}
     with ProcessPoolExecutor() as executor:
@@ -197,11 +197,13 @@ def generate_taskgraph(options, parameters, logdir):
             f = executor.submit(format_taskgraph, options, spec, logfile(spec))
             futures[f] = spec
 
+    returncode = 0
     for future in as_completed(futures):
         output_file = options["output_file"]
         spec = futures[future]
         e = future.exception()
         if e:
+            returncode = 1
             out = "".join(traceback.format_exception(type(e), e, e.__traceback__))
             if options["diff"]:
                 # Dump to console so we don't accidentally diff the tracebacks.
@@ -214,6 +216,8 @@ def generate_taskgraph(options, parameters, logdir):
             path=output_file,
             params_spec=spec if len(parameters) > 1 else None,
         )
+
+    return returncode
 
 
 @command(
@@ -409,7 +413,7 @@ def show_taskgraph(options):
         # to setup its `mach` based logging.
         setup_logging()
 
-    generate_taskgraph(options, parameters, logdir)
+    ret = generate_taskgraph(options, parameters, logdir)
 
     if options["diff"]:
         assert diffdir is not None
@@ -433,7 +437,7 @@ def show_taskgraph(options):
                 diffdir, f"{options['graph_attr']}_{base_rev_file}"
             )
             print(f"Generating {options['graph_attr']} @ {base_rev}", file=sys.stderr)
-            generate_taskgraph(options, parameters, logdir)
+            ret |= generate_taskgraph(options, parameters, logdir)
         finally:
             repo.update(cur_rev)
 
@@ -492,6 +496,8 @@ def show_taskgraph(options):
 
     if len(parameters) > 1:
         print(f"See '{logdir}' for logs", file=sys.stderr)
+
+    return ret
 
 
 @command("build-image", help="Build a Docker image")
@@ -838,7 +844,7 @@ def main(args=sys.argv[1:]):
     parser = create_parser()
     args = parser.parse_args(args)
     try:
-        args.command(vars(args))
+        return args.command(vars(args))
     except Exception:
         traceback.print_exc()
         sys.exit(1)
