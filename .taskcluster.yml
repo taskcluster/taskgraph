@@ -48,7 +48,7 @@ tasks:
                   #
                   # [1] https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
                   'tasks_for == "github-push" && event.base_ref': ${event.base_ref}
-                  'tasks_for == "github-push" && !event.base_ref': ${event.ref}
+                  'tasks_for == "github-push" && !(event.base_ref)': ${event.ref}
                   'tasks_for in ["cron", "action"]': '${push.branch}'
           head_ref:
               $switch:
