@@ -2,17 +2,16 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-
-import attr
+from dataclasses import dataclass
 
 from .keyed_by import evaluate_keyed_by
 from .memoize import memoize
 
 
-@attr.s
+@dataclass
 class _BuiltinWorkerType:
-    provisioner = attr.ib(str)
-    worker_type = attr.ib(str)
+    provisioner: str
+    worker_type: str
 
     @property
     def implementation(self):
