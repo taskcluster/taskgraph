@@ -6,8 +6,9 @@
 import logging
 import os
 import sys
+from dataclasses import dataclass
+from typing import Dict
 
-import attr
 from voluptuous import All, Any, Extra, Length, Optional, Required
 
 from .util import path
@@ -78,10 +79,10 @@ graph_config_schema = Schema(
 """Schema for GraphConfig"""
 
 
-@attr.s(frozen=True, cmp=False)
+@dataclass(frozen=True, eq=False)
 class GraphConfig:
-    _config = attr.ib()
-    root_dir = attr.ib()
+    _config: Dict
+    root_dir: str
 
     _PATH_MODIFIED = False
 
@@ -137,4 +138,4 @@ def load_graph_config(root_dir):
     config = load_yaml(config_yml)
 
     validate_graph_config(config)
-    return GraphConfig(config=config, root_dir=root_dir)
+    return GraphConfig(config, root_dir=root_dir)

@@ -1,5 +1,4 @@
 appdirs>=1.4
-attrs>=19.1.0
 cookiecutter~=2.1
 json-e>=2.7
 mozilla-repo-urls

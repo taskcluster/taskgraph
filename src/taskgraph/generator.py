@@ -5,9 +5,8 @@
 import copy
 import logging
 import os
-from typing import AnyStr
-
-import attr
+from dataclasses import dataclass
+from typing import Dict
 
 from . import filter_tasks
 from .config import GraphConfig, load_graph_config
@@ -31,12 +30,12 @@ class KindNotFound(Exception):
     """
 
 
-@attr.s(frozen=True)
+@dataclass(frozen=True)
 class Kind:
-    name = attr.ib(type=AnyStr)
-    path = attr.ib(type=AnyStr)
-    config = attr.ib(type=dict)
-    graph_config = attr.ib(type=GraphConfig)
+    name: str
+    path: str
+    config: Dict
+    graph_config: GraphConfig
 
     def _get_loader(self):
         try:

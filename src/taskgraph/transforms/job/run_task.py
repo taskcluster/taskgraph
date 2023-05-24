@@ -5,10 +5,9 @@
 Support for running jobs that are invoked via the `run-task` script.
 """
 
-
+import dataclasses
 import os
 
-import attr
 from voluptuous import Any, Extra, Optional, Required
 
 from taskgraph.transforms.job import run_job_using
@@ -78,7 +77,7 @@ def common_setup(config, job, taskdesc, command):
             raise Exception("Must explicitly specify checkouts with multiple repos.")
         elif run["checkout"] is not True:
             repo_configs = {
-                repo: attr.evolve(repo_configs[repo], **config)
+                repo: dataclasses.replace(repo_configs[repo], **config)
                 for (repo, config) in run["checkout"].items()
             }
 
