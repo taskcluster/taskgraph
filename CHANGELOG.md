@@ -1,5 +1,15 @@
 # Change Log
 
+## [5.2.0] - 2023-05-26
+
+### Added
+
+- New `from_deps` transforms for creating follow-up tasks
+
+### Fixed
+
+- Parallel generation (via multiple params) returns non-zero if one fails
+
 ## [5.1.1] - 2023-05-23
 
 ### Fixed
