@@ -17,38 +17,8 @@ from voluptuous import ALLOW_EXTRA, Any, Optional, Required
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.attributes import attrmatch
+from taskgraph.util.dependencies import GROUP_BY_MAP
 from taskgraph.util.schema import Schema
-
-# Define a collection of group_by functions
-GROUP_BY_MAP = {}
-
-
-def group_by(name, schema=None):
-    def wrapper(func):
-        GROUP_BY_MAP[name] = func
-        func.schema = schema
-        return func
-
-    return wrapper
-
-
-@group_by("single")
-def group_by_single(config, tasks):
-    for task in tasks:
-        yield [task]
-
-
-@group_by("attribute", schema=Schema(str))
-def group_by_attribute(config, tasks, attr):
-    groups = {}
-    for task in tasks:
-        val = task.attributes.get(attr)
-        if not val:
-            continue
-        groups.setdefault(val, []).append(task)
-
-    return groups.values()
-
 
 FROM_DEPS_SCHEMA = Schema(
     {
