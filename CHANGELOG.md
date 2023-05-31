@@ -1,5 +1,11 @@
 # Change Log
 
+## [5.2.1] - 2023-05-31
+
+### Fixed
+
+- Bug preventing use of custom `group_by` functions with `from_deps` transforms
+
 ## [5.2.0] - 2023-05-26
 
 ### Added
