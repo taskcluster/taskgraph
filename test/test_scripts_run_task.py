@@ -386,13 +386,13 @@ def test_git_checkout_with_commit(
 def test_display_python_version_should_output_python_versions_title(
     run_task_mod, capsys
 ):
-    run_task_mod._display_pyhton_version()
+    run_task_mod._display_python_version()
 
     assert ("Python version:" in capsys.readouterr().out) is True
 
 
 def test_display_python_version_should_output_python_versions(run_task_mod, capsys):
-    run_task_mod._display_pyhton_version()
+    run_task_mod._display_python_version()
 
     output = capsys.readouterr().out
     assert ("Python version: 3." in output) or ("Python version: 2." in output) is True

@@ -1054,7 +1054,7 @@ def maybe_run_resource_monitoring():
     monitor_process.start()
     return process
 
-def _display_pyhton_version():
+def _display_python_version():
     print_line(
         b"setup",
         b"Python version: "+ bytes(platform.python_version(), 'utf-8')
@@ -1067,7 +1067,7 @@ def main(args):
         b"setup",
         b"run-task started in %s\n" % os.environ["TASK_WORKDIR"].encode("utf-8"),
     )
-    _display_pyhton_version()
+    _display_python_version()
     running_as_root = IS_POSIX and os.getuid() == 0
 
     # Arguments up to '--' are ours. After are for the main task
