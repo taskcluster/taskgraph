@@ -654,6 +654,24 @@ def git_checkout(
 
         retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
 
+    # If a ref was provided, it might be tag, so we need to make sure we fetch
+    # those. This is explicitly only done when base and head repo match,
+    # because it is the only scenario where tags could be present. (PRs, for
+    # example, always include an explicit rev.) Failure to do this could result
+    # in not having a tag, or worse: having an outdated version of one.
+    # `--force` is needed to be able to update an existing tag.
+    if ref and base_repo == head_repo:
+        args = [
+            "git",
+            "fetch",
+            "--tags",
+            "--force",
+            base_repo,
+            ref,
+        ]
+
+        retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
+
     # If a ref isn't provided, we fetch all refs from head_repo, which may be slow
     args = [
         "git",
