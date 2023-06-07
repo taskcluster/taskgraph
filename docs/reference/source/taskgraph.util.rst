@@ -36,6 +36,14 @@ taskgraph.util.decision module
    :undoc-members:
    :show-inheritance:
 
+taskgraph.util.dependencies module
+----------------------------------
+
+.. automodule:: taskgraph.util.dependencies
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 taskgraph.util.docker module
 ----------------------------
 
