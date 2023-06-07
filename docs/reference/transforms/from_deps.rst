@@ -166,6 +166,30 @@ instead of a string:
 In the above example, the value ``foobar`` is what must conform to the schema defined
 by the ``group_by`` function.
 
+Unique Kinds
+~~~~~~~~~~~~
+
+By default, each group can contain only a single task from a given kind. I.e, a
+group can contain a build task and a signing task, but not two build tasks.
+This is enforced at task generation time. This is typically the desired behaviour
+and the check is in place to prevent mistakes.
+
+However, in some cases it may be desirable to depend on multiple tasks of the same
+kind (e.g, if implementing a ``notify`` task). In this case it's possible to specify
+``unique-kinds``:
+
+.. code-block:: yaml
+
+   tasks:
+     notify:
+       from-deps:
+         unique-kinds: false
+         group-by: custom
+
+This will disable the uniqueness check and switch dependency edge names to the
+dependency's label rather than its kind. Now the ``notify`` task can be used
+with a custom group-by function that returns more than one kind per group.
+
 Primary Kind
 ~~~~~~~~~~~~
 
@@ -188,4 +212,4 @@ Copying Attributes
 
 It's often useful to copy attributes from a dependency. When this key is set to ``True``,
 all attributes from the ``primary-kind`` (see above) will be copied over to the task. If
-the task contain pre-existing attributes, they will not be overwritten.
+the task contains pre-existing attributes, they will not be overwritten.
