@@ -13,7 +13,7 @@ after each build task, whatever builds may exist.
 from copy import deepcopy
 from textwrap import dedent
 
-from voluptuous import ALLOW_EXTRA, Any, Optional, Required
+from voluptuous import Any, Extra, Optional, Required
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.attributes import attrmatch
@@ -70,9 +70,9 @@ FROM_DEPS_SCHEMA = Schema(
                 """.lstrip()
                 ),
             ): bool,
-        }
+        },
+        Extra: object,
     },
-    extra=ALLOW_EXTRA,
 )
 """Schema for from_deps transforms."""
 
