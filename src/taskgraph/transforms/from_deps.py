@@ -70,6 +70,16 @@ FROM_DEPS_SCHEMA = Schema(
                 """.lstrip()
                 ),
             ): bool,
+            Optional(
+                "unique-kinds",
+                description=dedent(
+                    """
+                If true (the default), there must be only a single unique task
+                for each kind in a dependency group. Setting this to false
+                disables that requirement.
+                """.lstrip()
+                ),
+            ): bool,
         },
         Extra: object,
     },
@@ -137,16 +147,19 @@ def from_deps(config, tasks):
 
         # Split the task, one per group.
         copy_attributes = from_deps.get("copy-attributes", False)
+        unique_kinds = from_deps.get("unique-kinds", True)
         for group in groups:
             # Verify there is only one task per kind in each group.
             group_kinds = {t.kind for t in group}
-            if len(group_kinds) < len(group):
+            if unique_kinds and len(group_kinds) < len(group):
                 raise Exception(
                     "The from_deps transforms only allow a single task per kind in a group!"
                 )
 
             new_task = deepcopy(task)
-            new_task["dependencies"] = {dep.kind: dep.label for dep in group}
+            new_task["dependencies"] = {
+                dep.kind if unique_kinds else dep.label: dep.label for dep in group
+            }
 
             # Set name and copy attributes from the primary kind.
             for kind in kinds:

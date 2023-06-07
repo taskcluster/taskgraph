@@ -53,6 +53,15 @@ def assert_group_by_attribute_dupe(e):
     handle_exception(e, exc=Exception)
 
 
+def assert_group_by_attribute_dupe_allowed(tasks):
+    handle_exception(tasks)
+    assert len(tasks) == 2
+    assert tasks[0]["dependencies"] == {"a": "a"}
+    assert tasks[0]["attributes"] == {"primary-kind-dependency": "foo"}
+    assert tasks[1]["dependencies"] == {"b": "b", "c": "c"}
+    assert tasks[1]["attributes"] == {"primary-kind-dependency": "foo"}
+
+
 def assert_copy_attributes(tasks):
     handle_exception(tasks)
     assert len(tasks) == 1
@@ -129,6 +138,24 @@ def assert_copy_attributes(tasks):
                 "c": make_task("c", attributes={"build-type": "win"}, kind="foo"),
             },
             id="group_by_attribute_dupe",
+        ),
+        pytest.param(
+            # task
+            {
+                "from-deps": {
+                    "unique-kinds": False,
+                    "group-by": {"attribute": "build-type"},
+                }
+            },
+            # kind config
+            None,
+            # deps
+            {
+                "a": make_task("a", attributes={"build-type": "linux"}, kind="foo"),
+                "b": make_task("b", attributes={"build-type": "win"}, kind="foo"),
+                "c": make_task("c", attributes={"build-type": "win"}, kind="foo"),
+            },
+            id="group_by_attribute_dupe_allowed",
         ),
         pytest.param(
             # task
