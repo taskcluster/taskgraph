@@ -1,5 +1,18 @@
 # Change Log
 
+## [5.3.0] - 2023-06-08
+
+### Fixed
+
+- Disallow extraneous keys in the `from-deps` config
+- `run-task` now fetches tags when necessary after cloning repo
+
+### Added
+
+- New `from-deps.unique-kinds` key to allow depending on multiple tasks of a kind
+- New `get_dependencies` and `get_primary_dependency` functions in `taskgraph.util.dependencies`
+- `run-task` now logs the Python version it was invoked with
+
 ## [5.2.1] - 2023-05-31
 
 ### Fixed
