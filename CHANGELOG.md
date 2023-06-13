@@ -1,5 +1,15 @@
 # Change Log
 
+## [5.4.0] - 2023-06-13
+
+### Fixed
+
+- Regression in add-new-jobs and retrigger actions, introduced in 5.1.0.
+
+### Changed
+
+- Replaced 'attrs' with 'dataclasses'
+
 ## [5.3.0] - 2023-06-08
 
 ### Fixed
