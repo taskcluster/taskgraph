@@ -275,6 +275,7 @@ def run_command(prefix, args, *, extra_env=None, cwd=None):
         cwd=cwd,
         env=env,
     )
+    _display_python_version_in_sub_process(subprocess)
 
     stdout = io.TextIOWrapper(p.stdout, encoding="latin1")
 
@@ -724,6 +725,7 @@ def git_checkout(
         args, cwd=destination_path, universal_newlines=True
     ).strip()
     assert re.match("^[a-f0-9]{40}$", commit_hash)
+    _display_python_version_in_sub_process(subprocess)
 
     if head_repo.startswith("https://github.com"):
         if head_repo.endswith("/"):
@@ -827,6 +829,7 @@ def hg_checkout(
         # Triggers text mode on Python 3.
         universal_newlines=True,
     )
+    _display_python_version_in_sub_process(subprocess)
 
     assert re.match("^[a-f0-9]{40}$", revision)
 
@@ -858,6 +861,7 @@ def fetch_artifacts():
     cmd = [sys.executable, "-u", fetch_content, "task-artifacts"]
     print_line(b"fetches", b"executing %r\n" % cmd)
     subprocess.run(cmd, check=True, env=os.environ)
+    _display_python_version_in_sub_process(subprocess)
     print_line(b"fetches", b"finished fetching artifacts\n")
 
 
@@ -1060,6 +1064,7 @@ def maybe_run_resource_monitoring():
         creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if IS_WINDOWS else 0,
         cwd=os.getcwd(),
     )
+    _display_python_version_in_sub_process(subprocess)
 
     def capture_output():
         fh = io.TextIOWrapper(process.stdout, encoding="latin1")
