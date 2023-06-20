@@ -391,8 +391,10 @@ def test_display_python_version_should_output_python_versions_title(
     assert ("Python version:" in capsys.readouterr().out) is True
 
 
-def test_display_python_version_should_output_python_versions(run_task_mod, capsys):
-    run_task_mod._display_python_version()
+def test_display_python_version_in_sub_process_should_output_python_versions(
+    run_task_mod, capsys
+):
+    run_task_mod._display_python_version_in_sub_process(subprocess)
 
     output = capsys.readouterr().out
-    assert ("Python version: 3." in output) or ("Python version: 2." in output) is True
+    assert ("Python 3." in output) or ("Python 2." in output) is True

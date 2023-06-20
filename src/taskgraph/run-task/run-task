@@ -570,6 +570,7 @@ def _clean_git_checkout(destination_path):
         cwd=destination_path,
         env=os.environ,
     )
+    _display_python_version_in_sub_process(subprocess)
     stdout = io.TextIOWrapper(p.stdout, encoding="latin1")
     ret = p.wait()
     if ret:
@@ -1078,6 +1079,11 @@ def _display_python_version():
         b"Python version: "+ bytes(platform.python_version(), 'utf-8')
     )
 
+def _display_python_version_in_sub_process(subprocess: subprocess):
+    print_line(
+        b"setup",
+        subprocess.check_output("python --version")
+    )
 
 def main(args):
     os.environ["TASK_WORKDIR"] = os.getcwd()
