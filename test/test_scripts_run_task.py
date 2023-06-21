@@ -257,6 +257,15 @@ def test_clean_git_checkout(monkeypatch, mock_stdin, run_task_mod):
         _Popen,
     )
 
+    def _check_output(args):
+        return b""
+
+    monkeypatch.setattr(
+        subprocess,
+        "check_output",
+        _check_output,
+    )
+
     assert os.path.isdir(root_dir.name) is True
     assert os.path.isdir(tracked_dir.name) is True
     assert os.path.isdir(untracked_dir.name) is True
