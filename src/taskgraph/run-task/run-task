@@ -1087,7 +1087,7 @@ def _display_python_version():
 def _display_python_version_in_sub_process(subprocess: subprocess):
     print_line(
         b"setup",
-        subprocess.check_output("python --version")
+        subprocess.check_output(["python", "--version"])
     )
 
 def main(args):
