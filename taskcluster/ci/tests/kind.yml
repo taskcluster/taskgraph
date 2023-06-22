@@ -32,6 +32,16 @@ task-defaults:
         cache-dotcache: true
 
 tasks:
+    syntax:
+        description: "Run `syntax check`"
+        treeherder:
+            symbol: syntax
+        attributes:
+            artifact_prefix: public
+        run:
+            command: >-
+                pip install --user tox &&
+                tox -e syntax
     unit:
         description: "Run `unit tests` to validate the latest changes"
         treeherder:

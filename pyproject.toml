@@ -26,6 +26,10 @@ ignore = [
     "E741",
 ]
 target-version = "py37"
+exclude = [
+  "src/taskgraph/run-task/robustcheckout.py",
+  "taskcluster/scripts/external_tools/tooltool.py",
+]
 
 [tool.ruff.isort]
 known-first-party = ["taskgraph"]
