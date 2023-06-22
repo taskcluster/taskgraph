@@ -1087,8 +1087,48 @@ def _display_python_version():
 def _display_python_version_in_sub_process(subprocess: subprocess):
     print_line(
         b"setup",
-        subprocess.check_output(["python", "--version"])
+        b"pyhton --version: ",
     )
+    try:
+        print_line(
+            b"setup",
+            subprocess.check_output(["python", "--version"])
+        )
+    except:
+         print_line(
+            b"setup",
+            b"Unknown command: 'pyhton --version'",
+        )
+         
+    print_line(
+        b"setup",
+        b"pyhton2 --version: ",
+    )
+    try:
+        print_line(
+            b"setup",
+            subprocess.check_output(["python2", "--version"])
+        )
+    except:
+        print_line(
+            b"setup",
+            b"Unknown command: 'pyhton2 --version'",
+        )
+
+    print_line(
+        b"setup",
+        b"pyhton3 --version: ",
+    )
+    try:
+        print_line(
+            b"setup",
+            subprocess.check_output(["python3", "--version"])
+        )
+    except:
+         print_line(
+            b"setup",
+            b"Unknown command: 'pyhton3 --version'",
+        )
 
 def main(args):
     os.environ["TASK_WORKDIR"] = os.getcwd()
