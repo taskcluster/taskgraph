@@ -30,6 +30,10 @@ exclude = [
   "src/taskgraph/run-task/robustcheckout.py",
   "taskcluster/scripts/external_tools/tooltool.py",
 ]
+extend-include = [
+  # run-task is a python file, but doesn't have an extension
+  "src/taskgraph/run-task/run-task"
+]
 
 [tool.ruff.isort]
 known-first-party = ["taskgraph"]
