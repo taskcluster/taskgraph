@@ -27,6 +27,11 @@ def group_by_single(config, tasks):
         yield [task]
 
 
+@group_by("all")
+def group_by_all(config, tasks):
+    return [[task for task in tasks]]
+
+
 @group_by("attribute", schema=Schema(str))
 def group_by_attribute(config, tasks, attr):
     groups = {}

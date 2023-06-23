@@ -111,11 +111,34 @@ groups:
 Then the ``notify`` task will be duplicated into three, one for each group. The
 notify tasks will depend on each task in its associated group.
 
+You may also provide a special value of ``all`` to the ``group-by`` function.
+Using ``all`` will *always* result in one task being generated, with all tasks
+from the included kinds to be set as dependencies. It is usually useful to also
+set ``unique-kinds`` to ``False`` when using ``all``.
+
+If we alter the ``kind`` definition from above as follows:
+
+.. code-block:: yaml
+
+   kind-dependencies:
+     - build
+     - signing
+     - publish
+
+   tasks:
+     notify:
+       from-deps:
+         group-by: all
+
+We would end up with a single ``notify`` task that depends on all tasks from
+the ``build``, ``signing``, and ``publish`` kinds.
+
+
 Custom Grouping
 ~~~~~~~~~~~~~~~
 
-Only the default ``single`` and the ``attribute`` group-by functions are
-built-in. But if more complex grouping is needed, custom functions can be
+Only the default ``single``, ``all`` and the ``attribute`` group-by functions
+are built-in. But if more complex grouping is needed, custom functions can be
 implemented as well:
 
 .. code-block:: python
@@ -123,8 +146,8 @@ implemented as well:
    from typing import List
 
    from taskgraph.task import Task
-   from taskgraph.transforms.from_deps import group_by
    from taskgraph.transforms.base import TransformConfig
+   from taskgraph.util.dependencies import group_by
 
    @group_by("custom-name")
    def group_by(config: TransformConfig, tasks: List[Task]) -> List[List[Task]]:
@@ -146,8 +169,8 @@ allows tasks to pass down additional context (such as with the built-in
    from typing import List
 
    from taskgraph.task import Task
-   from taskgraph.transforms.from_deps import group_by
    from taskgraph.transforms.base import TransformConfig
+   from taskgraph.util.dependencies import group_by
    from taskgraph.util.schema import Schema
 
    @group_by("custom-name", schema=Schema(str))

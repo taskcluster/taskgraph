@@ -74,6 +74,18 @@ def assert_copy_attributes(tasks):
     }
 
 
+def assert_group_by_all(tasks):
+    handle_exception(tasks)
+    assert len(tasks) == 1
+    assert tasks[0]["dependencies"] == {"foo": "a", "bar": "bar-b"}
+
+
+def assert_group_by_all_dupe_allowed(tasks):
+    handle_exception(tasks)
+    assert len(tasks) == 1
+    assert tasks[0]["dependencies"] == {"a": "a", "b": "b", "c": "c"}
+
+
 @pytest.mark.parametrize(
     "task, kind_config, deps",
     (
@@ -177,6 +189,37 @@ def assert_copy_attributes(tasks):
                 ),
             },
             id="copy_attributes",
+        ),
+        pytest.param(
+            # task
+            {
+                "from-deps": {
+                    "group-by": "all",
+                }
+            },
+            # kind config
+            None,
+            # deps
+            None,
+            id="group_by_all",
+        ),
+        pytest.param(
+            # task
+            {
+                "from-deps": {
+                    "unique-kinds": False,
+                    "group-by": "all",
+                }
+            },
+            # kind config
+            None,
+            # deps
+            {
+                "a": make_task("a", kind="foo"),
+                "b": make_task("b", kind="foo"),
+                "c": make_task("c", kind="foo"),
+            },
+            id="group_by_all_dupe_allowed",
         ),
     ),
 )
