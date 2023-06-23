@@ -43,6 +43,6 @@ repos:
         stages: [commit-msg]
 exclude: |
   (?x)^(
-    src/taskgraph/run-task/|
+    src/taskgraph/run-task/robustcheckout.py|
     taskcluster/scripts/external_tools
   )
