@@ -29,7 +29,7 @@ ignore = [
 target-version = "py37"
 exclude = [
   "src/taskgraph/run-task/robustcheckout.py",
-  "taskcluster/scripts/external_tools/tooltool.py",
+  "taskcluster/scripts/external_tools/*",
 ]
 extend-include = [
   # run-task is a python file, but doesn't have an extension
