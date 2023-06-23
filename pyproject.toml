@@ -1,5 +1,6 @@
 [tool.black]
 line-length = 88
+include = 'src/taskgraph/run-task/run-task'
 extend-exclude = """(\
   taskcluster/scripts/external_tools)\
   """
@@ -26,6 +27,17 @@ ignore = [
     "E741",
 ]
 target-version = "py37"
+exclude = [
+  "src/taskgraph/run-task/robustcheckout.py",
+  "taskcluster/scripts/external_tools/*",
+]
+extend-include = [
+  # run-task is a python file, but doesn't have an extension
+  "src/taskgraph/run-task/*"
+]
 
 [tool.ruff.isort]
 known-first-party = ["taskgraph"]
+
+[tool.ruff.extend-per-file-ignores]
+"hgrc" = ["E999"]

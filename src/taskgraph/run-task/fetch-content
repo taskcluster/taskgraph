@@ -133,9 +133,7 @@ def retrier(attempts=5, sleeptime=10, max_sleeptime=300, sleepscale=1.5, jitter=
     jitter = jitter or 0  # py35 barfs on the next line if jitter is None
     if jitter > sleeptime:
         # To prevent negative sleep times
-        raise Exception(
-            "jitter ({}) must be less than sleep time ({})".format(jitter, sleeptime)
-        )
+        raise Exception(f"jitter ({jitter}) must be less than sleep time ({sleeptime})")
 
     sleeptime_real = sleeptime
     for _ in range(attempts):
@@ -226,7 +224,7 @@ def stream_download(url, sha256=None, size=None, headers=None):
             log("Verified sha256 integrity of %s" % url)
         else:
             raise IntegrityError(
-                "sha256 mismatch on %s: wanted %s; got %s" % (url, sha256, digest)
+                f"sha256 mismatch on {url}: wanted {sha256}; got {digest}"
             )
 
 
@@ -243,7 +241,7 @@ def download_to_path(url, path, sha256=None, size=None, headers=None):
 
     for _ in retrier(attempts=5, sleeptime=60):
         try:
-            log("Downloading %s to %s" % (url, path))
+            log(f"Downloading {url} to {path}")
 
             with rename_after_close(path, "wb") as fh:
                 for chunk in stream_download(
@@ -255,7 +253,7 @@ def download_to_path(url, path, sha256=None, size=None, headers=None):
         except IntegrityError:
             raise
         except Exception as e:
-            log("Download failed: {}".format(e))
+            log(f"Download failed: {e}")
             continue
 
     raise Exception("Download failed, no more retries!")
@@ -276,7 +274,7 @@ def download_to_memory(url, sha256=None, size=None):
         except IntegrityError:
             raise
         except Exception as e:
-            log("Download failed: {}".format(e))
+            log(f"Download failed: {e}")
             continue
 
     raise Exception("Download failed, no more retries!")
@@ -321,7 +319,7 @@ def open_tar_stream(path: pathlib.Path):
     """"""
     if path.suffix == ".bz2":
         return bz2.open(str(path), "rb")
-    elif path.suffix in (".gz", ".tgz") :
+    elif path.suffix in (".gz", ".tgz"):
         return gzip.open(str(path), "rb")
     elif path.suffix == ".xz":
         return lzma.open(str(path), "rb")
@@ -351,7 +349,7 @@ def extract_archive(path, dest_dir, typ):
     path = path.resolve()
     dest_dir = dest_dir.resolve()
 
-    log("Extracting %s to %s" % (path, dest_dir))
+    log(f"Extracting {path} to {dest_dir}")
     t0 = time.time()
 
     # We pipe input to the decompressor program so that we can apply
@@ -396,7 +394,7 @@ def extract_archive(path, dest_dir, typ):
         if p.returncode:
             raise Exception("%r exited %d" % (args, p.returncode))
 
-    log("%s extracted in %.3fs" % (path, time.time() - t0))
+    log(f"{path} extracted in {time.time() - t0:.3f}s")
 
 
 def repack_archive(
@@ -557,7 +555,7 @@ def _github_submodule_required(repo: str, commit: str):
     try:
         status_code = urllib.request.urlopen(url).getcode()
         return status_code == 200
-    except:
+    except Exception:
         return False
 
 
@@ -585,10 +583,11 @@ def git_checkout_archive(
             if re.match(r"^[a-fA-F0-9]{40}$", commit):
                 revision = commit
             else:
-                ref_output = subprocess.check_output(["git", "ls-remote", repo,
-                                                      'refs/heads/' + commit])
+                ref_output = subprocess.check_output(
+                    ["git", "ls-remote", repo, "refs/heads/" + commit]
+                )
                 revision, _ = ref_output.decode().split(maxsplit=1)
-            log("Fetching revision {}".format(revision))
+            log(f"Fetching revision {revision}")
             return _git_checkout_github_archive(dest_path, repo, commit, prefix)
 
     with tempfile.TemporaryDirectory() as td:
@@ -599,7 +598,7 @@ def git_checkout_archive(
         # This could be faster with a shallow clone. However, Git requires a ref
         # to initiate a clone. Since the commit-ish may not refer to a ref, we
         # simply perform a full clone followed by a checkout.
-        print("cloning %s to %s" % (repo, git_dir))
+        print(f"cloning {repo} to {git_dir}")
 
         env = os.environ.copy()
         keypath = ""
@@ -608,7 +607,7 @@ def git_checkout_archive(
                 os.environ.get("TASKCLUSTER_PROXY_URL"),
                 "secrets",
                 "v1",
-                "secret/{keypath}".format(keypath=ssh_key),
+                f"secret/{ssh_key}",
             )
             taskcluster_secret = b"".join(stream_download(taskcluster_secret_url))
             taskcluster_secret = json.loads(taskcluster_secret)
@@ -665,7 +664,7 @@ def git_checkout_archive(
         if keypath:
             os.remove(keypath)
 
-        print("creating archive %s of commit %s" % (dest_path, commit))
+        print(f"creating archive {dest_path} of commit {commit}")
         exclude_dot_git = [] if include_dot_git else ["--exclude=.git"]
         proc = subprocess.Popen(
             [
@@ -813,7 +812,7 @@ def command_task_artifacts(args):
             }
         ],
     }
-    print("PERFHERDER_DATA: {}".format(json.dumps(perfherder_data)), file=sys.stderr)
+    print(f"PERFHERDER_DATA: {json.dumps(perfherder_data)}", file=sys.stderr)
 
 
 def main():

@@ -27,7 +27,6 @@ import errno
 import io
 import json
 import os
-from pathlib import Path
 import platform
 import re
 import shutil
@@ -36,10 +35,9 @@ import socket
 import stat
 import subprocess
 import time
-
 import urllib.error
 import urllib.request
-
+from pathlib import Path
 from threading import Thread
 
 SECRET_BASEURL_TPL = "http://taskcluster/secrets/v1/secret/{}"
@@ -144,8 +142,7 @@ def _call_windows_retry(func, args=(), retry_max=5, retry_delay=0.5):
             retry_count += 1
 
             print(
-                '%s() failed for "%s". Reason: %s (%s). Retrying...'
-                % (func.__name__, args, e.strerror, e.errno)
+                f'{func.__name__}() failed for "{args}". Reason: {e.strerror} ({e.errno}). Retrying...'
             )
             time.sleep(retry_count * retry_delay)
         else:
@@ -493,7 +490,7 @@ def configure_cache_posix(cache, user, group, untrusted_caches, running_as_root)
 
             print("")
             print("audit log:")
-            with open(audit_path, "r") as fh:
+            with open(audit_path) as fh:
                 print(fh.read())
 
             return True
@@ -612,9 +609,9 @@ def git_checkout(
         env["GIT_SSH_COMMAND"] = " ".join(
             [
                 "ssh",
-                "-oIdentityFile={}".format(ssh_key_file.as_posix()),
+                f"-oIdentityFile={ssh_key_file.as_posix()}",
                 "-oStrictHostKeyChecking=yes",
-                "-oUserKnownHostsFile={}".format(ssh_known_hosts_file.as_posix()),
+                f"-oUserKnownHostsFile={ssh_known_hosts_file.as_posix()}",
             ]
         )
     elif ssh_key_file or ssh_known_hosts_file:
@@ -728,7 +725,7 @@ def git_checkout(
         if head_repo.endswith("/"):
             head_repo = head_repo[:-1]
 
-        tinderbox_link = "{}/commit/{}".format(head_repo, commit_hash)
+        tinderbox_link = f"{head_repo}/commit/{commit_hash}"
         repo_name = head_repo.split("/")[-1]
     else:
         tinderbox_link = head_repo
@@ -926,7 +923,6 @@ def collect_vcs_options(args, project, name):
 
 
 def vcs_checkout_from_args(options):
-
     if not options["checkout"]:
         if options["ref"] and not options["revision"]:
             print("task should be defined in terms of non-symbolic revision")
@@ -1072,10 +1068,11 @@ def maybe_run_resource_monitoring():
     monitor_process.start()
     return process
 
+
 def _display_python_version():
     print_line(
         b"setup",
-        b"Python version: %s\n" % platform.python_version().encode('utf-8')
+        b"Python version: %s\n" % platform.python_version().encode("utf-8"),
     )
 
 
