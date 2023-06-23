@@ -617,6 +617,11 @@ def build_docker_worker_payload(config, task, task_def):
         Required("env"): {str: taskref_or_string},
         # the maximum time to run, in seconds
         Required("max-run-time"): int,
+        # the exit status code(s) that indicates the task should be retried
+        Optional("retry-exit-status"): [int],
+        # the exit status code(s) that indicates the caches used by the task
+        # should be purged
+        Optional("purge-caches-exit-status"): [int],
         # os user groups for test task workers
         Optional("os-groups"): [str],
         # feature for test task to run as administarotr
@@ -639,6 +644,8 @@ def build_generic_worker_payload(config, task, task_def):
     on_exit_status = {}
     if "retry-exit-status" in worker:
         on_exit_status["retry"] = worker["retry-exit-status"]
+    if "purge-caches-exit-status" in worker:
+        on_exit_status["purgeCaches"] = worker["purge-caches-exit-status"]
     if worker["os"] == "windows":
         on_exit_status.setdefault("retry", []).extend(
             [
