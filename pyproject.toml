@@ -33,8 +33,11 @@ exclude = [
 ]
 extend-include = [
   # run-task is a python file, but doesn't have an extension
-  "src/taskgraph/run-task/run-task"
+  "src/taskgraph/run-task/*"
 ]
 
 [tool.ruff.isort]
 known-first-party = ["taskgraph"]
+
+[tool.ruff.extend-per-file-ignores]
+"hgrc" = ["E999"]
