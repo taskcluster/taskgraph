@@ -14,12 +14,10 @@ current time to improve log usefulness.
 """
 
 import sys
-from typing import Optional
 
 if sys.version_info[0:2] < (3, 5):
     print("run-task requires Python 3.5+")
     sys.exit(1)
-
 
 import argparse
 import datetime
@@ -27,7 +25,6 @@ import errno
 import io
 import json
 import os
-from pathlib import Path
 import platform
 import re
 import shutil
@@ -36,11 +33,11 @@ import socket
 import stat
 import subprocess
 import time
-
 import urllib.error
 import urllib.request
-
+from pathlib import Path
 from threading import Thread
+from typing import Optional
 
 SECRET_BASEURL_TPL = "http://taskcluster/secrets/v1/secret/{}"
 
@@ -926,7 +923,6 @@ def collect_vcs_options(args, project, name):
 
 
 def vcs_checkout_from_args(options):
-
     if not options["checkout"]:
         if options["ref"] and not options["revision"]:
             print("task should be defined in terms of non-symbolic revision")
@@ -1072,10 +1068,10 @@ def maybe_run_resource_monitoring():
     monitor_process.start()
     return process
 
+
 def _display_python_version():
     print_line(
-        b"setup",
-        b"Python version: %s\n" % platform.python_version().encode('utf-8')
+        b"setup", b"Python version: %s\n" % platform.python_version().encode("utf-8")
     )
 
 
