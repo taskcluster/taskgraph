@@ -2,6 +2,9 @@
 
 ## [5.4.0] - 2023-06-13
 
+### Added
+- logging of the command used to envoke 'run-task'
+
 ### Fixed
 
 - Regression in add-new-jobs and retrigger actions, introduced in 5.1.0.
