@@ -2,10 +2,6 @@
 
 ## [5.4.0] - 2023-06-13
 
-### Added
-
-- Loggign the command invkoing the run-script
-
 ### Fixed
 
 - Regression in add-new-jobs and retrigger actions, introduced in 5.1.0.
