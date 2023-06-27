@@ -1086,7 +1086,6 @@ def main(args):
         b"setup",
         b"Invoked by command: %s\n" % calling_script.encode("utf-8"),
     )
-    
     _display_python_version()
     running_as_root = IS_POSIX and os.getuid() == 0
 
