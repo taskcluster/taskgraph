@@ -1081,6 +1081,11 @@ def main(args):
         b"setup",
         b"run-task started in %s\n" % os.environ["TASK_WORKDIR"].encode("utf-8"),
     )
+    calling_script =''.join(args)
+    print_line(
+        b"setup",
+        b"Invoked by module: %s\n" % calling_script.encode("utf-8"),
+    )
     _display_python_version()
     running_as_root = IS_POSIX and os.getuid() == 0
 
