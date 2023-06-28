@@ -708,6 +708,7 @@ def git_checkout(
             "git",
             "submodule",
             "update",
+            "--force",  # Overrides any potential local changes
         ]
 
         run_required_command(b"vcs", args, cwd=destination_path)
