@@ -166,7 +166,10 @@ class Repository(ABC):
     @abstractmethod
     def find_latest_common_revision(self, base_ref_or_rev, head_rev):
         """Find the latest revision that is common to both the given
-        ``head_rev`` and ``base_ref_or_rev``"""
+        ``head_rev`` and ``base_ref_or_rev``.
+
+        If no common revision exists, ``Repository.NULL_REVISION`` will
+        be returned."""
 
     @abstractmethod
     def does_revision_exist_locally(self, revision):
@@ -296,13 +299,14 @@ class HgRepository(Repository):
         return self.run("update", "--check", ref)
 
     def find_latest_common_revision(self, base_ref_or_rev, head_rev):
-        return self.run(
+        ancestor = self.run(
             "log",
             "-r",
             f"last(ancestors('{base_ref_or_rev}') and ancestors('{head_rev}'))",
             "--template",
             "{node}",
         ).strip()
+        return ancestor or self.NULL_REVISION
 
     def does_revision_exist_locally(self, revision):
         try:
@@ -482,7 +486,10 @@ class GitRepository(Repository):
         self.run("checkout", ref)
 
     def find_latest_common_revision(self, base_ref_or_rev, head_rev):
-        return self.run("merge-base", base_ref_or_rev, head_rev).strip()
+        try:
+            return self.run("merge-base", base_ref_or_rev, head_rev).strip()
+        except subprocess.CalledProcessError:
+            return self.NULL_REVISION
 
     def does_revision_exist_locally(self, revision):
         try:
