@@ -1,5 +1,20 @@
 # Change Log
 
+## [5.5.0] - 2023-07-06
+
+### Added
+
+- Support for Mercurial 6.0+ in `robustcheckout` script
+- Added an `all` group for the `from_deps` transforms
+- Added support for the `purgeCaches` feature of `generic-worker`
+
+### Fixed
+
+- Added missing line feed to Python version log in `run-task` script
+- Return null revision when no common ancestor found in `repo.find_latest_common_revision`
+- Added `--force` flag when updating Git submodules in `run-task` script
+- Fix ImportError with old versions of Python (fail on version check instead)
+
 ## [5.4.0] - 2023-06-13
 
 ### Fixed
