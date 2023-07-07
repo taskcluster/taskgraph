@@ -795,6 +795,7 @@ def test_check_task_dependencies(graph_config, test_task, expectation):
             len(list(task.check_task_dependencies(transform_config, [test_task]))) == 1
         )
 
+
 @pytest.mark.parametrize(
     "deadline_after, test_task",
     (
@@ -822,7 +823,7 @@ def test_check_task_dependencies(graph_config, test_task, expectation):
                 },
             },
         ),
-    )
+    ),
 )
 def test_default_deadline_after(run_transform, graph_config, deadline_after, test_task):
     if deadline_after:

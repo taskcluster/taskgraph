@@ -220,6 +220,7 @@ def get_default_priority(graph_config, project):
         graph_config["task-priority"], "Graph Config", {"project": project}
     )
 
+
 @memoize
 def get_default_deadline(graph_config, project):
     return evaluate_keyed_by(
