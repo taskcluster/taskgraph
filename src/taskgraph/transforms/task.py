@@ -220,6 +220,12 @@ def get_default_priority(graph_config, project):
         graph_config["task-priority"], "Graph Config", {"project": project}
     )
 
+@memoize
+def get_default_deadline(graph_config, project):
+    return evaluate_keyed_by(
+        graph_config["task-deadline-after"], "Graph Config", {"project": project}
+    )
+
 
 # define a collection of payload builders, depending on the worker implementation
 payload_builders = {}
@@ -1069,7 +1075,12 @@ def build_task(config, tasks):
             task["expires-after"] = "28 days" if config.params.is_try() else "1 year"
 
         if "deadline-after" not in task:
-            task["deadline-after"] = "1 day"
+            if "task-deadline-after" in config.graph_config:
+                task["deadline-after"] = get_default_deadline(
+                    config.graph_config, config.params["project"]
+                )
+            else:
+                task["deadline-after"] = "1 day"
 
         if "priority" not in task:
             task["priority"] = get_default_priority(
