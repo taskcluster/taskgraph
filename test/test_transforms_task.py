@@ -794,3 +794,77 @@ def test_check_task_dependencies(graph_config, test_task, expectation):
         assert (
             len(list(task.check_task_dependencies(transform_config, [test_task]))) == 1
         )
+
+
+@pytest.mark.parametrize(
+    "deadline_after, test_task",
+    (
+        (
+            None,
+            {
+                "description": "fake description",
+                "name": "fake-task-name",
+                "worker-type": "t-linux",
+                "worker": {
+                    "docker-image": "fake-image-name",
+                    "max-run-time": 1800,
+                },
+            },
+        ),
+        (
+            "2 weeks",
+            {
+                "description": "fake description",
+                "name": "fake-task-name",
+                "worker-type": "t-linux",
+                "worker": {
+                    "docker-image": "fake-image-name",
+                    "max-run-time": 1800,
+                },
+            },
+        ),
+    ),
+)
+def test_default_deadline_after(run_transform, graph_config, deadline_after, test_task):
+    if deadline_after:
+        graph_config._config["task-deadline-after"] = deadline_after
+
+    params = FakeParameters(
+        {
+            "base_repository": "git@github.com://github.com/mozilla/example.git",
+            "build_date": 0,
+            "build_number": 1,
+            "head_repository": "git@github.com://github.com/mozilla/example.git",
+            "head_rev": "abcdef",
+            "head_ref": "default",
+            "level": "1",
+            "moz_build_date": 0,
+            "next_version": "1.0.1",
+            "owner": "some-owner",
+            "project": "some-project",
+            "pushlog_id": 1,
+            "repository_type": "git",
+            "target_tasks_method": "test_method",
+            "tasks_for": "github-pull-request",
+            "try_mode": None,
+            "version": "1.0.0",
+        },
+    )
+
+    transform_config = TransformConfig(
+        "check_deadline",
+        str(here),
+        {},
+        params,
+        {},
+        graph_config,
+        write_artifacts=False,
+    )
+
+    task_dict = deepcopy(test_task)
+
+    task_dict = run_transform(task.transforms, task_dict, config=transform_config)[0]
+    if deadline_after:
+        assert task_dict["task"]["deadline"] == {"relative-datestamp": deadline_after}
+    else:
+        assert task_dict["task"]["deadline"] == {"relative-datestamp": "1 day"}
