@@ -1,5 +1,11 @@
 # Change Log
 
+## [5.6.0] - 2023-07-10
+
+### Added
+
+- Support for overriding the default task deadline in `ci/config.yml`
+
 ## [5.5.0] - 2023-07-06
 
 ### Added
