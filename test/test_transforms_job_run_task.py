@@ -22,10 +22,7 @@ TASK_DEFAULTS = {
     },
     "run": {
         "using": "run-task",
-        "command": "echo hello {extra_string}",
-        "command-context": {
-            "from-file": f"{here}/data/command_context.yaml",
-        },
+        "command": "echo hello world"
     },
 }
 
