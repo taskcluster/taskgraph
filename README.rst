@@ -68,7 +68,7 @@ CI`_.
 Installation
 ------------
 
-Taskgraph supports Python 3.6 and up, and can be installed from Pypi:
+Taskgraph supports Python 3.7 and up, and can be installed from Pypi:
 
 .. code-block::
 
