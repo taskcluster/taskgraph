@@ -45,14 +45,14 @@ size or complexity.
 
 1. A *decision task* is created via Taskcluster's normal `.taskcluster.yml`_
    file. This task invokes ``taskgraph``.
-3. Taskgraph evaluates a series of yaml based task definitions (similar to
+2. Taskgraph evaluates a series of yaml based task definitions (similar to
    those other CI offerings provide).
-4. Taskgraph applies transforms on top of these task definitions. Transforms
+3. Taskgraph applies transforms on top of these task definitions. Transforms
    are Python functions that can programmatically alter or even clone a task
    definition.
-5. Taskgraph applies some optional optimization logic to remove unnecessary
+4. Taskgraph applies some optional optimization logic to remove unnecessary
    tasks.
-6. Taskgraph submits the resulting *task graph* to Taskcluster via its API.
+5. Taskgraph submits the resulting *task graph* to Taskcluster via its API.
 
 Taskgraph's combination of declarative task configuration combined with
 programmatic alteration are what allow it to support CI systems of any scale.
