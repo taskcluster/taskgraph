@@ -31,6 +31,7 @@ def is_json(data):
     return True
 
 
+@memoize
 def read_taskcluster_yml(filename):
     """Load and parse .taskcluster.yml, memoized to save some time"""
     return yaml.load_yaml(filename)
