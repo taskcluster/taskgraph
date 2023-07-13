@@ -3,7 +3,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from textwrap import dedent
-from unittest import mock
 
 from taskgraph.util import yaml
 
@@ -11,7 +10,6 @@ from .mockedopen import MockedOpen
 
 
 def test_load():
-    yaml.load_yaml.clear()
     with MockedOpen(
         {
             "/dir1/dir2/foo.yml": dedent(
@@ -25,27 +23,7 @@ def test_load():
         assert yaml.load_yaml("/dir1/dir2", "foo.yml") == {"prop": ["val1"]}
 
 
-@mock.patch("taskgraph.util.yaml.load_stream")
-def test_is_memoized(mocked_load_stream):
-    yaml.load_yaml.clear()
-    with MockedOpen(
-        {
-            "/dir1/dir2/foo.yml": dedent(
-                """\
-                prop:
-                    - val1
-                """
-            )
-        }
-    ):
-        yaml.load_yaml("/dir1/dir2", "foo.yml")
-        yaml.load_yaml("/dir1/dir2", "foo.yml")
-        yaml.load_yaml("/dir1/dir2", "foo.yml")
-        assert mocked_load_stream.call_count == 1
-
-
 def test_key_order():
-    yaml.load_yaml.clear()
     with MockedOpen(
         {
             "/dir1/dir2/foo.yml": dedent(
