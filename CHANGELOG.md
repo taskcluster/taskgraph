@@ -1,5 +1,12 @@
 # Change Log
 
+## [5.6.1] - 2023-07-14
+
+### Fixed
+
+- Reverted memoize on `load_yaml` utility which causes issues with parallel generations
+- Added line to log command used to invoke `run-task`
+
 ## [5.6.0] - 2023-07-10
 
 ### Added
