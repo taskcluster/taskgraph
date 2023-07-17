@@ -2,7 +2,7 @@ appdirs>=1.4
 cookiecutter~=2.1
 json-e>=2.7
 mozilla-repo-urls
-PyYAML>=5.4
+PyYAML>=5.3.1
 redo>=2.0
 requests>=2.25
 requests_unixsocket>=0.2
