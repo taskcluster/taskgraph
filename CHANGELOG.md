@@ -1,5 +1,11 @@
 # Change Log
 
+## [5.6.2] - 2023-07-17
+
+### Fixed
+
+- Relaxed PyYaml dependency constraint to work around a PyYaml issue
+
 ## [5.6.1] - 2023-07-14
 
 ### Fixed
