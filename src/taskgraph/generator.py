@@ -364,6 +364,8 @@ class TaskGraphGenerator:
                 t.label
                 for t in full_task_graph.tasks.values()
                 if t.attributes.get("always_target")
+                if parameters["enable_always_target"] is True
+                or t.kind in parameters["enable_always_target"]
             }
         else:
             always_target_tasks = set()

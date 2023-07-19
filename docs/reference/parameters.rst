@@ -104,11 +104,17 @@ These parameters are used at the ``target_task`` phase of :ref:`graph generation
 
 enable_always_target
 ~~~~~~~~~~~~~~~~~~~~
-    When ``True``, any task with the ``always_target`` attribute will be
-    included in the ``target_task_graph`` regardless of whether they were
-    filtered out by the ``target_tasks_method`` or not. Because they are not
-    part of the ``target_set``, they will still be eligible for optimization
-    when the ``optimize_target_tasks`` parameter is ``False``.
+
+   Can either be a boolean or a list of kinds.
+
+   When ``True``, any task with the ``always_target`` attribute will be included
+   in the ``target_task_graph`` regardless of whether they were filtered out by
+   the ``target_tasks_method`` or not. Because they are not part of the
+   ``target_set``, they will still be eligible for optimization when the
+   ``optimize_target_tasks`` parameter is ``False``.
+
+   When specified as a list of kinds, only tasks with a matching kind will be
+   eligible for addition to the graph.
 
 filters
 ~~~~~~~
