@@ -1,5 +1,16 @@
 # Change Log
 
+## [5.7.0] - 2023-07-20
+
+### Added
+
+- Ability to specify a list of kinds in the `enable_always_target` parameter
+
+### Fixed
+
+- Assertion that payload and index builder names are unique
+- Error handling when duplicate `run_using` functions are defined
+
 ## [5.6.2] - 2023-07-17
 
 ### Fixed
