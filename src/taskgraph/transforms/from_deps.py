@@ -18,7 +18,7 @@ from voluptuous import Any, Extra, Optional, Required
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.attributes import attrmatch
 from taskgraph.util.dependencies import GROUP_BY_MAP
-from taskgraph.util.schema import Schema
+from taskgraph.util.schema import Schema, validate_schema
 
 FROM_DEPS_SCHEMA = Schema(
     {
@@ -139,7 +139,9 @@ def from_deps(config, tasks):
             group_by, arg = group_by.popitem()
             func = GROUP_BY_MAP[group_by]
             if func.schema:
-                func.schema(arg)
+                validate_schema(
+                    func.schema, arg, f"Invalid group-by {group_by} argument"
+                )
             groups = func(config, deps, arg)
         else:
             func = GROUP_BY_MAP[group_by]
