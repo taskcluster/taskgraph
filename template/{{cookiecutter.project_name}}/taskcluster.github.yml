@@ -6,6 +6,7 @@
 ---
 version: 1
 reporting: checks-v1
+autoCancelPreviousChecks: true
 policy:
     pullRequests: public
 tasks:
