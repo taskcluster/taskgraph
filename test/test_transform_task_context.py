@@ -6,8 +6,6 @@ import os.path
 from copy import deepcopy
 from pprint import pprint
 
-import pytest
-
 from taskgraph.transforms import task_context
 from taskgraph.transforms.base import TransformConfig
 
@@ -44,7 +42,6 @@ TASK_DEFAULTS = {
 def test_transforms(request, run_transform, graph_config):
     task = deepcopy(TASK_DEFAULTS)
 
-
     params = FakeParameters(
         {
             "param": "param",
@@ -80,5 +77,8 @@ def test_transforms(request, run_transform, graph_config):
     print("Dumping task:")
     pprint(task, indent=2)
 
-    assert task["description"] == "fake description object file param object-overrides-file" \
+    assert (
+        task["description"]
+        == "fake description object file param object-overrides-file"
         "param-overrides-object param-overrides-file param-overrides-all default"
+    )

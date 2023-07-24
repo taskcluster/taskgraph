@@ -8,7 +8,7 @@ Support for running jobs that are invoked via the `run-task` script.
 import dataclasses
 import os
 
-from voluptuous import Any, Extra, Optional, Required
+from voluptuous import Any, Optional, Required
 
 from taskgraph.transforms.job import run_job_using
 from taskgraph.transforms.job.common import support_vcs_checkout

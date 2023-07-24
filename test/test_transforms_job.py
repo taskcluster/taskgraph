@@ -14,15 +14,12 @@ from unittest.mock import patch
 import pytest
 
 # prevent pytest thinking this is a test
-from taskcluster_urls import test_root_url as _test_root_url
-
 from taskgraph.task import Task
 from taskgraph.transforms import job
 from taskgraph.transforms.job import run_task  # noqa: F401
 from taskgraph.transforms.job.common import add_cache
 from taskgraph.transforms.task import payload_builders
 from taskgraph.util.schema import Schema, validate_schema
-from taskgraph.util.taskcluster import get_root_url
 from taskgraph.util.templates import merge
 
 here = os.path.abspath(os.path.dirname(__file__))

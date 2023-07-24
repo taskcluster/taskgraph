@@ -20,10 +20,7 @@ TASK_DEFAULTS = {
         "os": "linux",
         "env": {},
     },
-    "run": {
-        "using": "run-task",
-        "command": "echo hello world"
-    },
+    "run": {"using": "run-task", "command": "echo hello world"},
 }
 
 

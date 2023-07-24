@@ -1,11 +1,11 @@
-import copy
 from textwrap import dedent
+
+from voluptuous import ALLOW_EXTRA, Any, Optional, Required
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.schema import Schema
 from taskgraph.util.templates import deep_get, substitute
 from taskgraph.util.yaml import load_yaml
-from voluptuous import ALLOW_EXTRA, Any, Extra, Optional, Required
 
 SCHEMA = Schema(
     {
