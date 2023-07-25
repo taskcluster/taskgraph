@@ -1,5 +1,20 @@
 # Change Log
 
+## [6.0.0] - 2023-07-25
+
+### Added
+
+- Support for substituting arbitrary parts of a task definition with `task-context`
+
+### Removed
+
+- `command-context` support in `job` transforms (this can now be implemented with `task-context`
+
+### Fixed
+
+- Complain when `group_by` functions are attempted to registered twice
+- Use `validate_schema` in `from_deps` to avoid breaking `--fast`
+
 ## [5.7.0] - 2023-07-20
 
 ### Added
