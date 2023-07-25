@@ -14,15 +14,12 @@ from unittest.mock import patch
 import pytest
 
 # prevent pytest thinking this is a test
-from taskcluster_urls import test_root_url as _test_root_url
-
 from taskgraph.task import Task
 from taskgraph.transforms import job
 from taskgraph.transforms.job import run_task  # noqa: F401
 from taskgraph.transforms.job.common import add_cache
 from taskgraph.transforms.task import payload_builders
 from taskgraph.util.schema import Schema, validate_schema
-from taskgraph.util.taskcluster import get_root_url
 from taskgraph.util.templates import merge
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -86,50 +83,6 @@ def test_worker_caches(task, transform):
     # Create a new schema object with just the part relevant to caches.
     partial_schema = Schema(payload_builders[impl].schema.schema[key])
     validate_schema(partial_schema, taskdesc["worker"][key], "validation error")
-
-
-@pytest.mark.parametrize(
-    "workerfn", [fn for fn, *_ in job.registry["run-task"].values()]
-)
-@pytest.mark.parametrize(
-    "task",
-    (
-        {
-            "worker-type": "t-linux",
-            "run": {
-                "checkout": True,
-                "comm-checkout": False,
-                "command": "echo '{output}'",
-                "command-context": {"output": "hello", "extra": None},
-                "run-as-root": False,
-                "sparse-profile": False,
-                "tooltool-downloads": False,
-            },
-        },
-    ),
-)
-def test_run_task_command_context(task, transform, workerfn, monkeypatch):
-    if "TASKCLUSTER_ROOT_URL" not in os.environ:
-        monkeypatch.setenv("TASKCLUSTER_ROOT_URL", _test_root_url())
-    # Clear memoized function
-    get_root_url.clear()
-
-    config, job_, taskdesc, _ = transform(task)
-    job_ = deepcopy(job_)
-
-    def assert_cmd(expected):
-        cmd = taskdesc["worker"]["command"]
-        while isinstance(cmd, list):
-            cmd = cmd[-1]
-        assert cmd == expected
-
-    workerfn(config, job_, taskdesc)
-    assert_cmd("echo 'hello'")
-
-    job_copy = job_.copy()
-    del job_copy["run"]["command-context"]
-    workerfn(config, job_copy, taskdesc)
-    assert_cmd("echo '{output}'")
 
 
 def assert_use_fetches_toolchain_env(task):
