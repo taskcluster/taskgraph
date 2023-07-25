@@ -3,6 +3,16 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+5.x -> 6.x
+----------
+
+* Replace all uses of `command-context` with the more generalized `task-context`
+
+4.x -> 5.x
+----------
+
+* Upgrade to Python 3.7 or higher
+
 3.x -> 4.x
 ----------
 
