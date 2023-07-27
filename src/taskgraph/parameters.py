@@ -121,15 +121,17 @@ def _get_defaults(repo_root=None):
             repo_url = ""
             project = ""
 
-        defaults.update({
-            "base_repository": repo_url,
-            "head_ref": repo.branch or repo.head_rev,
-            "head_repository": repo_url,
-            "head_rev": repo.head_rev,
-            "project": project,
-            "repository_type": repo.tool,
-            "version": get_version(repo_path),
-        })
+        defaults.update(
+            {
+                "base_repository": repo_url,
+                "head_ref": repo.branch or repo.head_rev,
+                "head_repository": repo_url,
+                "head_rev": repo.head_rev,
+                "project": project,
+                "repository_type": repo.tool,
+                "version": get_version(repo_path),
+            }
+        )
     return defaults
 
 
