@@ -27,6 +27,16 @@ from taskgraph.util.workertypes import worker_type_implementation
 
 logger = logging.getLogger(__name__)
 
+# Fetches may be accepted in other transforms and eventually passed along
+# to a `job` (eg: from_deps). Defining this here allows them to re-use
+# the schema and avoid duplication.
+fetches_schema = {
+    Required("artifact"): str,
+    Optional("dest"): str,
+    Optional("extract"): bool,
+    Optional("verify-hash"): bool,
+}
+
 # Schema for a build description
 job_description_schema = Schema(
     {
@@ -76,12 +86,7 @@ job_description_schema = Schema(
             Any("toolchain", "fetch"): [str],
             str: [
                 str,
-                {
-                    Required("artifact"): str,
-                    Optional("dest"): str,
-                    Optional("extract"): bool,
-                    Optional("verify-hash"): bool,
-                },
+                fetches_schema,
             ],
         },
         # A description of how to run this job.

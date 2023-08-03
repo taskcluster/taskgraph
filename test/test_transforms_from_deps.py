@@ -86,6 +86,44 @@ def assert_group_by_all_dupe_allowed(tasks):
     assert tasks[0]["dependencies"] == {"a": "a", "b": "b", "c": "c"}
 
 
+def assert_dont_set_name(tasks):
+    handle_exception(tasks)
+    assert len(tasks) == 1
+    assert tasks[0]["name"] == "a-special-name"
+
+
+def assert_group_by_all_with_fetch(tasks):
+    handle_exception(tasks)
+    assert len(tasks) == 1
+    assert tasks[0]["dependencies"] == {"foo1": "foo1", "foo2": "foo2", "foo3": "foo3", "foo4": "foo4"}
+    assert tasks[0]["fetches"] == {
+        "foo1": [
+            {
+                "artifact": "foo.1.txt",
+                "dest": "foo-1.txt",
+            },
+        ],
+        "foo2": [
+            {
+                "artifact": "foo.2.txt",
+                "dest": "foo-2.txt",
+            },
+        ],
+        "foo3": [
+            {
+                "artifact": "foo.3.txt",
+                "dest": "foo-3.txt",
+            },
+        ],
+        "foo4": [
+            {
+                "artifact": "foo.4.txt",
+                "dest": "foo-4.txt",
+            },
+        ],
+    }
+
+
 @pytest.mark.parametrize(
     "task, kind_config, deps",
     (
@@ -115,6 +153,21 @@ def assert_group_by_all_dupe_allowed(tasks):
             # deps
             None,
             id="defaults",
+        ),
+        pytest.param(
+            # task
+            {
+                "name": "a-special-name",
+                "from-deps": {
+                    "group-by": "all",
+                    "set-name": False,
+                }
+            },
+            # kind config
+            None,
+            # deps
+            None,
+            id="dont_set_name",
         ),
         pytest.param(
             # task
@@ -220,6 +273,35 @@ def assert_group_by_all_dupe_allowed(tasks):
                 "c": make_task("c", kind="foo"),
             },
             id="group_by_all_dupe_allowed",
+        ),
+        pytest.param(
+            # task
+            {
+                "from-deps": {
+                    "group-by": "all",
+                    "unique-kinds": False,
+                    "kinds": ["foo"],
+                    "fetches": {
+                        "foo": [
+                            {
+                                "artifact": "foo.{this_chunk}.txt",
+                                "dest": "foo-{this_chunk}.txt",
+                            },
+                        ],
+                    },
+                },
+            },
+            # kind config
+            None,
+            # deps
+            {
+                "foo1": make_task("foo1", kind="foo", attributes={"this_chunk": "1", "total_chunks": "4", "kind": "foo"}),
+                "foo2": make_task("foo2", kind="foo", attributes={"this_chunk": "2", "total_chunks": "4", "kind": "foo"}),
+                "foo3": make_task("foo3", kind="foo", attributes={"this_chunk": "3", "total_chunks": "4", "kind": "foo"}),
+                "foo4": make_task("foo4", kind="foo", attributes={"this_chunk": "4", "total_chunks": "4", "kind": "foo"}),
+                "bar": make_task("bar", kind="bar", attributes={"kind": "bar"}),
+            },
+            id="group_by_all_with_fetch",
         ),
     ),
 )
