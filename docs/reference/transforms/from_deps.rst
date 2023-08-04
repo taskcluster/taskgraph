@@ -236,3 +236,72 @@ Copying Attributes
 It's often useful to copy attributes from a dependency. When this key is set to ``True``,
 all attributes from the ``primary-kind`` (see above) will be copied over to the task. If
 the task contains pre-existing attributes, they will not be overwritten.
+
+Generated Task Names
+~~~~~~~~~~~~~~~~~~~~
+
+By default ``from_deps`` will derive a ``name`` for generated tasks from the ``name``
+on the ``primary-kind``. This will override any ``name`` set in the ``kind``. In some
+cases you may need or want precise control over the generated task ``name``. You can
+use ``set-name: false`` to disable this behaviour:
+
+.. code-block:: yaml
+
+   tasks:
+     notify:
+       from-deps:
+         set-name: false
+
+Adding Fetches
+~~~~~~~~~~~~~~
+
+In many cases it is necessary to fetch artifacts from tasks that ``from_deps`` has added
+as dependencies. This can be accomplished by adding a ``fetches`` block to your ``from-deps``
+entry:
+
+.. code-block:: yaml
+
+   kind-dependencies:
+     - build
+
+   tasks:
+     test:
+       from-deps:
+         fetches:
+           build:
+             - artifact: target.tar.gz
+
+The above block will add a ``fetches`` entry to the task that is compatible with ``taskgraph`` 's
+:mod:`~taskgraph.transforms.job` transforms.
+
+In some cases, artifact names may be different for different upstream tasks within the same kind.
+You can often handle this by setting an attribute in the upstream tasks, which ``from_deps`` can
+substitute in. For example, suppose we have 3 ``build`` tasks with different suffixes for their
+``target`` artifact (``tar.gz``, ``zip``, and ``apk``). You can use an entry like this to ensure
+each generated ``test`` task looks for the appropriate artifact:
+
+.. code-block:: yaml
+
+   tasks:
+     test:
+       from-deps:
+         fetches:
+           build:
+             - artifact: target.{target_suffix}
+
+This can also be useful when combined with other transforms. For example, the
+:mod:`~taskgraph.transforms.chunking` transform sets the ``this_chunk`` attribute
+on the tasks it generates. In cases where the chunk number is used in artifacts
+produced by the chunked tasks, you can make use of this to easily collect them all
+in a downstream task:
+
+
+.. code-block:: yaml
+
+   tasks:
+     summary:
+       from-deps:
+         group-by: all
+         fetches:
+           expensive-test:
+             - artifact: test-summary-{this_chunk}.json
