@@ -1,5 +1,14 @@
 # Change Log
 
+## [6.1.0] - 2023-08-04
+
+### Added
+
+- A new `chunking` transform that helps parallelize tasks
+- Support for adding `fetches` with `from-deps`
+- An option for not overriding task `name` with `from-deps`
+- `autoCancelPreviousChecks` is set to `true` when initializing a new GitHub repository with `taskgraph init`
+
 ## [6.0.0] - 2023-07-25
 
 ### Added
@@ -8,7 +17,7 @@
 
 ### Removed
 
-- `command-context` support in `job` transforms (this can now be implemented with `task-context`
+- `command-context` support in `job` transforms (this can now be implemented with `task-context`)
 
 ### Fixed
 
