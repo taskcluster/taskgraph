@@ -95,7 +95,12 @@ def assert_dont_set_name(tasks):
 def assert_group_by_all_with_fetch(tasks):
     handle_exception(tasks)
     assert len(tasks) == 1
-    assert tasks[0]["dependencies"] == {"foo1": "foo1", "foo2": "foo2", "foo3": "foo3", "foo4": "foo4"}
+    assert tasks[0]["dependencies"] == {
+        "foo1": "foo1",
+        "foo2": "foo2",
+        "foo3": "foo3",
+        "foo4": "foo4",
+    }
     assert tasks[0]["fetches"] == {
         "foo1": [
             {
@@ -161,7 +166,7 @@ def assert_group_by_all_with_fetch(tasks):
                 "from-deps": {
                     "group-by": "all",
                     "set-name": False,
-                }
+                },
             },
             # kind config
             None,
@@ -295,10 +300,26 @@ def assert_group_by_all_with_fetch(tasks):
             None,
             # deps
             {
-                "foo1": make_task("foo1", kind="foo", attributes={"this_chunk": "1", "total_chunks": "4", "kind": "foo"}),
-                "foo2": make_task("foo2", kind="foo", attributes={"this_chunk": "2", "total_chunks": "4", "kind": "foo"}),
-                "foo3": make_task("foo3", kind="foo", attributes={"this_chunk": "3", "total_chunks": "4", "kind": "foo"}),
-                "foo4": make_task("foo4", kind="foo", attributes={"this_chunk": "4", "total_chunks": "4", "kind": "foo"}),
+                "foo1": make_task(
+                    "foo1",
+                    kind="foo",
+                    attributes={"this_chunk": "1", "total_chunks": "4", "kind": "foo"},
+                ),
+                "foo2": make_task(
+                    "foo2",
+                    kind="foo",
+                    attributes={"this_chunk": "2", "total_chunks": "4", "kind": "foo"},
+                ),
+                "foo3": make_task(
+                    "foo3",
+                    kind="foo",
+                    attributes={"this_chunk": "3", "total_chunks": "4", "kind": "foo"},
+                ),
+                "foo4": make_task(
+                    "foo4",
+                    kind="foo",
+                    attributes={"this_chunk": "4", "total_chunks": "4", "kind": "foo"},
+                ),
                 "bar": make_task("bar", kind="bar", attributes={"kind": "bar"}),
             },
             id="group_by_all_with_fetch",

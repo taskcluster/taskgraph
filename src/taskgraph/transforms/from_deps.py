@@ -223,9 +223,13 @@ def from_deps(config, tasks):
 
                         for fetch in kind_fetches:
                             entry = fetch.copy()
-                            entry["artifact"] = entry["artifact"].format(**dep_task.attributes)
+                            entry["artifact"] = entry["artifact"].format(
+                                **dep_task.attributes
+                            )
                             if "dest" in entry:
-                                entry["dest"] = entry["dest"].format(**dep_task.attributes)
+                                entry["dest"] = entry["dest"].format(
+                                    **dep_task.attributes
+                                )
                             fetches_from_dep.append(entry)
 
                     task_fetches[dep_task.label] = fetches_from_dep
