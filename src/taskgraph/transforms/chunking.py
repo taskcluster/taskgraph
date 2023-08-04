@@ -4,11 +4,11 @@
 import copy
 from textwrap import dedent
 
-from taskgraph.transforms.base import TransformSequence
-from taskgraph.util.schema import Schema, optionally_keyed_by, resolve_keyed_by
-from taskgraph.util.templates import deep_get, substitute
-from voluptuous import ALLOW_EXTRA, Required, Optional
+from voluptuous import ALLOW_EXTRA, Optional, Required
 
+from taskgraph.transforms.base import TransformSequence
+from taskgraph.util.schema import Schema
+from taskgraph.util.templates import substitute
 
 CHUNK_SCHEMA = Schema(
     {
@@ -58,10 +58,10 @@ def chunk_tasks(config, tasks):
             continue
 
         total_chunks = chunk_config["total-chunks"]
-        
+
         for this_chunk in range(1, total_chunks + 1):
             subtask = copy.deepcopy(task)
-            
+
             subs = {
                 "this_chunk": this_chunk,
                 "total_chunks": total_chunks,

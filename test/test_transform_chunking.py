@@ -5,8 +5,6 @@ Tests for the 'fetch' transforms.
 from copy import deepcopy
 from pprint import pprint
 
-import pytest
-
 from taskgraph.transforms import chunking
 
 TASK_DEFAULTS = {
