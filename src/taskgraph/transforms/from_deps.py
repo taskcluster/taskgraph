@@ -183,9 +183,10 @@ def from_deps(config, tasks):
                 )
 
             new_task = deepcopy(task)
-            new_task["dependencies"] = {
+            new_task.setdefault("dependencies", {})
+            new_task["dependencies"].update({
                 dep.kind if unique_kinds else dep.label: dep.label for dep in group
-            }
+            })
 
             # Set name and copy attributes from the primary kind.
             for kind in kinds:
@@ -216,6 +217,10 @@ def from_deps(config, tasks):
                 task_fetches = new_task.setdefault("fetches", {})
 
                 for dep_task in get_dependencies(config, new_task):
+                    # Nothing to do if this kind has no fetches listed
+                    if dep_task.kind not in fetches:
+                        continue
+
                     fetches_from_dep = []
                     for kind, kind_fetches in fetches.items():
                         if kind != dep_task.kind:
