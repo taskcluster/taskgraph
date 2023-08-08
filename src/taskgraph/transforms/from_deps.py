@@ -184,9 +184,9 @@ def from_deps(config, tasks):
 
             new_task = deepcopy(task)
             new_task.setdefault("dependencies", {})
-            new_task["dependencies"].update({
-                dep.kind if unique_kinds else dep.label: dep.label for dep in group
-            })
+            new_task["dependencies"].update(
+                {dep.kind if unique_kinds else dep.label: dep.label for dep in group}
+            )
 
             # Set name and copy attributes from the primary kind.
             for kind in kinds:
