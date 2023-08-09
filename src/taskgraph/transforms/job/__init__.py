@@ -246,9 +246,10 @@ def use_fetches(config, jobs):
         worker = job.setdefault("worker", {})
         env = worker.setdefault("env", {})
         prefix = get_artifact_prefix(job)
-        for kind, artifacts in fetches.items():
+        for kind in sorted(fetches):
+            artifacts = fetches[kind]
             if kind in ("fetch", "toolchain"):
-                for fetch_name in artifacts:
+                for fetch_name in sorted(artifacts):
                     label = f"{kind}-{fetch_name}"
                     label = aliases.get(label, label)
                     if label not in artifact_names:
@@ -300,7 +301,13 @@ def use_fetches(config, jobs):
 
                     prefix = get_artifact_prefix(dep_tasks[0])
 
-                for artifact in artifacts:
+                def cmp_artifacts(a):
+                    if isinstance(a, str):
+                        return a
+                    else:
+                        return a["artifact"]
+
+                for artifact in sorted(artifacts, key=cmp_artifacts):
                     if isinstance(artifact, str):
                         path = artifact
                         dest = None
