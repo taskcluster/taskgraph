@@ -1,5 +1,16 @@
 # Change Log
 
+## [6.2.0] - 2023-08-10
+
+### Added
+
+- Don't override all existing dependencies in `from-deps` (allow upstream or downstream transforms to also add them)
+
+### Fixed
+
+- Don't add a `fetches` entry for kinds without artifacts defined in `from-deps`
+- Sort fetches by key and artifact to ensure a consistent ordering
+
 ## [6.1.0] - 2023-08-04
 
 ### Added
