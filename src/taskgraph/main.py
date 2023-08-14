@@ -799,7 +799,7 @@ def init_taskgraph(options):
     # Populate some defaults from the current repository.
     context = {"project_name": root.name}
 
-    repo_url = repo.get_url()
+    repo_url = repo.get_url(remote=repo.remote_name)
     if repo.tool == "git" and "github.com" in repo_url:
         context["repo_host"] = "github"
     elif repo.tool == "hg" and "hg.mozilla.org" in repo_url:
