@@ -253,3 +253,31 @@ def test_init_taskgraph(mocker, tmp_path, project_root, repo_with_upstream):
         assert "reporting" not in tc_yml
     else:
         assert tc_yml["reporting"] == "checks-v1"
+
+
+def test_init_taskgraph_unsupported(mocker, tmp_path, repo_with_upstream):
+    repo, _ = repo_with_upstream
+
+    # Point cookiecutter at temporary directories (in case test fails and
+    # something gets generated).
+    d = tmp_path / "cookiecutter"
+    d.mkdir()
+
+    config = d / "config.yml"
+    config.write_text(
+        dedent(
+            f"""
+        cookiecutters_dir: {d / 'cookiecutters'}
+        replay_dir: {d / 'replay'}
+    """
+        )
+    )
+    mocker.patch.dict("os.environ", {"COOKIECUTTER_CONFIG": str(config)})
+
+    repo_root = Path(repo.path)
+    oldcwd = Path.cwd()
+    try:
+        os.chdir(repo_root)
+        assert taskgraph_main(["init"]) == 1
+    finally:
+        os.chdir(oldcwd)
