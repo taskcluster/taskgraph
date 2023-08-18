@@ -1,9 +1,10 @@
 Transforms
 ==========
 
-Many task kinds generate tasks by a process of transforming job descriptions
-into task definitions. The basic operation is simple, although the sequence of
-transforms applied for a particular kind may not be!
+Often tasks grow in complexity such that it is annoying or even impossible to
+specify as a YAML object. Taskgraph has the concept of :term:`transforms
+<Transform>` to help deal with this. Transforms allow you to layer programmatic
+logic on top of your task definitions.
 
 Overview
 --------
@@ -57,28 +58,28 @@ to the previous one:
      - project_taskgraph.transforms
      - taskgraph.transforms.task
 
-
-
 Transform Functions
 ...................
 
-Each transformation looks like this:
+Each transform function looks like:
 
 .. code-block:: python
 
-    from taskgraph.transforms.base import TransformSequence
+    from typing import Dict, Iterator
+
+    from taskgraph.transforms.base import TransformConfig, TransformSequence
 
     transforms = TransformSequence()
 
     @transforms.add
-    def transform_a_task(config, tasks):
+    def transform_a_task(config: TransformConfig, tasks: Iterator[Dict]) -> Iterator[Dict]:
         """This transform ..."""  # always include a docstring!
         for task in tasks:
             # do stuff to the task..
             yield task
 
 The ``config`` argument is a Python object containing useful configuration for
-the kind, and is a subclass of
+the kind, and is an instance of
 :class:`taskgraph.transforms.base.TransformConfig`, which specifies a few of
 its attributes. Kinds may subclass and add additional attributes if necessary.
 

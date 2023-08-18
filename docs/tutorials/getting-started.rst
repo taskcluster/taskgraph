@@ -118,6 +118,7 @@ Taskgraph works.
 Or if you are ready to dive into creating more tasks, you may wish to learn how
 to:
 
+* :doc:`/howto/create-tasks`
 * :doc:`/howto/run-locally`
 * :doc:`/howto/debugging`
 * :doc:`/howto/use-fetches`
