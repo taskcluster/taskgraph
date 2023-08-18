@@ -1,5 +1,15 @@
 # Change Log
 
+## [6.2.1] - 2023-08-18
+
+### Fixed
+
+- Exception when running `taskgraph load-image` and `taskgraph build-image`
+- Missing Github ssh fingerprints for `ed25519` and `ecdsa-sha2-nistp256` keys in `run-task`
+- Improved error message for unsupported repos when running `taskgraph init`
+- Stopped assuming `origin` remote in `taskgraph init`
+- Suppressed expected stderr logging when running `taskgraph init`
+
 ## [6.2.0] - 2023-08-10
 
 ### Added
