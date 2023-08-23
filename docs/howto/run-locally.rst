@@ -60,11 +60,11 @@ is used, the full JSON representation of all task definitions are displayed.
 A regular expression that matches against task labels. Useful for filtering
 down the output to only display desired tasks.
 
-``--target-kind``
-+++++++++++++++++
+``-k/--target-kind``
+++++++++++++++++++++
 
 Only generate tasks of the given ``kind`` or any kinds listed in that kind's
-``kind-dependencies`` key.
+``kind-dependencies`` key. Can be passed in multiple times.
 
 ``-p/--parameters``
 +++++++++++++++++++
