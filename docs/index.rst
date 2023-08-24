@@ -39,46 +39,14 @@ need to test against a specific revision:
 Getting Started
 ---------------
 
-Once installed, you can quickly bootstrap a new Taskgraph setup by running the
-following command within an existing repository:
+Once installed, check out the :doc:`/tutorials/getting-started` tutorial to get
+a task up and running as quickly as possible.
 
-.. code-block::
+Or if you prefer to build more understanding as you go, you can try to create a
+new Taskgraph setup from scratch by following these tutorials:
 
-   taskgraph init
-
-.. warning::
-
-   Taskgraph currently only supports repositories hosted on Github or hg.mozilla.org.
-
-You should notice a couple changes:
-
-1. A new file called ``.taskcluster.yml``. This file is rendered via `JSON-e`_
-   with context passed in from a Github webhook event (if your repository is
-   hosted on Github). The rendered result contains a `task definition`_ for a
-   special task called the :term:`Decision Task`.
-2. A new directory called ``taskcluster``. This contains the :term:`kind
-   <Kind>` definitions and :term:`transform <Transform>` files that will define
-   your tasks.
-
-In short, the Decision task will invoke ``taskgraph`` in your repository. This
-command will then process the ``taskcluster`` directory, turn it into a graph
-of tasks, and submit them all to Taskcluster. But you can also test out the
-``taskgraph`` command locally! From the root of your repo, try running:
-
-.. code-block::
-
-   taskgraph full
-
-You'll notice that ``taskgraph init`` has created a couple of tasks for us
-already, namely ``build-docker-image-linux`` and ``hello-world``.
-
-.. note::
-
-   By default the ``taskgraph`` command will only output task labels. Try
-   adding ``--json`` to the command to see the actual definitions.
-
-See if you can create a new task by editing ``taskcluster/ci/hello/kind.yml``,
-and re-run ``taskgraph full`` to verify.
+  * :doc:`tutorials/creating-a-task-graph`
+  * :doc:`tutorials/connecting-taskcluster`
 
 How It Works
 ------------
@@ -108,21 +76,15 @@ allows a project's CI to grow to arbitrary complexity.
 Next Steps and Further Reading
 ------------------------------
 
-After you have a working Taskgraph setup, you'll still need to integrate it with
-Taskcluster. See :ref:`configure your project` for more details.
-
-Here are some more resources to help get you started:
+After you have a working task, here are some more resources to help get you
+started building out your pipeline:
 
 * Learn about :doc:`task graphs and how they are generated
   <concepts/task-graphs>`.
-* Create a new Taskgraph setup from scratch to better understand what
-  ``taskgraph init`` accomplished for us by following the tutorials:
-
-  * :doc:`tutorials/creating-a-task-graph`
-  * :doc:`tutorials/connecting-taskcluster`
-* Read more details about :doc:`kinds <concepts/kind>` and :doc:`transforms <concepts/transforms>`.
-* Learn more advanced tips for :doc:`running <howto/run-locally>` and :doc:`debugging
-  <howto/debugging>` Taskgraph locally.
+* Read more details about :doc:`kinds <concepts/kind>` and :doc:`transforms
+  <concepts/transforms>`.
+* Learn more advanced tips for :doc:`running <howto/run-locally>` and
+  :doc:`debugging <howto/debugging>` Taskgraph locally.
 
 .. _DAGs: https://en.wikipedia.org/wiki/Directed_acyclic_graph
 .. _CI: https://en.wikipedia.org/wiki/Continuous_integration

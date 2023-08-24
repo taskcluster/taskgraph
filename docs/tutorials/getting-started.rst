@@ -62,7 +62,7 @@ resources it needs to run tasks.
 Each Taskcluster instance can be managed differently, but here are the processes
 to request scopes for some known Taskcluster deployments:
 
-.. list-table:: Taskcluster Github Apps
+.. list-table:: Request Scopes
    :widths: 20 60
    :header-rows: 1
 
