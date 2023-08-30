@@ -132,7 +132,7 @@ In order to release a new version of Taskgraph, you will need permission to the
 5. Checkout the latest public revision ``git checkout main``
 6. Pull latest revision ``git pull upstream main``
 7. Verify ``git show`` outputs the desired revision
-8. Remove previously packaged releases ``rm -rf ./dist/*``
+8. Remove previously packaged releases and build cache ``rm -rf build dist``
 9. Package the app ``python setup.py sdist bdist_wheel``
 10. Tag and push: ``git tag -s -m "taskgraph $version" $version && git push upstream $version``
 11. Upload to PyPI using `twine`_ ``twine upload dist/*`` providing your
