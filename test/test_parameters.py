@@ -282,10 +282,11 @@ def test_extend_parameters_schema(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "repo_root, raises, expected_repo_root, expected",
+    "repo_root, is_repo, raises, expected_repo_root, expected",
     (
         (
             "/some/repo/",
+            True,
             False,
             "/some/repo/",
             {
@@ -319,6 +320,7 @@ def test_extend_parameters_schema(monkeypatch):
         ),
         (
             None,
+            True,
             False,
             os.getcwd(),
             {
@@ -353,6 +355,7 @@ def test_extend_parameters_schema(monkeypatch):
         (
             "/some/repo/",
             True,
+            True,
             "/some/repo/",
             {
                 "base_ref": "",
@@ -383,23 +386,66 @@ def test_extend_parameters_schema(monkeypatch):
                 "version": "1.0.0",
             },
         ),
+        (
+            "/some/repo/",
+            False,
+            False,
+            "/some/repo/",
+            {
+                "base_ref": "",
+                "base_repository": "",
+                "base_rev": "",
+                "build_date": 1663804800,
+                "build_number": 1,
+                "do_not_optimize": [],
+                "enable_always_target": True,
+                "existing_tasks": {},
+                "filters": ["target_tasks_method"],
+                "head_ref": "",
+                "head_repository": "",
+                "head_rev": "",
+                "head_tag": "",
+                "level": "3",
+                "moz_build_date": "20220922000000",
+                "next_version": None,
+                "optimize_strategies": None,
+                "optimize_target_tasks": True,
+                "owner": "nobody@mozilla.com",
+                "project": "some-repo-name",
+                "pushdate": 1663804800,
+                "pushlog_id": "0",
+                "repository_type": "git",
+                "target_tasks_method": "default",
+                "tasks_for": "",
+                "version": "1.0.0",
+            },
+        ),
     ),
 )
-def test_get_defaults(monkeypatch, repo_root, raises, expected_repo_root, expected):
+def test_get_defaults(
+    monkeypatch, repo_root, is_repo, raises, expected_repo_root, expected
+):
     def mock_get_repository(repo_root):
         assert repo_root == expected_repo_root
-        repo_mock = mock.MagicMock(
-            branch="some-branch",
-            head_rev="headrev",
-            tool="git",
-        )
-        repo_mock.get_url.return_value = "https://some.url"
-        return repo_mock
+        if is_repo:
+            repo_mock = mock.MagicMock(
+                branch="some-branch",
+                head_rev="headrev",
+                tool="git",
+            )
+            repo_mock.get_url.return_value = "https://some.url"
+            return repo_mock
+
+        raise RuntimeError
 
     monkeypatch.setattr(parameters, "get_repository", mock_get_repository)
 
     def mock_parse(url):
-        assert url == "https://some.url"
+        if is_repo:
+            assert url == "https://some.url"
+        else:
+            assert url == ""
+
         if raises:
             raise mozilla_repo_urls.errors.InvalidRepoUrlError("https://unknown.url")
         return mock.MagicMock(repo_name="some-repo-name")
