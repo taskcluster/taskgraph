@@ -11,6 +11,7 @@ from datetime import datetime
 from io import BytesIO
 from pprint import pformat
 from subprocess import CalledProcessError
+from unittest.mock import Mock
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
@@ -79,7 +80,13 @@ def get_version(repo_path):
 
 def _get_defaults(repo_root=None):
     repo_path = repo_root or os.getcwd()
-    repo = get_repository(repo_path)
+    try:
+        repo = get_repository(repo_path)
+    except RuntimeError:
+        # Use fake values if no repo is detected.
+        repo = Mock(branch="", head_rev="", tool="git")
+        repo.get_url.return_value = ""
+
     try:
         repo_url = repo.get_url()
         parsed_url = mozilla_repo_urls.parse(repo_url)
