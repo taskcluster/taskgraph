@@ -1,5 +1,16 @@
 # Change Log
 
+## [6.3.0] - 2023-09-12
+
+### Added
+
+- `--target-kind` flag can be passed to Taskgraph multiple times
+- Ability to specify max worker processes when generating graphs in parallel
+
+### Fixed
+
+- `taskgraph.parameters._get_defaults` no longer raises outside of a repository
+
 ## [6.2.1] - 2023-08-18
 
 ### Fixed
