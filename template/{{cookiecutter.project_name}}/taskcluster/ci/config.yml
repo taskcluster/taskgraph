@@ -6,7 +6,7 @@ taskgraph:
   cached-task-prefix: "{{cookiecutter.trust_domain}}.v2.{{cookiecutter.project_slug.replace('_', '-')}}"
   repositories:
     {{cookiecutter.project_slug}}:
-      name: "{{cookiecutter.project_name}}"
+      name: "{{cookiecutter.repo_name}}"
 
 workers:
   aliases:

@@ -1,7 +1,8 @@
 {
     "project_name": "my-project",
-    "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '_').replace('-', '_') }}",
     "repo_host": ["github", "hgmo"],
+    "repo_name": "my-repo",
+    "project_slug": "{{ cookiecutter.repo_name.lower().replace(' ', '_').replace('-', '_') }}",
     "trust_domain": "mozilla",
     "level": 1
 }

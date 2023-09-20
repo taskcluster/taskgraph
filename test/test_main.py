@@ -197,14 +197,15 @@ def test_get_filtered_taskgraph(regex, exclude, expected):
 
 
 def test_init_taskgraph(mocker, tmp_path, project_root, repo_with_upstream):
+    name = "bar"
     repo, _ = repo_with_upstream
 
     # Mock out upstream url to bypass the repo host check.
     if repo.tool == "hg":
-        fake_url = "https://hg.mozilla.org/foo"
+        fake_url = f"https://hg.mozilla.org/foo/{name}"
         mocker.patch.object(HgRepository, "get_url").return_value = fake_url
     else:
-        fake_url = "https://github.com/foo"
+        fake_url = f"https://github.com/foo/{name}"
         mocker.patch.object(GitRepository, "get_url").return_value = fake_url
 
     # Point cookiecutter at temporary directories.
@@ -231,7 +232,6 @@ def test_init_taskgraph(mocker, tmp_path, project_root, repo_with_upstream):
         os.chdir(oldcwd)
 
     # Make assertions about the repository state.
-    name = repo_root.name
     expected_files = [
         ".taskcluster.yml",
         "taskcluster/ci/config.yml",
@@ -240,7 +240,8 @@ def test_init_taskgraph(mocker, tmp_path, project_root, repo_with_upstream):
         f"taskcluster/{name}_taskgraph/transforms/hello.py",
     ]
     for f in expected_files:
-        assert (repo_root / f).is_file()
+        path = repo_root / f
+        assert path.is_file(), f"{str(path)} not found!"
 
     c = load_yaml(str(repo_root / "taskcluster" / "ci" / "config.yml"))
     assert c["trust-domain"] == "mozilla"

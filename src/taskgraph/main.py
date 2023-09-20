@@ -18,6 +18,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 from textwrap import dedent
 from typing import Any, List
+from urllib.parse import urlparse
 
 import appdirs
 import yaml
@@ -834,6 +835,8 @@ def init_taskgraph(options):
             file=sys.stderr,
         )
         return 1
+
+    context["repo_name"] = urlparse(repo_url).path.rsplit("/", 1)[-1]
 
     # Generate the project.
     cookiecutter(
