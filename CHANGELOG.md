@@ -1,5 +1,14 @@
 # Change Log
 
+## [6.3.1] - 2023-09-28
+
+### Fixed
+
+- `taskgraph init` no longer derives the project name from local checkout dir
+- `run-task` bypasses Git's safe directory feature which breaks caches on multi-user workers
+- Fix for `taskgraph load-image` when specifying a name
+- `deadline-after` field added to `job_description_schema`
+
 ## [6.3.0] - 2023-09-12
 
 ### Added
