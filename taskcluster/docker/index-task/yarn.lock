@@ -265,24 +265,23 @@ responselike@^2.0.0:
   dependencies:
     lowercase-keys "^2.0.0"
 
-slugid@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/slugid/-/slugid-2.0.0.tgz#f08f651b677e666093e6617e10486aa2e73ed8a6"
-  integrity sha512-zTCivUfTk2GC6MU4Fjcz0iXwAjhe0NweMJqpfWcGrBbrm2dWtVAUupAonfsc7ysw4M0kZ934Nle5ljwM2dR+/g==
+slugid@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/slugid/-/slugid-4.0.0.tgz#27c548953584b89891a35048f00e332b882542ab"
+  integrity sha512-NJ3Sd6NkVIoC8h3Tpn74Ez+SkvukgCror6jIqhSzJYMyK3nbhAmJFKKwOYu2ZulrfvRe1BJDE+CBm/N9t2dENg==
   dependencies:
-    uuid "^3.2.1"
-    uuid-parse "^1.0.0"
+    uuid "^9.0.0"
 
-taskcluster-client@^44.13:
-  version "44.13.5"
-  resolved "https://registry.yarnpkg.com/taskcluster-client/-/taskcluster-client-44.13.5.tgz#19b0074b7f1dfb736006f3d89ca6842acff53e66"
-  integrity sha512-AK3b6c9jssf4qdY2v9Z4hJpdOALlMv74RgCueI7kYjM0lQXicEYyn8sLlNCCTNEVrk5c7VSbK/abhTJ1FZZEdw==
+taskcluster-client@^55.3:
+  version "55.3.2"
+  resolved "https://registry.yarnpkg.com/taskcluster-client/-/taskcluster-client-55.3.2.tgz#1b518dee818a58ac3a325dfda3772449e5a331c8"
+  integrity sha512-EmPpIaNQsciBbitOC78QvV9MOjUnrDIShBjdJZOxn7NyHXeZIR3m4nZt9M/FeoyEOpm7EHYaij/lABF7GLMjWA==
   dependencies:
     debug "^4.1.1"
     got "^11.8.1"
     hawk "^9.0.1"
     lodash "^4.17.4"
-    slugid "^2.0.0"
+    slugid "^4.0.0"
     taskcluster-lib-urls "^13.0.0"
 
 taskcluster-lib-urls@^13.0.0:
@@ -290,15 +289,10 @@ taskcluster-lib-urls@^13.0.0:
   resolved "https://registry.yarnpkg.com/taskcluster-lib-urls/-/taskcluster-lib-urls-13.0.1.tgz#773da8bb9937a52f77ad128961b8d501dfdd042a"
   integrity sha512-WrhKMbiWmpPrB0vbzLZq4W35mhdPVLklZY+qrBoI7KQzFAjO/qsgS8ssHL6eYmvBf4fE7C+C9ZFxQpQOUynQvg==
 
-uuid-parse@^1.0.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/uuid-parse/-/uuid-parse-1.1.0.tgz#7061c5a1384ae0e1f943c538094597e1b5f3a65b"
-  integrity sha512-OdmXxA8rDsQ7YpNVbKSJkNzTw2I+S5WsbMDnCtIWSQaosNAcWtFuI/YK1TjzUI6nbkgiqEyh8gWngfcv8Asd9A==
-
-uuid@^3.2.1:
-  version "3.4.0"
-  resolved "https://registry.yarnpkg.com/uuid/-/uuid-3.4.0.tgz#b23e4358afa8a202fe7a100af1f5f883f02007ee"
-  integrity sha512-HjSDRw6gZE5JMggctHBcjVak08+KEVhSIiDzFnT9S9aegmp85S/bReBVTb4QTFaRNptJ9kuYaNhnbNEOkbKb/A==
+uuid@^9.0.0:
+  version "9.0.1"
+  resolved "https://registry.yarnpkg.com/uuid/-/uuid-9.0.1.tgz#e188d4c8853cc722220392c424cd637f32293f30"
+  integrity sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==
 
 wrappy@1:
   version "1.0.2"
