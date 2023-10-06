@@ -640,6 +640,9 @@ def build_docker_worker_payload(config, task, task_def):
         Optional("taskcluster-proxy"): bool,
         # Whether any artifacts are assigned to this worker
         Optional("skip-artifacts"): bool,
+        Optional("docker-image"): Any(
+            {"in-tree": str},
+        ),
     },
 )
 def build_generic_worker_payload(config, task, task_def):
@@ -745,6 +748,33 @@ def build_generic_worker_payload(config, task, task_def):
 
     if features:
         task_def["payload"]["features"] = features
+
+    if worker.get("docker-image"):
+        image = worker["docker-image"]
+        if isinstance(image, dict):
+            if "in-tree" in image:
+                docker_image_task = "build-docker-image-" + image["in-tree"]
+                task.setdefault("dependencies", {})["docker-image"] = docker_image_task
+                task_def["payload"]["mounts"].append(
+                    {
+                        "content": {
+                            "artifact": "public/image.tar.zst",
+                            "taskId": {"task-reference": "<docker-image>"},
+                        },
+                        "file": "docker-image",
+                        "format": "zst"
+                    }
+                )
+
+                # volumes = dockerutil.parse_volumes(image["in-tree"])
+                # for v in sorted(volumes):
+                #     if v in worker["volumes"]:
+                #         raise Exception(
+                #             "volume %s already defined; "
+                #             "if it is defined in a Dockerfile, "
+                #             "it does not need to be specified in the "
+                #             "worker definition" % v
+                #         )
 
 
 @payload_builder(

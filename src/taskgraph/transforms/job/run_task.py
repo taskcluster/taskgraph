@@ -224,6 +224,38 @@ def generic_worker_run_task(config, job, taskdesc):
 
     if is_win:
         worker["command"] = [" ".join(command)]
+    elif worker.get("docker-image"):
+        worker["command"] = [
+            "bash",
+            "-cx",
+            "podman",
+            "run",
+            "-t",
+            "--name",
+            "task-container",
+            "-v",
+            "$(pwd)/checkouts:/builds/worker/checkouts",
+            "--add-host=taskcluster:127.0.0.1",
+            "--net=host",
+        ]
+        worker["command"].extend([f"-e {key}" for key in sorted(list(worker["env"].keys()))])
+        worker["command"].extend([
+            "-e MOZ_AUTOMATION",
+            "-e RUN_ID",
+            "-e SCCACHE_DISABLE",
+            "-e TASKCLUSTER_CACHES",
+            "-e TASKCLUSTER_PROXY_URL",
+            "-e TASKCLUSTER_ROOT_URL",
+            "-e TASKCLUSTER_UNTRUSTED_CACHES",
+            "-e TASKCLUSTER_VOLUMES",
+            "-e TASKCLUSTER_WORKER_LOCATION",
+            "-e TASK_ID",
+            "docker-archive:docker-image",
+        ])
+        worker["command"].extend(command)
+        worker["command"].append(
+            "\nexit_code=$?\npodman cp task-container:/builds/worker/artifacts artifacts\npodman rm task-container\nexit \"${exit_code}\""
+        )
     else:
         worker["command"] = [
             ["chmod", "+x", "run-task"],
