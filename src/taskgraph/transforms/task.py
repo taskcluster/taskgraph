@@ -762,7 +762,7 @@ def build_generic_worker_payload(config, task, task_def):
                             "taskId": {"task-reference": "<docker-image>"},
                         },
                         "file": "docker-image",
-                        "format": "zst"
+                        "format": "zst",
                     }
                 )
 
