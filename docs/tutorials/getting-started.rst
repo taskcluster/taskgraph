@@ -71,7 +71,7 @@ to request scopes for some known Taskcluster deployments:
    * - `Firefox-CI <https://firefox-ci-tc.services.mozilla.com>`_
      - `File a Bug <https://bugzilla.mozilla.org/enter_bug.cgi?product=Release%20Engineering&component=Firefox-CI%20Administration>`_
    * - `Community <https://community-tc.services.mozilla.com>`_
-     - `File an Issue <https://github.com/mozilla/community-tc-config/issues/new>`_
+     - `File an Issue <https://github.com/taskcluster/community-tc-config/issues/new>`_
 
 Use a title such as: *Please setup `org/my-repo` with Taskcluster*.
 
