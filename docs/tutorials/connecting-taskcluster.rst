@@ -39,7 +39,7 @@ integration.
 
 .. _tc-admin: https://github.com/taskcluster/tc-admin
 .. _Firefox-CI configuration: https://hg.mozilla.org/ci/ci-configuration/
-.. _Community configuration: https://github.com/mozilla/community-tc-config
+.. _Community configuration: https://github.com/taskcluster/community-tc-config
 .. _Taskcluster Github integration: https://docs.taskcluster.net/docs/manual/using/github
 .. _Firefox-CI Github integration: https://github.com/apps/firefoxci-taskcluster
 .. _Community Github integration: https://github.com/apps/community-tc-integration
