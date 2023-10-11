@@ -62,9 +62,10 @@ def chunk_tasks(config, tasks):
         for this_chunk in range(1, total_chunks + 1):
             subtask = copy.deepcopy(task)
 
+            # Format the chunks with zero padding
             subs = {
-                "this_chunk": this_chunk,
-                "total_chunks": total_chunks,
+                "this_chunk": str(this_chunk).zfill(2),
+                "total_chunks": str(total_chunks).zfill(2),
             }
             subtask.setdefault("attributes", {})
             subtask["attributes"].update(subs)
