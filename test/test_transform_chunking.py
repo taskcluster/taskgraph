@@ -31,5 +31,5 @@ def test_transforms(request, run_transform):
     pprint(tasks, indent=2)
 
     assert len(tasks) == 2, "Chunking should've generated 2 tasks"
-    assert_chunked_task(tasks[0], 1)
-    assert_chunked_task(tasks[1], 2)
+    assert_chunked_task(tasks[0], "01")
+    assert_chunked_task(tasks[1], "02")
