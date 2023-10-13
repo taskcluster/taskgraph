@@ -37,6 +37,11 @@ Glossary
     used to specify whether the generation is for a pull request or a push. See
     :doc:`/reference/parameters` for a list of supported parameters.
 
+  Role
+    An alias for a set of scopes. Roles consist of a name, description and a
+    list of scopes. Granting something the special scope `assume:<role>` grants
+    access to all scopes defined within that role.
+
   Scope
     Taskcluster permission required to perform a particular action. Each task
     has a set of these permissions determining what it can do.
