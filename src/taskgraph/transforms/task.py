@@ -186,6 +186,8 @@ task_description_schema = Schema(
             Required("implementation"): str,
             Extra: object,
         },
+        # Description for how to run the job locally.
+        Optional("local-run"): str,
     }
 )
 

@@ -104,6 +104,8 @@ job_description_schema = Schema(
         # This object will be passed through to the task description, with additions
         # provided by the job's run-using function
         Optional("worker"): dict,
+        # Description for how to run the job locally.
+        Optional("local-run"): str,
     }
 )
 
