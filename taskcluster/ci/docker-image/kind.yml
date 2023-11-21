@@ -18,10 +18,6 @@ transforms:
 tasks:
     decision:
         symbol: I(d)
-    # This image should be moved to a mobile-taskgraph project
-    decision-mobile:
-        symbol: I(d-m)
-        parent: decision
     fetch:
         symbol: I(fetch)
     index-task:

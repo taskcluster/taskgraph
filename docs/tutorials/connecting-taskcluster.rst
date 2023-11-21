@@ -258,12 +258,8 @@ here is the recommended method:
    For now, this tutorial will assume we're using the `docker-worker
    payload`__.
 
-   a. Define the image. Taskgraph conveniently provides pre-built images for
-      certain Decision task contexts. These are:
-
-      * ``taskgraph:decision`` - A general purpose image.
-      * ``taskgraph:decision-mobile`` - Built on top of ``taskgraph:decision`` with
-        some additions needed for Android applications at Mozilla.
+   a. Define the image. Taskgraph conveniently provides a pre-built image for
+      most Decision task contexts, called ``taskgraph:decision``.
 
       You may also build your own image if desired, either on top of
       ``taskgraph:decision`` or from scratch. For this tutorial we'll just
@@ -276,7 +272,7 @@ here is the recommended method:
                image:
                    mozillareleases/taskgraph:decision-cf4b4b4baff57d84c1f9ec8fcd70c9839b70a7d66e6430a6c41ffe67252faa19@sha256:425e07f6813804483bc5a7258288a7684d182617ceeaa0176901ccc7702dfe28
 
-      You should use the `latest versions of the images`_. Note that both the
+      You should use the `latest version of the image`_. Note that both the
       image id and sha256 are required (separated by ``@``).
 
    b. Enable the `taskclusterProxy`_ feature.
@@ -394,6 +390,6 @@ which to build.
 .. _docker-worker: https://docs.taskcluster.net/docs/reference/workers/docker-worker/payload
 .. _generic-worker: https://docs.taskcluster.net/docs/reference/workers/generic-worker/docker-posix-payload
 __ docker-worker_
-.. _latest versions of the images: https://hub.docker.com/r/mozillareleases/taskgraph/tags
+.. _latest version of the image: https://hub.docker.com/r/mozillareleases/taskgraph/tags
 .. _taskclusterProxy: https://docs.taskcluster.net/docs/reference/workers/docker-worker/features#feature-taskclusterproxy
 .. _run-task: https://github.com/taskcluster/taskgraph/file/tip/src/taskgraph/run-task/run-task
