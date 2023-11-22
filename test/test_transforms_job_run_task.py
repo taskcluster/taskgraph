@@ -53,7 +53,7 @@ def assert_docker_worker(task):
             "caches": [
                 {
                     "mount-point": "/builds/worker/checkouts",
-                    "name": "checkouts-hg58",
+                    "name": "checkouts",
                     "skip-untrusted": False,
                     "type": "persistent",
                 }
