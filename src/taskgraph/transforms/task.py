@@ -487,19 +487,19 @@ def build_docker_worker_payload(config, task, task_def):
 
         # run-task knows how to validate caches.
         #
-        # To help ensure new run-task features and bug fixes don't interfere
-        # with existing caches, we seed the hash of run-task into cache names.
-        # So, any time run-task changes, we should get a fresh set of caches.
-        # This means run-task can make changes to cache interaction at any time
-        # without regards for backwards or future compatibility.
+        # To help ensure new run-task features and bug fixes, as well as the
+        # versions of tools such as mercurial or git, don't interfere with
+        # existing caches, we seed the underlying docker-image task id into
+        # cache names, for tasks using in-tree Docker images.
         #
         # But this mechanism only works for in-tree Docker images that are built
         # with the current run-task! For out-of-tree Docker images, we have no
         # way of knowing their content of run-task. So, in addition to varying
         # cache names by the contents of run-task, we also take the Docker image
-        # name into consideration. This means that different Docker images will
-        # never share the same cache. This is a bit unfortunate. But it is the
-        # safest thing to do. Fortunately, most images are defined in-tree.
+        # name into consideration.
+        #
+        # This means that different Docker images will never share the same
+        # cache.  This is a bit unfortunate, but is the safest thing to do.
         #
         # For out-of-tree Docker images, we don't strictly need to incorporate
         # the run-task content into the cache name. However, doing so preserves
@@ -520,6 +520,8 @@ def build_docker_worker_payload(config, task, task_def):
                     out_of_tree_image.encode("utf-8")
                 ).hexdigest()
                 suffix += name_hash[0:12]
+            else:
+                suffix += "-<docker-image>"
 
         else:
             suffix = cache_version
@@ -539,13 +541,15 @@ def build_docker_worker_payload(config, task, task_def):
                 suffix=suffix,
             )
             caches[name] = cache["mount-point"]
-            task_def["scopes"].append("docker-worker:cache:%s" % name)
+            task_def["scopes"].append(
+                {"task-reference": "docker-worker:cache:%s" % name}
+            )
 
         # Assertion: only run-task is interested in this.
         if run_task:
             payload["env"]["TASKCLUSTER_CACHES"] = ";".join(sorted(caches.values()))
 
-        payload["cache"] = caches
+        payload["cache"] = {"task-reference": caches}
 
     # And send down volumes information to run-task as well.
     if run_task and worker.get("volumes"):
@@ -1343,7 +1347,9 @@ def check_run_task_caches(config, tasks):
         main_command = command[0] if isinstance(command[0], str) else ""
         run_task = main_command.endswith("run-task")
 
-        for cache in payload.get("cache", {}):
+        for cache in payload.get("cache", {}).get(
+            "task-reference", payload.get("cache", {})
+        ):
             if not cache.startswith(cache_prefix):
                 raise Exception(
                     "{} is using a cache ({}) which is not appropriate "
@@ -1364,7 +1370,7 @@ def check_run_task_caches(config, tasks):
                     "cache name"
                 )
 
-            if not cache.endswith(suffix):
+            if suffix not in cache:
                 raise Exception(
                     f"{task['label']} is using a cache ({cache}) reserved for run-task "
                     "but the cache name is not dependent on the contents "
