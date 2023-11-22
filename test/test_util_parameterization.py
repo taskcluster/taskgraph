@@ -90,7 +90,7 @@ def test_task_refs_multiple(assert_task_refs):
 
 
 def test_task_refs_embedded(assert_task_refs):
-    "resolve_task_references resolves ebmedded references"
+    "resolve_task_references resolves embedded references"
     assert_task_refs(
         {"embedded": {"task-reference": "stuff before <edge3> stuff after"}},
         {"embedded": "stuff before tid3 stuff after"},
@@ -121,6 +121,14 @@ def test_task_refs_decision(assert_task_refs):
     "resolve_task_references resolves `decision` to the provided decision task id"
     assert_task_refs(
         {"escape": {"task-reference": "<decision>"}}, {"escape": "tid-decision"}
+    )
+
+
+def test_task_refs_key(assert_task_refs):
+    "resolve_task_references resolves task references in a dict's keys"
+    assert_task_refs(
+        {"dict": {"task-reference": {"<edge3>": "<ignored>"}}},
+        {"dict": {"tid3": "<ignored>"}},
     )
 
 

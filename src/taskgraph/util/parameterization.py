@@ -20,6 +20,12 @@ def _recurse(val, param_fns):
             if len(val) == 1:
                 for param_key, param_fn in param_fns.items():
                     if set(val.keys()) == {param_key}:
+                        if isinstance(val[param_key], dict):
+                            # handle `{"task-reference": {"<foo>": "bar"}}`
+                            return {
+                                param_fn(key): recurse(v)
+                                for key, v in val[param_key].items()
+                            }
                         return param_fn(val[param_key])
             return {k: recurse(v) for k, v in val.items()}
         else:
