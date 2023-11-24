@@ -14,17 +14,9 @@ identify==2.5.24 \
     --hash=sha256:0aac67d5b4812498056d28a9a512a483f5085cc28640b02b258a59dac34301d4 \
     --hash=sha256:986dbfb38b1140e763e413e6feb44cd731faf72d1909543178aa79b0e258265d
     # via pre-commit
-nodeenv==1.8.0 \
-    --hash=sha256:d51e0c37e64fbf47d017feac3145cdbb58836d7eee8c6f6d3b6880c5456227d2 \
-    --hash=sha256:df865724bb3c3adc86b3876fa209771517b0cfe596beff01a92700e0e8be4cec
-    # via pre-commit
 pre-commit==2.21.0 \
     --hash=sha256:31ef31af7e474a8d8995027fefdfcf509b5c913ff31f2015b4ec4beb26a6f658 \
     --hash=sha256:e2f91727039fc39a92f58a588a25b87f936de6567eed4f0e673e0507edc75bad
     # via -r requirements/dev.in
 
 # The following packages are considered to be unsafe in a requirements file:
-setuptools==67.8.0 \
-    --hash=sha256:5df61bf30bb10c6f756eb19e7c9f3b473051f48db77fddbe06ff2ca307df9a6f \
-    --hash=sha256:62642358adc77ffa87233bc4d2354c4b2682d214048f500964dbe760ccedf102
-    # via nodeenv
