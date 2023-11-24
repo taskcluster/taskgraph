@@ -1,6 +1,7 @@
 -r base.in
 coverage
 mock
+pyright
 pytest
 pytest-mock
 responses

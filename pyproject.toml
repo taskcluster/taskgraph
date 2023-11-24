@@ -29,3 +29,33 @@ target-version = "py37"
 
 [tool.ruff.isort]
 known-first-party = ["taskgraph"]
+
+[tool.pyright]
+include = ["src"]
+exclude = [  # TODO fix errors in these files
+    "src/taskgraph/decision.py",
+    "src/taskgraph/docker.py",
+    "src/taskgraph/files_changed.py",
+    "src/taskgraph/generator.py",
+    "src/taskgraph/graph.py",
+    "src/taskgraph/main.py",
+    "src/taskgraph/morph.py",
+    "src/taskgraph/parameters.py",
+    "src/taskgraph/taskgraph.py",
+    "src/taskgraph/actions/cancel.py",
+    "src/taskgraph/actions/cancel_all.py",
+    "src/taskgraph/actions/rebuild_cached_tasks.py",
+    "src/taskgraph/actions/util.py",
+    "src/taskgraph/optimize/base.py",
+    "src/taskgraph/run-task/robustcheckout.py",
+    "src/taskgraph/transforms/fetch.py",
+    "src/taskgraph/transforms/task.py",
+    "src/taskgraph/transforms/job/run_task.py",
+    "src/taskgraph/util/cached_tasks.py",
+    "src/taskgraph/util/decision.py",
+    "src/taskgraph/util/python_path.py",
+    "src/taskgraph/util/schema.py",
+    "src/taskgraph/util/taskcluster.py",
+    "src/taskgraph/util/vcs.py",
+    "src/taskgraph/util/workertypes.py",
+]
