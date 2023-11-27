@@ -55,4 +55,8 @@ def _find_matching_files(base_path, pattern):
 
 @memoize
 def _get_all_files(base_path):
-    return [mozpath.normsep(str(path)) for path in Path(base_path).rglob("*") if path.is_file()]
+    return [
+        mozpath.normsep(str(path))
+        for path in Path(base_path).rglob("*")
+        if path.is_file()
+    ]
