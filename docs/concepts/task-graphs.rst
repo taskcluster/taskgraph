@@ -100,8 +100,8 @@ Transitive closure is a fancy name for this sort of operation:
  * add all tasks on which any of those tasks depend
  * repeat until nothing changes
 
-The effect is this: imagine you start with a linux32 test job and a linux64
-test job. In the first round, each test task depends on the test docker image
+The effect is this: imagine you start with a linux32 test task and a linux64
+test task. In the first round, each test task depends on the test docker image
 task, so add that image task. Each test also depends on a build, so add the
 linux32 and linux64 build tasks.
 
@@ -112,7 +112,7 @@ the set depend on a task not in the set, so nothing changes and the process is
 complete.
 
 And as you can see, the graph we've built now includes everything we wanted
-(the test jobs) plus everything required to do that (docker images, builds).
+(the test tasks) plus everything required to do that (docker images, builds).
 
 Dependencies
 ------------

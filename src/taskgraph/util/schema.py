@@ -74,7 +74,7 @@ def resolve_keyed_by(
 
     For example, given item::
 
-        job:
+        task:
             test-platform: linux128
             chunks:
                 by-test-platform:
@@ -82,10 +82,10 @@ def resolve_keyed_by(
                     win.*: 6
                     default: 12
 
-    a call to `resolve_keyed_by(item, 'job.chunks', item['thing-name'])`
+    a call to `resolve_keyed_by(item, 'task.chunks', item['thing-name'])`
     would mutate item in-place to::
 
-        job:
+        task:
             test-platform: linux128
             chunks: 12
 
