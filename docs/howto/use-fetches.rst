@@ -15,7 +15,7 @@ in its payload.
 Using Fetches
 -------------
 
-Fetches are implemented as part of the :mod:`~taskgraph.transforms.job`
+Fetches are implemented as part of the :mod:`~taskgraph.transforms.run`
 transforms. So first make sure your task's ``kind.yml`` file is using those
 transforms:
 
@@ -24,7 +24,7 @@ transforms:
    loader: taskgraph.loader.transform:loader
 
    transforms:
-     - taskgraph.transforms.job:transforms
+     - taskgraph.transforms.run:transforms
 
 
 Now let's say we're creating a test task. We'll need to download and

@@ -182,7 +182,7 @@ def test_load_tasks_for_kind(monkeypatch):
         pytest.param(
             {},
             [
-                "taskgraph.transforms.job:transforms",
+                "taskgraph.transforms.run:transforms",
                 "taskgraph.transforms.task:transforms",
             ],
             id="no_transforms",
@@ -191,7 +191,7 @@ def test_load_tasks_for_kind(monkeypatch):
             {"transforms": ["taskgraph.transforms.notify:transforms"]},
             [
                 "taskgraph.transforms.notify:transforms",
-                "taskgraph.transforms.job:transforms",
+                "taskgraph.transforms.run:transforms",
                 "taskgraph.transforms.task:transforms",
             ],
             id="additional_transform_specified",
@@ -214,15 +214,15 @@ def test_default_loader(config, expected_transforms):
         pytest.param(
             {
                 "transforms": [
-                    "taskgraph.transforms.job:transforms",
+                    "taskgraph.transforms.run:transforms",
                     "taskgraph.transforms.task:transforms",
                 ]
             },
-            id="job_and_task_transforms_specified",
+            id="run_and_task_transforms_specified",
         ),
         pytest.param(
-            {"transforms": ["taskgraph.transforms.job:transforms"]},
-            id="only_job_transform_specified",
+            {"transforms": ["taskgraph.transforms.run:transforms"]},
+            id="only_run_transform_specified",
         ),
         pytest.param(
             {"transforms": ["taskgraph.transforms.task:transforms"]},

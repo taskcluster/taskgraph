@@ -272,7 +272,7 @@ entry:
              - artifact: target.tar.gz
 
 The above block will add a ``fetches`` entry to the task that is compatible with ``taskgraph`` 's
-:mod:`~taskgraph.transforms.job` transforms.
+:mod:`~taskgraph.transforms.run` transforms.
 
 In some cases, artifact names may be different for different upstream tasks within the same kind.
 You can often handle this by setting an attribute in the upstream tasks, which ``from_deps`` can

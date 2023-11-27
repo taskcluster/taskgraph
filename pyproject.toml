@@ -50,7 +50,7 @@ exclude = [  # TODO fix errors in these files
     "src/taskgraph/run-task/robustcheckout.py",
     "src/taskgraph/transforms/fetch.py",
     "src/taskgraph/transforms/task.py",
-    "src/taskgraph/transforms/job/run_task.py",
+    "src/taskgraph/transforms/run/run_task.py",
     "src/taskgraph/util/cached_tasks.py",
     "src/taskgraph/util/decision.py",
     "src/taskgraph/util/python_path.py",

@@ -110,7 +110,7 @@ task_description_schema = Schema(
                 # section of the kind (delimited by "-") all smooshed together.
                 # Eg: "test" becomes "T", "docker-image" becomes "DI", etc.
                 "symbol": Optional(str),
-                # the job kind
+                # the task kind
                 # If "build" or "test" is found in the kind name, this defaults
                 # to the appropriate value. Otherwise, defaults to "other"
                 "kind": Optional(Any("build", "test", "other")),
@@ -129,7 +129,7 @@ task_description_schema = Schema(
         Optional("index"): {
             # the name of the product this build produces
             "product": str,
-            # the names to use for this job in the TaskCluster index
+            # the names to use for this task in the TaskCluster index
             "job-name": str,
             # Type of gecko v2 index to use
             "type": str,
@@ -179,7 +179,7 @@ task_description_schema = Schema(
         # be substituted in this string:
         #  {level} -- the scm level of this push
         "worker-type": str,
-        # Whether the job should use sccache compiler caching.
+        # Whether the task should use sccache compiler caching.
         Required("needs-sccache"): bool,
         # information specific to the worker implementation that will run this task
         Optional("worker"): {
@@ -756,7 +756,7 @@ def build_generic_worker_payload(config, task, task_def):
     schema={
         # the maximum time to run, in seconds
         Required("max-run-time"): int,
-        # locale key, if this is a locale beetmover job
+        # locale key, if this is a locale beetmover task
         Optional("locale"): str,
         Optional("partner-public"): bool,
         Required("release-properties"): {
@@ -1292,7 +1292,7 @@ def check_caches_are_volumes(task):
 
     Caches and volumes are the only filesystem locations whose content
     isn't defined by the Docker image itself. Some caches are optional
-    depending on the job environment. We want paths that are potentially
+    depending on the task environment. We want paths that are potentially
     caches to have as similar behavior regardless of whether a cache is
     used. To help enforce this, we require that all paths used as caches
     to be declared as Docker volumes. This check won't catch all offenders.

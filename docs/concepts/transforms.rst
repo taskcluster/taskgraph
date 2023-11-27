@@ -166,29 +166,29 @@ stages defined by schemas. The process begins with the raw data structures
 parsed from the YAML files in the kind configuration. This data can processed
 by kind-specific transforms resulting in a "kind specific description".
 
-From there, it's common for tasks to use the :mod:`job transforms
-<taskgraph.transforms.job>` which provide convenient utilities for things such
+From there, it's common for tasks to use the :mod:`run transforms
+<taskgraph.transforms.run>` which provide convenient utilities for things such
 as cloning repositories, downloading artifacts, caching and much more! After
-these transforms tasks will conform to the "job description".
+these transforms tasks will conform to the "run description".
 
 Finally almost all kinds should use the :mod:`task transforms
 <taskgraph.transforms.task>`. These transforms massage the task into the
 `Taskcluster task schema`_
 
-Job Descriptions
+Run Descriptions
 ................
 
-A job description defines what to run in the task. It is a combination of a
+A *run description* defines what to run in the task. It is a combination of a
 ``run`` section and all of the fields from a task description. The run section
 has a ``using`` property that defines how this task should be run; for example,
 ``run-task`` to run arbitrary commands, or ``toolchain-script`` to invoke a
 well defined script. The remainder of the run section is specific to the
 run-using implementation.
 
-The effect of a job description is to say "run this thing on this worker". The
-job description must contain enough information about the worker to identify
+The effect of a run description is to say "run this thing on this worker". The
+run description must contain enough information about the worker to identify
 the workerType and the implementation (docker-worker, generic-worker, etc.).
-Alternatively, job descriptions can specify the ``platforms`` field in
+Alternatively, run descriptions can specify the ``platforms`` field in
 conjunction with the ``by-platform`` key to specify multiple workerTypes and
 implementations. Any other task-description information is passed along
 verbatim, although it is augmented by the run-using implementation.

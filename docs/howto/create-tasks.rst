@@ -67,7 +67,7 @@ to the ``tasks`` object:
 
    The format of the tasks depends heavily on which :term:`transforms
    <Transform>` the kind uses. In this example, Taskgraph is implicitly adding
-   the :mod:`~taskgraph.transforms.job` and :mod:`~taskgraph.transforms.task`
+   the :mod:`~taskgraph.transforms.run` and :mod:`~taskgraph.transforms.task`
    transforms. See :doc:`/concepts/transforms` for more information.
 
 Task Defaults

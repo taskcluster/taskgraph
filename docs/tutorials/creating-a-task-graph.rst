@@ -85,7 +85,7 @@ you have a ``hello`` kind. For this next section we'll be editing
 
 #. Declare the set of :term:`transforms <transform>` that will be applied
    to tasks. By default, taskgraph will include the
-   :mod:`-taskgraph.transforms.job` and :mod:`-taskgraph.transforms.tasks`
+   :mod:`-taskgraph.transforms.run` and :mod:`-taskgraph.transforms.task`
    transforms, which are used by the vast majority of simple tasks. It is also
    quite common for kind-specific transforms to be used, which we will do here
    for the purpose of demonstration. In our example:
@@ -99,7 +99,7 @@ you have a ``hello`` kind. For this next section we'll be editing
    initial definition here can vary wildly from one kind to another, it all
    depends on the transforms that are used. It's conventional for transforms to
    define a schema (but not required). So often you can look at the first
-   transform file to see what schema is expected of your job. But since we
+   transform file to see what schema is expected of your task. But since we
    haven't created the first transforms yet, let's define our task like this
    for now:
 

@@ -5,7 +5,7 @@ from pprint import pprint
 
 import pytest
 
-from taskgraph.transforms.job import make_task_description
+from taskgraph.transforms.run import make_task_description
 from taskgraph.util.templates import merge
 
 TASK_DEFAULTS = {
@@ -26,7 +26,7 @@ TASK_DEFAULTS = {
 
 
 @pytest.fixture
-def run_job_using(mocker, run_transform):
+def run_task_using(mocker, run_transform):
     m = mocker.patch("taskgraph.util.hash._get_all_files")
     m.return_value = [
         "taskcluster/scripts/toolchain/run.sh",
@@ -36,7 +36,7 @@ def run_job_using(mocker, run_transform):
     def inner(task):
         task = merge(TASK_DEFAULTS, task)
         m = mocker.patch(
-            "taskgraph.transforms.job.toolchain.configure_taskdesc_for_run"
+            "taskgraph.transforms.run.toolchain.configure_taskdesc_for_run"
         )
         run_transform(make_task_description, task)
         return m.call_args[0]
@@ -44,8 +44,8 @@ def run_job_using(mocker, run_transform):
     return inner
 
 
-def assert_docker_worker(job, taskdesc):
-    assert job == {
+def assert_docker_worker(task, taskdesc):
+    assert task == {
         "description": "fake description",
         "label": "fake-task-label",
         "run": {
@@ -119,8 +119,8 @@ def assert_docker_worker(job, taskdesc):
     }
 
 
-def assert_generic_worker(job, taskdesc):
-    assert job == {
+def assert_generic_worker(task, taskdesc):
+    assert task == {
         "description": "fake description",
         "label": "fake-task-label",
         "run": {
@@ -173,8 +173,8 @@ def assert_generic_worker(job, taskdesc):
     }
 
 
-def assert_powershell(job, _):
-    assert job["run"] == {
+def assert_powershell(task, _):
+    assert task["run"] == {
         "command": "src/taskcluster/scripts/toolchain/run.ps1",
         "cwd": "{checkout}/..",
         "exec-with": "powershell",
@@ -184,9 +184,9 @@ def assert_powershell(job, _):
     }
 
 
-def assert_forward(job, _):
+def assert_forward(task, _):
     """Assert unknown schema args are forwarded to run_task"""
-    assert job["run"]["foo"] == "bar"
+    assert task["run"]["foo"] == "bar"
 
 
 @pytest.mark.parametrize(
@@ -233,12 +233,12 @@ def assert_forward(job, _):
         ),
     ),
 )
-def test_toolchain(request, run_job_using, task):
-    _, job, taskdesc, _ = run_job_using(task)
-    print("Job:")
-    pprint(job)
+def test_toolchain(request, run_task_using, task):
+    _, task, taskdesc, _ = run_task_using(task)
+    print("Task:")
+    pprint(task)
     print("Task Description:")
     pprint(taskdesc)
     param_id = request.node.callspec.id
     assert_func = globals()[f"assert_{param_id}"]
-    assert_func(job, taskdesc)
+    assert_func(task, taskdesc)

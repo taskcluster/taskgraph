@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """
-Tests for the 'job' transform subsystem.
+Tests for the 'run' transform subsystem.
 """
 
 import os
@@ -15,9 +15,9 @@ import pytest
 
 # prevent pytest thinking this is a test
 from taskgraph.task import Task
-from taskgraph.transforms import job
-from taskgraph.transforms.job import run_task  # noqa: F401
-from taskgraph.transforms.job.common import add_cache
+from taskgraph.transforms import run
+from taskgraph.transforms.run import run_task  # noqa: F401
+from taskgraph.transforms.run.common import add_cache
 from taskgraph.transforms.task import payload_builders
 from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.templates import merge
@@ -36,7 +36,7 @@ TASK_DEFAULTS = {
 
 @pytest.fixture
 def transform(monkeypatch, run_transform):
-    """Run the job transforms on the specified task but return the inputs to
+    """Run the run transforms on the specified task but return the inputs to
     `configure_taskdesc_for_run` without executing it.
 
     This gives test functions an easy way to generate the inputs required for
@@ -49,9 +49,9 @@ def transform(monkeypatch, run_transform):
         task = deepcopy(TASK_DEFAULTS)
         task.update(task_input)
 
-        with patch("taskgraph.transforms.job.configure_taskdesc_for_run") as m:
+        with patch("taskgraph.transforms.run.configure_taskdesc_for_run") as m:
             # This forces the generator to be evaluated
-            run_transform(job.transforms, task)
+            run_transform(run.transforms, task)
             return m.call_args[0]
 
     return inner
@@ -69,9 +69,9 @@ def transform(monkeypatch, run_transform):
     ids=["docker-worker", "generic-worker"],
 )
 def test_worker_caches(task, transform):
-    config, job, taskdesc, impl = transform(task)
-    add_cache(job, taskdesc, "cache1", "/cache1")
-    add_cache(job, taskdesc, "cache2", "/cache2", skip_untrusted=True)
+    config, task, taskdesc, impl = transform(task)
+    add_cache(task, taskdesc, "cache1", "/cache1")
+    add_cache(task, taskdesc, "cache2", "/cache2", skip_untrusted=True)
 
     if impl not in ("docker-worker", "generic-worker"):
         pytest.xfail(f"caches not implemented for '{impl}'")
@@ -120,7 +120,7 @@ def test_use_fetches(
         kind_dependencies_tasks={t.label: t for t in kind_dependencies_tasks}
     )
     task = merge(TASK_DEFAULTS, task)
-    result = run_transform(job.use_fetches, task, config=transform_config)[0]
+    result = run_transform(run.use_fetches, task, config=transform_config)[0]
     pprint(result)
 
     param_id = request.node.callspec.id

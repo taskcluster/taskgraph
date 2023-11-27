@@ -6,7 +6,7 @@ from pprint import pprint
 
 import pytest
 
-from taskgraph.transforms.job import make_task_description
+from taskgraph.transforms.run import make_task_description
 from taskgraph.util.templates import merge
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -25,7 +25,7 @@ TASK_DEFAULTS = {
 
 
 @pytest.fixture
-def run_job_using(mocker, run_transform):
+def run_task_using(mocker, run_transform):
     m = mocker.patch("taskgraph.util.hash._get_all_files")
     m.return_value = [
         "taskcluster/scripts/toolchain/run.sh",
@@ -209,8 +209,8 @@ def assert_run_task_command_generic_worker(task):
         ),
     ),
 )
-def test_run_task(request, run_job_using, task):
-    taskdesc = run_job_using(task)
+def test_run_task(request, run_task_using, task):
+    taskdesc = run_task_using(task)
     print("Task Description:")
     pprint(taskdesc)
     param_id = request.node.callspec.id
