@@ -12,8 +12,8 @@ transforms = TransformSequence()
 
 
 @transforms.add
-def add_dependencies(config, jobs):
-    for job in jobs:
+async def add_dependencies(config, jobs):
+    async for job in jobs:
         job.setdefault("soft-dependencies", [])
         job["soft-dependencies"] += [
             dep_task.label

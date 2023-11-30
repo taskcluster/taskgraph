@@ -78,9 +78,9 @@ transforms.add_validate(FETCH_SCHEMA)
 
 
 @transforms.add
-def process_fetch_job(config, jobs):
+async def process_fetch_job(config, jobs):
     # Converts fetch-url entries to the job schema.
-    for job in jobs:
+    async for job in jobs:
         typ = job["fetch"]["type"]
         name = job["name"]
         fetch = job.pop("fetch")
@@ -103,7 +103,7 @@ def configure_fetch(config, typ, name, fetch):
 
 
 @transforms.add
-def make_task(config, jobs):
+async def make_task(config, jobs):
     # Fetch tasks are idempotent and immutable. Have them live for
     # essentially forever.
     if config.params["level"] == "3":
@@ -111,7 +111,7 @@ def make_task(config, jobs):
     else:
         expires = "28 days"
 
-    for job in jobs:
+    async for job in jobs:
         name = job["name"]
         artifact_prefix = job.get("artifact-prefix", "public")
         env = job.get("env", {})

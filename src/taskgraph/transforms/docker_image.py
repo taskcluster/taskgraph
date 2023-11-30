@@ -65,7 +65,7 @@ transforms.add_validate(docker_image_schema)
 
 
 @transforms.add
-def fill_template(config, tasks):
+async def fill_template(config, tasks):
     available_packages = set()
     for task in config.kind_dependencies_tasks.values():
         if task.kind != "packages":
@@ -75,13 +75,11 @@ def fill_template(config, tasks):
 
     context_hashes = {}
 
-    tasks = list(tasks)
-
     if not taskgraph.fast and config.write_artifacts:
         if not os.path.isdir(CONTEXTS_DIR):
             os.makedirs(CONTEXTS_DIR)
 
-    for task in tasks:
+    async for task in tasks:
         image_name = task.pop("name")
         job_symbol = task.pop("symbol", None)
         args = task.pop("args", {})

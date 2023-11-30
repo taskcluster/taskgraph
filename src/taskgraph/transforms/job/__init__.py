@@ -112,8 +112,8 @@ transforms.add_validate(job_description_schema)
 
 
 @transforms.add
-def rewrite_when_to_optimization(config, jobs):
-    for job in jobs:
+async def rewrite_when_to_optimization(config, jobs):
+    async for job in jobs:
         when = job.pop("when", {})
         if not when:
             yield job
@@ -132,8 +132,8 @@ def rewrite_when_to_optimization(config, jobs):
 
 
 @transforms.add
-def set_implementation(config, jobs):
-    for job in jobs:
+async def set_implementation(config, jobs):
+    async for job in jobs:
         impl, os = worker_type_implementation(config.graph_config, job["worker-type"])
         if os:
             job.setdefault("tags", {})["os"] = os
@@ -148,8 +148,8 @@ def set_implementation(config, jobs):
 
 
 @transforms.add
-def set_label(config, jobs):
-    for job in jobs:
+async def set_label(config, jobs):
+    async for job in jobs:
         if "label" not in job:
             if "name" not in job:
                 raise Exception("job has neither a name nor a label")
@@ -160,8 +160,8 @@ def set_label(config, jobs):
 
 
 @transforms.add
-def add_resource_monitor(config, jobs):
-    for job in jobs:
+async def add_resource_monitor(config, jobs):
+    async for job in jobs:
         if job.get("attributes", {}).get("resource-monitor"):
             worker_implementation, worker_os = worker_type_implementation(
                 config.graph_config, job["worker-type"]
@@ -204,13 +204,13 @@ def get_attribute(dict, key, attributes, attribute_name):
 
 
 @transforms.add
-def use_fetches(config, jobs):
+async def use_fetches(config, jobs):
     artifact_names = {}
     aliases = {}
     extra_env = {}
 
+    jobs = [j async for j in jobs]
     if config.kind in ("toolchain", "fetch"):
-        jobs = list(jobs)
         for job in jobs:
             run = job.get("run", {})
             label = job["label"]
@@ -353,12 +353,12 @@ def use_fetches(config, jobs):
 
 
 @transforms.add
-def make_task_description(config, jobs):
+async def make_task_description(config, jobs):
     """Given a build description, create a task description"""
     # import plugin modules first, before iterating over jobs
     import_sibling_modules(exceptions=("common.py",))
 
-    for job in jobs:
+    async for job in jobs:
         # always-optimized tasks never execute, so have no workdir
         if job["worker"]["implementation"] in ("docker-worker", "generic-worker"):
             job["run"].setdefault("workdir", "/builds/worker")

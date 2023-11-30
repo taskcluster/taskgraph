@@ -140,8 +140,8 @@ def _convert_content(content):
 
 
 @transforms.add
-def add_notifications(config, tasks):
-    for task in tasks:
+async def add_notifications(config, tasks):
+    async for task in tasks:
         label = "{}-{}".format(config.kind, task["name"])
         if "notifications" in task:
             notify = _convert_legacy(config, task.pop("notifications"), label)

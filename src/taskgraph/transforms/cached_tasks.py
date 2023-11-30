@@ -50,7 +50,7 @@ def format_task_digest(cached_task):
 
 
 @transforms.add
-def cache_task(config, tasks):
+async def cache_task(config, tasks):
     if taskgraph.fast:
         for task in tasks:
             yield task
@@ -61,7 +61,7 @@ def cache_task(config, tasks):
         if "cached_task" in task.attributes:
             digests[task.label] = format_task_digest(task.attributes["cached_task"])
 
-    for task in order_tasks(config, tasks):
+    for task in order_tasks(config, [t async for t in tasks]):
         cache = task.pop("cache", None)
         if cache is None:
             yield task

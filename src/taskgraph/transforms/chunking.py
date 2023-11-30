@@ -50,8 +50,8 @@ transforms.add_validate(CHUNK_SCHEMA)
 
 
 @transforms.add
-def chunk_tasks(config, tasks):
-    for task in tasks:
+async def chunk_tasks(config, tasks):
+    async for task in tasks:
         chunk_config = task.pop("chunk", None)
         if not chunk_config:
             yield task
