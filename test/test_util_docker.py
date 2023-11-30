@@ -268,7 +268,7 @@ class TestDocker(unittest.TestCase):
             # file objects are BufferedRandom instances
             out_file = BufferedRandom(BytesIO(b""))
             h = docker.stream_context_tar(
-                tmp, d, out_file, "my_image", args={"PYTHON_VERSION": "3.7"}
+                tmp, d, out_file, "my_image", args={"PYTHON_VERSION": "3.8"}
             )
 
             self.assertEqual(
