@@ -3,6 +3,11 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+6.x -> 7.x
+----------
+
+* Upgrade to Python 3.8 or higher
+
 5.x -> 6.x
 ----------
 
