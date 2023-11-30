@@ -1,4 +1,4 @@
-FROM          ubuntu:20.04
+FROM          debian:12
 MAINTAINER Release Engineering <release@mozilla.com>
 
 # Add worker user
