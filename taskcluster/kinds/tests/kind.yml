@@ -50,7 +50,7 @@ tasks:
             command: >-
                 pip install --user -r requirements/test.txt --require-hashes &&
                 pip install --user --no-deps . &&
-                pyenv local 3.11 3.10 3.9 3.8 &&
+                pyenv local 3.12 3.11 3.10 3.9 3.8 &&
                 tox --parallel
     type-check:
         description: "Run type checking against src with Pyright"

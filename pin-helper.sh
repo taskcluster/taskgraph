@@ -23,7 +23,7 @@ set -x
 # Don't quit if a version fails
 set +e
 failed=0
-for version in 3.8 3.9 3.10 3.11; do
+for version in 3.8 3.9 3.10 3.11 3.12; do
     docker run -t -v $PWD:/src -w /src python:$version bash -c "pip install -q -r requirements/dev.txt"
     rt=$?
     if [ $rt -gt 0 ]; then
