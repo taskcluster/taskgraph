@@ -103,7 +103,7 @@ def fake_load_graph_config(root_dir):
 
 @pytest.fixture
 def graph_config(datadir):
-    return fake_load_graph_config(str(datadir / "taskcluster" / "ci"))
+    return fake_load_graph_config(str(datadir / "taskcluster" / "kinds"))
 
 
 class FakeParameters(dict):

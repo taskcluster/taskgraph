@@ -17,7 +17,7 @@ from taskgraph.taskgraph import TaskGraph
 
 @pytest.fixture(scope="module")
 def graph_config():
-    return load_graph_config(os.path.join("taskcluster", "ci"))
+    return load_graph_config(os.path.join("taskcluster", "kinds"))
 
 
 @pytest.fixture

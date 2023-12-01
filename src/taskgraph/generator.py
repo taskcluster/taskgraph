@@ -131,7 +131,7 @@ class TaskGraphGenerator:
         @type parameters: Union[Parameters, Callable[[GraphConfig], Parameters]]
         """
         if root_dir is None:
-            root_dir = "taskcluster/ci"
+            root_dir = "taskcluster/kinds"
         self.root_dir = root_dir
         self._parameters = parameters
         self._decision_task_id = decision_task_id

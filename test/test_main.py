@@ -234,16 +234,16 @@ def test_init_taskgraph(mocker, tmp_path, project_root, repo_with_upstream):
     # Make assertions about the repository state.
     expected_files = [
         ".taskcluster.yml",
-        "taskcluster/ci/config.yml",
-        "taskcluster/ci/docker-image/kind.yml",
-        "taskcluster/ci/hello/kind.yml",
+        "taskcluster/config.yml",
+        "taskcluster/kinds/docker-image/kind.yml",
+        "taskcluster/kinds/hello/kind.yml",
         f"taskcluster/{name}_taskgraph/transforms/hello.py",
     ]
     for f in expected_files:
         path = repo_root / f
         assert path.is_file(), f"{str(path)} not found!"
 
-    c = load_yaml(str(repo_root / "taskcluster" / "ci" / "config.yml"))
+    c = load_yaml(str(repo_root / "taskcluster" / "config.yml"))
     assert c["trust-domain"] == "mozilla"
     assert c["taskgraph"]["cached-task-prefix"] == f"{c['trust-domain']}.v2.{name}"
     assert c["taskgraph"]["repositories"] == {name: {"name": name}}
