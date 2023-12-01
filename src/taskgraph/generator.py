@@ -2,6 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import asyncio
 import copy
 import logging
 import os
@@ -44,7 +45,8 @@ class Kind:
             loader = "taskgraph.loader.default:loader"
         return find_object(loader)
 
-    def load_tasks(self, parameters, loaded_tasks, write_artifacts):
+    async def load_tasks(self, parameters, loaded_tasks, write_artifacts):
+        logger.debug(f"Loading tasks for kind {self.name}")
         loader = self._get_loader()
         config = copy.deepcopy(self.config)
 
@@ -85,8 +87,9 @@ class Kind:
                 soft_dependencies=task_dict.get("soft-dependencies"),
                 if_dependencies=task_dict.get("if-dependencies"),
             )
-            for task_dict in transforms(trans_config, inputs)
+            async for task_dict in await transforms(trans_config, inputs)
         ]
+        logger.info(f"Generated {len(tasks)} tasks for kind {self.name}")
         return tasks
 
     @classmethod
@@ -249,6 +252,57 @@ class TaskGraphGenerator:
                 except KindNotFound:
                     continue
 
+    async def _load_tasks(self, kinds, kind_graph, parameters):
+        all_tasks = {}
+        futures_to_kind = {}
+
+        def add_new_tasks(tasks):
+            for task in tasks:
+                if task.label in all_tasks:
+                    raise Exception("duplicate tasks with label " + task.label)
+                all_tasks[task.label] = task
+
+        def create_futures(kinds, edges):
+            """Create the next batch of tasks for kinds without dependencies."""
+            kinds_with_deps = {edge[0] for edge in edges}
+            ready_kinds = set(kinds) - kinds_with_deps
+            futures = set()
+            for name in ready_kinds:
+                task = asyncio.create_task(
+                    kinds[name].load_tasks(
+                        parameters,
+                        list(all_tasks.values()),
+                        self._write_artifacts,
+                    )
+                )
+                futures.add(task)
+                futures_to_kind[task] = name
+            return futures
+
+        edges = set(kind_graph.edges)
+        futures = create_futures(kinds, edges)
+        while len(kinds) > 0:
+            done, futures = await asyncio.wait(
+                futures, return_when=asyncio.FIRST_COMPLETED
+            )
+
+            for future in done:
+                add_new_tasks(future.result())
+                name = futures_to_kind[future]
+
+                # Update state for next batch of futures.
+                del kinds[name]
+                edges = {e for e in edges if e[1] != name}
+
+            futures |= create_futures(kinds, edges)
+
+        if futures:
+            done, _ = await asyncio.wait(futures, return_when=asyncio.ALL_COMPLETED)
+            for future in done:
+                add_new_tasks(future.result())
+
+        return all_tasks
+
     def _run(self):
         logger.info("Loading graph configuration.")
         graph_config = load_graph_config(self.root_dir)
@@ -303,24 +357,8 @@ class TaskGraphGenerator:
             )
 
         logger.info("Generating full task set")
-        all_tasks = {}
-        for kind_name in kind_graph.visit_postorder():
-            logger.debug(f"Loading tasks for kind {kind_name}")
-            kind = kinds[kind_name]
-            try:
-                new_tasks = kind.load_tasks(
-                    parameters,
-                    list(all_tasks.values()),
-                    self._write_artifacts,
-                )
-            except Exception:
-                logger.exception(f"Error loading tasks for kind {kind_name}:")
-                raise
-            for task in new_tasks:
-                if task.label in all_tasks:
-                    raise Exception("duplicate tasks with label " + task.label)
-                all_tasks[task.label] = task
-            logger.info(f"Generated {len(new_tasks)} tasks for kind {kind_name}")
+        all_tasks = asyncio.run(self._load_tasks(kinds, kind_graph, parameters))
+
         full_task_set = TaskGraph(all_tasks, Graph(set(all_tasks), set()))
         yield self.verify("full_task_set", full_task_set, graph_config, parameters)
 

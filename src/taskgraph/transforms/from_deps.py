@@ -113,8 +113,8 @@ transforms.add_validate(FROM_DEPS_SCHEMA)
 
 
 @transforms.add
-def from_deps(config, tasks):
-    for task in tasks:
+async def from_deps(config, tasks):
+    async for task in tasks:
         # Setup and error handling.
         from_deps = task.pop("from-deps")
         kind_deps = config.config.get("kind-dependencies", [])

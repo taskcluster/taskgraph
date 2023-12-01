@@ -81,8 +81,8 @@ transforms.add_validate(SCHEMA)
 
 
 @transforms.add
-def render_task(config, jobs):
-    for job in jobs:
+async def render_task(config, jobs):
+    async for job in jobs:
         sub_config = job.pop("task-context")
         params_context = {}
         for var, path in sub_config.pop("from-parameters", {}).items():

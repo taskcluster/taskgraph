@@ -835,11 +835,11 @@ transforms = TransformSequence()
 
 
 @transforms.add
-def set_implementation(config, tasks):
+async def set_implementation(config, tasks):
     """
     Set the worker implementation based on the worker-type alias.
     """
-    for task in tasks:
+    async for task in tasks:
         worker = task.setdefault("worker", {})
         if "implementation" in task["worker"]:
             yield task
@@ -859,8 +859,8 @@ def set_implementation(config, tasks):
 
 
 @transforms.add
-def set_defaults(config, tasks):
-    for task in tasks:
+async def set_defaults(config, tasks):
+    async for task in tasks:
         task.setdefault("always-target", False)
         task.setdefault("optimization", None)
         task.setdefault("needs-sccache", False)
@@ -903,8 +903,8 @@ def set_defaults(config, tasks):
 
 
 @transforms.add
-def task_name_from_label(config, tasks):
-    for task in tasks:
+async def task_name_from_label(config, tasks):
+    async for task in tasks:
         if "label" not in task:
             if "name" not in task:
                 raise Exception("task has neither a name nor a label")
@@ -915,8 +915,8 @@ def task_name_from_label(config, tasks):
 
 
 @transforms.add
-def validate(config, tasks):
-    for task in tasks:
+async def validate(config, tasks):
+    async for task in tasks:
         validate_schema(
             task_description_schema,
             task,
@@ -953,8 +953,8 @@ def add_generic_index_routes(config, task):
 
 
 @transforms.add
-def process_treeherder_metadata(config, tasks):
-    for task in tasks:
+async def process_treeherder_metadata(config, tasks):
+    async for task in tasks:
         routes = task.get("routes", [])
         extra = task.get("extra", {})
         task_th = task.get("treeherder")
@@ -1025,8 +1025,8 @@ def process_treeherder_metadata(config, tasks):
 
 
 @transforms.add
-def add_index_routes(config, tasks):
-    for task in tasks:
+async def add_index_routes(config, tasks):
+    async for task in tasks:
         index = task.get("index", {})
 
         # The default behavior is to rank tasks according to their tier
@@ -1057,8 +1057,8 @@ def add_index_routes(config, tasks):
 
 
 @transforms.add
-def build_task(config, tasks):
-    for task in tasks:
+async def build_task(config, tasks):
+    async for task in tasks:
         level = str(config.params["level"])
 
         provisioner_id, worker_type = get_worker_type(
@@ -1219,24 +1219,24 @@ def build_task(config, tasks):
 
 
 @transforms.add
-def add_github_checks(config, tasks):
+async def add_github_checks(config, tasks):
     """
     For git repositories, add checks route to all tasks.
 
     This will be replaced by a configurable option in the future.
     """
     if config.params["repository_type"] != "git":
-        for task in tasks:
+        async for task in tasks:
             yield task
 
-    for task in tasks:
+    async for task in tasks:
         task["task"]["routes"].append("checks")
         yield task
 
 
 @transforms.add
-def chain_of_trust(config, tasks):
-    for task in tasks:
+async def chain_of_trust(config, tasks):
+    async for task in tasks:
         if task["task"].get("payload", {}).get("features", {}).get("chainOfTrust"):
             image = task.get("dependencies", {}).get("docker-image")
             if image:
@@ -1250,12 +1250,12 @@ def chain_of_trust(config, tasks):
 
 
 @transforms.add
-def check_task_identifiers(config, tasks):
+async def check_task_identifiers(config, tasks):
     """Ensures that all tasks have well defined identifiers:
     ``^[a-zA-Z0-9_-]{1,38}$``
     """
     e = re.compile("^[a-zA-Z0-9_-]{1,38}$")
-    for task in tasks:
+    async for task in tasks:
         for attrib in ("workerType", "provisionerId"):
             if not e.match(task["task"][attrib]):
                 raise Exception(
@@ -1267,9 +1267,9 @@ def check_task_identifiers(config, tasks):
 
 
 @transforms.add
-def check_task_dependencies(config, tasks):
+async def check_task_dependencies(config, tasks):
     """Ensures that tasks don't have more than 100 dependencies."""
-    for task in tasks:
+    async for task in tasks:
         number_of_dependencies = (
             len(task["dependencies"])
             + len(task["if-dependencies"])
@@ -1315,7 +1315,7 @@ def check_caches_are_volumes(task):
 
 
 @transforms.add
-def check_run_task_caches(config, tasks):
+async def check_run_task_caches(config, tasks):
     """Audit for caches requiring run-task.
 
     run-task manages caches in certain ways. If a cache managed by run-task
@@ -1340,7 +1340,7 @@ def check_run_task_caches(config, tasks):
 
     suffix = _run_task_suffix()
 
-    for task in tasks:
+    async for task in tasks:
         payload = task["task"].get("payload", {})
         command = payload.get("command") or [""]
 
