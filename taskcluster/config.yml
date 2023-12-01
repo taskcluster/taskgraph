@@ -1,0 +1,36 @@
+---
+trust-domain: taskgraph
+treeherder:
+    group-names:
+        'I': 'Docker Image Builds'
+        'doc': 'Documentation tasks'
+        'Fetch': 'Fetch tasks'
+
+index:
+    products:
+        - taskgraph
+
+task-priority: low
+
+taskgraph:
+    repositories:
+        ci:
+            name: Taskgraph
+
+workers:
+    aliases:
+        images:
+            provisioner: 'taskgraph-{level}'
+            implementation: docker-worker
+            os: linux
+            worker-type: images-gcp
+        t-linux:
+            provisioner: 'taskgraph-t'
+            implementation: docker-worker
+            os: linux
+            worker-type: linux-gcp
+        misc:
+            provisioner: 'taskgraph-t'
+            implementation: docker-worker
+            os: linux
+            worker-type: linux-gcp
