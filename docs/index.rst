@@ -77,14 +77,14 @@ already, namely ``build-docker-image-linux`` and ``hello-world``.
    By default the ``taskgraph`` command will only output task labels. Try
    adding ``--json`` to the command to see the actual definitions.
 
-See if you can create a new task by editing ``taskcluster/ci/hello/kind.yml``,
+See if you can create a new task by editing ``taskcluster/kinds/hello/kind.yml``,
 and re-run ``taskgraph full`` to verify.
 
 How It Works
 ------------
 
 Taskgraph starts by loading :term:`kinds <Kind>`, which are logical groupings
-of similar tasks. Each kind is defined in a ``taskcluster/ci/<kind
+of similar tasks. Each kind is defined in a ``taskcluster/kinds/<kind
 name>/kind.yml`` file.
 
 Once a kind has been loaded, Taskgraph passes each task defined therein through

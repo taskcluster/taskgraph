@@ -14,7 +14,7 @@ depends on how you choose to organize them). So the first step is to define a
 kind for your task.
 
 If we're creating a build task, you might define a ``build`` kind by creating
-``taskcluster/ci/build/kind.yml``. Simply creating this file is enough to
+``taskcluster/kinds/build/kind.yml``. Simply creating this file is enough to
 define a kind, though in practice you'll likely add extra configuration such
 as a :term:`loader <Loader>` or :term:`transforms <Transform>`.
 
@@ -25,7 +25,7 @@ Tasks are defined in the ``kind.yml`` under a ``tasks`` key. For example, our
 ``build-linux`` task might look like:
 
 .. code-block:: yaml
-   :caption: taskcluster/ci/build/kind.yml
+   :caption: taskcluster/kinds/build/kind.yml
 
    tasks:
      build-linux:
@@ -42,7 +42,7 @@ If we want to add another task, say ``build-windows``, we can just append it
 to the ``tasks`` object:
 
 .. code-block:: yaml
-   :caption: taskcluster/ci/build/kind.yml
+   :caption: taskcluster/kinds/build/kind.yml
 
    tasks:
      build-linux:
@@ -78,7 +78,7 @@ copied from one task to the next. A ``task-defaults`` key can be used to
 reduce this overhead. The previous example can be re-written as:
 
 .. code-block:: yaml
-   :caption: taskcluster/ci/build/kind.yml
+   :caption: taskcluster/kinds/build/kind.yml
 
    task-defaults:
      description: "Build the app"
@@ -111,7 +111,7 @@ This allows you to define your tasks in any number of Yaml files outside of
 ``kind.yml``. For example, the following example is equivalent to the previous two:
 
 .. code-block:: yaml
-   :caption: taskcluster/ci/build/kind.yml
+   :caption: taskcluster/kinds/build/kind.yml
 
    task-defaults:
      description: "Build the app"
@@ -124,7 +124,7 @@ This allows you to define your tasks in any number of Yaml files outside of
      - windows.yml
 
 .. code-block:: yaml
-   :caption: taskcluster/ci/build/linux.yml
+   :caption: taskcluster/kinds/build/linux.yml
 
    tasks:
      build-linux:
@@ -136,7 +136,7 @@ This allows you to define your tasks in any number of Yaml files outside of
 
 
 .. code-block:: yaml
-   :caption: taskcluster/ci/build/windows.yml
+   :caption: taskcluster/kinds/build/windows.yml
 
    tasks:
      build-windows:

@@ -20,8 +20,8 @@ Create a file system layout similar to:
 ::
 
    taskcluster
-   ├── ci
-   │   ├── config.yml
+   ├── config.yml
+   ├── kinds
    │   └── hello
    |       └── kind.yml
    └── myrepo_taskgraph
@@ -36,7 +36,7 @@ similarly only a convention (but it must be importable).
 Populate the Config File
 ------------------------
 
-The config file lives at ``taskcluster/ci/config.yml`` and must conform to the
+The config file lives at ``taskcluster/config.yml`` and must conform to the
 :py:data:`~taskgraph.config.graph_config_schema`.
 
 Create the ``config.yml`` file to look like:
@@ -76,12 +76,12 @@ Define a Task
 -------------
 
 :term:`Kinds <Kind>` are groupings of tasks that share certain characteristics
-with one another. Each subdirectory in ``taskcluster/ci`` corresponds to a
+with one another. Each subdirectory in ``taskcluster/kinds`` corresponds to a
 different kind and contains a ``kind.yml`` file. These files define some
 properties that control how Taskgraph will generate the tasks, as well as the
 starting definitions of the tasks themselves. If you followed the layout above,
 you have a ``hello`` kind. For this next section we'll be editing
-``taskcluster/ci/hello/kind.yml``.
+``taskcluster/kinds/hello/kind.yml``.
 
 #. Declare the set of :term:`transforms <transform>` that will be applied
    to tasks. By default, taskgraph will include the
@@ -170,7 +170,7 @@ comments for explanations):
            if "description" not in task:
                task["description"] = f"Says Hello {task['text']}"
            task["label"] = f"{config.kind}-{task.pop('name')}"
-           # This is what was defined in `taskcluster/ci/config.yml`.
+           # This is what was defined in `taskcluster/config.yml`.
            task["worker-type"] = "linux"
            task["worker"] = {
                "command": task.pop["command"],

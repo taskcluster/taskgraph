@@ -9,6 +9,8 @@ This page can help when migrating Taskgraph across major versions.
 * Upgrade to Python 3.8 or higher
 * Replace references to `taskgraph.transforms.job` with `taskgraph.transforms.run`.
 * Rename the `run_job_using` decorator to `run_task_using`.
+* Move `config.yml` from `taskcluster/ci` to `taskcluster/`.
+* Rename the `taskcluster/ci` directory to `taskcluster/kinds`.
 
 5.x -> 6.x
 ----------
