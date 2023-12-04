@@ -6,7 +6,7 @@ from copy import deepcopy
 
 import pytest
 
-from taskgraph.transforms import release_notifications
+from taskgraph.transforms import notify
 
 TASK_DEFAULTS = {
     "description": "fake description",
@@ -200,7 +200,4 @@ def test_transforms(
     expected_task = deepcopy(TASK_DEFAULTS)
     expected_task.update(expected_task_output)
 
-    assert (
-        run_transform(release_notifications.transforms, task, config)[0]
-        == expected_task
-    )
+    assert run_transform(notify.transforms, task, config)[0] == expected_task
