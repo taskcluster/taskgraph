@@ -3,8 +3,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-import os
-
 import pytest
 
 from taskgraph import morph
@@ -17,7 +15,7 @@ from taskgraph.taskgraph import TaskGraph
 
 @pytest.fixture(scope="module")
 def graph_config():
-    return load_graph_config(os.path.join("taskcluster", "kinds"))
+    return load_graph_config("taskcluster")
 
 
 @pytest.fixture

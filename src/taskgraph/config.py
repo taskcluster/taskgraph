@@ -102,28 +102,27 @@ class GraphConfig:
         Add the project's taskgraph directory to the python path, and register
         any extensions present.
         """
-        modify_path = os.path.dirname(self.root_dir)
         if GraphConfig._PATH_MODIFIED:
-            if GraphConfig._PATH_MODIFIED == modify_path:
+            if GraphConfig._PATH_MODIFIED == self.root_dir:
                 # Already modified path with the same root_dir.
                 # We currently need to do this to enable actions to call
                 # taskgraph_decision, e.g. relpro.
                 return
             raise Exception("Can't register multiple directories on python path.")
-        GraphConfig._PATH_MODIFIED = modify_path
-        sys.path.insert(0, modify_path)
+        GraphConfig._PATH_MODIFIED = self.root_dir
+        sys.path.insert(0, self.root_dir)
         register_path = self["taskgraph"].get("register")
         if register_path:
             find_object(register_path)(self)
 
     @property
     def vcs_root(self):
-        if path.split(self.root_dir)[-2:] != ["taskcluster", "kinds"]:
+        if path.split(self.root_dir)[-1:] != ["taskcluster"]:
             raise Exception(
                 "Not guessing path to vcs root. "
                 "Graph config in non-standard location."
             )
-        return os.path.dirname(os.path.dirname(self.root_dir))
+        return os.path.dirname(self.root_dir)
 
     @property
     def taskcluster_yml(self):
@@ -135,8 +134,7 @@ def validate_graph_config(config):
 
 
 def load_graph_config(root_dir):
-    config_dir = path.dirname(root_dir)
-    config_yml = os.path.join(config_dir, "config.yml")
+    config_yml = os.path.join(root_dir, "config.yml")
     if not os.path.exists(config_yml):
         raise Exception(f"Couldn't find taskgraph configuration: {config_yml}")
 
