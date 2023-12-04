@@ -7,15 +7,29 @@ This page can help when migrating Taskgraph across major versions.
 ----------
 
 * Upgrade to Python 3.8 or higher
-* Replace references to `taskgraph.transforms.job` with `taskgraph.transforms.run`.
-* Rename the `run_job_using` decorator to `run_task_using`.
-* Move `config.yml` from `taskcluster/ci` to `taskcluster/`.
-* Rename the `taskcluster/ci` directory to `taskcluster/kinds`.
+* Ensure ``root_dir`` now points to ``taskcluster`` instead of
+  ``taskcluster/ci``. Typically this value is not passed in explicitly by
+  consumers, but updates are likely required if you have custom code that
+  uses any of the following objects:
+  * ``taskgraph.config.GraphConfig``
+  * ``taskgraph.config.load_graph_config``
+  * ``taskgraph.generator.TaskGraphGenerator``
+  * ``taskgraph.generator.load_tasks_for_kinds``
+  * The ``-r/--root`` flag on the ``taskgraph`` binary
+* Rename the ``run_job_using`` decorator to ``run_task_using``
+* Move ``config.yml`` from ``taskcluster/ci`` to ``taskcluster``
+* Rename the ``taskcluster/ci`` directory to ``taskcluster/kinds``
+* Replace references to ``taskgraph.transforms.job`` with ``taskgraph.transforms.run``
+* Replace references to ``taskgraph.transforms.release_notifications`` with ``taskgraph.transforms.notify``
+* Replace references to ``taskgraph.target_tasks._target_task`` with ``taskgraph.target_tasks.register_target_task``
+* Stop using or inline ``taskgraph.util.decision.make_decision_task``
+* Stop using the ``decision-mobile`` docker image
+* Ensure MacOS workers that need Mercurial have ``hg`` on their ``PATH``
 
 5.x -> 6.x
 ----------
 
-* Replace all uses of `command-context` with the more generalized `task-context`
+* Replace all uses of ``command-context` with the more generalized ``task-context``
 
 4.x -> 5.x
 ----------
@@ -25,7 +39,7 @@ This page can help when migrating Taskgraph across major versions.
 3.x -> 4.x
 ----------
 
-* Remove all uses of the `disable-seccomp` key in the `worker` section of task definitions.
+* Remove all uses of the ``disable-seccomp`` key in the ``worker`` section of task definitions.
 
 2.x -> 3.x
 ----------
