@@ -118,7 +118,7 @@ class GraphConfig:
 
     @property
     def vcs_root(self):
-        if path.split(self.root_dir)[-2:] != ["taskcluster", "ci"]:
+        if path.split(self.root_dir)[-2:] != ["taskcluster", "kinds"]:
             raise Exception(
                 "Not guessing path to vcs root. "
                 "Graph config in non-standard location."
@@ -135,7 +135,8 @@ def validate_graph_config(config):
 
 
 def load_graph_config(root_dir):
-    config_yml = os.path.join(root_dir, "config.yml")
+    config_dir = path.dirname(root_dir)
+    config_yml = os.path.join(config_dir, "config.yml")
     if not os.path.exists(config_yml):
         raise Exception(f"Couldn't find taskgraph configuration: {config_yml}")
 

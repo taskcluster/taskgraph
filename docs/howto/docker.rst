@@ -179,7 +179,7 @@ Once the ``Dockerfile`` is created, a task will need to be added that builds
 and uploads the image as an artifact. Luckily Taskgraph comes with the
 transforms necessary to set these up, so all that's needed is adding a
 barebones ``kind.yml`` file. For example, assuming you want to name your kind
-``docker-image``, you'd create a ``taskcluster/ci/docker-image/kind.yml`` file
+``docker-image``, you'd create a ``taskcluster/kinds/docker-image/kind.yml`` file
 with the following contents:
 
 .. code-block:: yaml
