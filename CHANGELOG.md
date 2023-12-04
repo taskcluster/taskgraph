@@ -1,5 +1,37 @@
 # Change Log
 
+## [7.0.0] - 2023-12-05
+
+### Added
+
+- Ability to use dictionary keys with `<task-reference>`
+- Body of responses logged on failure in `taskgraph.util.taskcluster`
+
+### Changed
+
+- BREAKING CHANGE: Root directory now considered to be `taskcluster` instead of `taskcluster/ci`
+- BREAKING CHANGE: `config.yml` moved from `taskcluster/ci` to `taskcluster`
+- BREAKING CHANGE: `taskcluster/ci` renamed to `taskcluster/kinds`
+- BREAKING CHANGE: `taskgraph.transforms.jobs` renamed to `taskgraph.transforms.run`
+- BREAKING CHANGE: Renamed `taskgraph.target_tasks._target_task` to `register_target_task`
+- BREAKING CHANGE: Switched Decision docker image from Ubuntu 22.04 to Debian 12
+- `index-task` docker image upgrade to node v18
+
+### Removed
+
+- BREAKING CHANGE: Dropped support for Python 3.7
+- BREAKING CHANGE: Removed `taskgraph.util.decision.make_decision_task`
+- BREAKING CHANGE: Removed the `decision-mobile` docker image
+- BREAKING CHANGE: Removed `taskgraph.transforms.release_notifications` shim
+
+### Fixed
+
+- BREAKING CHANGE: Stopped hardcoding path to `hg` on MacOS in `run-task`
+- Worker caches setup by the `run` transforms now contain the docker image hash if applicable
+- `--diff` flag will not fail if only one of the two graph generations failed
+- Paths in `taskgraph.util.hash` are normalized for Windows support
+- `taskgraph init` template now separates Decision task caches by project
+
 ## [6.3.1] - 2023-09-28
 
 ### Fixed
