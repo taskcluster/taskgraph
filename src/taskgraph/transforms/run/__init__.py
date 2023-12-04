@@ -255,9 +255,7 @@ def use_fetches(config, tasks):
                     label = aliases.get(label, label)
                     if label not in artifact_names:
                         raise Exception(
-                            "Missing fetch task for {kind}-{name}: {fetch}".format(
-                                kind=config.kind, name=name, fetch=fetch_name
-                            )
+                            f"Missing fetch task for {config.kind}-{name}: {fetch_name}"
                         )
                     if label in extra_env:
                         env.update(extra_env[label])
@@ -275,8 +273,8 @@ def use_fetches(config, tasks):
             else:
                 if kind not in dependencies:
                     raise Exception(
-                        "{name} can't fetch {kind} artifacts because "
-                        "it has no {kind} dependencies!".format(name=name, kind=kind)
+                        f"{name} can't fetch {kind} artifacts because "
+                        f"it has no {kind} dependencies!"
                     )
                 dep_label = dependencies[kind]
                 if dep_label in artifact_prefixes:
@@ -436,9 +434,7 @@ def configure_taskdesc_for_run(config, task, taskdesc, worker_implementation):
 
     if worker_implementation not in registry[run_using]:
         raise Exception(
-            "no functions for run.using {!r} on {!r}".format(
-                run_using, worker_implementation
-            )
+            f"no functions for run.using {run_using!r} on {worker_implementation!r}"
         )
 
     func, schema, defaults = registry[run_using][worker_implementation]

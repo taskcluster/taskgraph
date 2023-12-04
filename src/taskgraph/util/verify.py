@@ -134,10 +134,8 @@ def verify_task_graph_symbol(task, taskgraph, scratch_pad, graph_config, paramet
             collection_keys = tuple(sorted(treeherder.get("collection", {}).keys()))
             if len(collection_keys) != 1:
                 raise Exception(
-                    "Task {} can't be in multiple treeherder collections "
-                    "(the part of the platform after `/`): {}".format(
-                        task.label, collection_keys
-                    )
+                    f"Task {task.label} can't be in multiple treeherder collections "
+                    f"(the part of the platform after `/`): {collection_keys}"
                 )
             platform = treeherder.get("machine", {}).get("platform")
             group_symbol = treeherder.get("groupSymbol")
@@ -206,9 +204,7 @@ def verify_routes_notification_filters(
             route_filter = route.split(".")[-1]
             if route_filter not in valid_filters:
                 raise Exception(
-                    "{} has invalid notification filter ({})".format(
-                        task.label, route_filter
-                    )
+                    f"{task.label} has invalid notification filter ({route_filter})"
                 )
 
 
@@ -262,11 +258,7 @@ def verify_toolchain_alias(task, taskgraph, scratch_pad, graph_config, parameter
             if key in scratch_pad:
                 raise Exception(
                     "Duplicate toolchain-alias in tasks "
-                    "`{}`and `{}`: {}".format(
-                        task.label,
-                        scratch_pad[key],
-                        key,
-                    )
+                    f"`{task.label}`and `{scratch_pad[key]}`: {key}"
                 )
             else:
                 scratch_pad[key] = task.label
