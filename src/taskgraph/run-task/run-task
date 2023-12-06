@@ -1010,7 +1010,8 @@ def install_pip_requirements(repositories):
     if not requirements:
         return
 
-    cmd = [sys.executable, "-mpip", "install"]
+    # TODO: Stop using system Python (#381)
+    cmd = [sys.executable, "-mpip", "install", "--break-system-packages"]
     if os.environ.get("PIP_DISABLE_REQUIRE_HASHES") != "1":
         cmd.append("--require-hashes")
 
