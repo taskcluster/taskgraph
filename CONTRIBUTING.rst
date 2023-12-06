@@ -29,7 +29,7 @@ Tests are run with the `pytest`_ framework:
 
 .. code-block::
 
-  pytest src
+  pytest
 
 We use `tox`_ to run tests across multiple versions of Python.
 
