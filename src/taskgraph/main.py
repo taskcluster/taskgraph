@@ -895,6 +895,11 @@ def setup_logging():
 def main(args=sys.argv[1:]):
     setup_logging()
     parser = create_parser()
+
+    if not args:
+        parser.print_help()
+        sys.exit(1)
+
     args = parser.parse_args(args)
     try:
         return args.command(vars(args))
