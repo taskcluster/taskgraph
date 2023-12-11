@@ -6,7 +6,7 @@ ci:
   autoupdate_commit_msg: "chore: pre-commit autoupdate"
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.5.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -14,21 +14,21 @@ repos:
         exclude: template
       - id: check-added-large-files
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.0.277'
+    rev: 'v0.1.7'
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
   - repo: https://github.com/psf/black
-    rev: 23.3.0
+    rev: 23.11.0
     hooks:
       - id: black
   - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.32.0
+    rev: v1.33.0
     hooks:
       - id: yamllint
         exclude: template
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.5
+    rev: v2.2.6
     hooks:
       - id: codespell
         entry: codespell -I .codespell-ignore-words.txt
@@ -37,7 +37,7 @@ repos:
                 test/test_util_path.py
             )$
   - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v2.3.0
+    rev: v3.0.0
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]
