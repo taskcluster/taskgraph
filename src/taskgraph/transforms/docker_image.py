@@ -92,9 +92,7 @@ def fill_template(config, tasks):
         for p in packages:
             if p not in available_packages:
                 raise Exception(
-                    "Missing package job for {}-{}: {}".format(
-                        config.kind, image_name, p
-                    )
+                    f"Missing package job for {config.kind}-{image_name}: {p}"
                 )
 
         if not taskgraph.fast:
@@ -119,9 +117,7 @@ def fill_template(config, tasks):
         digest_data += [json.dumps(args, sort_keys=True)]
         context_hashes[image_name] = context_hash
 
-        description = "Build the docker image {} for use by dependent tasks".format(
-            image_name
-        )
+        description = f"Build the docker image {image_name} for use by dependent tasks"
 
         args["DOCKER_IMAGE_PACKAGES"] = " ".join(f"<{p}>" for p in packages)
 
@@ -158,9 +154,7 @@ def fill_template(config, tasks):
                 ],
                 "env": {
                     "CONTEXT_TASK_ID": {"task-reference": "<decision>"},
-                    "CONTEXT_PATH": "public/docker-contexts/{}.tar.gz".format(
-                        image_name
-                    ),
+                    "CONTEXT_PATH": f"public/docker-contexts/{image_name}.tar.gz",
                     "HASH": context_hash,
                     "PROJECT": config.params["project"],
                     "IMAGE_NAME": image_name,

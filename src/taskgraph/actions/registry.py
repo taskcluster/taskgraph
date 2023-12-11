@@ -154,9 +154,7 @@ def register_callback_action(
         ], "register_callback_action must be used as decorator"
         if not cb_name:
             cb_name = name
-        assert cb_name not in callbacks, "callback name {} is not unique".format(
-            cb_name
-        )
+        assert cb_name not in callbacks, f"callback name {cb_name} is not unique"
 
         def action_builder(parameters, graph_config, decision_task_id):
             if not available(parameters):
@@ -219,9 +217,7 @@ def register_callback_action(
                 {
                     "kind": "hook",
                     "hookGroupId": f"project-{trustDomain}",
-                    "hookId": "in-tree-action-{}-{}/{}".format(
-                        level, actionPerm, tcyml_hash
-                    ),
+                    "hookId": f"in-tree-action-{level}-{actionPerm}/{tcyml_hash}",
                     "hookPayload": {
                         # provide the decision-task parameters as context for triggerHook
                         "decision": {
