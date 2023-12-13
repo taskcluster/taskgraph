@@ -80,12 +80,15 @@ def assert_pull_request(task):
             "cached_task": {"digest": "abc", "name": "cache-name", "type": "cache-type"}
         },
         "optimization": {
-            "index-search": ["test-domain.cache.level-3.cache-type.cache-name.hash.abc"]
+            "index-search": [
+                "test-domain.cache.level-3.cache-type.cache-name.hash.abc",
+                "test-domain.cache.level-2.cache-type.cache-name.hash.abc",
+                "test-domain.cache.level-1.cache-type.cache-name.hash.abc",
+                "test-domain.cache.head.default.cache-type.cache-name.hash.abc",
+            ]
         },
         "routes": [
-            "index.test-domain.cache.level-1.cache-type.cache-name.hash.abc",
-            "index.test-domain.cache.level-1.cache-type.cache-name.latest",
-            "index.test-domain.cache.level-1.cache-type.cache-name.pushdate.1970.01.01.19700101000000",
+            "index.test-domain.cache.head.default.cache-type.cache-name.hash.abc"
         ],
     }
 
