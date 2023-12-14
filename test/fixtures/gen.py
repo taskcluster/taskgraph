@@ -186,9 +186,18 @@ def maketgg(monkeypatch, parameters):
 
 @pytest.fixture
 def make_transform_config(parameters, graph_config):
-    def inner(kind_config=None, kind_dependencies_tasks=None):
+    def inner(
+        kind_config=None,
+        kind_dependencies_tasks=None,
+        extra_params=None,
+        extra_graph_config=None,
+    ):
         kind_config = kind_config or {}
         kind_dependencies_tasks = kind_dependencies_tasks or {}
+        if extra_params:
+            parameters.update(extra_params)
+        if extra_graph_config:
+            graph_config._config.update(extra_graph_config)
         return TransformConfig(
             "test",
             str(here),
