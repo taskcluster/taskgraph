@@ -12,7 +12,7 @@
 - BREAKING CHANGE: Root directory now considered to be `taskcluster` instead of `taskcluster/ci`
 - BREAKING CHANGE: `config.yml` moved from `taskcluster/ci` to `taskcluster`
 - BREAKING CHANGE: `taskcluster/ci` renamed to `taskcluster/kinds`
-- BREAKING CHANGE: `taskgraph.transforms.jobs` renamed to `taskgraph.transforms.run`
+- BREAKING CHANGE: `taskgraph.transforms.job` renamed to `taskgraph.transforms.run`
 - BREAKING CHANGE: Renamed `taskgraph.target_tasks._target_task` to `register_target_task`
 - BREAKING CHANGE: Switched Decision docker image from Ubuntu 22.04 to Debian 12
 - `index-task` docker image upgrade to node v18
