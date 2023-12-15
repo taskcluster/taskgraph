@@ -63,10 +63,9 @@ def add_optimization(
         index_routes.append(TARGET_CACHE_INDEX.format(**subs))
 
     # Pull requests use a different target cache index route. This way we can
-    # be confident they won't be used by anything other than other pull
-    # requests.
+    # be confident they won't be used by anything other than the pull request
+    # that created the cache in the first place.
     if config.params["tasks_for"].startswith("github-pull-request"):
-        # Check the PR bucket first.
         subs["head_ref"] = config.params["head_ref"]
         if subs["head_ref"].startswith("refs/heads/"):
             subs["head_ref"] = subs["head_ref"][11:]
