@@ -317,7 +317,7 @@ def verify_index(config, index):
             {
                 # only one type is supported by any of the workers right now
                 "type": "persistent",
-                # name of the cache, allowing re-use by subsequent tasks naming the
+                # name of the cache, allowing reuse by subsequent tasks naming the
                 # same cache
                 "name": str,
                 # location in the task image where the cache will be mounted

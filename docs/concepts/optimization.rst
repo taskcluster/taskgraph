@@ -84,7 +84,7 @@ hash of the inputs to the task. In the diagram above, if both ``A`` and ``B`` ar
 replaced with existing tasks, then ``D`` is a candidate for replacement. But if
 ``B`` has no replacement, then replacement of ``D`` will not be considered.
 
-It is possible to replace a task with nothing. This is similar to optimzing
+It is possible to replace a task with nothing. This is similar to optimizing
 away, but is useful for utility tasks (possibly like ``G``). If such a task is
 considered for replacement, then all of its dependencies (here, ``D``) have
 already been replaced and there is no utility in running the task and no need

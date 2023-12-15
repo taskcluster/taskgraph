@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class Repository(ABC):
-    # Both mercurial and git use sha1 as revision idenfiers. Luckily, both define
+    # Both mercurial and git use sha1 as revision identifiers. Luckily, both define
     # the same value as the null revision.
     #
     # https://github.com/git/git/blob/dc04167d378fb29d30e1647ff6ff51dd182bc9a3/t/oid-info/hash-info#L7

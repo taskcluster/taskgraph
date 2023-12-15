@@ -28,7 +28,7 @@ from taskgraph.util.workertypes import worker_type_implementation
 logger = logging.getLogger(__name__)
 
 # Fetches may be accepted in other transforms and eventually passed along
-# to a `task` (eg: from_deps). Defining this here allows them to re-use
+# to a `task` (eg: from_deps). Defining this here allows them to reuse
 # the schema and avoid duplication.
 fetches_schema = {
     Required("artifact"): str,

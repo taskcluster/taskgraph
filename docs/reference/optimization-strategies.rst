@@ -2,7 +2,7 @@ Optimization Strategies
 =======================
 
 Taskgraph provides some built-in strategies that can be used during the
-:doc:`optimzation process </concepts/optimization>`.
+:doc:`optimization process </concepts/optimization>`.
 
 Strategies for Removing Tasks
 -----------------------------
