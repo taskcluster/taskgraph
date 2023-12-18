@@ -327,11 +327,7 @@ def get_purge_cache_url(provisioner_id, worker_type, use_proxy=False):
 def purge_cache(provisioner_id, worker_type, cache_name, use_proxy=False):
     """Requests a cache purge from the purge-caches service."""
     if testing:
-        logger.info(
-            "Would have purged {}/{}/{}.".format(
-                provisioner_id, worker_type, cache_name
-            )
-        )
+        logger.info(f"Would have purged {provisioner_id}/{worker_type}/{cache_name}.")
     else:
         logger.info(f"Purging {provisioner_id}/{worker_type}/{cache_name}.")
         purge_cache_url = get_purge_cache_url(provisioner_id, worker_type, use_proxy)

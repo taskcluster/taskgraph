@@ -80,9 +80,7 @@ def resolve_task_references(label, task_def, task_id, decision_task_id, dependen
                     task_id = dependencies[dependency]
                 except KeyError:
                     raise KeyError(
-                        "task '{}' has no dependency named '{}'".format(
-                            label, dependency
-                        )
+                        f"task '{label}' has no dependency named '{dependency}'"
                     )
 
             assert artifact_name.startswith(
