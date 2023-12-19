@@ -687,7 +687,7 @@ def decision(options):
 @argument(
     "--root",
     "-r",
-    default="taskcluster/ci",
+    default="taskcluster",
     help="root of the taskgraph definition relative to topsrcdir",
 )
 def action_callback(options):
