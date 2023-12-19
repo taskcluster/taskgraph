@@ -1,5 +1,11 @@
 # Change Log
 
+## [7.0.2] - 2023-12-19
+
+### Fixed
+
+- Reference to wrong root directory in `taskgraph action-callback`
+
 ## [7.0.1] - 2023-12-18
 
 ### Fixed
