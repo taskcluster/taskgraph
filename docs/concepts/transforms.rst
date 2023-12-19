@@ -100,7 +100,7 @@ various points in the transformation process. These schemas accomplish two
 things: they provide a place to add comments about the meaning of each field,
 and they enforce that the fields are actually used in the documented fashion.
 
-Using schemas is a best practice at it allows others to more easily reason
+Using schemas is a best practice as it allows others to more easily reason
 about the state of the tasks at given points. Here is an example:
 
 .. code-block:: python
