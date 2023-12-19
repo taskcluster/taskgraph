@@ -196,7 +196,7 @@ TC_TREEHERDER_SCHEMA_URL = (
 
 
 UNKNOWN_GROUP_NAME = (
-    "Treeherder group {} (from {}) has no name; " "add it to taskcluster/ci/config.yml"
+    "Treeherder group {} (from {}) has no name; " "add it to taskcluster/config.yml"
 )
 
 V2_ROUTE_TEMPLATES = [
@@ -266,7 +266,7 @@ def index_builder(name):
 
 UNSUPPORTED_INDEX_PRODUCT_ERROR = """\
 The index product {product} is not in the list of configured products in
-`taskcluster/ci/config.yml'.
+`taskcluster/config.yml'.
 """
 
 
