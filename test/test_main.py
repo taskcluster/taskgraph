@@ -18,7 +18,7 @@ from taskgraph.util.yaml import load_yaml
 
 
 @pytest.fixture
-def run_show_taskgraph(maketgg, monkeypatch):
+def run_taskgraph(maketgg, monkeypatch):
     def inner(args, **kwargs):
         kwargs.setdefault("target_tasks", ["_fake-t-0", "_fake-t-1"])
         tgg = maketgg(**kwargs)
@@ -48,8 +48,8 @@ def run_show_taskgraph(maketgg, monkeypatch):
         ("morphed", ["_fake-t-0", "_fake-t-1"]),
     ),
 )
-def test_show_taskgraph(run_show_taskgraph, capsys, attr, expected):
-    res = run_show_taskgraph([attr])
+def test_show_taskgraph(run_taskgraph, capsys, attr, expected):
+    res = run_taskgraph([attr])
     assert res == 0
 
     out, err = capsys.readouterr()
@@ -57,32 +57,32 @@ def test_show_taskgraph(run_show_taskgraph, capsys, attr, expected):
     assert "Dumping result" in err
 
     # Craft params to cause an exception
-    res = run_show_taskgraph(["full"], params={"_kinds": None})
+    res = run_taskgraph(["full"], params={"_kinds": None})
     assert res == 1
 
 
-def test_show_taskgraph_parallel(run_show_taskgraph):
-    res = run_show_taskgraph(["full", "-p", "taskcluster/test/params"])
+def test_show_taskgraph_parallel(run_taskgraph):
+    res = run_taskgraph(["full", "-p", "taskcluster/test/params"])
     assert res == 0
 
     # Craft params to cause an exception
-    res = run_show_taskgraph(
+    res = run_taskgraph(
         ["full", "-p", "taskcluster/test/params"], params={"_kinds": None}
     )
     assert res == 1
 
 
-def test_tasks_regex(run_show_taskgraph, capsys):
-    run_show_taskgraph(["full", "--tasks=_.*-t-1"])
+def test_tasks_regex(run_taskgraph, capsys):
+    run_taskgraph(["full", "--tasks=_.*-t-1"])
     out, _ = capsys.readouterr()
     assert out.strip() == "_fake-t-1"
 
 
-def test_output_file(run_show_taskgraph, tmpdir):
+def test_output_file(run_taskgraph, tmpdir):
     output_file = tmpdir.join("out.txt")
     assert not output_file.check()
 
-    run_show_taskgraph(["full", f"--output-file={output_file.strpath}"])
+    run_taskgraph(["full", f"--output-file={output_file.strpath}"])
     assert output_file.check()
     assert output_file.read_text("utf-8").strip() == "\n".join(
         ["_fake-t-0", "_fake-t-1", "_fake-t-2"]
@@ -282,3 +282,37 @@ def test_init_taskgraph_unsupported(mocker, tmp_path, repo_with_upstream):
         assert taskgraph_main(["init"]) == 1
     finally:
         os.chdir(oldcwd)
+
+
+def test_action_callback(mocker, run_taskgraph):
+    mocker.patch.dict(
+        "os.environ",
+        {
+            "ACTION_TASK_ID": "null",
+            "ACTION_TASK_GROUP_ID": "def",
+            "ACTION_INPUT": '{"ship": true}',
+            "ACTION_CALLBACK": "action",
+        },
+    )
+
+    params_mock = mocker.patch("taskgraph.actions.util.get_parameters")
+    params_mock.return_value = {"foo": "bar"}
+
+    trigger_mock = mocker.patch("taskgraph.actions.trigger_action_callback")
+    trigger_mock.return_value = "result"
+
+    result = run_taskgraph(["action-callback"])
+    assert result == "result"
+
+    params_mock.assert_called_once_with("def")
+    trigger_mock.assert_called_once_with(
+        task_group_id="def",
+        task_id=None,
+        callback="action",
+        input={"ship": True},
+        parameters={"foo": "bar"},
+        root="taskcluster",
+        test=False,
+    )
+    root = Path(trigger_mock.call_args.kwargs["root"])
+    assert root.joinpath("config.yml").is_file()
