@@ -1,5 +1,15 @@
 # Change Log
 
+## [7.0.1] - 2023-12-18
+
+### Fixed
+
+- Ensure pull requests properly use cached tasks
+- Print help if no arguments are provided to `taskgraph`
+- run-task: pass '--break-system-packages' when installing pip requirements
+- Bootstrap Taskgraph 7 with latest decision image
+- Update template Dockerfile to work with current alpine:latest base image
+
 ## [7.0.0] - 2023-12-05
 
 ### Added
