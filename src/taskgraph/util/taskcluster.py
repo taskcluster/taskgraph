@@ -120,7 +120,7 @@ def _do_request(url, method=None, **kwargs):
     if response.status_code >= 400:
         # Consume content before raise_for_status, so that the connection can be
         # reused.
-        logger.warning("response body: %s", response.text)
+        response.content
     response.raise_for_status()
     return response
 
