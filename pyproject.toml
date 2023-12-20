@@ -59,3 +59,4 @@ exclude = [  # TODO fix errors in these files
     "src/taskgraph/util/vcs.py",
     "src/taskgraph/util/workertypes.py",
 ]
+reportIncompatibleMethodOverride = false
