@@ -862,6 +862,8 @@ def init_taskgraph(options):
         return 1
 
     context["repo_name"] = urlparse(repo_url).path.rsplit("/", 1)[-1]
+    if context["repo_name"].endswith(".git"):
+        context["repo_name"] = context["repo_name"][:-len(".git")]
 
     # Generate the project.
     cookiecutter(

@@ -205,7 +205,7 @@ def test_init_taskgraph(mocker, tmp_path, project_root, repo_with_upstream):
         fake_url = f"https://hg.mozilla.org/foo/{name}"
         mocker.patch.object(HgRepository, "get_url").return_value = fake_url
     else:
-        fake_url = f"https://github.com/foo/{name}"
+        fake_url = f"https://github.com/foo/{name}.git"
         mocker.patch.object(GitRepository, "get_url").return_value = fake_url
 
     # Point cookiecutter at temporary directories.
