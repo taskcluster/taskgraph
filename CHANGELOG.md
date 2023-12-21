@@ -1,5 +1,13 @@
 # Change Log
 
+## [7.0.3] - 2023-12-21
+
+### Fixed
+
+- Wrong module name being generated in `taskgraph init`
+- Exception in `taskgraph test-action-callback` due to wrong default root
+- Reverted change causing log spam during optimization phase
+
 ## [7.0.2] - 2023-12-19
 
 ### Fixed
