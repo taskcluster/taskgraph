@@ -32,6 +32,7 @@ FETCH_SCHEMA = Schema(
         Optional("task-from"): str,
         # Description of the task.
         Required("description"): str,
+        Optional("expires-after"): str,
         Optional("docker-image"): object,
         Optional(
             "fetch-alias",
@@ -126,7 +127,7 @@ def make_task(config, tasks):
             "attributes": attributes,
             "name": name,
             "description": task["description"],
-            "expires-after": expires,
+            "expires-after": task.get("expires-after", expires),
             "label": "fetch-%s" % name,
             "run-on-projects": [],
             "run": {
