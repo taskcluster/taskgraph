@@ -899,7 +899,7 @@ def test_default_deadline_after(run_transform, graph_config, deadline_after, tes
         ),
     ),
 )
-def test_default_deadline_after(run_transform, graph_config, expires_after, test_task):
+def test_default_expires_after(run_transform, graph_config, expires_after, test_task):
     if expires_after:
         graph_config._config["task-expires-after"] = expires_after
 
