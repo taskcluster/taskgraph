@@ -109,6 +109,8 @@ def make_task(config, tasks):
     # essentially forever.
     if config.params["level"] == "3":
         expires = "1000 years"
+    elif "task-expires-after" in config.graph_config:
+        expires = config.graph_config["task-expires-after"]
     else:
         expires = "28 days"
 
