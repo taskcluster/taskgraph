@@ -128,10 +128,7 @@ def fill_template(config, tasks):
         # burn more CPU once to reduce image size.
         zstd_level = "3" if int(config.params["level"]) == 1 else "10"
 
-        if "task-expires-after" in config.graph_config:
-            expires = config.graph_config["task-expires-after"]
-        else:
-            expires = "28 days"
+        expires = config.graph_config._config.get("task-expires-after", "28 days")
 
         # include some information that is useful in reconstructing this task
         # from JSON
