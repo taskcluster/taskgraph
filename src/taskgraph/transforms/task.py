@@ -1079,7 +1079,11 @@ def build_task(config, tasks):
         extra["parent"] = os.environ.get("TASK_ID", "")
 
         if "expires-after" not in task:
-            task["expires-after"] = config.graph_config._config.get("task-expires-after", "28 days") if config.params.is_try() else "1 year"
+            task["expires-after"] = (
+                config.graph_config._config.get("task-expires-after", "28 days")
+                if config.params.is_try()
+                else "1 year"
+            )
 
         if "deadline-after" not in task:
             if "task-deadline-after" in config.graph_config:
