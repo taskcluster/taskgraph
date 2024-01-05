@@ -128,6 +128,8 @@ def fill_template(config, tasks):
         # burn more CPU once to reduce image size.
         zstd_level = "3" if int(config.params["level"]) == 1 else "10"
 
+        expires = config.graph_config._config.get("task-expires-after", "28 days")
+
         # include some information that is useful in reconstructing this task
         # from JSON
         taskdesc = {
@@ -138,7 +140,7 @@ def fill_template(config, tasks):
                 "artifact_prefix": "public",
             },
             "always-target": True,
-            "expires-after": "28 days" if config.params.is_try() else "1 year",
+            "expires-after": expires if config.params.is_try() else "1 year",
             "scopes": [],
             "run-on-projects": [],
             "worker-type": "images",
