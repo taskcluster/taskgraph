@@ -1,5 +1,11 @@
 # Change Log
 
+## [7.1.0] - 2024-01-08
+
+### Added
+
+- Add a `task-expires-after` parameter to `taskcluster/config.yml` to set the default value for `expires-after` on level 1 tasks.
+
 ## [7.0.3] - 2023-12-21
 
 ### Fixed
