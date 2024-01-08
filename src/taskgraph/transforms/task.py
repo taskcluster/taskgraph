@@ -228,6 +228,18 @@ def get_default_deadline(graph_config, project):
     )
 
 
+@memoize
+def get_default_expires_after(graph_config, level):
+    breakpoint()
+    if level != "3":
+        default_expires_after = "28 days"
+    else:
+        default_expires_after = "1 year"
+    evaluated_expires_after = evaluate_keyed_by(
+        graph_config["task-expires-after"], "Graph Config", {"level": level}
+    )
+
+
 # define a collection of payload builders, depending on the worker implementation
 payload_builders = {}
 
@@ -1077,8 +1089,15 @@ def build_task(config, tasks):
         # set up extra
         extra = task.get("extra", {})
         extra["parent"] = os.environ.get("TASK_ID", "")
-
         if "expires-after" not in task:
+            if "expires-after" not in task:
+                if "task-expires-after" in config.graph_config:
+                    task["expires-after"] = get_default_expires_after(
+                        config.graph_config, config.params["level"]
+                    )
+                else:
+                    task["deadline-after"] = "1 day"
+
             task["expires-after"] = (
                 config.graph_config._config.get("task-expires-after", "28 days")
                 if config.params.is_try()

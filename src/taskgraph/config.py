@@ -42,9 +42,9 @@ graph_config_schema = Schema(
         ): optionally_keyed_by("project", str),
         Optional(
             "task-expires-after",
-            description="Default 'expires-after' for level 1 tasks, in relative date format. "
+            description="Default 'expires-after' for tasks, in relative date format. "
             "Eg: '90 days'",
-        ): str,
+        ): optionally_keyed_by("level", str),
         Required("workers"): {
             Required("aliases"): {
                 str: {
