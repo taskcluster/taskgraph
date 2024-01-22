@@ -65,7 +65,9 @@ def add_optimization(
     # Pull requests use a different target cache index route. This way we can
     # be confident they won't be used by anything other than the pull request
     # that created the cache in the first place.
-    if config.params["tasks_for"].startswith("github-pull-request"):
+    if config.params["tasks_for"].startswith(
+        "github-pull-request"
+    ) and config.graph_config["taskgraph"].get("cache-pull-requests", True):
         subs["head_ref"] = config.params["head_ref"]
         if subs["head_ref"].startswith("refs/heads/"):
             subs["head_ref"] = subs["head_ref"][11:]
@@ -77,9 +79,10 @@ def add_optimization(
     subs["level"] = config.params["level"]
 
     if config.params["tasks_for"].startswith("github-pull-request"):
-        taskdesc.setdefault("routes", []).append(
-            f"index.{TARGET_PR_CACHE_INDEX.format(**subs)}"
-        )
+        if config.graph_config["taskgraph"].get("cache-pull-requests", True):
+            taskdesc.setdefault("routes", []).append(
+                f"index.{TARGET_PR_CACHE_INDEX.format(**subs)}"
+            )
     else:
         taskdesc.setdefault("routes", []).append(
             f"index.{TARGET_CACHE_INDEX.format(**subs)}"

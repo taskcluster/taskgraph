@@ -67,6 +67,10 @@ graph_config_schema = Schema(
                 "Defaults to `trust-domain`.",
             ): str,
             Optional(
+                "cache-pull-requests",
+                description="Should tasks from pull requests populate the cache",
+            ): bool,
+            Optional(
                 "index-path-regexes",
                 description="Regular expressions matching index paths to be summarized.",
             ): [str],

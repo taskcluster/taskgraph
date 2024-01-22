@@ -93,6 +93,22 @@ def assert_pull_request(task):
     }
 
 
+def assert_pull_request_nocache(task):
+    handle_exception(task)
+    assert task == {
+        "attributes": {
+            "cached_task": {"digest": "abc", "name": "cache-name", "type": "cache-type"}
+        },
+        "optimization": {
+            "index-search": [
+                "test-domain.cache.level-3.cache-type.cache-name.hash.abc",
+                "test-domain.cache.level-2.cache-type.cache-name.hash.abc",
+                "test-domain.cache.level-1.cache-type.cache-name.hash.abc",
+            ]
+        },
+    }
+
+
 @pytest.mark.parametrize(
     "extra_params,extra_graph_config,digest,digest_data",
     (
@@ -150,6 +166,17 @@ def assert_pull_request(task):
             # digest_data
             None,
             id="pull_request",
+        ),
+        pytest.param(
+            # extra_params
+            {"tasks_for": "github-pull-request"},
+            # extra_graph_config
+            {"taskgraph": {"cache-pull-requests": False}},
+            # digest
+            "abc",
+            # digest_data
+            None,
+            id="pull_request_nocache",
         ),
     ),
 )
