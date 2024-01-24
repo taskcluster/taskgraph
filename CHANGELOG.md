@@ -1,5 +1,11 @@
 # Change Log
 
+## [7.1.1] - 2024-01-24
+
+### Added
+
+- Add a `cache-pull-requests` parameter to `taskcluster/config.yml` to disable caching of tasks on pull requests.
+
 ## [7.1.0] - 2024-01-08
 
 ### Added
