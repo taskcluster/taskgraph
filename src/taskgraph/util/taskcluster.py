@@ -7,6 +7,7 @@ import datetime
 import functools
 import logging
 import os
+from typing import Dict, List, Union
 
 import requests
 import taskcluster_urls as liburls
@@ -367,3 +368,39 @@ def list_task_group_incomplete_tasks(task_group_id):
             params = {"continuationToken": resp.get("continuationToken")}
         else:
             break
+
+
+def _get_deps(task_ids, use_proxy):
+    upstream_tasks = {}
+    for task_id in task_ids:
+        task_def = get_task_definition(task_id, use_proxy)
+        upstream_tasks[task_def["metadata"]["name"]] = task_id
+
+        upstream_tasks.update(_get_deps(task_def["dependencies"], use_proxy))
+
+    return upstream_tasks
+
+
+def get_ancestors(
+    task_ids: Union[List[str], str], use_proxy: bool = False
+) -> Dict[str, str]:
+    """Gets the ancestor tasks of the given task_ids as a dictionary of label -> taskid.
+
+    Args:
+        task_ids (str or [str]): A single task id or a list of task ids to find the ancestors of.
+        use_proxy (bool): See get_root_url.
+
+    Returns:
+        dict: A dict whose keys are task labels and values are task ids.
+    """
+    upstream_tasks: Dict[str, str] = {}
+
+    if isinstance(task_ids, str):
+        task_ids = [task_ids]
+
+    for task_id in task_ids:
+        task_def = get_task_definition(task_id, use_proxy)
+
+        upstream_tasks.update(_get_deps(task_def["dependencies"], use_proxy))
+
+    return upstream_tasks
