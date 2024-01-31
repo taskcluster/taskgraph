@@ -1,5 +1,11 @@
 # Change Log
 
+## [7.1.2] - 2024-01-31
+
+### Added
+
+- Add a `get_ancestors` helper to find ancestor tasks through the Taskcluster API
+
 ## [7.1.1] - 2024-01-24
 
 ### Added
