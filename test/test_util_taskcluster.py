@@ -355,3 +355,150 @@ def test_list_task_group_incomplete_tasks(responses, root_url):
         },
     )
     assert list(tc.list_task_group_incomplete_tasks(tgid)) == ["1", "2", "3"]
+
+
+def test_get_ancestors(responses, root_url):
+    base_url = f"{root_url}/api/queue/v1/task"
+    responses.add(
+        responses.GET,
+        f"{base_url}/fff",
+        json={
+            "dependencies": ["eee", "ddd"],
+            "metadata": {
+                "name": "task-fff",
+            },
+        },
+    )
+    responses.add(
+        responses.GET,
+        f"{base_url}/eee",
+        json={
+            "dependencies": [],
+            "metadata": {
+                "name": "task-eee",
+            },
+        },
+    )
+    responses.add(
+        responses.GET,
+        f"{base_url}/ddd",
+        json={
+            "dependencies": ["ccc"],
+            "metadata": {
+                "name": "task-ddd",
+            },
+        },
+    )
+    responses.add(
+        responses.GET,
+        f"{base_url}/ccc",
+        json={
+            "dependencies": [],
+            "metadata": {
+                "name": "task-ccc",
+            },
+        },
+    )
+    responses.add(
+        responses.GET,
+        f"{base_url}/bbb",
+        json={
+            "dependencies": ["aaa"],
+            "metadata": {
+                "name": "task-bbb",
+            },
+        },
+    )
+    responses.add(
+        responses.GET,
+        f"{base_url}/aaa",
+        json={
+            "dependencies": [],
+            "metadata": {
+                "name": "task-aaa",
+            },
+        },
+    )
+
+    got = tc.get_ancestors(["bbb", "fff"])
+    expected = {
+        "task-aaa": "aaa",
+        "task-ccc": "ccc",
+        "task-ddd": "ddd",
+        "task-eee": "eee",
+    }
+    assert got == expected, f"got: {got}, expected: {expected}"
+
+
+def test_get_ancestors_string(responses, root_url):
+    base_url = f"{root_url}/api/queue/v1/task"
+    responses.add(
+        responses.GET,
+        f"{base_url}/fff",
+        json={
+            "dependencies": ["eee", "ddd"],
+            "metadata": {
+                "name": "task-fff",
+            },
+        },
+    )
+    responses.add(
+        responses.GET,
+        f"{base_url}/eee",
+        json={
+            "dependencies": [],
+            "metadata": {
+                "name": "task-eee",
+            },
+        },
+    )
+    responses.add(
+        responses.GET,
+        f"{base_url}/ddd",
+        json={
+            "dependencies": ["ccc", "bbb"],
+            "metadata": {
+                "name": "task-ddd",
+            },
+        },
+    )
+    responses.add(
+        responses.GET,
+        f"{base_url}/ccc",
+        json={
+            "dependencies": ["aaa"],
+            "metadata": {
+                "name": "task-ccc",
+            },
+        },
+    )
+    responses.add(
+        responses.GET,
+        f"{base_url}/bbb",
+        json={
+            "dependencies": [],
+            "metadata": {
+                "name": "task-bbb",
+            },
+        },
+    )
+    responses.add(
+        responses.GET,
+        f"{base_url}/aaa",
+        json={
+            "dependencies": [],
+            "metadata": {
+                "name": "task-aaa",
+            },
+        },
+    )
+
+    got = tc.get_ancestors("fff")
+    expected = {
+        "task-aaa": "aaa",
+        "task-bbb": "bbb",
+        "task-ccc": "ccc",
+        "task-ddd": "ddd",
+        "task-eee": "eee",
+    }
+    assert got == expected, f"got: {got}, expected: {expected}"
