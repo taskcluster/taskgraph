@@ -36,6 +36,9 @@ class FakeResponse:
         ) as f:
             return json.load(f)
 
+    def raise_for_status(self):
+        pass
+
 
 class TestGetChangedFiles(unittest.TestCase):
     def setUp(self):
