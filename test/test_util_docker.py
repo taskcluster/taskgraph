@@ -25,7 +25,6 @@ MODE_STANDARD = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
 
 @mock.patch.dict("os.environ", {"TASKCLUSTER_ROOT_URL": liburls.test_root_url()})
 class TestDocker(unittest.TestCase):
-    @pytest.mark.xfail(sys.version_info >= (3, 8), reason="Hash is different")
     def test_generate_context_hash(self):
         tmpdir = tempfile.mkdtemp()
         try:
@@ -87,7 +86,6 @@ class TestDocker(unittest.TestCase):
                 docker.docker_image("myimage", by_tag=True), "mozilla/myimage:1.2.3"
             )
 
-    @pytest.mark.xfail(sys.version_info >= (3, 8), reason="Hash is different")
     def test_create_context_tar_basic(self):
         tmp = tempfile.mkdtemp()
         try:
@@ -119,7 +117,6 @@ class TestDocker(unittest.TestCase):
         finally:
             shutil.rmtree(tmp)
 
-    @pytest.mark.xfail(sys.version_info >= (3, 8), reason="Hash is different")
     def test_create_context_topsrcdir_files(self):
         tmp = tempfile.mkdtemp()
         try:
@@ -195,7 +192,6 @@ class TestDocker(unittest.TestCase):
         finally:
             shutil.rmtree(tmp)
 
-    @pytest.mark.xfail(sys.version_info >= (3, 8), reason="Hash is different")
     def test_create_context_extra_directory(self):
         tmp = tempfile.mkdtemp()
         try:
@@ -240,7 +236,6 @@ class TestDocker(unittest.TestCase):
         finally:
             shutil.rmtree(tmp)
 
-    @pytest.mark.xfail(sys.version_info >= (3, 8), reason="Hash is different")
     def test_stream_context_tar(self):
         tmp = tempfile.mkdtemp()
         try:
