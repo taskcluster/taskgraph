@@ -60,9 +60,9 @@ def test_transforms(
 
     expected_task_output["label"] = "build-docker-image-" + task["name"]
     expected_task_output["index"] = task["index"]
-    expected_task_output[
-        "description"
-    ] = "Build the docker image {} for use by dependent tasks".format(task["name"])
+    expected_task_output["description"] = (
+        "Build the docker image {} for use by dependent tasks".format(task["name"])
+    )
     assert (
         expected_task_output.items()
         <= run_transform(docker_image.transforms, task, config)[0].items()

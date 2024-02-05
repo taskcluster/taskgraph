@@ -54,9 +54,11 @@ def get_root_url(use_proxy):
         logger.debug(
             "Running in Taskcluster instance {}{}".format(
                 os.environ["TASKCLUSTER_ROOT_URL"],
-                " with taskcluster-proxy"
-                if "TASKCLUSTER_PROXY_URL" in os.environ
-                else "",
+                (
+                    " with taskcluster-proxy"
+                    if "TASKCLUSTER_PROXY_URL" in os.environ
+                    else ""
+                ),
             )
         )
         return liburls.normalize_root_url(os.environ["TASKCLUSTER_ROOT_URL"])
