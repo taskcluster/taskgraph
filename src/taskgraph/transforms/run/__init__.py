@@ -292,9 +292,11 @@ def use_fetches(config, tasks):
                                 name=name,
                                 kind=kind,
                                 label=dependencies[kind],
-                                tasks="no tasks"
-                                if len(dep_tasks) == 0
-                                else "multiple tasks",
+                                tasks=(
+                                    "no tasks"
+                                    if len(dep_tasks) == 0
+                                    else "multiple tasks"
+                                ),
                             )
                         )
 

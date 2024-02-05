@@ -1,6 +1,7 @@
 """
 Tests for the 'rebuild_cached_tasks' action.
 """
+
 import pytest
 
 from taskgraph import create
