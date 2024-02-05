@@ -13,8 +13,6 @@ import unittest
 
 import pytest
 
-from taskgraph.util.archive import create_tar_from_files
-
 from taskgraph.util.archive import (
     DEFAULT_MTIME,
     create_tar_from_files,
@@ -48,7 +46,7 @@ class TestArchive(unittest.TestCase):
             files["file%02d" % i] = p
 
         for i in range(10):
-            files["file%02d" % (i + 10)] = io.BytesIO((b"file%02d" % (i + 10)))
+            files["file%02d" % (i + 10)] = io.BytesIO(b"file%02d" % (i + 10))
 
         return files
 
@@ -74,7 +72,7 @@ class TestArchive(unittest.TestCase):
         try:
             tp = os.path.join(d, "test.tar")
             with open(tp, "wb") as fh:
-                with self.assertRaisesRegexp(ValueError, "not a regular"):
+                with self.assertRaisesRegex(ValueError, "not a regular"):
                     create_tar_from_files(fh, {"test": d})
         finally:
             shutil.rmtree(d)
@@ -94,9 +92,9 @@ class TestArchive(unittest.TestCase):
 
             tp = os.path.join(d, "test.tar")
             with open(tp, "wb") as fh:
-                with self.assertRaisesRegexp(ValueError, "cannot add file with setuid"):
+                with self.assertRaisesRegex(ValueError, "cannot add file with setuid"):
                     create_tar_from_files(fh, {"test": uid})
-                with self.assertRaisesRegexp(ValueError, "cannot add file with setuid"):
+                with self.assertRaisesRegex(ValueError, "cannot add file with setuid"):
                     create_tar_from_files(fh, {"test": gid})
         finally:
             shutil.rmtree(d)

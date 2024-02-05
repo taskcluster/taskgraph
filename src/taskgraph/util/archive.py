@@ -43,7 +43,7 @@ class TarInfo(tarfile.TarInfo):
         info["type"] = HackedType(info["type"])
         # ignore type checking because it looks like pyright complains because we're calling a
         # non-public method
-        return tarfile.TarInfo._create_header(info, format, encoding, errors) # type: ignore
+        return tarfile.TarInfo._create_header(info, format, encoding, errors)  # type: ignore
 
 
 def create_tar_from_files(fp, files):

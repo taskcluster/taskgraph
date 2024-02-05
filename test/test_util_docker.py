@@ -6,14 +6,12 @@
 import os
 import shutil
 import stat
-import sys
 import tarfile
 import tempfile
 import unittest
 from io import BufferedRandom, BytesIO
 from unittest import mock
 
-import pytest
 import taskcluster_urls as liburls
 
 from taskgraph.util import docker
