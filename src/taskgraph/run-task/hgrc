@@ -10,7 +10,7 @@ assume-tty = true
 [extensions]
 share =
 sparse =
-robustcheckout = /usr/local/mercurial/robustcheckout.py
+robustcheckout = /opt/robustcheckout.py
 
 [hostsecurity]
 # When running a modern Python, Mercurial will default to TLS 1.1+.
