@@ -17,21 +17,22 @@ tasks:
           ownerEmail:
               $switch:
                   'tasks_for == "github-push"': '${event.pusher.email}'
+                  'tasks_for == "github-release"': 'release+taskgraph-ci@mozilla.com'
                   'tasks_for[:19] == "github-pull-request"': '${event.pull_request.user.login}@users.noreply.github.com'
                   'tasks_for in ["cron", "action"]': '${tasks_for}@noreply.mozilla.org'
           baseRepoUrl:
               $switch:
-                  'tasks_for == "github-push"': '${event.repository.html_url}'
                   'tasks_for[:19] == "github-pull-request"': '${event.pull_request.base.repo.html_url}'
                   'tasks_for in ["cron", "action"]': '${repository.url}'
+                  $default: '${event.repository.html_url}'
           repoUrl:
               $switch:
-                  'tasks_for == "github-push"': '${event.repository.html_url}'
                   'tasks_for[:19] == "github-pull-request"': '${event.pull_request.head.repo.html_url}'
                   'tasks_for in ["cron", "action"]': '${repository.url}'
+                  $default: '${event.repository.html_url}'
           project:
               $switch:
-                  'tasks_for == "github-push"': '${event.repository.name}'
+                  'tasks_for in ["github-push", "github-release"]': '${event.repository.name}'
                   'tasks_for[:19] == "github-pull-request"': '${event.pull_request.head.repo.name}'
                   'tasks_for in ["cron", "action"]': '${repository.project}'
           head_branch:
@@ -50,15 +51,18 @@ tasks:
                   # [1] https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
                   'tasks_for == "github-push" && event.base_ref': ${event.base_ref}
                   'tasks_for == "github-push" && !(event.base_ref)': ${event.ref}
+                  'tasks_for == "github-release"': ${event.release.tag_name}
                   'tasks_for in ["cron", "action"]': '${push.branch}'
           head_ref:
               $switch:
                   'tasks_for[:19] == "github-pull-request"': ${event.pull_request.head.ref}
                   'tasks_for == "github-push"': ${event.ref}
                   'tasks_for in ["cron", "action"]': '${push.branch}'
+                  'tasks_for == "github-release"': ${event.release.tag_name}
           base_sha:
               $switch:
                   'tasks_for == "github-push"': '${event.before}'
+                  'tasks_for == "github-release"': '${event.release.target_commitish}'
                   'tasks_for[:19] == "github-pull-request"': '${event.pull_request.base.sha}'
                   'tasks_for in ["cron", "action"]': '${push.revision}'
           head_sha:
@@ -66,6 +70,7 @@ tasks:
                   'tasks_for == "github-push"': '${event.after}'
                   'tasks_for[:19] == "github-pull-request"': '${event.pull_request.head.sha}'
                   'tasks_for in ["cron", "action"]': '${push.revision}'
+                  'tasks_for == "github-release"': '${event.release.tag_name}'
           ownTaskId:
               $switch:
                   '"github" in tasks_for': {$eval: as_slugid("decision_task")}
@@ -74,20 +79,32 @@ tasks:
               $switch:
                   'tasks_for[:19] == "github-pull-request"': ${event.action}
                   $default: 'UNDEFINED'
+          releaseAction:
+              $if: 'tasks_for == "github-release"'
+              then: ${event.action}
+              else: 'UNDEFINED'
           isPullRequest:
               $eval: 'tasks_for[:19] == "github-pull-request"'
       in:
           $if: >
             tasks_for in ["action", "cron"]
+            || (tasks_for == "github-release" && releaseAction == "published")
             || (tasks_for == "github-push" && head_branch == "refs/heads/main")
             || (tasks_for == "github-release" && )
             || (isPullRequest && pullRequestAction in ["opened", "reopened", "synchronize"])
           then:
               $let:
                   level:
-                      $if: 'tasks_for in ["github-push", "cron", "action"] && repoUrl == "https://github.com/taskcluster/taskgraph"'
+                      $if: 'tasks_for in ["github-release", "github-push", "cron", "action"] && repoUrl == "https://github.com/taskcluster/taskgraph"'
                       then: 3
                       else: 1
+                  short_head_ref:
+                      $if: 'head_ref[:10] == "refs/tags/"'
+                      then: {$eval: 'head_ref[10:]'}
+                      else:
+                          $if: 'head_ref[:11] == "refs/heads/"'
+                          then: {$eval: 'head_ref[11:]'}
+                          else: ${head_ref}
               in:
                   taskId: {$if: 'tasks_for != "action"', then: '${ownTaskId}'}
                   taskGroupId:
@@ -106,7 +123,7 @@ tasks:
                           - owner: "${ownerEmail}"
                             source: "${repoUrl}/raw/${head_sha}/.taskcluster.yml"
                           - $switch:
-                                'tasks_for == "github-push" || isPullRequest':
+                                'tasks_for in ["github-push", "github-release"] || isPullRequest':
                                     name: "Decision Task"
                                     description: 'The task that creates all of the other tasks in the task graph'
                                 'tasks_for == "action"':
@@ -152,17 +169,10 @@ tasks:
 
                   scopes:
                       $switch:
-                          'tasks_for in ["github-push"]':
-                              $let:
-                                  short_head_ref:
-                                      $if: 'head_ref[:10] == "refs/tags/"'
-                                      then: {$eval: 'head_ref[10:]'}
-                                      else:
-                                          $if: 'head_ref[:11] == "refs/heads/"'
-                                          then: {$eval: 'head_ref[11:]'}
-                                          else: ${head_ref}
-                              in:
-                                  - 'assume:repo:${repoUrl[8:]}:branch:${short_head_ref}'
+                          'tasks_for == "github-push"':
+                              - 'assume:repo:${repoUrl[8:]}:branch:${short_head_ref}'
+                          'tasks_for == "github-release"':
+                              - 'assume:repo:${repoUrl[8:]}:release:${releaseAction}'
                           'isPullRequest':
                               - 'assume:repo:github.com/${event.pull_request.base.repo.full_name}:${tasks_for[7:]}'
                           'tasks_for == "action"':
@@ -282,7 +292,7 @@ tasks:
                                     - machine:
                                           platform: gecko-decision
                                     - $switch:
-                                          'tasks_for == "github-push" || isPullRequest':
+                                          'tasks_for in ["github-push", "github-release"] || isPullRequest':
                                               symbol: D
                                           'tasks_for == "action"':
                                               groupName: 'action-callback'
