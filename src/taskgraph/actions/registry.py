@@ -125,6 +125,9 @@ def register_callback_action(
     Returns:
         function: Decorator to be used for the callback function.
     """
+
+    """This is a test to poke at broken actions on PRs..."""
+
     mem = {"registered": False}  # workaround nonlocal missing in 2.x
 
     assert isinstance(title, str), "title must be a string"
