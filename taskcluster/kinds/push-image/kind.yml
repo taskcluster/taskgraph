@@ -26,13 +26,12 @@ task-defaults:
         max-run-time: 1800
         taskcluster-proxy: true
         chain-of-trust: true
+        env:
+            DOCKER_REPO: "mozillareleases/taskgraph"
         artifacts:
             - type: directory
               name: public/
               path: /builds/worker/artifacts/
 
 tasks:
-    decision:
-        worker:
-            env:
-                APP: taskgraph-decision
+    decision: {}

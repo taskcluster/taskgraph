@@ -1,8 +1,8 @@
 #!/bin/sh
-set -e
+set -e -x
 
-test $APP
-test $APP_VERSION
+test $NAME
+test $VERSION
 test $DOCKER_REPO
 test $MOZ_FETCHES_DIR
 test $TASKCLUSTER_ROOT_URL
@@ -20,22 +20,22 @@ unzstd image.tar.zst
 
 echo "=== Inserting version.json into image ==="
 # Create an OCI copy of image in order umoci can patch it
-skopeo copy docker-archive:image.tar oci:${APP}:final
+skopeo copy docker-archive:image.tar oci:${NAME}:final
 
 cat > version.json <<EOF
 {
     "commit": "${VCS_HEAD_REV}",
-    "version": "${APP_VERSION}",
+    "version": "${VERSION}",
     "source": "${VCS_HEAD_REPOSITORY}",
     "build": "${TASKCLUSTER_ROOT_URL}/tasks/${TASK_ID}"
 }
 EOF
 
-umoci insert --image ${APP}:final version.json /app/version.json
+umoci insert --image ${NAME}:final version.json /version.json
 
 echo "=== Pushing to docker hub ==="
-DOCKER_TAG="v${APP_VERSION}"
-skopeo copy oci:${APP}:final docker://$DOCKER_REPO:$DOCKER_TAG
+DOCKER_TAG="${NAME}-v${VERSION}"
+skopeo copy oci:${NAME}:final docker://$DOCKER_REPO:$DOCKER_TAG
 skopeo inspect docker://$DOCKER_REPO:$DOCKER_TAG
 
 echo "=== Clean up ==="
