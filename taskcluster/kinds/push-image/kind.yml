@@ -24,6 +24,8 @@ task-defaults:
             - artifact: image.tar.zst
               extract: false
     run-on-tasks-for: ["github-release"]
+    scopes:
+        - secrets:get:project/taskgraph/level-3/dockerhub
     worker-type: images
     worker:
         docker-image: {"in-tree": "skopeo"}
