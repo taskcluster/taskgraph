@@ -32,8 +32,9 @@ def get_parameters(decision_task_id):
     return get_artifact(decision_task_id, "public/parameters.yml")
 
 
-def fetch_graph_and_labels(parameters, graph_config):
-    decision_task_id = find_decision_task(parameters, graph_config)
+def fetch_graph_and_labels(parameters, graph_config, decision_task_id=None):
+    if decision_task_id is None:
+        decision_task_id = find_decision_task(parameters, graph_config)
 
     # First grab the graph and labels generated during the initial decision task
     full_task_graph = get_artifact(decision_task_id, "public/full-task-graph.json")
