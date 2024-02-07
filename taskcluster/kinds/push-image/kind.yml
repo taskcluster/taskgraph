@@ -18,8 +18,7 @@ task-defaults:
         using: run-task
         checkout: false
         use-caches: false
-        command:
-            - sh /usr/local/bin/push_image.sh
+        command: "sh /usr/local/bin/push_image.sh"
     run-on-tasks-for: ["github-release"]
     worker-type: images
     worker:
