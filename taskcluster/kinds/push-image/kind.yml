@@ -20,7 +20,7 @@ task-defaults:
         use-caches: false
         command:
             - /usr/local/bin/push_image.sh
-    run-on-tasks-for: ["github-releases"]
+    run-on-tasks-for: ["github-release"]
     worker-type: images
     worker:
         docker-image: {"in-tree": "skopeo"}
