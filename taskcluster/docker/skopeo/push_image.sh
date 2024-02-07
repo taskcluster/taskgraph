@@ -20,8 +20,6 @@ export REGISTRY_AUTH_FILE=$HOME/.dockercfg
 # TODO: REMOVE THIS!
 cat $HOME/.dockercfg
 
-skopeo login docker.io
-
 cd $MOZ_FETCHES_DIR
 unzstd image.tar.zst
 
