@@ -13,12 +13,9 @@ test $VCS_HEAD_REV
 echo "=== Generating dockercfg ==="
 PASSWORD_URL="http://taskcluster/secrets/v1/secret/project/taskgraph/level-3/dockerhub"
 install -m 600 /dev/null $HOME/.dockercfg
-curl $PASSWORD_URL | jq '.secret.dockercfg' > $HOME/.dockercfg
+curl -vvv $PASSWORD_URL
 
 export REGISTRY_AUTH_FILE=$HOME/.dockercfg
-
-# TODO: REMOVE THIS!
-cat $HOME/.dockercfg
 
 cd $MOZ_FETCHES_DIR
 unzstd image.tar.zst
