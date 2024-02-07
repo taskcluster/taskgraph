@@ -19,6 +19,10 @@ task-defaults:
         checkout: false
         use-caches: false
         command: "sh /usr/local/bin/push_image.sh"
+    fetches:
+        docker-image:
+            - artifact: image.tar.zst
+              extract: false
     run-on-tasks-for: ["github-release"]
     worker-type: images
     worker:
@@ -34,4 +38,6 @@ task-defaults:
               path: /builds/worker/artifacts/
 
 tasks:
-    decision: {}
+    decision:
+        dependencies:
+            docker-image: build-docker-image-decision
