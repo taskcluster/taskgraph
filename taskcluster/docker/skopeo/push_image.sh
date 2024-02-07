@@ -13,7 +13,8 @@ test $VCS_HEAD_REV
 echo "=== Generating dockercfg ==="
 PASSWORD_URL="http://taskcluster/secrets/v1/secret/project/taskgraph/level-3/dockerhub"
 install -m 600 /dev/null $HOME/.dockercfg
-curl -vvv $PASSWORD_URL
+# Note: If there's a scoping error, this will not fail, causing the skopeo copy command to fail
+curl $PASSWORD_URL | jq '.secret.dockercfg' > $HOME/.dockercfg
 
 export REGISTRY_AUTH_FILE=$HOME/.dockercfg
 
