@@ -15,6 +15,11 @@ PASSWORD_URL="http://taskcluster/secrets/v1/secret/project/taskgraph/level-3/doc
 install -m 600 /dev/null $HOME/.dockercfg
 curl $PASSWORD_URL | jq '.secret.dockercfg' > $HOME/.dockercfg
 
+export REGISTRY_AUTH_FILE=$HOME/.dockercfg
+
+# TODO: REMOVE THIS!
+cat $HOME/.dockercfg
+
 skopeo login docker.io
 
 cd $MOZ_FETCHES_DIR
