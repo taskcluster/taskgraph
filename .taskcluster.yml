@@ -91,7 +91,6 @@ tasks:
             tasks_for in ["action", "pr-action", "cron"]
             || (tasks_for == "github-release" && releaseAction == "published")
             || (tasks_for == "github-push" && head_branch == "refs/heads/main")
-            || (tasks_for == "github-release" && )
             || (isPullRequest && pullRequestAction in ["opened", "reopened", "synchronize"])
           then:
               $let:
