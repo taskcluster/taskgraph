@@ -1,5 +1,20 @@
 # Change Log
 
+## [7.2.0] - 2024-02-08
+
+### Added
+
+- Support for actions in pull-requests
+- Improved logging to optimization phase
+- Utility function to walk through a task's dependency ancestors
+
+### Fixed
+
+- `taskgraph init` support for github-release events in .taskcluster.yml
+- `taskgraph init` .taskcluster.yml passes short refs to run-task
+- Check to ensure reserved dependency edge `docker-image` isn't used
+- Improved tracebacks when querying json-automationrelevance from hg.mozilla.org fails
+
 ## [7.1.2] - 2024-01-31
 
 ### Added
