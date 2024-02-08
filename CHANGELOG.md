@@ -1,5 +1,11 @@
 # Change Log
 
+## [7.2.1] - 2024-02-08
+
+### Fixed
+
+- Make run-task shebang use /usr/bin/env python3 (#453)
+
 ## [7.2.0] - 2024-02-08
 
 ### Added
