@@ -179,6 +179,9 @@ def register_callback_action(
             branch = parameters.get("head_ref")
             if branch:
                 push["branch"] = branch
+            base_branch = parameters.get("base_ref")
+            if base_branch and branch != base_branch:
+                push["base_branch"] = base_branch
 
             action = {
                 "name": name,
