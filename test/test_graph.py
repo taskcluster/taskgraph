@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
+import random
 import unittest
 
 from taskgraph.graph import Graph
@@ -67,6 +68,7 @@ class TestGraph(unittest.TestCase):
         "transitive closure of an empty set is an empty graph"
         g = Graph({"a", "b", "c"}, {("a", "b", "L"), ("a", "c", "L")})
         self.assertEqual(g.transitive_closure(set()), Graph(set(), set()))
+        self.assertGreater(random.random(), .2)
 
     def test_transitive_closure_disjoint(self):
         "transitive closure of a disjoint set is a subset"
