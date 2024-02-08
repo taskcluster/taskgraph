@@ -151,7 +151,7 @@ support `hashes with url requirements`_:
 
    payload:
       env:
-          - PIP_DISABLE_REQUIRE_HASHES: 1
+          PIP_DISABLE_REQUIRE_HASHES: 1
 
 .. note::
 
