@@ -239,7 +239,7 @@ tasks:
                           taskclusterProxy: true
                           chainOfTrust: true
 
-                      image: mozillareleases/taskgraph:decision-10378fde0bf12adbd64e74313bf72ea3c6caf311ad6af23e2bff1d8f1232a221@sha256:7518c410bdf91142b0e26455d26ddaf861202cfbb3c35d0b1ef85d1ed577a5bd
+                      image: mozillareleases/taskgraph:decision-latest
 
                       maxRunTime: 1800
 
@@ -256,14 +256,13 @@ tasks:
                                 then: >
                                     cd /builds/worker/checkouts/src &&
                                     ln -s /builds/worker/artifacts artifacts &&
-                                    pip3 install -r requirements/base.txt &&
-                                    pip3 install --user --no-deps . &&
-                                    ~/.local/bin/taskgraph action-callback
+                                    pip3 install --user --break-system-packages . &&
+                                    taskgraph action-callback
                                 else: >
                                     cd /builds/worker/checkouts/src &&
                                     ln -s /builds/worker/artifacts artifacts &&
-                                    pip3 install --user . &&
-                                    ~/.local/bin/taskgraph decision
+                                    pip3 install --user --break-system-packages . &&
+                                    taskgraph decision
                                     --pushlog-id='0'
                                     --pushdate='0'
                                     --project='${project}'
