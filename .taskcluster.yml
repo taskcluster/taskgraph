@@ -53,7 +53,8 @@ tasks:
                   'tasks_for == "github-push" && event.base_ref': ${event.base_ref}
                   'tasks_for == "github-push" && !(event.base_ref)': ${event.ref}
                   'tasks_for == "github-release"': ${event.release.tag_name}
-                  'tasks_for in ["cron", "action", "pr-action"]': '${push.branch}'
+                  'tasks_for in ["cron", "action"]': '${push.branch}'
+                  'tasks_for == "pr-action"': '${push.base_branch}'
           head_ref:
               $switch:
                   'tasks_for[:19] == "github-pull-request"': ${event.pull_request.head.ref}
