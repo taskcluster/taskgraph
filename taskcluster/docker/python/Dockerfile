@@ -2,8 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-FROM python:3.9
-LABEL maintainer="Andrew Halberstadt <ahal@mozilla.com>"
+FROM python:3.12-slim
+MAINTAINER Release Engineering <release@mozilla.com>
 
 # Add worker user
 RUN mkdir /builds && \
@@ -13,8 +13,16 @@ RUN mkdir /builds && \
 
 # %include-run-task
 
-RUN apt-get update && apt-get install -y --force-yes --no-install-recommends \
-    mercurial build-essential zlib1g-dev libssl-dev git
+RUN apt-get update \
+ && apt-get install -y --reinstall ca-certificates \
+ && apt-get install -y --force-yes --no-install-recommends \
+    mercurial \
+    build-essential \
+    zlib1g-dev \
+    libssl-dev \
+    curl \
+    git \
+    build-essential zlib1g-dev libffi-dev libssl-dev libbz2-dev libreadline-dev libsqlite3-dev liblzma-dev pkg-config
 
 ENV SHELL=/bin/bash \
     HOME=/builds/worker \

@@ -1,4 +1,5 @@
-FROM debian:11
+FROM debian:12-slim
+MAINTAINER Release Engineering <release@mozilla.com>
 
 ### Add worker user and setup its workspace.
 RUN mkdir /builds && \

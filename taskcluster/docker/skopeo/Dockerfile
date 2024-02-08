@@ -27,7 +27,8 @@ RUN ["/usr/local/go/bin/go", "build", \
     "./cmd/umoci"]
 
 
-FROM debian:buster
+FROM debian:12-slim
+MAINTAINER Release Engineering <release@mozilla.com>
 
 # %include-run-task
 
