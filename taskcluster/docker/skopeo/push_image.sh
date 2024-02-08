@@ -38,8 +38,31 @@ umoci insert --image ${NAME}:final version.json /version.json
 
 echo "=== Pushing to docker hub ==="
 DOCKER_TAG="${NAME}-v${VERSION}"
+
+# Get all remote tags | jq filter only starting with ${NAME}-v | Sort by version | Get the last one
+LATEST_REMOTE_VERSION=$(skopeo list-tags docker://$DOCKER_REPO | jq ".Tags[] | select(. | test(\"^${NAME}-v\\\\d\"))" -r | sort -V | tail -1)
+
 skopeo copy oci:${NAME}:final docker://$DOCKER_REPO:$DOCKER_TAG
 skopeo inspect docker://$DOCKER_REPO:$DOCKER_TAG
+
+# This bit is intentionally verbose so it's easier to track when we override the latest tag
+if [ "${LATEST_REMOTE_VERSION}" = "" ]; then
+    echo "Couldn't find a remote version. Tagging as latest."
+    skopeo copy oci:${NAME}:final docker://$DOCKER_REPO:$NAME-latest
+elif [ "${LATEST_REMOTE_VERSION}" = "${DOCKER_TAG}" ]; then
+    echo "Updating latest tag, the latest version on remote matches the provided version."
+    skopeo copy oci:${NAME}:final docker://$DOCKER_REPO:$NAME-latest
+else
+    # Printf the latest remote version and the current tag | Sort by version | Get the last one
+    LATEST_VERSION=$(printf "$REMOTE_VERSION\n$DOCKER_TAG" | sort -V | tail -1)
+    # If current tag > latest remote, then we should tag as latest
+    if [ "${LATEST_VERSION}" != "${REMOTE_VERSION}" ]; then
+        echo "Updating latest tag, the current version is higher than the remote."
+        skopeo copy oci:${NAME}:final docker://$DOCKER_REPO:$NAME-latest
+    else
+        echo "Skipped tagging as current tag is not higher than the remote's latest."
+    fi
+fi
 
 echo "=== Clean up ==="
 rm -rf $HOME/.docker
