@@ -90,7 +90,7 @@ def fetch_graph_and_labels(parameters, graph_config):
     return (decision_task_id, full_task_graph, label_to_taskid)
 
 
-def create_task_from_def(task_id, task_def, level):
+def create_task_from_def(task_id, task_def, level, trust_domain):
     """Create a new task from a definition rather than from a label
     that is already in the full-task-graph. The task definition will
     have {relative-datestamp': '..'} rendered just like in a decision task.
@@ -98,7 +98,7 @@ def create_task_from_def(task_id, task_def, level):
     It is useful if you want to "edit" the full_task_graph and then hand
     it to this function. No dependencies will be scheduled. You must handle
     this yourself. Seeing how create_tasks handles it might prove helpful."""
-    task_def["schedulerId"] = f"gecko-level-{level}"
+    task_def["schedulerId"] = f"{trust_domain}-level-{level}"
     label = task_def["metadata"]["name"]
     session = get_session()
     create.create_task(session, task_id, label, task_def)
