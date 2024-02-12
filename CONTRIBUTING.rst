@@ -122,21 +122,15 @@ you can run:
 Releasing
 ---------
 
-In order to release a new version of Taskgraph, you will need permission to the
-`taskcluster-taskgraph`_ project in PyPI. The following are **required** steps:
+In order to release a new version of Taskgraph, you will need to:
 
 1. Update ``CHANGELOG.md``
 2. Update ``__version__`` in ``src/taskgraph/__init__.py``
-3. Commit, and land the above changes
-4. Make sure your ``git status`` is clean
-5. Checkout the latest public revision ``git checkout main``
-6. Pull latest revision ``git pull upstream main``
-7. Verify ``git show`` outputs the desired revision
-8. Remove previously packaged releases and build cache ``rm -rf build dist``
-9. Package the app ``python setup.py sdist bdist_wheel``
-10. Tag and push: ``git tag -s -m "taskgraph $version" $version && git push upstream $version``
-11. Upload to PyPI using `twine`_ ``twine upload dist/*`` providing your
-    username and API token
+3. Commit, and land the above changes with a commit message like "chore: bump <version>"
+4. Create a release in Github pointing to the above commit. Be sure to also
+   create a new tag matching this version.
+5. Wait for the ``pypi-publish`` Github workflow and ``push-image-decision`` task to finish.
+6. Verify that expected version has been published to `pypi`_ and pushed to `DockerHub`_.
 
-.. _taskcluster-taskgraph: https://pypi.org/project/taskcluster-taskgraph/
-.. _twine: https://pypi.org/project/twine/
+.. _pypi: https://pypi.org/project/taskcluster-taskgraph
+.. _DockerHub: https://hub.docker.com/r/mozillareleases/taskgraph/tags
