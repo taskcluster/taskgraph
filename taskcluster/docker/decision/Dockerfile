@@ -11,6 +11,8 @@ RUN mkdir /builds && \
 ADD topsrcdir/src/taskgraph /setup/taskgraph/src/taskgraph
 # %include setup.py
 ADD topsrcdir/setup.py /setup/taskgraph/setup.py
+# %include README.rst
+ADD topsrcdir/README.rst /setup/taskgraph/README.rst
 # %include requirements/base.in
 ADD topsrcdir/requirements/base.in /setup/taskgraph/requirements/base.in
 # %include requirements/base.txt
