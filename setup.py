@@ -13,10 +13,14 @@ with open(version_file) as fh:
 with open(os.path.join(project_dir, "requirements/base.in")) as fp:
     requirements = fp.read().splitlines()
 
+with open(os.path.join(project_dir, "README.rst")) as fh:
+    long_description = fh.read()
+
 setup(
     name="taskcluster-taskgraph",
     version=namespace["__version__"],
     description="Build taskcluster taskgraphs",
+    long_description=long_description,
     url="https://github.com/taskcluster/taskgraph",
     packages=find_packages("src"),
     package_dir={"": "src"},
