@@ -32,8 +32,15 @@ def get_parameters(decision_task_id):
     return get_artifact(decision_task_id, "public/parameters.yml")
 
 
-def fetch_graph_and_labels(parameters, graph_config):
-    decision_task_id = find_decision_task(parameters, graph_config)
+def fetch_graph_and_labels(parameters, graph_config, task_group_id=None):
+    try:
+        # Look up the decision_task id in the index
+        decision_task_id = find_decision_task(parameters, graph_config)
+    except KeyError:
+        if not task_group_id:
+            raise
+        # Not found (e.g. from github-pull-request), fall back to the task group id.
+        decision_task_id = task_group_id
 
     # First grab the graph and labels generated during the initial decision task
     full_task_graph = get_artifact(decision_task_id, "public/full-task-graph.json")

@@ -144,7 +144,7 @@ def retrigger_decision_action(parameters, graph_config, input, task_group_id, ta
 )
 def retrigger_action(parameters, graph_config, input, task_group_id, task_id):
     decision_task_id, full_task_graph, label_to_taskid = fetch_graph_and_labels(
-        parameters, graph_config
+        parameters, graph_config, task_group_id=task_group_id
     )
 
     task = taskcluster.get_task_definition(task_id)
@@ -201,7 +201,7 @@ def rerun_action(parameters, graph_config, input, task_group_id, task_id):
     task = taskcluster.get_task_definition(task_id)
     parameters = dict(parameters)
     decision_task_id, full_task_graph, label_to_taskid = fetch_graph_and_labels(
-        parameters, graph_config
+        parameters, graph_config, task_group_id=task_group_id
     )
     label = task["metadata"]["name"]
     if task_id not in label_to_taskid.values():
@@ -259,7 +259,7 @@ def _rerun_task(task_id, label):
 )
 def retrigger_multiple(parameters, graph_config, input, task_group_id, task_id):
     decision_task_id, full_task_graph, label_to_taskid = fetch_graph_and_labels(
-        parameters, graph_config
+        parameters, graph_config, task_group_id=task_group_id
     )
 
     suffixes = []
