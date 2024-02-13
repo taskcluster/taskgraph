@@ -1,5 +1,17 @@
 # Change Log
 
+## [7.3.0] - 2024-02-13
+
+### Added
+
+- Support for actions in pull-requests (bug 1641282)
+
+### Fixed
+
+- Remove hardcoded gecko trust domain from retrigger-decision action
+- Pick up upstream enhancements for tarfile reproducability (fixes #421)
+
+
 ## [7.2.1] - 2024-02-08
 
 ### Fixed
@@ -10,7 +22,6 @@
 
 ### Added
 
-- Support for actions in pull-requests
 - Improved logging to optimization phase
 - Utility function to walk through a task's dependency ancestors
 
