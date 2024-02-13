@@ -1,5 +1,5 @@
 FROM debian:12-slim
-MAINTAINER Release Engineering <release@mozilla.com>
+LABEL maintainer="Release Engineering <release+taskgraph-ci@mozilla.com>"
 
 # Add worker user
 RUN mkdir /builds && \
