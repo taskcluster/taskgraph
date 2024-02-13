@@ -1,5 +1,15 @@
 # Change Log
 
+## [7.3.0] - 2024-02-13
+
+### Added
+
+- Support for actions in pull-requests
+
+### Fixed
+
+- Various fixes targeting tarfile reproducibility
+
 ## [7.2.1] - 2024-02-08
 
 ### Fixed
@@ -10,7 +20,6 @@
 
 ### Added
 
-- Support for actions in pull-requests
 - Improved logging to optimization phase
 - Utility function to walk through a task's dependency ancestors
 
