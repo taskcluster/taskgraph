@@ -43,3 +43,6 @@ tasks:
     decision:
         dependencies:
             image: build-docker-image-decision
+    run-task:
+        dependencies:
+            image: build-docker-image-run-task

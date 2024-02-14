@@ -18,6 +18,7 @@ transforms:
 tasks:
     decision:
         symbol: I(d)
+        parent: run-task
     fetch:
         symbol: I(fetch)
     index-task:
@@ -26,5 +27,7 @@ tasks:
         symbol: I(py)
         args:
             PYENV_VERSIONS: "3.12, 3.11, 3.10, 3.9, 3.8"
+    run-task:
+        symbol: I(rt)
     skopeo:
         symbol: I(skopeo)
