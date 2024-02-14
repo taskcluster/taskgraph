@@ -23,7 +23,7 @@ git -C "$(pyenv root)" rev-parse HEAD
 for i in ${1//,/ }
 do
     version=$(pyenv latest --known $i)
-    pyenv install $version
+    pyenv install $version --verbose
 done
 chmod 777 /builds/worker/.pyenv/shims
 pyenv rehash
