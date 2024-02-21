@@ -1,5 +1,12 @@
 # Change Log
 
+## [7.3.1] - 2024-02-21
+
+### Added
+
+- Create a base docker image containing only run-task
+
+
 ## [7.3.0] - 2024-02-13
 
 ### Added
