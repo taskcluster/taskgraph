@@ -1,3 +1,12 @@
+[build-system]
+requires = ["maturin"]
+build-backend = "maturin"
+
+[tool.maturin]
+bindings = "bin"
+manifest-path = "rust/run-task/Cargo.toml"
+strip = true
+
 [tool.black]
 line-length = 88
 extend-exclude = """(\
