@@ -82,6 +82,7 @@ def test_register_morph(monkeypatch, make_taskgraph):
         label_to_taskid["count"] += 1
         return taskgraph, label_to_taskid
 
+    assert callable(fake_morph)
     assert label_to_taskid == {}
     morph.morph(taskgraph, label_to_taskid, None, None)
     assert label_to_taskid == {"count": 1}
