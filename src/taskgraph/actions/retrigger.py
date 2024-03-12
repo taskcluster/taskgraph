@@ -206,9 +206,7 @@ def rerun_action(parameters, graph_config, input, task_group_id, task_id):
     label = task["metadata"]["name"]
     if task_id not in label_to_taskid.values():
         logger.error(
-            "Refusing to rerun {}: taskId {} not in decision task {} label_to_taskid!".format(
-                label, task_id, decision_task_id
-            )
+            f"Refusing to rerun {label}: taskId {task_id} not in decision task {decision_task_id} label_to_taskid!"
         )
 
     _rerun_task(task_id, label)

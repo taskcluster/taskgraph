@@ -91,7 +91,5 @@ def evaluate_keyed_by(
             continue
 
         raise Exception(
-            "No {} matching {!r} nor 'default' found while determining item {}".format(
-                keyed_by, key, item_name
-            )
+            f"No {keyed_by} matching {key!r} nor 'default' found while determining item {item_name}"
         )
