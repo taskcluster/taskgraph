@@ -39,10 +39,7 @@ def hash_paths(base_path, patterns):
             raise Exception("%s did not match anything" % pattern)
     for path in sorted(found):
         h.update(
-            "{} {}\n".format(
-                hash_path(mozpath.abspath(mozpath.join(base_path, path))),
-                mozpath.normsep(path),
-            ).encode("utf-8")
+            f"{hash_path(mozpath.abspath(mozpath.join(base_path, path)))} {mozpath.normsep(path)}\n".encode()
         )
     return h.hexdigest()
 

@@ -1153,9 +1153,9 @@ def build_task(config, tasks):
                     config.params["project"] + th_project_suffix, branch_rev
                 )
             )
-            task_def["metadata"]["description"] += " ([Treeherder push]({}))".format(
-                th_push_link
-            )
+            task_def["metadata"][
+                "description"
+            ] += f" ([Treeherder push]({th_push_link}))"
 
         # add the payload and adjust anything else as required (e.g., scopes)
         payload_builders[task["worker"]["implementation"]].builder(

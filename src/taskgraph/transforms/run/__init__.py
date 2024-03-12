@@ -403,11 +403,7 @@ def run_task_using(worker_implementation, run_using, schema=None, defaults={}):
         for_run_using = registry.setdefault(run_using, {})
         if worker_implementation in for_run_using:
             raise Exception(
-                "run_task_using({!r}, {!r}) already exists: {!r}".format(
-                    run_using,
-                    worker_implementation,
-                    for_run_using[worker_implementation],
-                )
+                f"run_task_using({run_using!r}, {worker_implementation!r}) already exists: {for_run_using[worker_implementation]!r}"
             )
         for_run_using[worker_implementation] = (func, schema, defaults)
         return func
