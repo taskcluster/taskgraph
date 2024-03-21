@@ -55,10 +55,10 @@ def _get_changed_files_json_automationrelevance(head_repository_url, head_rev):
     contents = retry(get_automationrelevance, attempts=10, sleeptime=10)
 
     logger.debug(
-        "{} commits influencing task scheduling:".format(len(contents["changesets"]))
+        "{} commits influencing task scheduling:".format(len(contents["changesets"]))  # type: ignore
     )
     changed_files = set()
-    for c in contents["changesets"]:
+    for c in contents["changesets"]:  # type: ignore
         desc = ""  # Support empty desc
         if c["desc"]:
             desc = c["desc"].splitlines()[0].encode("ascii", "ignore")
