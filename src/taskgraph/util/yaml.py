@@ -4,7 +4,6 @@
 
 
 import os
-import typing
 
 try:
     from yaml import CSafeLoader as SafeLoader
