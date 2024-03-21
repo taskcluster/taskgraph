@@ -58,5 +58,6 @@ exclude = [  # TODO fix errors in these files
     "src/taskgraph/util/taskcluster.py",
     "src/taskgraph/util/vcs.py",
     "src/taskgraph/util/workertypes.py",
+    "src/taskgraph/util/yaml.py",
 ]
 reportIncompatibleMethodOverride = false
