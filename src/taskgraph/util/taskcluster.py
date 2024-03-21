@@ -12,7 +12,7 @@ from typing import Dict, List, Union
 
 import requests
 import taskcluster_urls as liburls
-from requests.packages.urllib3.util.retry import Retry
+from requests.packages.urllib3.util.retry import Retry  # type: ignore
 
 from taskgraph.task import Task
 from taskgraph.util import yaml
@@ -94,7 +94,7 @@ def requests_retry_session(
     # Default HTTPAdapter uses 10 connections. Mount custom adapter to increase
     # that limit. Connections are established as needed, so using a large value
     # should not negatively impact performance.
-    http_adapter = requests.adapters.HTTPAdapter(
+    http_adapter = requests.adapters.HTTPAdapter(  # type: ignore
         pool_connections=concurrency,
         pool_maxsize=concurrency,
         max_retries=retry,
@@ -186,7 +186,7 @@ def find_task_id(index_path, use_proxy=False):
     try:
         response = _do_request(get_index_url(index_path, use_proxy))
     except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 404:
+        if e.response.status_code == 404:  # type: ignore
             raise KeyError(f"index path {index_path} not found")
         raise
     return response.json()["taskId"]
@@ -372,7 +372,7 @@ def state_task(task_id, use_proxy=False):
     if testing:
         logger.info(f"Would have gotten state for {task_id}.")
     else:
-        status = status_task(task_id, use_proxy=use_proxy).get("state") or "unknown"
+        status = status_task(task_id, use_proxy=use_proxy).get("state") or "unknown"  # type: ignore
         return status
 
 

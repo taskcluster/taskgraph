@@ -359,7 +359,7 @@ def write_artifact(filename, data):
         import gzip
 
         with gzip.open(path, "wb") as f:
-            f.write(json.dumps(data))
+            f.write(json.dumps(data))  # type: ignore
     else:
         raise TypeError(f"Don't know how to write to {filename}")
 
