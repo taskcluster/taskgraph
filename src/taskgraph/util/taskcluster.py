@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
+import copy
 import datetime
 import functools
 import logging
@@ -247,6 +248,7 @@ def get_task_url(task_id, use_proxy=False):
     return task_tmpl.format(task_id)
 
 
+@memoize
 def get_task_definition(task_id, use_proxy=False):
     response = _do_request(get_task_url(task_id, use_proxy))
     return response.json()
@@ -372,13 +374,14 @@ def list_task_group_incomplete_tasks(task_group_id):
             break
 
 
+@memoize
 def _get_deps(task_ids, use_proxy):
     upstream_tasks = {}
     for task_id in task_ids:
         task_def = get_task_definition(task_id, use_proxy)
         upstream_tasks[task_def["metadata"]["name"]] = task_id
 
-        upstream_tasks.update(_get_deps(task_def["dependencies"], use_proxy))
+        upstream_tasks.update(_get_deps(tuple(task_def["dependencies"]), use_proxy))
 
     return upstream_tasks
 
@@ -403,6 +406,6 @@ def get_ancestors(
     for task_id in task_ids:
         task_def = get_task_definition(task_id, use_proxy)
 
-        upstream_tasks.update(_get_deps(task_def["dependencies"], use_proxy))
+        upstream_tasks.update(_get_deps(tuple(task_def["dependencies"]), use_proxy))
 
-    return upstream_tasks
+    return copy.deepcopy(upstream_tasks)

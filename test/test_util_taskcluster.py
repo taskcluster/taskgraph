@@ -358,6 +358,8 @@ def test_list_task_group_incomplete_tasks(responses, root_url):
 
 
 def test_get_ancestors(responses, root_url):
+    tc.get_task_definition.clear()
+    tc._get_deps.clear()
     base_url = f"{root_url}/api/queue/v1/task"
     responses.add(
         responses.GET,
@@ -431,6 +433,8 @@ def test_get_ancestors(responses, root_url):
 
 
 def test_get_ancestors_string(responses, root_url):
+    tc.get_task_definition.clear()
+    tc._get_deps.clear()
     base_url = f"{root_url}/api/queue/v1/task"
     responses.add(
         responses.GET,
