@@ -4,8 +4,12 @@
 
 
 import os
+import typing
 
-from yaml.loader import SafeLoader
+try:
+    from yaml import CSafeLoader as SafeLoader
+except ImportError:
+    from yaml import SafeLoader
 
 
 class UnicodeLoader(SafeLoader):
