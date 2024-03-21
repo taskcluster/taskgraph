@@ -305,7 +305,7 @@ def replace_tasks(
         if dependents:
             now = datetime.datetime.utcnow()
             deadline = max(
-                resolve_timestamps(now, task.task["deadline"]) for task in dependents
+                resolve_timestamps(now, task.task["deadline"]) for task in dependents  # type: ignore
             )
         repl = opt.should_replace_task(task, params, deadline, arg)
         if repl:
@@ -396,7 +396,7 @@ def get_subgraph(
             decision_task_id=decision_task_id,
             dependencies=named_task_dependencies,
         )
-        deps = task.task.setdefault("dependencies", [])
+        deps = task.task.setdefault("dependencies", [])  # type: ignore
         deps.extend(sorted(named_task_dependencies.values()))
         tasks_by_taskid[task.task_id] = task
 
@@ -413,7 +413,7 @@ def get_subgraph(
         if left in tasks_by_taskid and right in tasks_by_taskid
     }
 
-    return TaskGraph(tasks_by_taskid, Graph(set(tasks_by_taskid), edges_by_taskid))
+    return TaskGraph(tasks_by_taskid, Graph(set(tasks_by_taskid), edges_by_taskid))  # type: ignore
 
 
 @register_strategy("never")
