@@ -1,5 +1,13 @@
 # Change Log
 
+## [7.4.0] - 2024-03-26
+
+### Changed
+
+- Don't set 'base_ref' on github-release events (#470)
+- Faster yaml loading using the native loader if available (#474)
+- Memoize `get_task_definition` and `_get_deps` (#477)
+
 ## [7.3.1] - 2024-02-21
 
 ### Added
