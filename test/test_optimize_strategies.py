@@ -3,11 +3,12 @@
 
 import os
 from datetime import datetime
+from test.fixtures.gen import make_task
 from time import mktime
 
 import pytest
 
-from taskgraph.optimize.strategies import IndexSearch
+from taskgraph.optimize.strategies import IndexSearch, SkipUnlessChanged
 
 
 @pytest.fixture
@@ -68,3 +69,34 @@ def test_index_search(responses, params, state, expires, expected):
     opt = IndexSearch()
     deadline = "2021-06-07T19:03:20.482Z"
     assert opt.should_replace_task({}, params, deadline, (index_path,)) == expected
+
+
+@pytest.mark.parametrize(
+    "params,file_patterns,should_optimize",
+    (
+        pytest.param({"files_changed": []}, ["foo.txt"], True, id="no files changed"),
+        pytest.param(
+            {"files_changed": ["foo.txt"]}, ["foo.txt"], False, id="files match"
+        ),
+        pytest.param(
+            {"files_changed": ["foo.txt"]},
+            ["bar.tx", "foo.txt"],
+            False,
+            id="files match multiple",
+        ),
+        pytest.param(
+            {"files_changed": ["bar.txt"]}, ["foo.txt"], True, id="files don't match"
+        ),
+        pytest.param(
+            {"repository_type": "hg", "pushlog_id": -1, "files_changed": ["bar.txt"]},
+            ["foo.txt"],
+            False,
+            id="cron task",
+        ),
+    ),
+)
+def test_skip_unless_changed(params, file_patterns, should_optimize):
+    task = make_task("task")
+
+    opt = SkipUnlessChanged()
+    assert opt.should_remove_task(task, params, file_patterns) == should_optimize
