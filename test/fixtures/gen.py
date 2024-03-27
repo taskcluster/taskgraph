@@ -139,6 +139,7 @@ def parameters():
             "build_date": 0,
             "build_number": 1,
             "enable_always_target": True,
+            "files_changed": [],
             "head_repository": "http://hg.example.com",
             "head_rev": "abcdef",
             "head_ref": "default",
