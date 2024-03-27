@@ -48,14 +48,6 @@ taskgraph.docker module
    :undoc-members:
    :show-inheritance:
 
-taskgraph.files\_changed module
--------------------------------
-
-.. automodule:: taskgraph.files_changed
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 taskgraph.filter\_tasks module
 ------------------------------
 
