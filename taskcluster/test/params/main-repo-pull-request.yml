@@ -3,6 +3,9 @@ base_repository: https://github.com/ahal/taskgraph
 build_date: 1650573119
 do_not_optimize: []
 existing_tasks: {}
+files_changed:
+    - src/taskgraph/decision.py
+    - test/test_decision.py
 filters:
     - target_tasks_method
 head_ref: 2695ccc00b55efc92b823e91c03120cec04c6d50
