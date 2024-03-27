@@ -10,8 +10,6 @@ import pytest
 
 from taskgraph.util.vcs import HgRepository, Repository, get_repository
 
-from .fixtures.vcs import create_remote_repo
-
 
 def test_get_repository(repo):
     r = get_repository(repo.path)
@@ -159,14 +157,14 @@ def test_remote_name(repo_with_remote):
         assert repo.remote_name == remote_name
 
 
-def test_all_remote_names(tmpdir, repo_with_remote):
+def test_all_remote_names(tmpdir, create_remote_repo, repo_with_remote):
     repo, remote_name = repo_with_remote
     assert repo.all_remote_names == [remote_name]
     create_remote_repo(tmpdir, repo, "upstream2", "remote_path2")
     assert repo.all_remote_names == [remote_name, "upstream2"]
 
 
-def test_remote_name_many_remotes(tmpdir, repo_with_remote):
+def test_remote_name_many_remotes(tmpdir, create_remote_repo, repo_with_remote):
     repo, _ = repo_with_remote
     create_remote_repo(tmpdir, repo, "upstream2", "remote_path2")
 
@@ -177,7 +175,7 @@ def test_remote_name_many_remotes(tmpdir, repo_with_remote):
     assert repo.remote_name == "upstream"
 
 
-def test_remote_name_default_and_origin(tmpdir, repo_with_remote):
+def test_remote_name_default_and_origin(tmpdir, create_remote_repo, repo_with_remote):
     repo, _ = repo_with_remote
     remote_name = "origin" if repo.tool == "git" else "default"
     create_remote_repo(tmpdir, repo, remote_name, "remote_path2")
@@ -188,28 +186,28 @@ def test_remote_name_default_and_origin(tmpdir, repo_with_remote):
     assert repo.remote_name == remote_name
 
 
-def test_default_branch_guess(repo):
+def test_default_branch_guess(default_git_branch, repo):
     if repo.tool == "git":
-        assert repo.default_branch == "refs/heads/master"
+        assert repo.default_branch == f"refs/heads/{default_git_branch}"
     else:
         assert repo.default_branch == "default"
 
 
-def test_default_branch_remote_query(repo_with_remote):
+def test_default_branch_remote_query(default_git_branch, repo_with_remote):
     repo, _ = repo_with_remote
     if repo.tool == "git":
-        assert repo.default_branch == "upstream/master"
+        assert repo.default_branch == f"upstream/{default_git_branch}"
     else:
         assert repo.default_branch == "default"
 
 
-def test_default_branch_cloned_metadata(tmpdir, repo):
+def test_default_branch_cloned_metadata(tmpdir, default_git_branch, repo):
     if repo.tool == "git":
         clone_repo_path = tmpdir / "cloned_repo"
         command = ("git", "clone", repo.path, clone_repo_path)
         subprocess.check_output(command, cwd=tmpdir)
         cloned_repo = get_repository(clone_repo_path)
-        assert cloned_repo.default_branch == "origin/master"
+        assert cloned_repo.default_branch == f"origin/{default_git_branch}"
 
 
 def assert_files(actual, expected):

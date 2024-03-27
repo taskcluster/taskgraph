@@ -57,6 +57,17 @@ def git_repo(tmpdir_factory):
     yield repo_dir
 
 
+@pytest.fixture(scope="package")
+def default_git_branch():
+    proc = subprocess.run(
+        ["git", "config", "init.defaultBranch"],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+    return proc.stdout.strip() or "master"
+
+
 def _build_env_with_git_date_env_vars(date_time_string):
     env = os.environ.copy()
     env.update({env_var: date_time_string for env_var in _GIT_DATE_ENV_VARS})
@@ -90,30 +101,37 @@ def repo(request, hg_repo, git_repo, monkeypatch, tmpdir):
     return get_repository(repodir)
 
 
-def create_remote_repo(tmpdir, repo, remote_name, remote_path):
-    if repo.tool == "hg":
-        repo.run("phase", "--public", ".")
+@pytest.fixture
+def create_remote_repo(default_git_branch):
 
-    shutil.copytree(repo.path, str(tmpdir / remote_path))
+    def inner(tmpdir, repo, remote_name, remote_path):
+        if repo.tool == "hg":
+            repo.run("phase", "--public", ".")
 
-    if repo.tool == "git":
-        repo.run("remote", "add", remote_name, f"{tmpdir}/{remote_path}")
-        repo.run("fetch", remote_name)
-        repo.run("branch", "--set-upstream-to", f"{remote_name}/master")
-    if repo.tool == "hg":
-        with open(os.path.join(repo.path, ".hg/hgrc"), "a") as f:
-            f.write(f"[paths]\n{remote_name} = {tmpdir}/{remote_path}\n")
+        shutil.copytree(repo.path, str(tmpdir / remote_path))
+
+        if repo.tool == "git":
+            repo.run("remote", "add", remote_name, f"{tmpdir}/{remote_path}")
+            repo.run("fetch", remote_name)
+            repo.run(
+                "branch", "--set-upstream-to", f"{remote_name}/{default_git_branch}"
+            )
+        if repo.tool == "hg":
+            with open(os.path.join(repo.path, ".hg/hgrc"), "a") as f:
+                f.write(f"[paths]\n{remote_name} = {tmpdir}/{remote_path}\n")
+
+    return inner
 
 
 @pytest.fixture
-def repo_with_remote(tmpdir, repo):
+def repo_with_remote(tmpdir, create_remote_repo, repo):
     remote_name = "upstream"
     create_remote_repo(tmpdir, repo, remote_name, "remote_repo")
     return repo, remote_name
 
 
 @pytest.fixture
-def repo_with_upstream(tmpdir, repo):
+def repo_with_upstream(tmpdir, repo, default_git_branch):
     with open(os.path.join(repo.path, "second_file"), "w") as f:
         f.write("some data for the second file")
 
@@ -127,7 +145,7 @@ def repo_with_upstream(tmpdir, repo):
     upstream_location = None
 
     if repo.tool == "git":
-        upstream_location = "upstream/master"
+        upstream_location = f"upstream/{default_git_branch}"
         repo.run("remote", "add", "upstream", f"{tmpdir}/remoterepo")
         repo.run("fetch", "upstream")
         repo.run("branch", "--set-upstream-to", upstream_location)
