@@ -2,6 +2,7 @@
 # http://creativecommons.org/publicdomain/zero/1.0/
 
 import os
+import sys
 from pathlib import Path
 from textwrap import dedent
 
@@ -48,7 +49,7 @@ def run_taskgraph(maketgg, monkeypatch):
         ("morphed", ["_fake-t-0", "_fake-t-1"]),
     ),
 )
-def test_show_taskgraph(run_taskgraph, capsys, attr, expected):
+def test_show_taskgraph_attr(run_taskgraph, capsys, attr, expected):
     res = run_taskgraph([attr])
     assert res == 0
 
@@ -70,6 +71,34 @@ def test_show_taskgraph_parallel(run_taskgraph):
         ["full", "-p", "taskcluster/test/params"], params={"_kinds": None}
     )
     assert res == 1
+
+
+def test_show_taskgraph_force_local_files_changed(mocker, run_taskgraph):
+    repo = mocker.MagicMock()
+    repo.get_changed_files.return_value = ["foo.txt"]
+
+    m = mocker.MagicMock()
+    m.get_repository.return_value = repo
+    mocker.patch.dict(sys.modules, {"taskgraph.util.vcs": m})
+
+    res = run_taskgraph(["full"])
+    assert res == 0
+    assert not repo.get_changed_files.called
+
+    res = run_taskgraph(["full", "--force-local-files-changed"])
+    assert res == 0
+    assert not repo.get_changed_files.called
+
+    res = run_taskgraph(
+        [
+            "full",
+            "--force-local-files-changed",
+            "-p",
+            "taskcluster/test/params/mc-onpush.yml",
+        ]
+    )
+    assert res == 0
+    assert repo.get_changed_files.call_count == 1
 
 
 def test_tasks_regex(run_taskgraph, capsys):
