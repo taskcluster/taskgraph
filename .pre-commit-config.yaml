@@ -4,6 +4,7 @@
 ci:
   autofix_commit_msg: "style: pre-commit.ci auto fixes [...]"
   autoupdate_commit_msg: "chore: pre-commit autoupdate"
+  autoupdate_schedule: monthly
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
