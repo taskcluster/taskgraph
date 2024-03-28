@@ -37,6 +37,7 @@ class TestParameters(TestCase):
         "do_not_optimize": [],
         "enable_always_target": True,
         "existing_tasks": {},
+        "files_changed": [],
         "filters": ["target_tasks_method"],
         "head_ref": "ref",
         "head_repository": "repository",
@@ -298,6 +299,7 @@ def test_extend_parameters_schema(monkeypatch):
                 "do_not_optimize": [],
                 "enable_always_target": True,
                 "existing_tasks": {},
+                "files_changed": ["foo.txt"],
                 "filters": ["target_tasks_method"],
                 "head_ref": "some-branch",
                 "head_repository": "https://some.url",
@@ -332,6 +334,7 @@ def test_extend_parameters_schema(monkeypatch):
                 "do_not_optimize": [],
                 "enable_always_target": True,
                 "existing_tasks": {},
+                "files_changed": ["foo.txt"],
                 "filters": ["target_tasks_method"],
                 "head_ref": "some-branch",
                 "head_repository": "https://some.url",
@@ -366,6 +369,7 @@ def test_extend_parameters_schema(monkeypatch):
                 "do_not_optimize": [],
                 "enable_always_target": True,
                 "existing_tasks": {},
+                "files_changed": ["foo.txt"],
                 "filters": ["target_tasks_method"],
                 "head_ref": "some-branch",
                 "head_repository": "",
@@ -400,6 +404,7 @@ def test_extend_parameters_schema(monkeypatch):
                 "do_not_optimize": [],
                 "enable_always_target": True,
                 "existing_tasks": {},
+                "files_changed": [],
                 "filters": ["target_tasks_method"],
                 "head_ref": "",
                 "head_repository": "",
@@ -434,6 +439,7 @@ def test_get_defaults(
                 tool="git",
             )
             repo_mock.get_url.return_value = "https://some.url"
+            repo_mock.get_changed_files.return_value = ["foo.txt"]
             return repo_mock
 
         raise RuntimeError

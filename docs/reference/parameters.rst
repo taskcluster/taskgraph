@@ -45,6 +45,10 @@ head_tag
 ~~~~~~~~
    The tag attached to the revision, if any.
 
+files_changed
+~~~~~~~~~~~~~
+   The list of all files added or modified by the push.
+
 owner
 ~~~~~
    Email address indicating the person who made the push. Note that this
