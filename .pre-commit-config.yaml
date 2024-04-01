@@ -38,7 +38,7 @@ repos:
                 test/test_util_path.py
             )$
   - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v3.1.0
+    rev: v3.2.0
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]
