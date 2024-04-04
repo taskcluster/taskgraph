@@ -84,12 +84,10 @@ def assert_pull_request(task):
                 "test-domain.cache.level-3.cache-type.cache-name.hash.abc",
                 "test-domain.cache.level-2.cache-type.cache-name.hash.abc",
                 "test-domain.cache.level-1.cache-type.cache-name.hash.abc",
-                "test-domain.cache.head.default.cache-type.cache-name.hash.abc",
+                "test-domain.cache.pr.cache-type.cache-name.hash.abc",
             ]
         },
-        "routes": [
-            "index.test-domain.cache.head.default.cache-type.cache-name.hash.abc"
-        ],
+        "routes": ["index.test-domain.cache.pr.cache-type.cache-name.hash.abc"],
     }
 
 
