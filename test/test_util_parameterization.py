@@ -205,6 +205,17 @@ def test_artifact_refs_in_string(assert_artifact_refs):
     )
 
 
+def test_artifact_refs_private(monkeypatch, assert_artifact_refs):
+    "resolve_task_references resolves private artifact references"
+    tc_proxy_url = "https://taskcluster-proxy.net"
+    monkeypatch.setenv("TASKCLUSTER_PROXY_URL", tc_proxy_url)
+
+    assert_artifact_refs(
+        {"artifact-reference": "<edge1/private/foo>"},
+        f"{tc_proxy_url}/api/queue/v1/task/tid1/artifacts/private/foo",
+    )
+
+
 def test_artifact_refs_self():
     "resolve_task_references raises keyerror on artifact references to `self`"
     with pytest.raises(KeyError):

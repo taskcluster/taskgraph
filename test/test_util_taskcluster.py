@@ -106,6 +106,30 @@ def test_do_request(responses):
         tc._do_request("https://example.org")
 
 
+@pytest.mark.parametrize(
+    "use_proxy,expected",
+    (
+        pytest.param(
+            False,
+            "https://tc.example.com/api/queue/v1/task/abc/artifacts/public/log.txt",
+            id="use_proxy=False",
+        ),
+        pytest.param(
+            True,
+            "https://taskcluster-proxy.net/api/queue/v1/task/abc/artifacts/public/log.txt",
+            id="use_proxy=True",
+        ),
+    ),
+)
+def test_get_artifact_url(monkeypatch, use_proxy, expected):
+    if use_proxy:
+        monkeypatch.setenv("TASKCLUSTER_PROXY_URL", "https://taskcluster-proxy.net")
+
+    task_id = "abc"
+    path = "public/log.txt"
+    assert tc.get_artifact_url(task_id, path, use_proxy) == expected
+
+
 def test_get_artifact(responses, root_url):
     tid = 123
     responses.add(
