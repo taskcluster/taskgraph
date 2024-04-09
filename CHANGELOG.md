@@ -1,5 +1,26 @@
 # Change Log
 
+## [8.0.0] - 2024-04-09
+
+### Added
+
+- Ability to use custom name functions in `from_deps` transforms (#484)
+- New `from_deps` name function that doesn't strip the dep's kind (#484)
+- New cli flag to force using locally generated `files_changed` (#481)
+
+### Fixed
+
+- Support for `artifact-reference` with private artifacts (#485)
+
+### Changed
+
+- Replaced `head_ref` in pull-request cached task routes (#486)
+- Created a new `files_changed` parameter (#481)
+
+### Removed
+
+- Removed the `taskgraph.files_changed` module (#481)
+
 ## [7.4.0] - 2024-03-26
 
 ### Changed

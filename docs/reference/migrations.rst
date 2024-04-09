@@ -3,6 +3,22 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+7.x -> 8.x
+----------
+
+* Replace all references to ``taskgraph.files_changed``. Instead, use one of:
+
+  * The ``files_changed`` parameter
+  * The ``get_files_changed`` method on an instance of ``taskgraph.util.vcs.Repository``
+  * Mercurial repositories relying on hgmo's ``json-automationrelevance``
+    endpoint will need to in-line this logic into their own custom Taskgraph
+    logic
+* In tasks using the ``from_deps`` transforms, remove ``from-deps.set-name`` if
+  it is set to ``true``
+* Update any references to pull request cached task indexes from
+  ``{cache_prefix}.cache.head.{head_ref}...`` to ``{cache_prefix}.cache.pr...``
+  (i.e, add ``pr`` and remove the ``head.{head_ref}``)
+
 6.x -> 7.x
 ----------
 
@@ -11,6 +27,7 @@ This page can help when migrating Taskgraph across major versions.
   ``taskcluster/ci``. Typically this value is not passed in explicitly by
   consumers, but updates are likely required if you have custom code that
   uses any of the following objects:
+
   * ``taskgraph.config.GraphConfig``
   * ``taskgraph.config.load_graph_config``
   * ``taskgraph.generator.TaskGraphGenerator``
