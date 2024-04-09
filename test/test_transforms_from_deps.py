@@ -92,6 +92,20 @@ def assert_dont_set_name(tasks):
     assert tasks[0]["name"] == "a-special-name"
 
 
+def assert_set_name_strip_kind(tasks):
+    handle_exception(tasks)
+    assert len(tasks) == 2
+    assert tasks[0]["name"] == "a"
+    assert tasks[1]["name"] == "b"
+
+
+def assert_set_name_retain_kind(tasks):
+    handle_exception(tasks)
+    assert len(tasks) == 2
+    assert tasks[0]["name"] == "a"
+    assert tasks[1]["name"] == "bar-b"
+
+
 def assert_group_by_all_with_fetch(tasks):
     handle_exception(tasks)
     assert len(tasks) == 1
@@ -165,7 +179,7 @@ def assert_group_by_all_with_fetch(tasks):
                 "name": "a-special-name",
                 "from-deps": {
                     "group-by": "all",
-                    "set-name": False,
+                    "set-name": None,
                 },
             },
             # kind config
@@ -173,6 +187,32 @@ def assert_group_by_all_with_fetch(tasks):
             # deps
             None,
             id="dont_set_name",
+        ),
+        pytest.param(
+            # task
+            {
+                "from-deps": {
+                    "set-name": "strip-kind",
+                },
+            },
+            # kind config
+            None,
+            # deps
+            None,
+            id="set_name_strip_kind",
+        ),
+        pytest.param(
+            # task
+            {
+                "from-deps": {
+                    "set-name": "retain-kind",
+                },
+            },
+            # kind config
+            None,
+            # deps
+            None,
+            id="set_name_retain_kind",
         ),
         pytest.param(
             # task
