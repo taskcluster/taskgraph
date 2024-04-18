@@ -150,7 +150,7 @@ def assert_artifact_refs(monkeypatch):
 
     def inner(input, output):
         # Clear memoized function
-        get_root_url.clear()
+        get_root_url.cache_clear()
         taskid_for_edge_name = {"edge%d" % n: "tid%d" % n for n in range(1, 4)}
         assert (
             resolve_task_references(

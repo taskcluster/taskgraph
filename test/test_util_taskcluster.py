@@ -28,7 +28,7 @@ def mock_production_taskcluster_root_url(monkeypatch):
 
 @pytest.fixture
 def root_url(mock_environ):
-    tc.get_root_url.clear()
+    tc.get_root_url.cache_clear()
     return tc.get_root_url(False)
 
 
@@ -36,22 +36,22 @@ def root_url(mock_environ):
 def proxy_root_url(monkeypatch, mock_environ):
     monkeypatch.setenv("TASK_ID", "123")
     monkeypatch.setenv("TASKCLUSTER_PROXY_URL", "https://taskcluster-proxy.net")
-    tc.get_root_url.clear()
+    tc.get_root_url.cache_clear()
     return tc.get_root_url(True)
 
 
 def test_get_root_url(monkeypatch):
-    tc.get_root_url.clear()
+    tc.get_root_url.cache_clear()
     assert tc.get_root_url(False) == tc.PRODUCTION_TASKCLUSTER_ROOT_URL
 
     custom_url = "https://taskcluster-root.net"
     monkeypatch.setenv("TASKCLUSTER_ROOT_URL", custom_url)
-    tc.get_root_url.clear()
+    tc.get_root_url.cache_clear()
     assert tc.get_root_url(False) == custom_url
 
     # trailing slash is normalized
     monkeypatch.setenv("TASKCLUSTER_ROOT_URL", custom_url + "/")
-    tc.get_root_url.clear()
+    tc.get_root_url.cache_clear()
     assert tc.get_root_url(False) == custom_url
 
     with pytest.raises(RuntimeError):
@@ -66,7 +66,7 @@ def test_get_root_url(monkeypatch):
     proxy_url = "https://taskcluster-proxy.net"
     monkeypatch.setenv("TASKCLUSTER_PROXY_URL", proxy_url)
     assert tc.get_root_url(True) == proxy_url
-    tc.get_root_url.clear()
+    tc.get_root_url.cache_clear()
 
     # no default set
     monkeypatch.setattr(tc, "PRODUCTION_TASKCLUSTER_ROOT_URL", None)
@@ -382,8 +382,8 @@ def test_list_task_group_incomplete_tasks(responses, root_url):
 
 
 def test_get_ancestors(responses, root_url):
-    tc.get_task_definition.clear()
-    tc._get_deps.clear()
+    tc.get_task_definition.cache_clear()
+    tc._get_deps.cache_clear()
     base_url = f"{root_url}/api/queue/v1/task"
     responses.add(
         responses.GET,
@@ -457,8 +457,8 @@ def test_get_ancestors(responses, root_url):
 
 
 def test_get_ancestors_string(responses, root_url):
-    tc.get_task_definition.clear()
-    tc._get_deps.clear()
+    tc.get_task_definition.cache_clear()
+    tc._get_deps.cache_clear()
     base_url = f"{root_url}/api/queue/v1/task"
     responses.add(
         responses.GET,
