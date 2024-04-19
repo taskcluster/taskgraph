@@ -144,7 +144,7 @@ def test_output_file(run_taskgraph, tmpdir):
                     "description": "",
                     "kind": "task",
                     "label": "b",
-                    "optimization": None,
+                    "optimization": {"skip-unless-changed": True},
                     "soft_dependencies": [],
                     "if_dependencies": [],
                     "task": {
@@ -164,7 +164,7 @@ def test_output_file(run_taskgraph, tmpdir):
                     "description": "",
                     "kind": "task",
                     "label": "b",
-                    "optimization": None,
+                    "optimization": {"skip-unless-changed": True},
                     "soft_dependencies": [],
                     "if_dependencies": [],
                     "task": {
@@ -178,6 +178,7 @@ def test_output_file(run_taskgraph, tmpdir):
             None,
             [
                 "attributes.thing",
+                "optimization.skip-unless-changed",
                 "task.foo.baz",
             ],
             {
@@ -200,7 +201,7 @@ def test_output_file(run_taskgraph, tmpdir):
                     "description": "",
                     "kind": "task",
                     "label": "b",
-                    "optimization": None,
+                    "optimization": {},
                     "soft_dependencies": [],
                     "if_dependencies": [],
                     "task": {
@@ -216,7 +217,11 @@ def test_get_filtered_taskgraph(regex, exclude, expected):
     tasks = {
         "a": Task(kind="task", label="a", attributes={}, task={"foo": {"bar": 1}}),
         "b": Task(
-            kind="task", label="b", attributes={"thing": True}, task={"foo": {"baz": 1}}
+            kind="task",
+            label="b",
+            attributes={"thing": True},
+            optimization={"skip-unless-changed": True},
+            task={"foo": {"baz": 1}},
         ),
     }
 
