@@ -1,5 +1,14 @@
 # Change Log
 
+## [8.0.1] - 2024-04-24
+
+### Fixed
+
+- Regression to `files-changed` calculation for pull requests (#494)
+- Support `**kwargs` in functions wrapped by `taskgraph.util.memoize` (#490)
+- Support `--exclude-key` argument when the excluded key may or may not exist (#489)
+- Stop requiring REGISTRY and VERSION files for `taskgraph build-image` (#488)
+
 ## [8.0.0] - 2024-04-09
 
 ### Added
