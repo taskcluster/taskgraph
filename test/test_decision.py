@@ -46,12 +46,16 @@ class TestDecision(unittest.TestCase):
             decision.ARTIFACTS_DIR = Path("artifacts")
 
 
+@unittest.mock.patch.object(
+    GitRepository,
+    "get_changed_files",
+)
 class TestGetDecisionParameters(unittest.TestCase):
     def setUp(self):
         self.options = {
             "base_repository": "https://hg.mozilla.org/mozilla-unified",
             "head_repository": "https://hg.mozilla.org/mozilla-central",
-            "head_rev": "abcd",
+            "head_rev": "bbbb",
             "head_ref": "default",
             "head_tag": "v0.0.1",
             "project": "mozilla-central",
@@ -66,11 +70,11 @@ class TestGetDecisionParameters(unittest.TestCase):
         self.old_determine_more_accurate_base_rev = (
             decision._determine_more_accurate_base_rev
         )
-        decision._determine_more_accurate_base_rev = lambda *_, **__: "abcd"
+        decision._determine_more_accurate_base_rev = lambda *_, **__: "aaaa"
         self.old_determine_more_accurate_base_ref = (
             decision._determine_more_accurate_base_ref
         )
-        decision._determine_more_accurate_base_ref = lambda *_, **__: "abcd"
+        decision._determine_more_accurate_base_ref = lambda *_, **__: "aaaa"
 
     def tearDown(self):
         decision._determine_more_accurate_base_rev = (
@@ -80,14 +84,18 @@ class TestGetDecisionParameters(unittest.TestCase):
             self.old_determine_more_accurate_base_ref
         )
 
-    def test_simple_options(self):
+    def test_simple_options(self, mock_files_changed):
+        mock_files_changed.return_value = ["foo.txt"]
         params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
+        mock_files_changed.assert_called_once_with(rev="bbbb", base_rev="aaaa")
         self.assertEqual(params["build_date"], 1503691511)
         self.assertEqual(params["head_tag"], "v0.0.1")
         self.assertEqual(params["pushlog_id"], "143")
         self.assertEqual(params["moz_build_date"], "20170825200511")
+        self.assertEqual(params["files_changed"], ["foo.txt"])
 
-    def test_no_email_owner(self):
+    def test_no_email_owner(self, mock_files_changed):
+        mock_files_changed.return_value = ["foo.txt"]
         self.options["owner"] = "ffxbld"
         params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
         self.assertEqual(params["owner"], "ffxbld@noreply.mozilla.org")
@@ -102,11 +110,14 @@ class TestGetDecisionParameters(unittest.TestCase):
         "get_commit_message",
         unittest.mock.MagicMock(return_value="Add Foo"),
     )
-    def test_regular_commit_message_yields_default_target_tasks_method(self):
+    def test_regular_commit_message_yields_default_target_tasks_method(
+        self, mock_files_changed
+    ):
         """
         Ensures `target_tasks_method` is `default` when the commit message does not contain
         `DONTBUILD`.
         """
+        mock_files_changed.return_value = ["foo.txt"]
         self.options["tasks_for"] = "github-push"
         params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
         self.assertEqual(params["target_tasks_method"], "default")
@@ -125,10 +136,13 @@ class TestGetDecisionParameters(unittest.TestCase):
         "get_commit_message",
         unittest.mock.MagicMock(return_value="DONTBUILD"),
     )
-    def test_dontbuild_commit_message_yields_default_target_tasks_method(self):
+    def test_dontbuild_commit_message_yields_default_target_tasks_method(
+        self, mock_files_changed
+    ):
         """
         Ensures `target_tasks_method` is `nothing` when the commit message contains `DONTBUILD`.
         """
+        mock_files_changed.return_value = ["foo.txt"]
         self.options["tasks_for"] = "github-release"
         params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
         self.assertNotEqual(params["target_tasks_method"], "nothing")
