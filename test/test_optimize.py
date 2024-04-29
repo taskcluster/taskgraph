@@ -269,7 +269,7 @@ def test_remove_tasks(monkeypatch, graph, kwargs, exp_removed):
 
 
 @pytest.mark.parametrize(
-    "graph,kwargs,exp_replaced,exp_removed,exp_label_to_taskid",
+    "graph,kwargs,exp_replaced,exp_removed",
     (
         # A task cannot be replaced if it depends on one that was not replaced
         pytest.param(
@@ -277,11 +277,12 @@ def test_remove_tasks(monkeypatch, graph, kwargs, exp_removed):
                 t1={"replace": "e1"},
                 t3={"replace": "e3"},
             ),
-            {},
+            {
+                "index_to_taskid": {"t1": "e1"},
+            },
             # expectations
             {"t1"},
             set(),
-            {"t1": "e1"},
             id="blocked",
         ),
         # A task cannot be replaced if it should not be optimized
@@ -291,11 +292,13 @@ def test_remove_tasks(monkeypatch, graph, kwargs, exp_removed):
                 t2={"replace": "xxx"},  # but do_not_optimize
                 t3={"replace": "e3"},
             ),
-            {"do_not_optimize": {"t2"}},
+            {
+                "do_not_optimize": {"t2"},
+                "index_to_taskid": {"t1": "e1"},
+            },
             # expectations
             {"t1"},
             set(),
-            {"t1": "e1"},
             id="do_not_optimize",
         ),
         # No tasks are replaced when strategy is 'never'
@@ -305,7 +308,6 @@ def test_remove_tasks(monkeypatch, graph, kwargs, exp_removed):
             # expectations
             set(),
             set(),
-            {},
             id="never",
         ),
         # All replaceable tasks are replaced when strategy is 'replace'
@@ -315,11 +317,12 @@ def test_remove_tasks(monkeypatch, graph, kwargs, exp_removed):
                 t2={"replace": "e2"},
                 t3={"replace": "e3"},
             ),
-            {},
+            {
+                "index_to_taskid": {"t1": "e1", "t2": "e2", "t3": "e3"},
+            },
             # expectations
             {"t1", "t2", "t3"},
             set(),
-            {"t1": "e1", "t2": "e2", "t3": "e3"},
             id="all",
         ),
         # A task can be replaced with nothing
@@ -329,11 +332,12 @@ def test_remove_tasks(monkeypatch, graph, kwargs, exp_removed):
                 t2={"replace": True},
                 t3={"replace": True},
             ),
-            {},
+            {
+                "index_to_taskid": {"t1": "e1"},
+            },
             # expectations
             {"t1"},
             {"t2", "t3"},
-            {"t1": "e1"},
             id="tasks_removed",
         ),
         # A task which expires before a dependents deadline is not a valid replacement.
@@ -353,7 +357,6 @@ def test_remove_tasks(monkeypatch, graph, kwargs, exp_removed):
             # expectations
             set(),
             set(),
-            {},
             id="deadline",
         ),
     ),
@@ -363,7 +366,6 @@ def test_replace_tasks(
     kwargs,
     exp_replaced,
     exp_removed,
-    exp_label_to_taskid,
 ):
     """Tests the `replace_tasks` function.
 
@@ -378,6 +380,8 @@ def test_replace_tasks(
     kwargs.setdefault("params", {})
     kwargs.setdefault("do_not_optimize", set())
     kwargs.setdefault("label_to_taskid", {})
+    kwargs.setdefault("index_to_taskid", {})
+    kwargs.setdefault("taskid_to_status", {})
     kwargs.setdefault("removed_tasks", set())
     kwargs.setdefault("existing_tasks", {})
 
@@ -388,7 +392,6 @@ def test_replace_tasks(
     )
     assert got_replaced == exp_replaced
     assert kwargs["removed_tasks"] == exp_removed
-    assert kwargs["label_to_taskid"] == exp_label_to_taskid
 
 
 @pytest.mark.parametrize(
