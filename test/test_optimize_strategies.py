@@ -1,7 +1,6 @@
 # Any copyright is dedicated to the public domain.
 # http://creativecommons.org/publicdomain/zero/1.0/
 
-import os
 from datetime import datetime
 from test.fixtures.gen import make_task
 from time import mktime
@@ -44,31 +43,25 @@ def params():
         ),
     ),
 )
-def test_index_search(responses, params, state, expires, expected):
+def test_index_search(state, expires, expected):
     taskid = "abc"
     index_path = "foo.bar.latest"
-    responses.add(
-        responses.GET,
-        f"{os.environ['TASKCLUSTER_ROOT_URL']}/api/index/v1/task/{index_path}",
-        json={"taskId": taskid},
-        status=200,
-    )
-
-    responses.add(
-        responses.GET,
-        f"{os.environ['TASKCLUSTER_ROOT_URL']}/api/queue/v1/task/{taskid}/status",
-        json={
-            "status": {
-                "state": state,
-                "expires": expires,
-            }
-        },
-        status=200,
-    )
+    label_to_taskid = {index_path: taskid}
+    taskid_to_status = {
+        taskid: {
+            "state": state,
+            "expires": expires,
+        }
+    }
 
     opt = IndexSearch()
     deadline = "2021-06-07T19:03:20.482Z"
-    assert opt.should_replace_task({}, params, deadline, (index_path,)) == expected
+    assert (
+        opt.should_replace_task(
+            {}, params, deadline, ((index_path,), label_to_taskid, taskid_to_status)
+        )
+        == expected
+    )
 
 
 @pytest.mark.parametrize(
