@@ -86,7 +86,7 @@ tasks:
               short_base_ref:
                   $switch:
                       'base_ref[:10] == "refs/tags/"': '${base_ref[10:]}'
-                      'base_ref[:11] == "refs/heads/"': '${$base_ref[11:]}'
+                      'base_ref[:11] == "refs/heads/"': '${base_ref[11:]}'
                       $default: '${base_ref}'
               short_head_ref:
                   $switch:
