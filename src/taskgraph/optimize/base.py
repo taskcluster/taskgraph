@@ -316,7 +316,7 @@ def replace_tasks(
                 removed_tasks.add(label)
             else:
                 logger.debug(
-                    f"replace_tasks: {label} replaced by optimization strategy"
+                    f"replace_tasks: {label} replaced with {repl} by optimization strategy"
                 )
                 label_to_taskid[label] = repl
                 replaced.add(label)
