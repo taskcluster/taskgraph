@@ -163,8 +163,54 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
             Exception,
             id="task_graph_symbol: too many collections",
         ),
+        pytest.param(
+            "verify_routes_notification_filters",
+            make_graph(
+                make_task(
+                    "good1",
+                    task_def={
+                        "routes": [
+                            "notify.email.default@email.address.on-completed"
+                        ]
+                    },
+                ),
+            ),
+            None,
+            id="routes_notfication_filter: valid"
+        ),
+        pytest.param(
+            "verify_routes_notification_filters",
+            make_graph(
+                make_task(
+                    "bad1",
+                    task_def={
+                        "routes": [
+                            "notify.email.default@email.address.on-bogus"
+                        ]
+                    },
+                ),
+            ),
+            Exception,
+            id="routes_notfication_filter: invalid"
+        ),
+        pytest.param(
+            "verify_routes_notification_filters",
+            make_graph(
+                make_task(
+                    "deprecated",
+                    task_def={
+                        "routes": [
+                            "notify.email.default@email.address.on-any"
+                        ]
+                    },
+                ),
+            ),
+            DeprecationWarning,
+            id="routes_notfication_filter: deprecated"
+        ),
     ),
 )
+@pytest.mark.filterwarnings("error")
 def test_verification(run_verification, name, graph, exception):
     func = partial(run_verification, name, graph=graph)
     if exception:
