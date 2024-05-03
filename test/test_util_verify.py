@@ -169,14 +169,12 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
                 make_task(
                     "good1",
                     task_def={
-                        "routes": [
-                            "notify.email.default@email.address.on-completed"
-                        ]
+                        "routes": ["notify.email.default@email.address.on-completed"]
                     },
                 ),
             ),
             None,
-            id="routes_notfication_filter: valid"
+            id="routes_notfication_filter: valid",
         ),
         pytest.param(
             "verify_routes_notification_filters",
@@ -184,29 +182,23 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
                 make_task(
                     "bad1",
                     task_def={
-                        "routes": [
-                            "notify.email.default@email.address.on-bogus"
-                        ]
+                        "routes": ["notify.email.default@email.address.on-bogus"]
                     },
                 ),
             ),
             Exception,
-            id="routes_notfication_filter: invalid"
+            id="routes_notfication_filter: invalid",
         ),
         pytest.param(
             "verify_routes_notification_filters",
             make_graph(
                 make_task(
                     "deprecated",
-                    task_def={
-                        "routes": [
-                            "notify.email.default@email.address.on-any"
-                        ]
-                    },
+                    task_def={"routes": ["notify.email.default@email.address.on-any"]},
                 ),
             ),
             DeprecationWarning,
-            id="routes_notfication_filter: deprecated"
+            id="routes_notfication_filter: deprecated",
         ),
     ),
 )
