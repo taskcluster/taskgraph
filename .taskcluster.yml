@@ -264,6 +264,7 @@ tasks:
                                     ln -s /builds/worker/artifacts artifacts &&
                                     pip3 install --user --break-system-packages . &&
                                     taskgraph decision
+                                    --verbose
                                     --pushlog-id='0'
                                     --pushdate='0'
                                     --project='${project}'
