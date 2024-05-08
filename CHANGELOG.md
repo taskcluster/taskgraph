@@ -1,5 +1,15 @@
 # Change Log
 
+## [8.1.0] - 2024-05-08
+
+### Added
+
+- New Taskcluster utility functions to use the new Taskcluster `batch` APIs
+
+### Changed
+
+- Optimization logic uses new `batch` APIs to vastly reduce number of queries made to Taskcluster
+
 ## [8.0.1] - 2024-04-24
 
 ### Fixed
