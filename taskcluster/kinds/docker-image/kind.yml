@@ -21,6 +21,8 @@ tasks:
         parent: run-task
     fetch:
         symbol: I(fetch)
+    image-builder:
+        symbol: I(ib)
     index-task:
         symbol: I(idx)
     python:
