@@ -40,8 +40,9 @@ class IndexSearch(OptimizationStrategy):
         for index_path in index_paths:
             try:
                 if batched:
-                    task_id = label_to_taskid[index_path]
-                    status = taskid_to_status[task_id]
+                    task_id, status = _find_task_id_and_status_from_batch(
+                        label_to_taskid, taskid_to_status, index_path
+                    )
                 else:
                     # 404 is raised as `KeyError` also end up here
                     task_id = find_task_id(index_path)
@@ -57,11 +58,27 @@ class IndexSearch(OptimizationStrategy):
                     continue
 
                 return task_id
-            except KeyError:
-                # go on to the next index path
-                pass
+            except KeyError as e:
+                logger.debug(e)
 
         return False
+
+
+def _find_task_id_and_status_from_batch(label_to_taskid, taskid_to_status, index_path):
+    try:
+        task_id = label_to_taskid[index_path]
+    except KeyError as e:
+        raise KeyError(
+            f'Couldn\'t find cached task for index path "{index_path}".'
+        ) from e
+    try:
+        status = taskid_to_status[task_id]
+    except KeyError as e:
+        raise KeyError(
+            f'Couldn\'t find cached status for taskId {task_id} (index path "{index_path}").'
+        ) from e
+
+    return task_id, status
 
 
 @register_strategy("skip-unless-changed")
