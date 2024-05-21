@@ -1,5 +1,15 @@
 # Change Log
 
+## [8.2.0] - 2024-05-21
+
+### Fixed
+
+- Invalid parameters passed to `IndexSearch` optimization from `docker` utility
+
+### Changed
+
+- `IndexSearch` optimization supports both old and new (from 8.1.0) signatures
+
 ## [8.1.0] - 2024-05-08
 
 ### Added
