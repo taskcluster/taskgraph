@@ -17,10 +17,8 @@ except ImportError as e:
 
 from taskgraph.util import docker
 from taskgraph.util.taskcluster import (
-    find_task_id_batched,
     get_artifact_url,
     get_session,
-    status_task_batched,
 )
 
 DEPLOY_WARNING = """
@@ -66,15 +64,7 @@ def load_image_by_name(image_name, tag=None):
     task = tasks[f"build-docker-image-{image_name}"]
 
     indexes = task.optimization.get("index-search", [])
-    index_to_taskid = {}
-    task_id = False
-    if indexes:
-        indexes = list(indexes)
-        index_to_taskid = find_task_id_batched(indexes)
-        taskid_to_status = status_task_batched(list(index_to_taskid.values()))
-
-        arg = (indexes, index_to_taskid, taskid_to_status)
-        task_id = IndexSearch().should_replace_task(task, {}, None, arg)
+    task_id = IndexSearch().should_replace_task(task, {}, None, indexes)
 
     if task_id in (True, False):
         print(

@@ -3,6 +3,7 @@ from datetime import datetime
 
 from taskgraph.optimize.base import OptimizationStrategy, register_strategy
 from taskgraph.util.path import match as match_path
+from taskgraph.util.taskcluster import find_task_id, status_task
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +24,28 @@ class IndexSearch(OptimizationStrategy):
 
     def should_replace_task(self, task, params, deadline, arg):
         "Look for a task with one of the given index paths"
-        index_paths, label_to_taskid, taskid_to_status = arg
+        batched = False
+        # Appease static checker that doesn't understand that this is not needed
+        label_to_taskid = {}
+        taskid_to_status = {}
+
+        if isinstance(arg, tuple) and len(arg) == 3:
+            # allow for a batched call optimization instead of two queries
+            # per index path
+            index_paths, label_to_taskid, taskid_to_status = arg
+            batched = True
+        else:
+            index_paths = arg
 
         for index_path in index_paths:
             try:
-                task_id = label_to_taskid[index_path]
-                status = taskid_to_status[task_id]
+                if batched:
+                    task_id = label_to_taskid[index_path]
+                    status = taskid_to_status[task_id]
+                else:
+                    # 404 is raised as `KeyError` also end up here
+                    task_id = find_task_id(index_path)
+                    status = status_task(task_id)
                 # status can be `None` if we're in `testing` mode
                 # (e.g. test-action-callback)
                 if not status or status.get("state") in ("exception", "failed"):
