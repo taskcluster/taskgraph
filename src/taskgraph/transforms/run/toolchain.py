@@ -14,8 +14,8 @@ from taskgraph.transforms.run.common import (
     generic_worker_add_artifacts,
     get_vcsdir_name,
 )
-from taskgraph.util.hash import hash_paths
 from taskgraph.util import path as mozpath
+from taskgraph.util.hash import hash_paths
 from taskgraph.util.schema import Schema
 from taskgraph.util.shell import quote as shell_quote
 
