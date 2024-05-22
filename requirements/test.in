@@ -6,3 +6,4 @@ pytest
 pytest-mock
 responses
 tox
+zstandard
