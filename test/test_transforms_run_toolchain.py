@@ -189,6 +189,9 @@ def assert_forward(task, _):
     """Assert unknown schema args are forwarded to run_task"""
     assert task["run"]["foo"] == "bar"
 
+def assert_relative_script(task, taskdesc):
+    """Assert that a relative script produces the same results"""
+    assert_docker_worker(task, taskdesc)
 
 @pytest.mark.parametrize(
     "task",
@@ -231,6 +234,18 @@ def assert_forward(task, _):
         pytest.param(
             {"run": {"foo": "bar"}},
             id="forward",
+        ),
+        pytest.param(
+            {
+                "run": {
+                    "script": "../toolchain/run.sh",
+                    "toolchain-alias": "foo",
+                    "toolchain-env": {
+                        "FOO": "1",
+                    },
+                }
+            },
+            id="relative_script",
         ),
     ),
 )
