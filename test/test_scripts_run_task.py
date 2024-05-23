@@ -282,33 +282,61 @@ def git_current_rev(cwd):
         universal_newlines=True,
     ).strip()
 
+@pytest.fixture()
+def mock_homedir(monkeypatch):
+    "Mock home directory to isolate git config changes"
+    with tempfile.TemporaryDirectory() as fakehome:
+        env = os.environ.copy()
+        env['HOME'] = str(fakehome)
+        monkeypatch.setattr(os, "environ", env)
+
+        # Enable the git file protocol for testing.
+        subprocess.check_call(
+            ["git", "config", "--global", "protocol.file.allow", "always"], env=env)
+        yield str(fakehome)
 
 @pytest.fixture(scope="session")  # Tests shouldn't change this repo
 def mock_git_repo():
     "Mock repository with files, commits and branches for using as source"
-    with tempfile.TemporaryDirectory() as repo:
-        repo_path = str(repo)
-        # Init git repo and setup user config
-        subprocess.check_call(["git", "init", "-b", "main"], cwd=repo_path)
-        subprocess.check_call(["git", "config", "user.name", "pytest"], cwd=repo_path)
+    def _create_empty_repo(path):
+        subprocess.check_call(["git", "init", "-b", "main", path])
+        subprocess.check_call(["git", "config", "user.name", "pytest"], cwd=path)
         subprocess.check_call(
-            ["git", "config", "user.email", "py@tes.t"], cwd=repo_path
+            ["git", "config", "user.email", "py@tes.t"], cwd=path
         )
 
-        def _commit_file(message, filename):
-            with open(os.path.join(repo, filename), "w") as fout:
-                fout.write("test file content")
-            subprocess.check_call(["git", "add", filename], cwd=repo_path)
-            subprocess.check_call(["git", "commit", "-m", message], cwd=repo_path)
-            return git_current_rev(repo_path)
+    def _commit_file(message, filename, path):
+        with open(os.path.join(path, filename), "w") as fout:
+            fout.write("test file content")
+        subprocess.check_call(["git", "add", filename], cwd=path)
+        subprocess.check_call(["git", "commit", "-m", message], cwd=path)
+        return git_current_rev(path)
+    
+    with tempfile.TemporaryDirectory() as repo:
+        # Create the submodule repository.
+        submod_path = os.path.join(str(repo), "submodule")
+        _create_empty_repo(submod_path)
+        _commit_file("Submodule content", "content", submod_path)
+
+        # Create the testing repository.
+        repo_path = os.path.join(str(repo), "repository")
+        _create_empty_repo(repo_path)
+
+        # Add submodule (to main branch)
+        subprocess.check_call(
+            ["git", "-c", "protocol.file.allow=always",
+             "submodule", "add", f"file://{os.path.abspath(submod_path)}", "submodule"],
+            cwd=repo_path
+        )
+        subprocess.check_call(["git", "add", "submodule"], cwd=repo_path)
 
         # Commit mainfile (to main branch)
-        main_commit = _commit_file("Initial commit", "mainfile")
+        main_commit = _commit_file("Initial commit", "mainfile", repo_path)
 
         # New branch mybranch
         subprocess.check_call(["git", "checkout", "-b", "mybranch"], cwd=repo_path)
         # Commit branchfile to mybranch branch
-        branch_commit = _commit_file("File in mybranch", "branchfile")
+        branch_commit = _commit_file("File in mybranch", "branchfile", repo_path)
 
         # Set current branch back to main
         subprocess.check_call(["git", "checkout", "main"], cwd=repo_path)
@@ -318,15 +346,16 @@ def mock_git_repo():
 @pytest.mark.parametrize(
     "base_ref,ref,files,hash_key",
     [
-        (None, None, ["mainfile"], "main"),
-        (None, "main", ["mainfile"], "main"),
-        (None, "mybranch", ["mainfile", "branchfile"], "branch"),
-        ("main", "main", ["mainfile"], "main"),
-        ("main", "mybranch", ["mainfile", "branchfile"], "branch"),
+        (None, None, ["mainfile", "submodule/content"], "main"),
+        (None, "main", ["mainfile", "submodule/content"], "main"),
+        (None, "mybranch", ["mainfile", "submodule/content", "branchfile"], "branch"),
+        ("main", "main", ["mainfile", "submodule/content"], "main"),
+        ("main", "mybranch", ["mainfile", "submodule/content", "branchfile"], "branch"),
     ],
 )
 def test_git_checkout(
     mock_stdin,
+    mock_homedir,
     run_task_mod,
     mock_git_repo,
     base_ref,
@@ -367,6 +396,7 @@ def test_git_checkout(
 
 def test_git_checkout_with_commit(
     mock_stdin,
+    mock_homedir,
     run_task_mod,
     mock_git_repo,
 ):
