@@ -317,28 +317,30 @@ def git_current_rev(cwd):
         universal_newlines=True,
     ).strip()
 
+
 @pytest.fixture()
 def mock_homedir(monkeypatch):
     "Mock home directory to isolate git config changes"
     with tempfile.TemporaryDirectory() as fakehome:
         env = os.environ.copy()
-        env['HOME'] = str(fakehome)
+        env["HOME"] = str(fakehome)
         monkeypatch.setattr(os, "environ", env)
 
         # Enable the git file protocol for testing.
         subprocess.check_call(
-            ["git", "config", "--global", "protocol.file.allow", "always"], env=env)
+            ["git", "config", "--global", "protocol.file.allow", "always"], env=env
+        )
         yield str(fakehome)
+
 
 @pytest.fixture(scope="session")  # Tests shouldn't change this repo
 def mock_git_repo():
     "Mock repository with files, commits and branches for using as source"
+
     def _create_empty_repo(path):
         subprocess.check_call(["git", "init", "-b", "main", path])
         subprocess.check_call(["git", "config", "user.name", "pytest"], cwd=path)
-        subprocess.check_call(
-            ["git", "config", "user.email", "py@tes.t"], cwd=path
-        )
+        subprocess.check_call(["git", "config", "user.email", "py@tes.t"], cwd=path)
 
     def _commit_file(message, filename, path):
         with open(os.path.join(path, filename), "w") as fout:
@@ -346,7 +348,7 @@ def mock_git_repo():
         subprocess.check_call(["git", "add", filename], cwd=path)
         subprocess.check_call(["git", "commit", "-m", message], cwd=path)
         return git_current_rev(path)
-    
+
     with tempfile.TemporaryDirectory() as repo:
         # Create the submodule repositories
         sm1_path = os.path.join(str(repo), "submodule1")
@@ -363,14 +365,28 @@ def mock_git_repo():
 
         # Add submodules (to main branch)
         subprocess.check_call(
-            ["git", "-c", "protocol.file.allow=always",
-             "submodule", "add", f"file://{os.path.abspath(sm1_path)}", "sm1"],
-            cwd=repo_path
+            [
+                "git",
+                "-c",
+                "protocol.file.allow=always",
+                "submodule",
+                "add",
+                f"file://{os.path.abspath(sm1_path)}",
+                "sm1",
+            ],
+            cwd=repo_path,
         )
         subprocess.check_call(
-            ["git", "-c", "protocol.file.allow=always",
-             "submodule", "add", f"file://{os.path.abspath(sm2_path)}", "sm2"],
-            cwd=repo_path
+            [
+                "git",
+                "-c",
+                "protocol.file.allow=always",
+                "submodule",
+                "add",
+                f"file://{os.path.abspath(sm2_path)}",
+                "sm2",
+            ],
+            cwd=repo_path,
         )
         subprocess.check_call(["git", "add", "sm1"], cwd=repo_path)
         subprocess.check_call(["git", "add", "sm2"], cwd=repo_path)
@@ -401,9 +417,21 @@ def mock_git_repo():
         # Same tests again - but with submodules.
         (None, None, True, ["mainfile", "sm1/first", "sm2/second"], "main"),
         (None, "main", True, ["mainfile", "sm1/first", "sm2/second"], "main"),
-        (None, "mybranch", True, ["mainfile", "branchfile", "sm1/first", "sm2/second"], "branch"),
+        (
+            None,
+            "mybranch",
+            True,
+            ["mainfile", "branchfile", "sm1/first", "sm2/second"],
+            "branch",
+        ),
         ("main", "main", True, ["mainfile", "sm1/first", "sm2/second"], "main"),
-        ("main", "mybranch", True, ["mainfile", "branchfile", "sm1/first", "sm2/second"], "branch"),
+        (
+            "main",
+            "mybranch",
+            True,
+            ["mainfile", "branchfile", "sm1/first", "sm2/second"],
+            "branch",
+        ),
         # Tests for submodule matching rules.
         (None, "main", "sm1", ["mainfile", "sm1/first"], "main"),
         (None, "main", "sm2", ["mainfile", "sm2/second"], "main"),
