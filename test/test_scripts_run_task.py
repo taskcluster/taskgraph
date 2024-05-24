@@ -126,7 +126,41 @@ def test_install_pip_requirements(
             {
                 "base-repo": "https://hg.mozilla.org/mozilla-unified",
             },
-        )
+        ),
+        pytest.param(
+            {
+                "REPOSITORY_TYPE": "git",
+                "BASE_REPOSITORY": "https://github.com/mozilla-mobile/mozilla-vpn-client.git",
+                "HEAD_REPOSITORY": "https://github.com/mozilla-mobile/mozilla-vpn-client.git",
+                "HEAD_REV": "abcdef",
+                "SUBMODULES": "3rdparty/i18n",
+            },
+            {},
+        ),
+        pytest.param(
+            {
+                "REPOSITORY_TYPE": "git",
+                "BASE_REPOSITORY": "https://github.com/mozilla-mobile/mozilla-vpn-client.git",
+                "HEAD_REPOSITORY": "https://github.com/mozilla-mobile/mozilla-vpn-client.git",
+                "HEAD_REV": "abcdef",
+                "SUBMODULES": "auto",
+            },
+            {
+                "submodules": True,
+            },
+        ),
+        pytest.param(
+            {
+                "REPOSITORY_TYPE": "git",
+                "BASE_REPOSITORY": "https://github.com/mozilla-mobile/mozilla-vpn-client.git",
+                "HEAD_REPOSITORY": "https://github.com/mozilla-mobile/mozilla-vpn-client.git",
+                "HEAD_REV": "abcdef",
+                "SUBMODULES": "yes",
+            },
+            {
+                "submodules": True,
+            },
+        ),
     ],
 )
 def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
@@ -159,6 +193,7 @@ def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
         "ssh-secret-name": env.get("SSH_SECRET_NAME"),
         "sparse-profile": False,
         "store-path": env.get("HG_STORE_PATH"),
+        "submodules": env.get("SUBMODULES"),
     }
     if "PIP_REQUIREMENTS" in env:
         expected["pip-requirements"] = os.path.join(
@@ -344,13 +379,24 @@ def mock_git_repo():
 
 
 @pytest.mark.parametrize(
-    "base_ref,ref,files,hash_key",
+    "base_ref,ref,submodules,files,hash_key",
     [
-        (None, None, ["mainfile", "submodule/content"], "main"),
-        (None, "main", ["mainfile", "submodule/content"], "main"),
-        (None, "mybranch", ["mainfile", "submodule/content", "branchfile"], "branch"),
-        ("main", "main", ["mainfile", "submodule/content"], "main"),
-        ("main", "mybranch", ["mainfile", "submodule/content", "branchfile"], "branch"),
+        # Check out the repository in a bunch of states.
+        (None, None, None, ["mainfile"], "main"),
+        (None, "main", None, ["mainfile"], "main"),
+        (None, "mybranch", None, ["mainfile", "branchfile"], "branch"),
+        ("main", "main", None, ["mainfile"], "main"),
+        ("main", "mybranch", None, ["mainfile", "branchfile"], "branch"),
+        # Same tests again - but with submodules.
+        (None, None, True, ["mainfile", "submodule/content"], "main"),
+        (None, "main", True, ["mainfile", "submodule/content"], "main"),
+        (None, "mybranch", True, ["mainfile", "branchfile", "submodule/content"], "branch"),
+        ("main", "main", True, ["mainfile", "submodule/content"], "main"),
+        ("main", "mybranch", True, ["mainfile", "branchfile", "submodule/content"], "branch"),
+        # Tests for submodule matching rules.
+        (None, "main", "submodule", ["mainfile", "submodule/content"], "main"),
+        (None, "main", "one:two:three", ["mainfile"], "main"),
+        (None, "main", "one:two:submodule", ["mainfile", "submodule/content"], "main"),
     ],
 )
 def test_git_checkout(
@@ -360,6 +406,7 @@ def test_git_checkout(
     mock_git_repo,
     base_ref,
     ref,
+    submodules,
     files,
     hash_key,
 ):
@@ -375,6 +422,7 @@ def test_git_checkout(
             commit=None,
             ssh_key_file=None,
             ssh_known_hosts_file=None,
+            submodules=submodules,
         )
 
         # Check desired files exist
@@ -412,6 +460,7 @@ def test_git_checkout_with_commit(
             commit=mock_git_repo["branch"],
             ssh_key_file=None,
             ssh_known_hosts_file=None,
+            submodules=None,
         )
 
 

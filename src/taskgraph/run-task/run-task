@@ -598,6 +598,7 @@ def git_checkout(
     commit: Optional[str],
     ssh_key_file: Optional[Path],
     ssh_known_hosts_file: Optional[Path],
+    submodules: Optional[str | bool],
 ):
     env = {
         # abort if transfer speed is lower than 1kB/s for 1 minute
@@ -705,23 +706,40 @@ def git_checkout(
 
     run_required_command(b"vcs", args, cwd=destination_path)
 
-    if os.path.exists(os.path.join(destination_path, ".gitmodules")):
-        args = [
-            "git",
-            "submodule",
-            "init",
+    if submodules is not None:
+        def _filter_submodule(status):
+            # A boolean value selects/disables all submodules.
+            if isinstance(submodules, bool):
+                return submodules
+
+            # Otherwise, a colon-separated stringlist of selected submodules.
+            smpath = status.split()[1]
+            return smpath in submodules.split(':')
+
+        submodpaths = [
+            status.split()[1]
+            for status in subprocess.check_output(["git", "submodule", "status"],
+                cwd=destination_path, universal_newlines=True).splitlines()
+            if _filter_submodule(status)
         ]
 
-        run_required_command(b"vcs", args, cwd=destination_path)
+        for p in submodpaths:
+            args = [
+                "git",
+                "submodule",
+                "init",
+                p
+            ]
+            run_required_command(b"vcs", args, cwd=destination_path)
 
-        args = [
-            "git",
-            "submodule",
-            "update",
-            "--force",  # Overrides any potential local changes
-        ]
-
-        run_required_command(b"vcs", args, cwd=destination_path)
+            args = [
+                "git",
+                "submodule",
+                "update",
+                "--force",  # Overrides any potential local changes
+                p
+            ]
+            run_required_command(b"vcs", args, cwd=destination_path)
 
     _clean_git_checkout(destination_path)
 
@@ -894,6 +912,12 @@ def collect_vcs_options(args, project, name):
     ref = os.environ.get("%s_HEAD_REF" % env_prefix)
     pip_requirements = os.environ.get("%s_PIP_REQUIREMENTS" % env_prefix)
     private_key_secret = os.environ.get("%s_SSH_SECRET_NAME" % env_prefix)
+    submodules = os.environ.get("%s_SUBMODULES" % env_prefix)
+
+    # Some special values can be used to request all submodules.
+    if submodules is not None:
+        if submodules.lower() in ["auto", "true", "yes"]:
+            submodules = True
 
     store_path = os.environ.get("HG_STORE_PATH")
 
@@ -928,6 +952,7 @@ def collect_vcs_options(args, project, name):
         "repo-type": repo_type,
         "ssh-secret-name": private_key_secret,
         "pip-requirements": pip_requirements,
+        "submodules": submodules,
     }
 
 
@@ -976,6 +1001,7 @@ def vcs_checkout_from_args(options):
                 revision,
                 ssh_key_file,
                 ssh_known_hosts_file,
+                options["submodules"],
             )
         elif options["repo-type"] == "hg":
             if not revision and not ref:
