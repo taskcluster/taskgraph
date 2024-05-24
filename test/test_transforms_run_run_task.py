@@ -168,6 +168,31 @@ def assert_run_task_command_generic_worker(task):
     ]
 
 
+def assert_no_checkouts(task):
+    assert task["worker"]["env"] == {
+        "MOZ_SCM_LEVEL": "1",
+    }
+    assert task["worker"]["command"] == [
+        "/usr/local/bin/run-task",
+        "--",
+        "bash",
+        "-cx",
+        "echo hello world",
+    ]
+
+def assert_change_head(task):
+    assert task["worker"]["env"] == {
+        "CI_BASE_REPOSITORY": "http://hg.example.com",
+        "CI_HEAD_REF": "default",
+        "CI_HEAD_REPOSITORY": "http://hg.somewhere.com",
+        "CI_HEAD_REV": "an-awesome-branch",
+        "CI_REPOSITORY_TYPE": "hg",
+        "HG_STORE_PATH": "/builds/worker/checkouts/hg-store",
+        "MOZ_SCM_LEVEL": "1",
+        "REPOSITORIES": '{"ci": "Taskgraph"}',
+        "VCS_PATH": "/builds/worker/checkouts/vcs",
+    }
+
 @pytest.mark.parametrize(
     "task",
     (
@@ -207,6 +232,27 @@ def assert_run_task_command_generic_worker(task):
                 },
             },
             id="run_task_command_generic_worker",
+        ),
+        pytest.param(
+            {
+                "run": {
+                    "checkout": False,
+                },
+            },
+            id="no_checkouts",
+        ),
+        pytest.param(
+            {
+                "run": {
+                    "checkout": {
+                        "ci": {
+                            "head_repository": "http://hg.somewhere.com",
+                            "head_rev": "an-awesome-branch",
+                        },
+                    },
+                },
+            },
+            id="change_head",
         ),
     ),
 )
