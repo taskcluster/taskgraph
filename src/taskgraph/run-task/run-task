@@ -37,7 +37,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from threading import Thread
-from typing import Optional
+from typing import Optional, Union
 
 SECRET_BASEURL_TPL = "http://taskcluster/secrets/v1/secret/{}"
 
@@ -598,7 +598,7 @@ def git_checkout(
     commit: Optional[str],
     ssh_key_file: Optional[Path],
     ssh_known_hosts_file: Optional[Path],
-    submodules: Optional[str | bool],
+    submodules: Union[str, bool, None],
 ):
     env = {
         # abort if transfer speed is lower than 1kB/s for 1 minute
