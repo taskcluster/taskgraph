@@ -348,22 +348,33 @@ def mock_git_repo():
         return git_current_rev(path)
     
     with tempfile.TemporaryDirectory() as repo:
-        # Create the submodule repository.
-        submod_path = os.path.join(str(repo), "submodule")
-        _create_empty_repo(submod_path)
-        _commit_file("Submodule content", "content", submod_path)
+        # Create the submodule repositories
+        sm1_path = os.path.join(str(repo), "submodule1")
+        _create_empty_repo(sm1_path)
+        _commit_file("The first submodule", "first", sm1_path)
+
+        sm2_path = os.path.join(str(repo), "submodule2")
+        _create_empty_repo(sm2_path)
+        _commit_file("The second submodule", "second", sm2_path)
 
         # Create the testing repository.
         repo_path = os.path.join(str(repo), "repository")
         _create_empty_repo(repo_path)
 
-        # Add submodule (to main branch)
+        # Add submodules (to main branch)
         subprocess.check_call(
             ["git", "-c", "protocol.file.allow=always",
-             "submodule", "add", f"file://{os.path.abspath(submod_path)}", "submodule"],
+             "submodule", "add", f"file://{os.path.abspath(sm1_path)}", "sm1"],
             cwd=repo_path
         )
-        subprocess.check_call(["git", "add", "submodule"], cwd=repo_path)
+        subprocess.check_call(
+            ["git", "-c", "protocol.file.allow=always",
+             "submodule", "add", f"file://{os.path.abspath(sm2_path)}", "sm2"],
+            cwd=repo_path
+        )
+        subprocess.check_call(["git", "add", "sm1"], cwd=repo_path)
+        subprocess.check_call(["git", "add", "sm2"], cwd=repo_path)
+        subprocess.check_call(["git", "commit", "-m", "Add submodules"], cwd=repo_path)
 
         # Commit mainfile (to main branch)
         main_commit = _commit_file("Initial commit", "mainfile", repo_path)
@@ -388,15 +399,16 @@ def mock_git_repo():
         ("main", "main", None, ["mainfile"], "main"),
         ("main", "mybranch", None, ["mainfile", "branchfile"], "branch"),
         # Same tests again - but with submodules.
-        (None, None, True, ["mainfile", "submodule/content"], "main"),
-        (None, "main", True, ["mainfile", "submodule/content"], "main"),
-        (None, "mybranch", True, ["mainfile", "branchfile", "submodule/content"], "branch"),
-        ("main", "main", True, ["mainfile", "submodule/content"], "main"),
-        ("main", "mybranch", True, ["mainfile", "branchfile", "submodule/content"], "branch"),
+        (None, None, True, ["mainfile", "sm1/first", "sm2/second"], "main"),
+        (None, "main", True, ["mainfile", "sm1/first", "sm2/second"], "main"),
+        (None, "mybranch", True, ["mainfile", "branchfile", "sm1/first", "sm2/second"], "branch"),
+        ("main", "main", True, ["mainfile", "sm1/first", "sm2/second"], "main"),
+        ("main", "mybranch", True, ["mainfile", "branchfile", "sm1/first", "sm2/second"], "branch"),
         # Tests for submodule matching rules.
-        (None, "main", "submodule", ["mainfile", "submodule/content"], "main"),
+        (None, "main", "sm1", ["mainfile", "sm1/first"], "main"),
+        (None, "main", "sm2", ["mainfile", "sm2/second"], "main"),
         (None, "main", "one:two:three", ["mainfile"], "main"),
-        (None, "main", "one:two:submodule", ["mainfile", "submodule/content"], "main"),
+        (None, "main", "one:two:sm1", ["mainfile", "sm1/first"], "main"),
     ],
 )
 def test_git_checkout(
