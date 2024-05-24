@@ -26,6 +26,7 @@ class RepoConfig:
     path: str = ""
     head_rev: Union[str, None] = None
     ssh_secret_name: Union[str, None] = None
+    submodules: Union[bool, str, None] = None
 
 
 @dataclass(frozen=True, eq=False)

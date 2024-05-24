@@ -180,6 +180,37 @@ def assert_no_checkouts(task):
         "echo hello world",
     ]
 
+
+def assert_with_all_submodules(task):
+    assert task["worker"]["env"] == {
+        "CI_BASE_REPOSITORY": "http://hg.example.com",
+        "CI_HEAD_REF": "default",
+        "CI_HEAD_REPOSITORY": "http://hg.example.com",
+        "CI_HEAD_REV": "abcdef",
+        "CI_REPOSITORY_TYPE": "hg",
+        "CI_SUBMODULES": "auto",
+        "HG_STORE_PATH": "/builds/worker/checkouts/hg-store",
+        "MOZ_SCM_LEVEL": "1",
+        "REPOSITORIES": '{"ci": "Taskgraph"}',
+        "VCS_PATH": "/builds/worker/checkouts/vcs",
+    }
+
+
+def assert_with_one_submodule(task):
+    assert task["worker"]["env"] == {
+        "CI_BASE_REPOSITORY": "http://hg.example.com",
+        "CI_HEAD_REF": "default",
+        "CI_HEAD_REPOSITORY": "http://hg.example.com",
+        "CI_HEAD_REV": "abcdef",
+        "CI_REPOSITORY_TYPE": "hg",
+        "CI_SUBMODULES": "xyz",
+        "HG_STORE_PATH": "/builds/worker/checkouts/hg-store",
+        "MOZ_SCM_LEVEL": "1",
+        "REPOSITORIES": '{"ci": "Taskgraph"}',
+        "VCS_PATH": "/builds/worker/checkouts/vcs",
+    }
+
+
 def assert_change_head(task):
     assert task["worker"]["env"] == {
         "CI_BASE_REPOSITORY": "http://hg.example.com",
@@ -192,6 +223,7 @@ def assert_change_head(task):
         "REPOSITORIES": '{"ci": "Taskgraph"}',
         "VCS_PATH": "/builds/worker/checkouts/vcs",
     }
+
 
 @pytest.mark.parametrize(
     "task",
@@ -240,6 +272,30 @@ def assert_change_head(task):
                 },
             },
             id="no_checkouts",
+        ),
+        pytest.param(
+            {
+                "run": {
+                    "checkout": {
+                        "ci": {
+                            "submodules": True,
+                        }
+                    },
+                },
+            },
+            id="with_all_submodules",
+        ),
+        pytest.param(
+            {
+                "run": {
+                    "checkout": {
+                        "ci": {
+                            "submodules": "xyz",
+                        }
+                    },
+                },
+            },
+            id="with_one_submodule",
         ),
         pytest.param(
             {
