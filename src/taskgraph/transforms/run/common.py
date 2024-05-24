@@ -143,8 +143,9 @@ def support_vcs_checkout(config, task, taskdesc, repo_configs, sparse=False):
         }
     )
     for repo_config in repo_configs.values():
-        repo_submods = repo_config.submodules
-        if not isinstance(repo_config.submodules, str):
+        if isinstance(repo_config.submodules, list):
+            repo_submods = ':'.join(repo_config.submodules)
+        else:
             repo_submods = "auto" if repo_config.submodules else None
 
         env.update(

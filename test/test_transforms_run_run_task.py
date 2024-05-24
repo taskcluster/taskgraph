@@ -203,7 +203,22 @@ def assert_with_one_submodule(task):
         "CI_HEAD_REPOSITORY": "http://hg.example.com",
         "CI_HEAD_REV": "abcdef",
         "CI_REPOSITORY_TYPE": "hg",
-        "CI_SUBMODULES": "xyz",
+        "CI_SUBMODULES": "apple",
+        "HG_STORE_PATH": "/builds/worker/checkouts/hg-store",
+        "MOZ_SCM_LEVEL": "1",
+        "REPOSITORIES": '{"ci": "Taskgraph"}',
+        "VCS_PATH": "/builds/worker/checkouts/vcs",
+    }
+
+
+def assert_with_two_submodules(task):
+    assert task["worker"]["env"] == {
+        "CI_BASE_REPOSITORY": "http://hg.example.com",
+        "CI_HEAD_REF": "default",
+        "CI_HEAD_REPOSITORY": "http://hg.example.com",
+        "CI_HEAD_REV": "abcdef",
+        "CI_REPOSITORY_TYPE": "hg",
+        "CI_SUBMODULES": "orange:banana",
         "HG_STORE_PATH": "/builds/worker/checkouts/hg-store",
         "MOZ_SCM_LEVEL": "1",
         "REPOSITORIES": '{"ci": "Taskgraph"}',
@@ -290,12 +305,24 @@ def assert_change_head(task):
                 "run": {
                     "checkout": {
                         "ci": {
-                            "submodules": "xyz",
+                            "submodules": ["apple"],
                         }
                     },
                 },
             },
             id="with_one_submodule",
+        ),
+        pytest.param(
+            {
+                "run": {
+                    "checkout": {
+                        "ci": {
+                            "submodules": ["orange", "banana"],
+                        }
+                    },
+                },
+            },
+            id="with_two_submodules",
         ),
         pytest.param(
             {
