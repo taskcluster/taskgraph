@@ -380,10 +380,10 @@ def build_docker_worker_payload(config, task, task_def):
             for v in sorted(volumes):
                 if v in worker["volumes"]:
                     raise Exception(
-                        "volume %s already defined; "
+                        f"volume {v} already defined; "
                         "if it is defined in a Dockerfile, "
                         "it does not need to be specified in the "
-                        "worker definition" % v
+                        "worker definition"
                     )
 
                 worker["volumes"].append(v)
@@ -544,9 +544,7 @@ def build_docker_worker_payload(config, task, task_def):
                 suffix=suffix,
             )
             caches[name] = cache["mount-point"]
-            task_def["scopes"].append(
-                {"task-reference": "docker-worker:cache:%s" % name}
-            )
+            task_def["scopes"].append({"task-reference": f"docker-worker:cache:{name}"})
 
         # Assertion: only run-task is interested in this.
         if run_task:

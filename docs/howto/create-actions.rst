@@ -259,7 +259,7 @@ The :func:`~taskgraph.create.create_tasks` utility function provides a full-feat
 new tasks. Its features include creating prerequisite tasks, operating in a
 "testing" mode with ``./mach taskgraph test-action-callback``, and generating
 artifacts that can be used by later action tasks to figure out what happened.
-See the source for more detailed docmentation.
+See the source for more detailed documentation.
 
 The artifacts it can produce are:
 

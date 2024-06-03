@@ -1,9 +1,8 @@
-from test import does_not_raise
-
 import pytest
 from mozilla_repo_urls import InvalidRepoUrlError
 
 from taskgraph.actions import registry
+from test import does_not_raise
 
 
 @pytest.mark.parametrize(
