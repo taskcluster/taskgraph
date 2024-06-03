@@ -177,15 +177,15 @@ def stream_context_tar(topsrcdir, context_dir, out_file, image_name=None, args=N
 
             p = line[len("# %include ") :].strip()
             if os.path.isabs(p):
-                raise Exception("extra include path cannot be absolute: %s" % p)
+                raise Exception(f"extra include path cannot be absolute: {p}")
 
             fs_path = os.path.normpath(os.path.join(topsrcdir, p))
             # Check for filesystem traversal exploits.
             if not fs_path.startswith(topsrcdir):
-                raise Exception("extra include path outside topsrcdir: %s" % p)
+                raise Exception(f"extra include path outside topsrcdir: {p}")
 
             if not os.path.exists(fs_path):
-                raise Exception("extra include path does not exist: %s" % p)
+                raise Exception(f"extra include path does not exist: {p}")
 
             if os.path.isdir(fs_path):
                 for root, dirs, files in os.walk(fs_path):
