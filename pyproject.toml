@@ -13,6 +13,9 @@ branch = true
 source = ["src/taskgraph/", "taskgraph", "src/taskgraph/run-task/"]
 
 [tool.ruff]
+target-version = "py38"
+
+[tool.ruff.lint]
 select = [
     "E", "W",       # pycodestyle
     "F",            # pyflakes
@@ -25,9 +28,8 @@ ignore = [
     "E501",  # let black handle line-length
     "E741",
 ]
-target-version = "py38"
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["taskgraph"]
 
 [tool.pyright]
