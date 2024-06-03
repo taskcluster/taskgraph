@@ -3,12 +3,12 @@
 
 import os
 from datetime import datetime
-from test.fixtures.gen import make_task
 from time import mktime
 
 import pytest
 
 from taskgraph.optimize.strategies import IndexSearch, SkipUnlessChanged
+from test.fixtures.gen import make_task
 
 
 @pytest.fixture
