@@ -218,9 +218,7 @@ def assert_chain_of_trust_influences_digest(tasks):
                         "name": "cache-foo",
                         "digest-data": ["abc"],
                     },
-                    "worker": {
-                        "chain-of-trust": True
-                    },
+                    "worker": {"chain-of-trust": True},
                 },
             ],
             # kind config
