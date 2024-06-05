@@ -91,6 +91,19 @@ def assert_cache_with_non_cached_dependency(e):
     handle_exception(e, exc=Exception)
 
 
+def assert_chain_of_trust_influences_digest(tasks):
+    assert len(tasks) == 3
+    # The first two tasks are chain-of-trust unspecified, and chain-of-trust: False
+    # which should result in the same digest.
+    digest_0 = tasks[0]["attributes"]["cached_task"]["digest"]
+    digest_1 = tasks[1]["attributes"]["cached_task"]["digest"]
+    assert digest_0 == digest_1
+
+    # The third task is chain-of-trust: True, and should have a different digest
+    digest_2 = tasks[2]["attributes"]["cached_task"]["digest"]
+    assert digest_0 != digest_2
+
+
 @pytest.mark.parametrize(
     "tasks, kind_config, deps",
     (
@@ -176,6 +189,45 @@ def assert_cache_with_non_cached_dependency(e):
             # kind deps
             {"dep": make_task("dep")},
             id="cache_with_non_cached_dependency",
+        ),
+        pytest.param(
+            # tasks
+            [
+                {
+                    "cache": {
+                        "type": "cached-task.v2",
+                        "name": "cache-foo",
+                        "digest-data": ["abc"],
+                    },
+                    # no explicit chain of trust configuration; should be the
+                    # same as when it is set to False
+                },
+                {
+                    "cache": {
+                        "type": "cached-task.v2",
+                        "name": "cache-foo",
+                        "digest-data": ["abc"],
+                    },
+                    "worker": {
+                        "chain-of-trust": False,
+                    },
+                },
+                {
+                    "cache": {
+                        "type": "cached-task.v2",
+                        "name": "cache-foo",
+                        "digest-data": ["abc"],
+                    },
+                    "worker": {
+                        "chain-of-trust": True
+                    },
+                },
+            ],
+            # kind config
+            {},
+            # kind deps
+            {},
+            id="chain_of_trust_influences_digest",
         ),
     ),
 )
