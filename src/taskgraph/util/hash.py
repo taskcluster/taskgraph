@@ -2,14 +2,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import functools
 import hashlib
 from pathlib import Path
 
 from taskgraph.util import path as mozpath
-from taskgraph.util.memoize import memoize
 
 
-@memoize
+@functools.lru_cache(maxsize=None)
 def hash_path(path):
     """Hash a single file.
 
@@ -44,13 +44,13 @@ def hash_paths(base_path, patterns):
     return h.hexdigest()
 
 
-@memoize
+@functools.lru_cache(maxsize=None)
 def _find_matching_files(base_path, pattern):
     files = _get_all_files(base_path)
     return [path for path in files if mozpath.match(path, pattern)]
 
 
-@memoize
+@functools.lru_cache(maxsize=None)
 def _get_all_files(base_path):
     return [
         mozpath.normsep(str(path))

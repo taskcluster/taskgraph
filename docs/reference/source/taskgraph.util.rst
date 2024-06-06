@@ -60,14 +60,6 @@ taskgraph.util.keyed\_by module
    :undoc-members:
    :show-inheritance:
 
-taskgraph.util.memoize module
------------------------------
-
-.. automodule:: taskgraph.util.memoize
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 taskgraph.util.parameterization module
 --------------------------------------
 
