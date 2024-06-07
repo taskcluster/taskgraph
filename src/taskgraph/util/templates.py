@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import copy
+from taskgraph.util.copy import deepcopy
 
 
 def merge_to(source, dest):
@@ -55,7 +55,7 @@ def merge(*objects):
     Returns the result without modifying any arguments.
     """
     if len(objects) == 1:
-        return copy.deepcopy(objects[0])
+        return deepcopy(objects[0])
     return merge_to(objects[-1], merge(*objects[:-1]))
 
 
