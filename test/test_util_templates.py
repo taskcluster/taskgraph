@@ -2,7 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-
 import unittest
 
 from taskgraph.util.templates import merge, merge_to
@@ -50,3 +49,24 @@ class MergeTest(unittest.TestCase):
         self.assertEqual(first, {"a": 1, "b": 2, "d": 11})
         self.assertEqual(second, {"b": 20, "c": 30})
         self.assertEqual(third, {"c": 300, "d": 400})
+
+    def test_merge_by(self):
+        source = {
+            "x": "abc",
+            "y": {"by-foo": {"quick": "fox", "default": ["a", "b", "c"]}},
+        }
+        dest = {"y": {"by-foo": {"purple": "rain", "default": ["x", "y", "z"]}}}
+        expected = {
+            "x": "abc",
+            "y": {"by-foo": {"quick": "fox", "default": ["a", "b", "c"]}},
+        }  # source wins
+        self.assertEqual(merge_to(source, dest), expected)
+        self.assertEqual(dest, expected)
+
+    def test_merge_multiple_by(self):
+        source = {"x": {"by-foo": {"quick": "fox", "default": ["a", "b", "c"]}}}
+        dest = {"x": {"by-bar": {"purple": "rain", "default": ["x", "y", "z"]}}}
+        expected = {
+            "x": {"by-foo": {"quick": "fox", "default": ["a", "b", "c"]}}
+        }  # source wins
+        self.assertEqual(merge_to(source, dest), expected)
