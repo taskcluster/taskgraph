@@ -3,6 +3,19 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+8.x -> 9.x
+----------
+
+* Replace references to ``taskgraph.util.memoize.memoize`` with
+  ``functools.cache``. E.g, change ``@memoize`` to ``@cache``. If using Python
+  3.8, use ``@functools.lru_cache(maxsize=None)`` instead.
+* Pay close attention to tasks that use ``task-defaults`` to merge
+  configuration containing ``by-<attribute>`` keys. The
+  :func:`taskgraph.util.templates.merge` function will no longer attempt to merge
+  keys containing these attributes, which may result in changes to your graph.
+  You can use the :ref:`diff feature <diffing graphs>` to help detect possible
+  changes.
+
 7.x -> 8.x
 ----------
 
