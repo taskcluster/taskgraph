@@ -1,5 +1,22 @@
 # Change Log
 
+## [9.0.0] - 2024-06-11
+
+### Added
+
+- New `taskgraph.util.copy.deepcopy` function to assist deepcopying Task objects efficiently
+- Toolchain tasks now support relative script paths
+
+### Fixed
+
+- `taskgraph.util.templates.merge` no longer attempts to merge `by-<attribute>` configs
+- Cached task digest now factors in Chain of Trust config
+- Updated `verify_routes_notification_filters` to support all valid Taskcluster values
+
+### Removed
+
+- Removed the `taskgraph.util.memoize` utility function
+
 ## [8.2.0] - 2024-05-21
 
 ### Fixed
