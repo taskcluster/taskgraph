@@ -23,10 +23,31 @@ tasks:
         symbol: I(fetch)
     index-task:
         symbol: I(idx)
-    python:
-        symbol: I(py)
+    py38:
+        definition: python
+        symbol: I(py38)
         args:
-            PYENV_VERSIONS: "3.12, 3.11, 3.10, 3.9, 3.8"
+            PYTHON_VERSION: "3.8"
+    py39:
+        definition: python
+        symbol: I(py39)
+        args:
+            PYTHON_VERSION: "3.9"
+    py310:
+        definition: python
+        symbol: I(py310)
+        args:
+            PYTHON_VERSION: "3.10"
+    py311:
+        definition: python
+        symbol: I(py311)
+        args:
+            PYTHON_VERSION: "3.11"
+    py312:
+        definition: python
+        symbol: I(py312)
+        args:
+            PYTHON_VERSION: "3.12"
     run-task:
         symbol: I(rt)
     skopeo:

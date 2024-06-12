@@ -6,17 +6,25 @@
 loader: taskgraph.loader.transform:loader
 
 transforms:
-    - taskgraph.transforms.run:transforms
-    - taskgraph.transforms.task:transforms
+    - taskgraph.transforms.run
+    - taskgraph.transforms.task
 
 task-defaults:
+    attributes:
+        retrigger: true
+        code-review: true
     worker-type: t-linux
     worker:
-        docker-image: {in-tree: py312}
-        max-run-time: 3600
+        docker-image: {in-tree: py38}
+        max-run-time: 600
+        env:
+            LC_ALL: "C"
+            PYTHONUTF8: "0"
+            PYTHONCOERCECLOCALE: "0"
+            HGENCODING: "utf-8"
     treeherder:
         kind: test
-        platform: tests/opt
+        platform: test/opt
         tier: 1
     run:
         using: run-task
@@ -24,15 +32,12 @@ task-defaults:
         cache-dotcache: true
 
 tasks:
-    generate:
-        description: "Generate documentation and fail on warnings"
+    type:
+        description: "Run type checking against src with Pyright"
         treeherder:
-            symbol: doc(gen)
-        worker:
-            env:
-                SPHINXOPTS: "-W"
+            symbol: check(type)
         run:
             command: >-
-                pip install --user -r requirements/docs.txt --require-hashes &&
+                pip install --user -r requirements/test.txt --require-hashes &&
                 pip install --user --no-deps . &&
-                make html
+                pyright

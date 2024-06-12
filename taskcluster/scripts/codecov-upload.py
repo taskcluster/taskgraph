@@ -24,5 +24,15 @@ token = fetch_secret("project/releng/taskgraph/ci")["codecov_api_token"]
 uploader = FETCHES_DIR / "codecov"
 uploader.chmod(uploader.stat().st_mode | stat.S_IEXEC)
 subprocess.run(
-    [str(uploader), "-t", token, "-f", str(FETCHES_DIR / "coverage.xml")], check=True
+    [
+        str(uploader),
+        "--verbose",
+        "upload-process",
+        "--fail-on-error",
+        "--token",
+        token,
+        "-f",
+        str(FETCHES_DIR / "coverage.xml"),
+    ],
+    check=True,
 )

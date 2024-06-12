@@ -1,0 +1,46 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+---
+
+loader: taskgraph.loader.transform:loader
+
+transforms:
+    - self_taskgraph.transforms.test
+    - taskgraph.transforms.run
+    - taskgraph.transforms.task
+
+kind-dependencies:
+    - docker-image
+
+task-defaults:
+    attributes:
+        retrigger: true
+        code-review: true
+    worker-type: t-linux
+    worker:
+        max-run-time: 1800
+        env:
+            LC_ALL: "C"
+            PYTHONUTF8: "0"
+            PYTHONCOERCECLOCALE: "0"
+            HGENCODING: "utf-8"
+    treeherder:
+        kind: test
+        platform: test/opt
+        tier: 1
+    run:
+        using: run-task
+        cwd: '{checkout}'
+        cache-dotcache: true
+
+tasks:
+    unit:
+        description: "Run `unit tests` to validate the latest changes"
+        attributes:
+            artifact_prefix: public
+        run:
+            command: >-
+                pip install --user -r requirements/test.txt --require-hashes &&
+                pip install --user --no-deps -e . &&
+                coverage run --data-file $MOZ_ARTIFACT_DIR/coverage --context=$PYTHON_VERSION -m pytest -vv

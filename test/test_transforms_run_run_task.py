@@ -210,7 +210,8 @@ def assert_run_task_command_generic_worker(task):
         ),
     ),
 )
-def test_run_task(request, run_task_using, task):
+def test_run_task(monkeypatch, request, run_task_using, task):
+    monkeypatch.setenv("TASK_ID", "<TASK_ID>")
     taskdesc = run_task_using(task)
     print("Task Description:")
     pprint(taskdesc)
