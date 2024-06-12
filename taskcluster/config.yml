@@ -3,8 +3,10 @@ trust-domain: taskgraph
 treeherder:
     group-names:
         'I': 'Docker Image Builds'
-        'doc': 'Documentation tasks'
         'Fetch': 'Fetch tasks'
+        'check': 'Checks and lints'
+        'doc': 'Documentation tasks'
+        'unit': 'Unit test tasks'
 
 index:
     products:
