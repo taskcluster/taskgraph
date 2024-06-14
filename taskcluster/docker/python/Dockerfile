@@ -6,7 +6,7 @@ FROM python:3.12-slim
 MAINTAINER Release Engineering <release@mozilla.com>
 
 # Add worker user
-RUN mkdir /builds && \
+RUN mkdir -p /builds && \
     useradd -d /builds/worker -s /bin/bash -m worker && \
     mkdir /builds/worker/artifacts && \
     chown worker:worker /builds/worker/artifacts
