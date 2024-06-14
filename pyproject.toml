@@ -9,7 +9,7 @@ xfail_strict = true
 
 [tool.coverage.run]
 branch = true
-source = ["src/taskgraph/", "taskgraph", "src/taskgraph/run-task/"]
+source = ["src/taskgraph/", "src/taskgraph/run-task/", "test"]
 
 [tool.ruff]
 target-version = "py38"
