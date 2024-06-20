@@ -49,11 +49,13 @@ class IndexSearch(OptimizationStrategy):
                 # status can be `None` if we're in `testing` mode
                 # (e.g. test-action-callback)
                 if not status or status.get("state") in ("exception", "failed"):
+                    logger.debug(f'not replacing {task["label"]} with {task_id} because it is in failed or exception state')
                     continue
 
                 if deadline and datetime.strptime(
                     status["expires"], self.fmt
                 ) < datetime.strptime(deadline, self.fmt):
+                    logger.debug(f'not replacing {task["label"]} with {task_id} because it expires before {deadline}')
                     continue
 
                 return task_id
