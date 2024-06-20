@@ -79,7 +79,10 @@ def test_index_search(responses, params, state, expires, expected):
     deadline = "2021-06-07T19:03:20.482Z"
     assert (
         opt.should_replace_task(
-            {}, params, deadline, ([index_path], label_to_taskid, taskid_to_status)
+            {"label": "task-label"},
+            params,
+            deadline,
+            ([index_path], label_to_taskid, taskid_to_status),
         )
         == expected
     )
