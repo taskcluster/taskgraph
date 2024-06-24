@@ -24,7 +24,7 @@ from taskgraph.util.parameterization import resolve_task_references, resolve_tim
 from taskgraph.util.python_path import import_sibling_modules
 from taskgraph.util.taskcluster import find_task_id_batched, status_task_batched
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("optimization")
 registry = {}
 
 

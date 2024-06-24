@@ -1,6 +1,7 @@
 # Any copyright is dedicated to the public domain.
 # http://creativecommons.org/publicdomain/zero/1.0/
 
+import logging
 import os
 from datetime import datetime
 from time import mktime
@@ -24,27 +25,37 @@ def params():
 
 
 @pytest.mark.parametrize(
-    "state,expires,expected",
+    "state,expires,expected,logs",
     (
         (
             "completed",
             "2021-06-06T14:53:16.937Z",
             False,
+            (
+                "not replacing {label} with {taskid} because it expires before {deadline}",
+            ),
         ),
-        ("completed", "2021-06-08T14:53:16.937Z", "abc"),
+        ("completed", "2021-06-08T14:53:16.937Z", "abc", ()),
         (
             "exception",
             "2021-06-08T14:53:16.937Z",
             False,
+            (
+                "not replacing {label} with {taskid} because it is in failed or exception state",
+            ),
         ),
         (
             "failed",
             "2021-06-08T14:53:16.937Z",
             False,
+            (
+                "not replacing {label} with {taskid} because it is in failed or exception state",
+            ),
         ),
     ),
 )
-def test_index_search(responses, params, state, expires, expected):
+def test_index_search(caplog, responses, params, state, expires, expected, logs):
+    caplog.set_level(logging.DEBUG, "optimization")
     taskid = "abc"
     index_path = "foo.bar.latest"
 
@@ -79,12 +90,26 @@ def test_index_search(responses, params, state, expires, expected):
     deadline = "2021-06-07T19:03:20.482Z"
     assert (
         opt.should_replace_task(
-            {}, params, deadline, ([index_path], label_to_taskid, taskid_to_status)
+            {"label": "task-label"},
+            params,
+            deadline,
+            ([index_path], label_to_taskid, taskid_to_status),
         )
         == expected
     )
     # test the non-batched variant as well
     assert opt.should_replace_task({}, params, deadline, [index_path]) == expected
+
+    if logs:
+        log_records = [
+            (
+                "optimization",
+                logging.DEBUG,
+                m.format(label="task-label", taskid=taskid, deadline=deadline),
+            )
+            for m in logs
+        ]
+        assert caplog.record_tuples == log_records
 
 
 @pytest.mark.parametrize(
@@ -111,8 +136,18 @@ def test_index_search(responses, params, state, expires, expected):
         ),
     ),
 )
-def test_skip_unless_changed(params, file_patterns, should_optimize):
+def test_skip_unless_changed(caplog, params, file_patterns, should_optimize):
+    caplog.set_level(logging.DEBUG, "optimization")
     task = make_task("task")
 
     opt = SkipUnlessChanged()
     assert opt.should_remove_task(task, params, file_patterns) == should_optimize
+
+    if should_optimize:
+        assert caplog.record_tuples == [
+            (
+                "optimization",
+                logging.DEBUG,
+                f'no files found matching a pattern in `skip-unless-changed` for "{task.label}"',
+            ),
+        ]

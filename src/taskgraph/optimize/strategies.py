@@ -5,7 +5,7 @@ from taskgraph.optimize.base import OptimizationStrategy, register_strategy
 from taskgraph.util.path import match as match_path
 from taskgraph.util.taskcluster import find_task_id, status_task
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("optimization")
 
 
 @register_strategy("index-search")
