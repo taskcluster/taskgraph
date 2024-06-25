@@ -1,5 +1,6 @@
 {
     "project_name": "my-project",
+    "taskgraph_version": "{{ cookiecutter.taskgraph_version }}",
     "repo_host": ["github", "hgmo"],
     "repo_name": "my-repo",
     "project_slug": "{{ cookiecutter.repo_name.lower().replace(' ', '_').replace('-', '_') }}",

@@ -859,7 +859,7 @@ def init_taskgraph(options):
             shutil.rmtree(tg_dir)
 
     # Populate some defaults from the current repository.
-    context = {"project_name": root.name}
+    context = {"project_name": root.name, "taskgraph_version": taskgraph.__version__}
 
     try:
         repo_url = repo.get_url(remote=repo.remote_name)  # type: ignore
