@@ -12,7 +12,6 @@ policy:
 tasks:
     - $let:
           trustDomain: "{{cookiecutter.trust_domain}}"
-          level: "{{cookiecutter.level}}"
           ownerEmail:
               $switch:
                   'tasks_for == "github-push"': '${event.pusher.email}'
@@ -93,6 +92,10 @@ tasks:
                       'head_ref[:10] == "refs/tags/"': '${head_ref[10:]}'
                       'head_ref[:11] == "refs/heads/"': '${head_ref[11:]}'
                       $default: '${head_ref}'
+              level:
+                  $if: 'isPullRequest || tasks_for == "pr-action"'
+                  then: "1"
+                  else: "{{cookiecutter.level}}"
           in:
               $if: >
                   tasks_for in ["action", "pr-action", "cron"]
