@@ -72,16 +72,15 @@ task_description_schema = Schema(
                 ),
             ): object,
         },
-        Optional("priority"):
-            Any(
-                "highest",
-                "very-high",
-                "high",
-                "medium",
-                "low",
-                "very-low",
-                "lowest",
-            ),
+        Optional("priority"): Any(
+            "highest",
+            "very-high",
+            "high",
+            "medium",
+            "low",
+            "very-low",
+            "lowest",
+        ),
         # Soft dependencies of this task, as a list of tasks labels
         Optional("soft-dependencies"): [str],
         # Dependencies that must be scheduled in order for this task to run.
