@@ -942,3 +942,70 @@ def test_default_expires_after(run_transform, graph_config, expires_after, test_
         assert task_dict["task"]["expires"] == {"relative-datestamp": expires_after}
     else:
         assert task_dict["task"]["expires"] == {"relative-datestamp": "28 days"}
+
+
+@pytest.mark.parametrize(
+    "test_task",
+    (
+        {
+            "description": "fake description",
+            "name": "fake-task-name",
+            "worker-type": "t-linux",
+            "worker": {
+                "docker-image": "fake-image-name",
+                "max-run-time": 1800,
+            },
+        },
+        {
+            "description": "fake description",
+            "name": "fake-task-name",
+            "worker-type": "t-linux",
+            "worker": {
+                "docker-image": "fake-image-name",
+                "max-run-time": 1800,
+            },
+            "priority": "high",
+        },
+    ),
+)
+def test_task_priority(run_transform, graph_config, test_task):
+    params = FakeParameters(
+        {
+            "base_repository": "git@github.com://github.com/mozilla/example.git",
+            "build_date": 0,
+            "build_number": 1,
+            "head_repository": "git@github.com://github.com/mozilla/example.git",
+            "head_rev": "abcdef",
+            "head_ref": "default",
+            "level": "1",
+            "moz_build_date": 0,
+            "next_version": "1.0.1",
+            "owner": "some-owner",
+            "project": "some-project",
+            "pushlog_id": 1,
+            "repository_type": "git",
+            "target_tasks_method": "test_method",
+            "tasks_for": "github-pull-request",
+            "try_mode": None,
+            "version": "1.0.0",
+        },
+    )
+
+    transform_config = TransformConfig(
+        "check_priority",
+        str(here),
+        {},
+        params,
+        {},
+        graph_config,
+        write_artifacts=False,
+    )
+
+    task_dict = deepcopy(test_task)
+
+    task_dict = run_transform(task.transforms, task_dict, config=transform_config)[0]
+    priority = test_task.get("priority")
+    if priority:
+        assert task_dict["task"]["priority"] == priority
+    else:
+        assert task_dict["task"]["priority"] == graph_config["task-priority"]

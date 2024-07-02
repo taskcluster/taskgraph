@@ -49,6 +49,7 @@ run_description_schema = Schema(
         # possibly modified by the run implementation.  See
         # taskcluster/taskgraph/transforms/task.py for the schema details.
         Required("description"): task_description_schema["description"],
+        Optional("priority"): task_description_schema["priority"],
         Optional("attributes"): task_description_schema["attributes"],
         Optional("task-from"): task_description_schema["task-from"],
         Optional("dependencies"): task_description_schema["dependencies"],
