@@ -2,45 +2,69 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 
-# Imported from
-# https://searchfox.org/mozilla-central/rev/c3ebaf6de2d481c262c04bb9657eaf76bf47e2ac/python/mozbuild/mozbuild/util.py#115-127
+import copy
+import pickle
 
-import unittest
+import pytest
 
 from taskgraph.util.readonlydict import ReadOnlyDict
 
 
-class TestReadOnlyDict(unittest.TestCase):
-    def test_basic(self):
-        original = {"foo": 1, "bar": 2}
+def test_basic():
+    original = {"foo": 1, "bar": 2}
 
-        test = ReadOnlyDict(original)
+    test = ReadOnlyDict(original)
 
-        self.assertEqual(original, test)
-        self.assertEqual(test["foo"], 1)
+    assert original == test
+    assert test["foo"] == 1
 
-        with self.assertRaises(KeyError):
-            test["missing"]
+    with pytest.raises(KeyError):
+        test["missing"]
 
-        with self.assertRaises(Exception):
-            test["baz"] = True
+    with pytest.raises(Exception):
+        test["baz"] = True
 
-    def test_update(self):
-        original = {"foo": 1, "bar": 2}
 
-        test = ReadOnlyDict(original)
+def test_update():
+    original = {"foo": 1, "bar": 2}
 
-        with self.assertRaises(Exception):
-            test.update(foo=2)
+    test = ReadOnlyDict(original)
 
-        self.assertEqual(original, test)
+    with pytest.raises(Exception):
+        test.update(foo=2)
 
-    def test_del(self):
-        original = {"foo": 1, "bar": 2}
+    assert original == test
 
-        test = ReadOnlyDict(original)
 
-        with self.assertRaises(Exception):
-            del test["foo"]
+def test_del():
+    original = {"foo": 1, "bar": 2}
 
-        self.assertEqual(original, test)
+    test = ReadOnlyDict(original)
+
+    with pytest.raises(Exception):
+        del test["foo"]
+
+    assert original == test
+
+
+def test_copy():
+    d = ReadOnlyDict(foo="bar")
+
+    d_copy = d.copy()
+    assert d == d_copy
+    # TODO Returning a dict here feels like a bug, but there are places in-tree
+    # relying on this behaviour.
+    assert isinstance(d_copy, dict)
+
+    d_copy = copy.copy(d)
+    assert d == d_copy
+    assert isinstance(d_copy, ReadOnlyDict)
+
+    d_copy = copy.deepcopy(d)
+    assert d == d_copy
+    assert isinstance(d_copy, ReadOnlyDict)
+
+
+def test_pickle():
+    d = ReadOnlyDict(foo="bar")
+    pickle.loads(pickle.dumps(d))
