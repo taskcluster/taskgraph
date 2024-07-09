@@ -1,5 +1,20 @@
 # Change Log
 
+## [9.1.0] - 2024-07-10
+
+### Added
+
+- Separate log for optimizations that always logs verbosely (#525)
+- Retry batched taskcluster requests (#529)
+- Allow setting per-task priority (#534)
+- Updated ReadOnlyDict vendor (#537)
+
+### Fixed
+
+- Invalid escape in string literal in robustcheckout (#475)
+- IndexSearch optimization now logs when it refuses to replace a task (#524)
+- Use versioned decision image in cookiecutter .taskcluster.yml files (#528)
+
 ## [9.0.0] - 2024-06-11
 
 ### Added
