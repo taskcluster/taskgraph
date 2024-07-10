@@ -73,7 +73,13 @@ def test_stream_download(
         # create a mock context manager
         cm = MagicMock()
         cm.getcode.return_value = 200
+
+        def getheader(field):
+            if field.lower() == "content-length":
+                return size
+
         # simulates chunking
+        cm.getheader = getheader
         cm.read.side_effect = [b"foo", b"bar", None]
         cm.__enter__.return_value = cm
         return cm
