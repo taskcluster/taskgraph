@@ -1,5 +1,16 @@
 # Change Log
 
+## [9.2.0] - 2024-07-15
+
+### Added
+- fetch-content detects archive type instead of using the file extension
+- fetch-content validates downloads against server-provided content-length when
+  possible, and retries downloads on size or checksum mismatch
+
+### Fixed
+
+- github projects set up by `taskgraph init` now use level 1 for pull request graphs
+
 ## [9.1.0] - 2024-07-10
 
 ### Added
