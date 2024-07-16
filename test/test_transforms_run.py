@@ -6,6 +6,7 @@
 Tests for the 'run' transform subsystem.
 """
 
+import json
 import os
 from copy import deepcopy
 from pprint import pprint
@@ -89,6 +90,12 @@ def assert_use_fetches_toolchain_env(task):
     assert task["worker"]["env"]["FOO"] == "1"
 
 
+def assert_use_fetches_toolchain_extract_false(task):
+    fetches = json.loads(task["worker"]["env"]["MOZ_FETCHES"]["task-reference"])
+    assert len(fetches) == 1
+    assert fetches[0]["extract"] is False
+
+
 @pytest.mark.parametrize(
     "task,kind_dependencies_tasks",
     (
@@ -106,6 +113,20 @@ def assert_use_fetches_toolchain_env(task):
                 )
             ],
             id="toolchain_env",
+        ),
+        pytest.param(
+            {"fetches": {"toolchain": [{"artifact": "foo", "extract": False}]}},
+            [
+                Task(
+                    kind="toolchain",
+                    label="toolchain-foo",
+                    attributes={
+                        "toolchain-artifact": "target.whl",
+                    },
+                    task={},
+                )
+            ],
+            id="toolchain_extract_false",
         ),
     ),
 )
