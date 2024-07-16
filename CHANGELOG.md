@@ -1,8 +1,16 @@
 # Change Log
 
+## [9.2.1] - 2024-07-16
+
+### Fixed
+
+- Reverted "fetch-content detects archive type instead of using the file
+  extension" change from 9.2.0, for breaking backwards compatibility (#543)
+
 ## [9.2.0] - 2024-07-15
 
 ### Added
+
 - fetch-content detects archive type instead of using the file extension
 - fetch-content validates downloads against server-provided content-length when
   possible, and retries downloads on size or checksum mismatch
