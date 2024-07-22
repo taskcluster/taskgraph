@@ -3,8 +3,6 @@ from voluptuous import ALLOW_EXTRA, Required
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.schema import Schema
 
-transforms = TransformSequence()
-
 HELLO_SCHEMA = Schema(
     {
         Required("noun"): str,
