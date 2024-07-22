@@ -3,6 +3,14 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+9.x -> 10.x
+-----------
+
+* Directories listed as VOLUME in Dockerfiles are created before any other
+  instructions, so those instructions may need to be updated (e.g. `RUN mkdir`)
+* `fetch-content` no longer relies on file extension to detect archives, so you.
+  may need to explicitly disable `extract` for some fetches.
+
 8.x -> 9.x
 ----------
 
