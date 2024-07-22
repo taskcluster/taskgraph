@@ -163,7 +163,7 @@ def assert_use_fetches_toolchain_mixed(task):
                         "toolchain-artifact": "bar.zip",
                     },
                     task={},
-                )
+                ),
             ],
             id="toolchain_mixed",
         ),
