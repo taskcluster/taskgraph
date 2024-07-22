@@ -1,5 +1,13 @@
 # Change Log
 
+## [10.0.0] - 2024-07-22
+
+### Added
+
+- BREAKING CHANGE: Bug 1796139 - Pull in fetch-content changes from mozilla-central by @jcristau (#541)
+- BREAKING CHANGE: Update image_builder Docker image to version 5.1.0 (#520)
+- support fully configured fetches for toolchain and fetch upstreams (#545)
+
 ## [9.2.1] - 2024-07-16
 
 ### Fixed
