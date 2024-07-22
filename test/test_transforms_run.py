@@ -96,6 +96,23 @@ def assert_use_fetches_toolchain_extract_false(task):
     assert fetches[0]["extract"] is False
 
 
+def assert_use_fetches_toolchain_mixed(task):
+    fetches = json.loads(task["worker"]["env"]["MOZ_FETCHES"]["task-reference"])
+    assert len(fetches) == 2
+    assert fetches == [
+        {
+            "artifact": "bar.zip",
+            "extract": True,
+            "task": "<toolchain-bar>",
+        },
+        {
+            "artifact": "target.whl",
+            "extract": False,
+            "task": "<toolchain-foo>",
+        },
+    ]
+
+
 @pytest.mark.parametrize(
     "task,kind_dependencies_tasks",
     (
@@ -127,6 +144,28 @@ def assert_use_fetches_toolchain_extract_false(task):
                 )
             ],
             id="toolchain_extract_false",
+        ),
+        pytest.param(
+            {"fetches": {"toolchain": [{"artifact": "foo", "extract": False}, "bar"]}},
+            [
+                Task(
+                    kind="toolchain",
+                    label="toolchain-foo",
+                    attributes={
+                        "toolchain-artifact": "target.whl",
+                    },
+                    task={},
+                ),
+                Task(
+                    kind="toolchain",
+                    label="toolchain-bar",
+                    attributes={
+                        "toolchain-artifact": "bar.zip",
+                    },
+                    task={},
+                )
+            ],
+            id="toolchain_mixed",
         ),
     ),
 )
