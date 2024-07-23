@@ -1,5 +1,11 @@
 # Change Log
 
+## [10.0.1] - 2024-07-23
+
+### Fixed
+
+- Make toolchain and fetch tasks work when there is more than one present, and at least one is defined as a dict (#551)
+
 ## [10.0.0] - 2024-07-22
 
 ### Added
