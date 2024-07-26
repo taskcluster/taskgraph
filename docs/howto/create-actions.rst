@@ -251,6 +251,37 @@ The feature is illustrated below:
 
 See :doc:`/reference/parameters` for a reference on the available parameters.
 
+Permissions
+...........
+
+Actions can be grouped together with a "permission" string. Scopes can then be
+granted to use these actions in the `fxci-config repo`_. By default, actions
+have the "generic" permission. Any actions with this default "generic" permission,
+can be run in contexts where ``action:generic`` is granted in ``fxci-config``.
+
+But if certain actions are more sensitive, or should be granted in *different* contexts
+than the "generic" ones, you can pass in the ``permission`` argument to ``register_callback_action``:
+
+.. code-block:: python
+
+   from taskgraph.actions.registry import register_callback_action
+
+   @register_callback_action(
+       name='hello',
+       title='Say Hello',
+       symbol='hw',
+       description="Simple **proof-of-concept** callback action",
+       permission="sensitive"
+   )
+   def try_only_action(parameters, graph_config, input, task_group_id, task_id, task):
+       pass
+
+Now, this action can only be run in contexts where ``fxci-config`` grants
+``action:sensitive``. Presumably in more restricted places than
+``action:generic``.
+
+.. _fxci-config repo: https://github.com/mozilla-releng/fxci-config
+
 Creating Tasks
 --------------
 
