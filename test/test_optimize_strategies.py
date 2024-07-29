@@ -33,6 +33,7 @@ def params():
             False,
             (
                 "not replacing {label} with {taskid} because it expires before {deadline}",
+                "not replacing {label} with {taskid} because it expires before {deadline}",
             ),
         ),
         ("completed", "2021-06-08T14:53:16.937Z", "abc", ()),
@@ -42,6 +43,7 @@ def params():
             False,
             (
                 "not replacing {label} with {taskid} because it is in failed or exception state",
+                "not replacing {label} with {taskid} because it is in failed or exception state",
             ),
         ),
         (
@@ -49,6 +51,7 @@ def params():
             "2021-06-08T14:53:16.937Z",
             False,
             (
+                "not replacing {label} with {taskid} because it is in failed or exception state",
                 "not replacing {label} with {taskid} because it is in failed or exception state",
             ),
         ),
@@ -90,7 +93,7 @@ def test_index_search(caplog, responses, params, state, expires, expected, logs)
     deadline = "2021-06-07T19:03:20.482Z"
     assert (
         opt.should_replace_task(
-            {"label": "task-label"},
+            make_task("task-label"),
             params,
             deadline,
             ([index_path], label_to_taskid, taskid_to_status),
@@ -98,7 +101,10 @@ def test_index_search(caplog, responses, params, state, expires, expected, logs)
         == expected
     )
     # test the non-batched variant as well
-    assert opt.should_replace_task({}, params, deadline, [index_path]) == expected
+    assert (
+        opt.should_replace_task(make_task("task-label"), params, deadline, [index_path])
+        == expected
+    )
 
     if logs:
         log_records = [
