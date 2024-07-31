@@ -277,42 +277,59 @@ def test_get_changed_files_one_added_file(repo):
 def test_get_changed_files_two_revisions(repo):
     with open(os.path.join(repo.path, "second_file"), "w") as f:
         f.write("some data for the second file")
-    repo.run("add", "second_file")
-    repo.run("commit", "-m", "Add second_file")
+    with open(os.path.join(repo.path, "fourth_file"), "w") as f:
+        f.write("some data for the fourth file")
+    repo.run("add", "second_file", "fourth_file")
+    repo.run("commit", "-m", "Add second_file and fourth_file")
 
     os.remove(os.path.join(repo.path, "first_file"))
     with open(os.path.join(repo.path, "second_file"), "w") as f:
         f.write("new data for second file")
     with open(os.path.join(repo.path, "third_file"), "w") as f:
         f.write("third type of data")
+    os.rename(
+        os.path.join(repo.path, "fourth_file"),
+        os.path.join(repo.path, "fourth_file_new"),
+    )
 
-    repo.run("rm", "first_file")
+    repo.run("rm", "first_file", "fourth_file")
     repo.run("add", ".")
-    repo.run("commit", "-m", "Remove first_file; modify second_file; add third_file")
+    repo.run(
+        "commit",
+        "-m",
+        "Remove first_file; modify second_file; add third_file, rename fourth_file",
+    )
 
     last_revision = "HEAD" if repo.tool == "git" else "."
-    assert_files(repo.get_changed_files("A", "all", last_revision), ["third_file"])
+    assert_files(
+        repo.get_changed_files("A", "all", last_revision),
+        ["third_file", "fourth_file_new"],
+    )
     assert_files(repo.get_changed_files("M", "all", last_revision), ["second_file"])
-    assert_files(repo.get_changed_files("D", "all", last_revision), ["first_file"])
+    assert_files(
+        repo.get_changed_files("D", "all", last_revision), ["first_file", "fourth_file"]
+    )
     assert_files(
         repo.get_changed_files("AMD", "all", last_revision),
-        ["first_file", "second_file", "third_file"],
+        ["first_file", "second_file", "third_file", "fourth_file_new", "fourth_file"],
     )
 
     one_before_last_revision = "HEAD~1" if repo.tool == "git" else ".^"
     assert_files(
-        repo.get_changed_files("A", "all", one_before_last_revision), ["second_file"]
+        repo.get_changed_files("A", "all", one_before_last_revision),
+        ["second_file", "fourth_file"],
     )
     assert_files(repo.get_changed_files("M", "all", one_before_last_revision), [])
     assert_files(repo.get_changed_files("D", "all", one_before_last_revision), [])
     assert_files(
-        repo.get_changed_files("AMD", "all", one_before_last_revision), ["second_file"]
+        repo.get_changed_files("AMD", "all", one_before_last_revision),
+        ["second_file", "fourth_file"],
     )
 
     two_before_last_revision = "HEAD~2" if repo.tool == "git" else ".^^"
     assert_files(
         repo.get_changed_files("A", "all", last_revision, two_before_last_revision),
-        ["third_file", "second_file"],
+        ["third_file", "second_file", "fourth_file", "fourth_file_new"],
     )
     assert_files(
         repo.get_changed_files("M", "all", last_revision, two_before_last_revision),
@@ -320,11 +337,11 @@ def test_get_changed_files_two_revisions(repo):
     )
     assert_files(
         repo.get_changed_files("D", "all", last_revision, two_before_last_revision),
-        ["first_file"],
+        ["first_file", "fourth_file"],
     )
     assert_files(
         repo.get_changed_files("AMD", "all", last_revision, two_before_last_revision),
-        ["first_file", "second_file", "third_file"],
+        ["first_file", "second_file", "third_file", "fourth_file", "fourth_file_new"],
     )
 
 
