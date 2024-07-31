@@ -16,7 +16,7 @@ min_python_version="3.8"
 pushd $script_dir
 
 for requirement_in in *.in; do
-    uv pip compile "$requirement_in" --python-version $min_python_version --universal --generate-hashes --output-file "${requirement_in%.*}.txt"
+    uv pip compile "$requirement_in" --python-version $min_python_version --universal --generate-hashes --output-file "${requirement_in%.*}.txt" $@
 done
 
 popd
