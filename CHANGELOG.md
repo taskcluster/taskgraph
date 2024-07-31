@@ -1,5 +1,12 @@
 # Change Log
 
+## [10.0.2] - 2024-07-31
+
+### Fixed
+
+- Error in optimization log message (#554)
+- Git file renames now count as changed files for optimization purposes (#555)
+
 ## [10.0.1] - 2024-07-23
 
 ### Fixed
