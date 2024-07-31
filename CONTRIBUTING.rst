@@ -90,34 +90,41 @@ them in the source reference.
 Managing Dependencies
 ---------------------
 
-.. warning::
-   Ensure you always update packages using the minimum supported Python.
-   Otherwise you may break the workflow of people trying to develop Taskgraph
-   with an older version of Python. The `pyenv`_ tool can help with managing
-   multiple Python versions at once.
+To help lock dependencies, Taskgraph uses `uv`_. Make sure it is installed and
+on your ``$PATH``.
 
-To help lock dependencies, Taskgraph uses a tool called `pip-compile-multi`_.
+Adding a New Dependency
+~~~~~~~~~~~~~~~~~~~~~~~
+
 To add or update a dependency first edit the relevant ``.in`` file under the
 ``requirements`` directory. If the dependency is needed by the actual Taskgraph
 library, edit ``requirements/base.in``. If it's required by the CI system, edit
 ``requirements/test.in``. And if it's only needed for developing Taskgraph,
 edit ``requirements/dev.in``.
 
-Next run the following command from the repository root:
+Next run the following script:
 
 .. code-block::
 
-  pip-compile-multi -g base -g test -g dev --allow-unsafe
+   ./requirements/pin.sh
 
-If you'd like to add a new package without upgrading any of the existing ones,
-you can run:
+Updating Existing Dependencies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you'd like to update all dependencies within their constraints defined in
+the ``.in`` files, run:
 
 .. code-block::
 
-  pip-compile-multi -g base -g test -g dev --allow-unsafe --no-upgrade
+   ./requirements/pin.sh -U
 
-.. _pyenv: https://github.com/pyenv/pyenv
-.. _pip-compile-multi: https://pip-compile-multi.readthedocs.io/en/latest/
+Or if you'd like to update a specific dependency:
+
+.. code-block::
+
+   ./requirements/pin.sh -P <package>
+
+.. _uv: https://github.com/astral-sh/uv
 
 Releasing
 ---------
