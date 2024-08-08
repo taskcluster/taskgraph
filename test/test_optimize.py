@@ -263,7 +263,7 @@ def test_remove_tasks(monkeypatch, graph, kwargs, exp_removed):
     got_removed = optimize_mod.remove_tasks(
         target_task_graph=graph,
         optimizations=optimize_mod._get_optimizations(graph, strategies),
-        **kwargs
+        **kwargs,
     )
     assert got_removed == exp_removed
 
@@ -388,7 +388,7 @@ def test_replace_tasks(
     got_replaced = optimize_mod.replace_tasks(
         target_task_graph=graph,
         optimizations=optimize_mod._get_optimizations(graph, default_strategies()),
-        **kwargs
+        **kwargs,
     )
     assert got_replaced == exp_replaced
     assert kwargs["removed_tasks"] == exp_removed

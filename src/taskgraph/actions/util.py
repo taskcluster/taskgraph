@@ -160,7 +160,8 @@ def create_tasks(
 
     target_graph = full_task_graph.graph.transitive_closure(to_run)
     target_task_graph = TaskGraph(
-        {l: modifier(full_task_graph[l]) for l in target_graph.nodes}, target_graph  # type: ignore
+        {l: modifier(full_task_graph[l]) for l in target_graph.nodes},
+        target_graph,  # type: ignore
     )
     target_task_graph.for_each_task(update_parent)
     if decision_task_id and decision_task_id != os.environ.get("TASK_ID"):

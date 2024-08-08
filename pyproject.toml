@@ -1,9 +1,3 @@
-[tool.black]
-line-length = 88
-extend-exclude = """(\
-  taskcluster/scripts/external_tools)\
-  """
-
 [tool.pytest.ini_options]
 xfail_strict = true
 
@@ -12,6 +6,10 @@ branch = true
 source = ["src/taskgraph/", "src/taskgraph/run-task/", "test"]
 
 [tool.ruff]
+extend-exclude = [
+  "taskcluster/scripts/external_tools"
+]
+line-length = 88
 target-version = "py38"
 
 [tool.ruff.lint]

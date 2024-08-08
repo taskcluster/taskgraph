@@ -103,7 +103,6 @@ def repo(request, hg_repo, git_repo, monkeypatch, tmpdir):
 
 @pytest.fixture
 def create_remote_repo(default_git_branch):
-
     def inner(tmpdir, repo, remote_name, remote_path):
         if repo.tool == "hg":
             repo.run("phase", "--public", ".")
