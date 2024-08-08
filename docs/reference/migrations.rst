@@ -3,6 +3,18 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+10.x -> 11.x
+------------
+
+* When defining custom actions with
+  ``taskgraph.actions.registry.register_callback_action``, make the following
+  changes:
+
+  * If you are passing ``generic=True`` to the function, remove this argument.
+  * If the argument isn't present, or you are passing ``generic=False``, then
+    add a new argument called ``permission=<cb_name>``, where ``<cb_name>`` is
+    the value of whatever you are passing to the ``cb_name`` argument.
+
 9.x -> 10.x
 -----------
 
