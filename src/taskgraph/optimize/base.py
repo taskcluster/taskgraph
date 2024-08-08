@@ -333,7 +333,8 @@ def replace_tasks(
         if dependents:
             now = datetime.datetime.utcnow()
             deadline = max(
-                resolve_timestamps(now, task.task["deadline"]) for task in dependents  # type: ignore
+                resolve_timestamps(now, task.task["deadline"])
+                for task in dependents  # type: ignore
             )
 
         if isinstance(opt, IndexSearch):

@@ -343,13 +343,15 @@ class TaskGraphGenerator:
 
         logger.info("Generating target task set")
         target_task_set = TaskGraph(
-            dict(all_tasks), Graph(set(all_tasks.keys()), set())  # type: ignore
+            dict(all_tasks),
+            Graph(set(all_tasks.keys()), set()),  # type: ignore
         )
         for fltr in filters:
             old_len = len(target_task_set.graph.nodes)
             target_tasks = set(fltr(target_task_set, parameters, graph_config))
             target_task_set = TaskGraph(
-                {l: all_tasks[l] for l in target_tasks}, Graph(target_tasks, set())  # type: ignore
+                {l: all_tasks[l] for l in target_tasks},
+                Graph(target_tasks, set()),  # type: ignore
             )
             logger.info(
                 "Filter %s pruned %d tasks (%d remain)"
@@ -377,7 +379,8 @@ class TaskGraphGenerator:
         requested_tasks = target_tasks | always_target_tasks  # type: ignore
         target_graph = full_task_graph.graph.transitive_closure(requested_tasks)
         target_task_graph = TaskGraph(
-            {l: all_tasks[l] for l in target_graph.nodes}, target_graph  # type: ignore
+            {l: all_tasks[l] for l in target_graph.nodes},
+            target_graph,  # type: ignore
         )
         yield self.verify(
             "target_task_graph", target_task_graph, graph_config, parameters
