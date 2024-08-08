@@ -761,7 +761,7 @@ def _docheckout(
                     abort_on_err=True,
                     # The function expects all arguments to be
                     # defined.
-                    **{"print": None, "print0": None, "dirs": None, "files": None}
+                    **{"print": None, "print0": None, "dirs": None, "files": None},
                 ):
                     raise error.Abort(b"error purging")
         finally:

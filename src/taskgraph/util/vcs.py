@@ -40,7 +40,11 @@ class Repository(ABC):
 
         try:
             return subprocess.check_output(  # type: ignore
-                cmd, cwd=self.path, env=self._env, encoding="utf-8", **kwargs  # type: ignore
+                cmd,  # type: ignore
+                cwd=self.path,
+                env=self._env,
+                encoding="utf-8",
+                **kwargs,
             )
         except subprocess.CalledProcessError as e:
             if e.returncode in return_codes:
