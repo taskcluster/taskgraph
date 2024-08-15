@@ -15,7 +15,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 
 TASK_DEFAULTS = {
     "description": "fake description {object} {file} {param} {object_and_file}"
-    "{object_and_param} {file_and_param} {object_file_and_param} {param_fallback}",
+    "{object_and_param} {file_and_param} {object_file_and_param} {param_fallback} {name}",
     "name": "fake-task-name",
     "task-context": {
         "from-parameters": {
@@ -80,5 +80,5 @@ def test_transforms(request, run_transform, graph_config):
     assert (
         task["description"]
         == "fake description object file param object-overrides-file"
-        "param-overrides-object param-overrides-file param-overrides-all default"
+        "param-overrides-object param-overrides-file param-overrides-all default fake-task-name"
     )
