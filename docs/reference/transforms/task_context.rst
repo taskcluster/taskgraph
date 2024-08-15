@@ -128,10 +128,31 @@ For example:
 This will give build1 and build2 descriptions with their ``extra_desc``
 included while allowing them to share the rest of their task definition.
 
+Implicit Context
+~~~~~~~~~~~~~~~~
+
+Finally, the name of the task is added to the context implicitly. For example:
+
+.. code-block:: yaml
+
+   task-defaults:
+     description: run {name}
+     task-context:
+       substitution-fields:
+         - description
+
+   tasks:
+     foo: {}
+     bar: {}
+
+This will evaluate the description correctly, even though there are no
+``task-context`` keys defined on the individual tasks.
+
 Precedence
 ----------
 
-If the same key is found in multiple places the order of precedence
-is as follows: ``from-parameters``, ``from-object`` keys, ``from-file``.
+If the same key is found in multiple places the order of precedence is as
+follows: ``from-parameters``, ``from-object`` keys, ``from-file`` and finally
+implicit context.
 
 That is to say: parameters will always override anything else.
