@@ -79,11 +79,16 @@ def common_setup(config, task, taskdesc, command):
         )
 
         vcs_path = taskdesc["worker"]["env"]["VCS_PATH"]
+
+        try:
+            primary_repo_path = taskdesc["worker"]["env"]["PRIMARY_REPO_PATH"]
+        except Exception:
+            primary_repo_path_exists = False
+
         for repo_config in repo_configs.values():
             checkout_path = path.join(vcs_path, repo_config.path)
             command.append(f"--{repo_config.prefix}-checkout={checkout_path}")
-            primary_repo_path = taskdesc["worker"]["env"]["PRIMARY_REPO_PATH"]
-            if primary_repo_path is None or not vcs_path.strip():
+            if primary_repo_path_exists is False or not primary_repo_path.strip():
                 taskdesc["worker"]["env"]["PRIMARY_REPO_PATH"] = checkout_path
 
         if run["sparse-profile"]:
