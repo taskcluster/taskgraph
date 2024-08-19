@@ -82,7 +82,8 @@ def common_setup(config, task, taskdesc, command):
         for repo_config in repo_configs.values():
             checkout_path = path.join(vcs_path, repo_config.path)
             command.append(f"--{repo_config.prefix}-checkout={checkout_path}")
-            taskdesc["worker"]["env"]["VCS_CHECKOUT_DIR_PATH"] = checkout_path
+            if vcs_path is None or not vcs_path.strip():
+                taskdesc["worker"]["env"]["PRIMARY_REPO_PATH"] = checkout_path
 
         if run["sparse-profile"]:
             command.append(
