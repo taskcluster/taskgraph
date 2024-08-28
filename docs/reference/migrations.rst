@@ -3,6 +3,20 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+10.x -> 11.x
+------------
+
+* A hardcoded path to a Python installation was removed for MacOS
+  generic-workers. If Mac tasks start failing after upgrade and you are able to
+  change the worker environment, ensure the ``python3`` binary is available on
+  the ``$PATH``. If you cannot change the worker environment, add the following
+  to the definitions of the failing tasks:
+
+  .. code-block:: yaml
+
+     run:
+       run-task-command: ["/tools/python36/bin/python3", "run-task"]
+
 9.x -> 10.x
 -----------
 
