@@ -18,7 +18,7 @@ jobs:
           cache: 'pip'
       - name: Build package distributions
         run: |
-          pip install wheel
-          python setup.py sdist bdist_wheel
+          pip install build
+          python -m build
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

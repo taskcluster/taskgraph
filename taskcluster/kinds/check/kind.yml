@@ -38,6 +38,4 @@ tasks:
             symbol: check(type)
         run:
             command: >-
-                pip install --user -r requirements/test.txt --require-hashes &&
-                pip install --user --no-deps . &&
-                pyright
+                uv run pyright

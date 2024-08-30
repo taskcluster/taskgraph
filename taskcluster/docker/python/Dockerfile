@@ -6,6 +6,9 @@
 FROM python:$PYTHON_VERSION-slim
 LABEL maintainer="Release Engineering <release@mozilla.com>"
 
+# Keep uv version in sync with decision image
+COPY --from=ghcr.io/astral-sh/uv:0.4.5 /uv /bin/uv
+
 # Add worker user
 RUN mkdir -p /builds && \
     useradd -d /builds/worker -s /bin/bash -m worker && \

@@ -6,12 +6,12 @@ test "$(whoami)" == 'root'
 
 apt-get update
 apt-get install -y --force-yes --no-install-recommends \
-    python3-pip \
-    python3-setuptools \
-    python3-wheel \
+    python3-pip
 
-python3 -mpip install --break-system-packages -r /setup/requirements.txt
-python3 -mpip install --break-system-packages --no-deps /setup/taskgraph
+pushd /setup/taskgraph
+uv export --no-dev > /setup/requirements.txt
+uv pip install --system --break-system-packages -r /setup/requirements.txt
+popd
 
 apt-get clean
 apt-get autoclean

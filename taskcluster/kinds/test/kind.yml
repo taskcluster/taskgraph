@@ -41,6 +41,4 @@ tasks:
             artifact_prefix: public
         run:
             command: >-
-                pip install --user -r requirements/test.txt --require-hashes &&
-                pip install --user --no-deps -e . &&
-                coverage run --data-file $MOZ_ARTIFACT_DIR/coverage --context=$PYTHON_VERSION -m pytest -vv
+                uv run coverage run --data-file $MOZ_ARTIFACT_DIR/coverage --context=$PYTHON_VERSION -m pytest -vv
