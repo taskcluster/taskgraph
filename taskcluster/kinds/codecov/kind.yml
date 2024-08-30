@@ -45,7 +45,6 @@ tasks:
             using: run-task
             cwd: '{checkout}'
             command: >-
-                pip install --user -r requirements/test.txt --require-hashes &&
-                coverage combine --data-file $MOZ_FETCHES_DIR/coverage $MOZ_FETCHES_DIR &&
-                coverage xml --data-file $MOZ_FETCHES_DIR/coverage -o $MOZ_FETCHES_DIR/coverage.xml &&
-                python taskcluster/scripts/codecov-upload.py
+                uv run coverage combine --data-file $MOZ_FETCHES_DIR/coverage $MOZ_FETCHES_DIR &&
+                uv run coverage xml --data-file $MOZ_FETCHES_DIR/coverage -o $MOZ_FETCHES_DIR/coverage.xml &&
+                uv run python taskcluster/scripts/codecov-upload.py
