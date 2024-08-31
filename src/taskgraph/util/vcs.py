@@ -9,7 +9,6 @@ import re
 import subprocess
 from abc import ABC, abstractmethod
 from shutil import which
-from collections.abc import Sized
 
 from taskgraph.util.path import ancestors
 

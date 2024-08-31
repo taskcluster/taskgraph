@@ -334,7 +334,9 @@ class TaskGraphGenerator:
                     )
                 edges.add((t.label, dep, depname))
 
-        full_task_graph = TaskGraph(all_tasks, Graph(frozenset(full_task_set.graph.nodes), frozenset(edges)))
+        full_task_graph = TaskGraph(
+            all_tasks, Graph(frozenset(full_task_set.graph.nodes), frozenset(edges))
+        )
         logger.info(
             "Full task graph contains %d tasks and %d dependencies"
             % (len(full_task_set.graph.nodes), len(edges))
