@@ -862,10 +862,7 @@ def init_taskgraph(options):
     context = {"project_name": root.name, "taskgraph_version": taskgraph.__version__}
 
     try:
-        if isinstance(repo.remote_name, str):
-            repo_url = repo.get_url(remote=repo.remote_name)
-        else:
-            repo_url = ""
+        repo_url = repo.get_url(remote=repo.remote_name)
     except RuntimeError:
         repo_url = ""
 

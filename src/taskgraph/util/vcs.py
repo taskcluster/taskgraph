@@ -79,7 +79,7 @@ class Repository(ABC):
 
     @property
     @abstractmethod
-    def default_remote_name(self):
+    def default_remote_name(self) -> str:
         """Name the VCS defines for the remote repository when cloning
         it for the first time. This name may not exist anymore if users
         changed the default configuration, for instance."""

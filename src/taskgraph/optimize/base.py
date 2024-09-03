@@ -13,7 +13,7 @@ See ``taskcluster/docs/optimization.rst`` for more information.
 
 import datetime
 import logging
-from abc import ABCMeta, abstractmethod, abstractproperty
+from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 
 from slugid import nice as slugid
@@ -495,7 +495,8 @@ class CompositeStrategy(OptimizationStrategy, metaclass=ABCMeta):
         if kwargs:
             raise TypeError("unexpected keyword args")
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def description(self):
         """A textual description of the combined substrategies."""
 
