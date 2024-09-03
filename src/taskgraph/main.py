@@ -88,7 +88,9 @@ def get_filtered_taskgraph(taskgraph, tasksregex, exclude_keys):
                     if regexprogram.match(dep):
                         filterededges.add((key, dep, depname))
 
-        taskgraph = TaskGraph(filteredtasks, Graph(frozenset(filteredtasks), frozenset(filterededges)))
+        taskgraph = TaskGraph(
+            filteredtasks, Graph(frozenset(filteredtasks), frozenset(filterededges))
+        )
 
     if exclude_keys:
         for label, task in taskgraph.tasks.items():
