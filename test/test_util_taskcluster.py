@@ -456,6 +456,61 @@ def test_get_ancestors(responses, root_url):
     assert got == expected, f"got: {got}, expected: {expected}"
 
 
+def test_get_ancestors_404(responses, root_url):
+    """Ensures that get_ancestors functions even if some upstream dependencies
+    are 404s from expired tasks."""
+    tc.get_task_definition.cache_clear()
+    tc._get_deps.cache_clear()
+    base_url = f"{root_url}/api/queue/v1/task"
+    responses.add(
+        responses.GET,
+        f"{base_url}/fff",
+        json={
+            "dependencies": ["eee", "ddd"],
+            "metadata": {
+                "name": "task-fff",
+            },
+        },
+    )
+    responses.add(
+        responses.GET,
+        f"{base_url}/eee",
+        json={
+            "dependencies": [],
+            "metadata": {
+                "name": "task-eee",
+            },
+        },
+    )
+    responses.add(
+        responses.GET,
+        f"{base_url}/ddd",
+        json={
+            "dependencies": ["ccc"],
+            "metadata": {
+                "name": "task-ddd",
+            },
+        },
+    )
+    responses.add(
+        responses.GET,
+        f"{base_url}/ccc",
+        status=404,
+    )
+    responses.add(
+        responses.GET,
+        f"{base_url}/bbb",
+        status=404,
+    )
+
+    got = tc.get_ancestors(["bbb", "fff"])
+    expected = {
+        "task-ddd": "ddd",
+        "task-eee": "eee",
+    }
+    assert got == expected, f"got: {got}, expected: {expected}"
+
+
 def test_get_ancestors_string(responses, root_url):
     tc.get_task_definition.cache_clear()
     tc._get_deps.cache_clear()
