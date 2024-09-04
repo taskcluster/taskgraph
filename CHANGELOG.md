@@ -1,5 +1,17 @@
 # Change Log
 
+## [11.0.0] - 2024-09-04
+
+### Added
+
+- BREAKING CHANGE: removed hardcode python3 path on macOS (#566)
+- BREAKING CHANGE: register_action_callback interface has changed (#553)
+- Task name is now available in `task_context` (#562)
+
+### Fixed
+
+- get_ancestors ignores 404s to avoid failing when some tasks have already expired (#569)
+
 ## [10.0.2] - 2024-07-31
 
 ### Fixed
