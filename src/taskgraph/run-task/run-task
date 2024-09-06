@@ -1011,7 +1011,11 @@ def install_pip_requirements(repositories):
         return
 
     # TODO: Stop using system Python (#381)
-    cmd = [sys.executable, "-mpip", "install", "--break-system-packages"]
+    if shutil.which("uv"):
+        cmd = ["uv", "pip", "install", "--python", sys.executable, "--break-system-packages"]
+    else:
+        cmd = [sys.executable, "-mpip", "install", "--break-system-packages"]
+
     if os.environ.get("PIP_DISABLE_REQUIRE_HASHES") != "1":
         cmd.append("--require-hashes")
 
