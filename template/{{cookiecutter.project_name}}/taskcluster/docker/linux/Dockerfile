@@ -14,7 +14,7 @@ RUN apk add --no-cache python3 py3-pip && \
     python3 -m pip install --no-cache --upgrade --break-system-packages pip setuptools
 
 # Setup other dependencies
-RUN apk add bash git
+RUN apk add bash git coreutils
 
 # %include-run-task
 
