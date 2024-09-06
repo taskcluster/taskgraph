@@ -59,10 +59,13 @@ def mock_stdin(monkeypatch):
 
 
 def test_install_pip_requirements(
+    mocker,
     tmp_path,
     patch_run_command,
     run_task_mod,
 ):
+    mocker.patch("shutil.which", return_value=False)
+
     # no requirements
     repositories = [{"pip-requirements": None}]
     called = patch_run_command()
@@ -108,6 +111,36 @@ def test_install_pip_requirements(
             str(req),
             "-r",
             str(req2),
+        ],
+    )
+
+
+def test_install_pip_requirements_with_uv(
+    mocker,
+    tmp_path,
+    patch_run_command,
+    run_task_mod,
+):
+    mocker.patch("shutil.which", return_value=True)
+
+    req = tmp_path.joinpath("requirements.txt")
+    req.write_text("taskcluster-taskgraph==1.0.0")
+    repositories = [{"pip-requirements": str(req)}]
+    called = patch_run_command()
+    run_task_mod.install_pip_requirements(repositories)
+    assert len(called) == 1
+    assert called[0][0] == (
+        b"pip-install",
+        [
+            "uv",
+            "pip",
+            "install",
+            "--python",
+            sys.executable,
+            "--break-system-packages",
+            "--require-hashes",
+            "-r",
+            str(req),
         ],
     )
 
