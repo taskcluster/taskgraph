@@ -1,8 +1,7 @@
 FROM alpine:latest
-LABEL maintainer="Mozilla Release Engineering <release+docker@mozilla.com>"
 
 # Add worker user
-RUN mkdir /builds && \
+RUN mkdir -p /builds && \
     adduser -h /builds/worker -s /bin/ash -D worker && \
     mkdir /builds/worker/artifacts && \
     chown worker:worker /builds/worker/artifacts

@@ -2,7 +2,7 @@ FROM debian:12-slim
 LABEL maintainer="Release Engineering <release+taskgraph-ci@mozilla.com>"
 
 # Add worker user
-RUN mkdir /builds && \
+RUN mkdir -p /builds && \
     useradd -d /builds/worker -s /bin/bash -m worker && \
     mkdir /builds/worker/artifacts && \
     chown worker:worker /builds/worker/artifacts
