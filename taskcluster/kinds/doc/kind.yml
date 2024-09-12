@@ -12,7 +12,7 @@ transforms:
 task-defaults:
     worker-type: t-linux
     worker:
-        docker-image: {in-tree: py312}
+        docker-image: {in-tree: python}
         max-run-time: 3600
     treeherder:
         kind: test

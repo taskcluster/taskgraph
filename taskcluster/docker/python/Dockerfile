@@ -2,12 +2,11 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-# %ARG PYTHON_VERSION
-FROM python:$PYTHON_VERSION-slim
+FROM debian:bookworm-slim
 LABEL maintainer="Release Engineering <release@mozilla.com>"
 
-# Keep uv version in sync with decision image
-COPY --from=ghcr.io/astral-sh/uv:0.4.5 /uv /bin/uv
+VOLUME /builds/worker/checkouts
+VOLUME /builds/worker/.cache
 
 # Add worker user
 RUN mkdir -p /builds && \
@@ -29,8 +28,10 @@ ENV SHELL=/bin/bash \
     HOME=/builds/worker \
     PATH=/builds/worker/.local/bin:$PATH
 
-VOLUME /builds/worker/checkouts
-VOLUME /builds/worker/.cache
+# Keep uv version in sync with decision image
+COPY --from=ghcr.io/astral-sh/uv:0.4.9 /uv /bin/uv
+# %ARG PYTHON_VERSIONS
+RUN uv python install $PYTHON_VERSIONS
 
 # Set a default command useful for debugging
 CMD ["/bin/bash", "--login"]

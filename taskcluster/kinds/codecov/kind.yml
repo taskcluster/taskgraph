@@ -26,7 +26,7 @@ tasks:
                     - artifact: coverage.{python_version}
         worker-type: t-linux
         worker:
-            docker-image: {in-tree: py312}
+            docker-image: {in-tree: python}
             max-run-time: 1800
             env:
                 MOZ_FETCHES_DIR: /builds/worker/fetches

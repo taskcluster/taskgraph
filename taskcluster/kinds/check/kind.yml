@@ -15,7 +15,7 @@ task-defaults:
         code-review: true
     worker-type: t-linux
     worker:
-        docker-image: {in-tree: py38}
+        docker-image: {in-tree: python}
         max-run-time: 600
         env:
             LC_ALL: "C"
