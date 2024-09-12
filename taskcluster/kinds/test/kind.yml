@@ -19,6 +19,7 @@ task-defaults:
         code-review: true
     worker-type: t-linux
     worker:
+        docker-image: {in-tree: python}
         max-run-time: 1800
         env:
             LC_ALL: "C"
@@ -39,6 +40,7 @@ tasks:
         description: "Run `unit tests` to validate the latest changes"
         attributes:
             artifact_prefix: public
+        python-versions: ["3.12", "3.11", "3.10", "3.9", "3.8"]
         run:
             command: >-
                 uv run coverage run --data-file $MOZ_ARTIFACT_DIR/coverage --context=$PYTHON_VERSION -m pytest -vv
