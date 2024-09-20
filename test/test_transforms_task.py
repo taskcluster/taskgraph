@@ -740,7 +740,7 @@ def test_treeherder_defaults(run_transform, graph_config, kind, task_def, expect
         (
             {
                 "label": "task3",
-                "dependencies": ["dependency"] * 98,
+                "dependencies": ["dependency"] * 9998,
                 "soft-dependencies": ["dependency"] * 1,
                 "if-dependencies": ["dependency"] * 1,
             },
@@ -749,7 +749,7 @@ def test_treeherder_defaults(run_transform, graph_config, kind, task_def, expect
         (
             {
                 "label": "task3",
-                "dependencies": ["dependency"] * 99,
+                "dependencies": ["dependency"] * 9999,
                 "soft-dependencies": ["dependency"],
                 "if-dependencies": ["dependency"],
             },
