@@ -1,5 +1,18 @@
 # Change Log
 
+## [11.1.0] - 2024-09-23
+
+### Added
+
+- Use `uv` to install requirements if available (#572)
+- Allow 9,999 upstream dependencies on a Task (#575)
+  - Taskcluster platform work that enabled this: https://github.com/taskcluster/taskcluster/issues/7151
+
+### Fixed
+
+- Ensure builds don't fail if `/builds` already exists in Dockerfile (#573)
+- Add `coreutils` to the `linux` Dockerfile (#573)
+
 ## [11.0.0] - 2024-09-04
 
 ### Added
