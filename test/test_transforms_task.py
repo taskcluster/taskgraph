@@ -43,6 +43,15 @@ def assert_common(task_dict):
     assert "extra" in task_dict["task"]
     assert "payload" in task_dict["task"]
     assert "routes" in task_dict["task"]
+    assert task_dict["task"].get("tags", {}) == {
+        "createdForUser": "some-owner",
+        "kind": "test",
+        "label": "test-fake-task-name",
+        "os": "linux",
+        "project": "some-project",
+        "trust-domain": "test-domain",
+        "worker-implementation": "docker-worker",
+    }
     assert (
         "index.test-domain.v2.some-project.latest.fake.fake-job"
         in task_dict["task"]["routes"]
