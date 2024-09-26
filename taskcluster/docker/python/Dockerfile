@@ -28,8 +28,8 @@ ENV SHELL=/bin/bash \
     HOME=/builds/worker \
     PATH=/builds/worker/.local/bin:$PATH
 
-# Keep uv version in sync with decision image
-COPY --from=ghcr.io/astral-sh/uv:0.4.9 /uv /bin/uv
+# %ARG UV_VERSION
+COPY --from=ghcr.io/astral-sh/uv:$UV_VERSION /uv /bin/uv
 # %ARG PYTHON_VERSIONS
 RUN uv python install $PYTHON_VERSIONS
 

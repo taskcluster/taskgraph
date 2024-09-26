@@ -1,8 +1,8 @@
 FROM $DOCKER_IMAGE_PARENT
 LABEL maintainer="Release Engineering <release+taskgraph@mozilla.com>"
 
-# Keep uv version in sync with python image
-COPY --from=ghcr.io/astral-sh/uv:0.4.9 /uv /bin/uv
+# %ARG UV_VERSION
+COPY --from=ghcr.io/astral-sh/uv:$UV_VERSION /uv /bin/uv
 
 ENV UV_PROJECT_ENVIRONMENT=/setup/taskgraph
 
