@@ -1,9 +1,6 @@
 FROM $DOCKER_IMAGE_PARENT
 LABEL maintainer="Release Engineering <release+taskgraph@mozilla.com>"
 
-# %ARG UV_VERSION
-COPY --from=ghcr.io/astral-sh/uv:$UV_VERSION /uv /bin/uv
-
 ENV UV_PROJECT_ENVIRONMENT=/setup/taskgraph
 
 # %include src
