@@ -1,5 +1,17 @@
 # Change Log
 
+## [11.2.0] - 2024-09-26
+
+### Added
+
+- `taskgraph.config.GraphConfig` now implements a `get(<key>)` method (#577)
+- Global tags for `project` and `trust-domain` are now applied to all tasks (#579)
+
+### Fixed
+
+- `run-task` script no longer attempts to chmod `/dev/kvm` if it already has the right permissions (#578)
+  - This fixes an issue when using a container with podman
+
 ## [11.1.0] - 2024-09-23
 
 ### Added
