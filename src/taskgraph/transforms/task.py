@@ -1114,6 +1114,8 @@ def build_task(config, tasks):
                 "createdForUser": config.params["owner"],
                 "kind": config.kind,
                 "label": task["label"],
+                "project": config.params["project"],
+                "trust-domain": config.graph_config["trust-domain"],
             }
         )
 
