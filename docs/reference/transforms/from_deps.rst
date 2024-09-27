@@ -1,7 +1,7 @@
-.. _from_deps:
+.. _from_deps transforms:
 
-From Dependencies
-=================
+From Dependencies Transforms
+============================
 
 The :mod:`taskgraph.transforms.from_deps` transforms can be used to create
 tasks based on the kind dependencies, filtering on common attributes like the
