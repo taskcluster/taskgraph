@@ -8,6 +8,7 @@ provides, read below to learn how to use them.
 
 .. toctree::
 
-   from_deps
-   task_context
-   chunking
+   From Dependencies <from_deps>
+   Task Context <task_context>
+   Matrix <matrix>
+   Chunking <chunking>

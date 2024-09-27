@@ -1,7 +1,7 @@
-.. _chunking:
+.. _chunking transforms:
 
-Chunking Tasks
-==============
+Chunking Transforms
+===================
 
 The :mod:`taskgraph.transforms.chunking` module contains transforms that aid
 in splitting a single entry in a ``kind`` into multiple tasks. This is often
