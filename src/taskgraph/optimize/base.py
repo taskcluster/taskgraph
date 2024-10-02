@@ -28,10 +28,12 @@ logger = logging.getLogger("optimization")
 registry = {}
 
 
-def register_strategy(name, args=()):
+def register_strategy(name, args=(), kwargs=None):
+    kwargs = kwargs or {}
+
     def wrap(cls):
         if name not in registry:
-            registry[name] = cls(*args)
+            registry[name] = cls(*args, **kwargs)
             if not hasattr(registry[name], "description"):
                 registry[name].description = name
         return cls

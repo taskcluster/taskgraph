@@ -9,7 +9,13 @@ import pytest
 
 from taskgraph.graph import Graph
 from taskgraph.optimize import base as optimize_mod
-from taskgraph.optimize.base import All, Any, Not, OptimizationStrategy
+from taskgraph.optimize.base import (
+    All,
+    Any,
+    Not,
+    OptimizationStrategy,
+    register_strategy,
+)
 from taskgraph.task import Task
 from taskgraph.taskgraph import TaskGraph
 
@@ -467,3 +473,10 @@ def test_get_subgraph_removed_dep():
     graph = make_triangle()
     with pytest.raises(Exception):
         optimize_mod.get_subgraph(graph, {"t2"}, set(), {})
+
+
+def test_register_strategy(mocker):
+    m = mocker.Mock()
+    func = register_strategy("foo", args=("one", "two"), kwargs={"n": 1})
+    func(m)
+    m.assert_called_with("one", "two", n=1)
