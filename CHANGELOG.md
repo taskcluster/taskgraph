@@ -1,5 +1,11 @@
 # Change Log
 
+## [11.2.1] - 2024-10-03
+
+### Fixed
+
+- `taskgraph.optimize.register_strategy` can now pass kwargs on to the optimization class
+
 ## [11.2.0] - 2024-09-26
 
 ### Added
