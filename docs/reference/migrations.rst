@@ -22,6 +22,7 @@ This page can help when migrating Taskgraph across major versions.
      filters: ["target_tasks_method", "my_custom_filter"]
 
   No action is necessary if the ``filters`` parameter was empty.
+* Change all references from ``build-docker-image`` to ``docker-image``.
 
 10.x -> 11.x
 ------------
