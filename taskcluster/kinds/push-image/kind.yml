@@ -42,7 +42,7 @@ task-defaults:
 tasks:
     decision:
         dependencies:
-            image: build-docker-image-decision
+            image: docker-image-decision
     run-task:
         dependencies:
-            image: build-docker-image-run-task
+            image: docker-image-run-task
