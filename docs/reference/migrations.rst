@@ -3,6 +3,11 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+11.x -> 12.x
+------------
+
+* Change all references from ``build-docker-image`` to ``docker-image``.
+
 10.x -> 11.x
 ------------
 

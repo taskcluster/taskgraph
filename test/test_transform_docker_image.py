@@ -27,7 +27,7 @@ TASK_DEFAULTS = {
         pytest.param(
             {"parent": "fake-parent"},
             {},
-            {"dependencies": {"parent": "build-docker-image-fake-parent"}},
+            {"dependencies": {"parent": "docker-image-fake-parent"}},
             id="parent",
         ),
         pytest.param(
@@ -58,7 +58,7 @@ def test_transforms(
     config = make_transform_config()
     config.params.update(extra_params)
 
-    expected_task_output["label"] = "build-docker-image-" + task["name"]
+    expected_task_output["label"] = "docker-image-" + task["name"]
     expected_task_output["index"] = task["index"]
     expected_task_output["description"] = (
         "Build the docker image {} for use by dependent tasks".format(task["name"])
