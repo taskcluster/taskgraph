@@ -26,7 +26,7 @@ tasks:
     python:
         symbol: I(py)
         args:
-            PYTHON_VERSIONS: "3.12 3.11 3.10 3.9 3.8"
+            PYTHON_VERSIONS: "3.13 3.12 3.11 3.10 3.9 3.8"
     run-task:
         symbol: I(rt)
     skopeo:
