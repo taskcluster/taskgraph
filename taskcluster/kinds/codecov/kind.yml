@@ -23,7 +23,7 @@ tasks:
             set-name: null
             fetches:
                 test:
-                    - artifact: coverage.{python_version}
+                    - artifact: coverage.py{matrix[python]}
         worker-type: t-linux
         worker:
             docker-image: {in-tree: python}

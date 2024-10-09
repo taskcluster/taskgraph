@@ -6,7 +6,7 @@
 loader: taskgraph.loader.transform:loader
 
 transforms:
-    - self_taskgraph.transforms.test
+    - taskgraph.transforms.matrix
     - taskgraph.transforms.run
     - taskgraph.transforms.task
 
@@ -15,6 +15,7 @@ kind-dependencies:
 
 task-defaults:
     attributes:
+        artifact_prefix: public
         retrigger: true
         code-review: true
     worker-type: t-linux
@@ -37,10 +38,20 @@ task-defaults:
 
 tasks:
     unit:
-        description: "Run `unit tests` to validate the latest changes"
-        attributes:
-            artifact_prefix: public
-        python-versions: ["3.13", "3.12", "3.11", "3.10", "3.9", "3.8"]
+        description: "Run unit tests with py{matrix[python]}"
+        matrix:
+            set-name: "unit-py{matrix[python]}"
+            substitution-fields: [description, run.command, treeherder, worker]
+            python: ["313", "312", "311", "310", "39", "38"]
+        worker:
+            artifacts:
+                - type: file
+                  path: "/builds/worker/artifacts/coverage"
+                  name: "public/coverage.py{matrix[python]}"
+            env:
+                UV_PYTHON: "{matrix[python]}"
+        treeherder:
+            symbol: unit(py{matrix[python]})
         run:
             command: >-
-                uv run coverage run --data-file $MOZ_ARTIFACT_DIR/coverage --context=$PYTHON_VERSION -m pytest -vv
+                uv run coverage run --data-file /builds/worker/artifacts/coverage --context=py{matrix[python]} -m pytest -vv
