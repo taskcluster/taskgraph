@@ -11,6 +11,7 @@ apt-get install -y --force-yes --no-install-recommends \
 pushd /setup/taskgraph
 uv export --no-dev > /setup/requirements.txt
 uv pip install --system --break-system-packages -r /setup/requirements.txt
+uv pip install --system --break-system-packages --no-deps .
 popd
 
 apt-get clean
