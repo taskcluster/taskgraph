@@ -1,5 +1,13 @@
 # Change Log
 
+## [11.2.2] - 2024-10-15
+
+### Fixed
+
+- Regression in Decision image where `taskgraph` was no longer on the $PATH
+- Decision image no longer contains root owned `uv` cache
+- `uv` now included in the `run-task` image
+
 ## [11.2.1] - 2024-10-03
 
 ### Fixed
