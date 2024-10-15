@@ -1,4 +1,5 @@
 import os
+import pathlib
 import urllib.request
 from importlib.machinery import SourceFileLoader
 from importlib.util import module_from_spec, spec_from_loader
@@ -94,3 +95,84 @@ def test_stream_download(
     except fetch_content_mod.IntegrityError:
         if not raises:
             raise
+
+
+@pytest.mark.parametrize(
+    "expected,orig,dest,strip_components,add_prefix",
+    [
+        # Archives to repack
+        (True, pathlib.Path("archive"), pathlib.Path("archive.tar.zst"), 0, ""),
+        (True, pathlib.Path("archive.tar"), pathlib.Path("archive.tar.zst"), 0, ""),
+        (True, pathlib.Path("archive.tgz"), pathlib.Path("archive.tar.zst"), 0, ""),
+        (True, pathlib.Path("archive.zip"), pathlib.Path("archive.tar.zst"), 0, ""),
+        (True, pathlib.Path("archive.tar.xz"), pathlib.Path("archive.tar.zst"), 0, ""),
+        (True, pathlib.Path("archive.zst"), pathlib.Path("archive.tar.zst"), 0, ""),
+        # Path is exactly the same
+        (False, pathlib.Path("archive"), pathlib.Path("archive"), 0, ""),
+        (False, pathlib.Path("file.txt"), pathlib.Path("file.txt"), 0, ""),
+        (False, pathlib.Path("archive.tar"), pathlib.Path("archive.tar"), 0, ""),
+        (False, pathlib.Path("archive.tgz"), pathlib.Path("archive.tgz"), 0, ""),
+        (False, pathlib.Path("archive.zip"), pathlib.Path("archive.zip"), 0, ""),
+        (
+            False,
+            pathlib.Path("archive.tar.zst"),
+            pathlib.Path("archive.tar.zst"),
+            0,
+            "",
+        ),
+        (
+            False,
+            pathlib.Path("archive-before.tar.zst"),
+            pathlib.Path("archive-after.tar.zst"),
+            0,
+            "",
+        ),
+        (
+            False,
+            pathlib.Path("before.foo.bar.baz"),
+            pathlib.Path("after.foo.bar.baz"),
+            0,
+            "",
+        ),
+        # Non-default values for strip_components and add_prefix parameters
+        (True, pathlib.Path("archive.tar.zst"), pathlib.Path("archive.tar.zst"), 1, ""),
+        (
+            True,
+            pathlib.Path("archive.tar.zst"),
+            pathlib.Path("archive.tar.zst"),
+            0,
+            "prefix",
+        ),
+        (
+            True,
+            pathlib.Path("archive.tar.zst"),
+            pathlib.Path("archive.tar.zst"),
+            1,
+            "prefix",
+        ),
+        # Real edge cases that should not be repacks
+        (
+            False,
+            pathlib.Path("python-3.8.10-amd64.exe"),
+            pathlib.Path("python.exe"),
+            0,
+            "",
+        ),
+        (
+            False,
+            pathlib.Path("9ee26e91-9b52-44ba-8d30-c0230dd587b2.bin"),
+            pathlib.Path("model.esen.intgemm.alphas.bin"),
+            0,
+            "",
+        ),
+    ],
+)
+def test_should_repack_archive(
+    fetch_content_mod, orig, dest, expected, strip_components, add_prefix
+):
+    assert (
+        fetch_content_mod.should_repack_archive(
+            orig, dest, strip_components, add_prefix
+        )
+        == expected
+    ), f"Failed for orig: {orig}, dest: {dest}, strip_components: {strip_components}, add_prefix: {add_prefix}, expected {expected} but received {not expected}"
