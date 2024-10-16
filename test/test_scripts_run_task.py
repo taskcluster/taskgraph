@@ -1,5 +1,6 @@
 import io
 import os
+import site
 import stat
 import subprocess
 import sys
@@ -85,6 +86,7 @@ def test_install_pip_requirements(
             sys.executable,
             "-mpip",
             "install",
+            "--user",
             "--break-system-packages",
             "--require-hashes",
             "-r",
@@ -105,6 +107,7 @@ def test_install_pip_requirements(
             sys.executable,
             "-mpip",
             "install",
+            "--user",
             "--break-system-packages",
             "--require-hashes",
             "-r",
@@ -137,7 +140,8 @@ def test_install_pip_requirements_with_uv(
             "install",
             "--python",
             sys.executable,
-            "--break-system-packages",
+            "--target",
+            site.getusersitepackages(),
             "--require-hashes",
             "-r",
             str(req),
