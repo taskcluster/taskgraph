@@ -814,12 +814,11 @@ def command_static_url(args):
         if gpg_sig_url:
             gpg_verify_path(dl_dest, gpg_key, gpg_signature)
 
-        if dl_dest != dest:
-            if should_repack_archive(dl_dest, dest, args.strip_components, args.add_prefix):
-                repack_archive(dl_dest, dest, args.strip_components, args.add_prefix)
-            else:
-                log(f"Renaming {dl_dest} to {dest}")
-                dl_dest.rename(dest)
+        if should_repack_archive(dl_dest, dest, args.strip_components, args.add_prefix):
+            repack_archive(dl_dest, dest, args.strip_components, args.add_prefix)
+        elif dl_dest != dest:
+            log(f"Renaming {dl_dest} to {dest}")
+            dl_dest.rename(dest)
 
     except Exception:
         try:
