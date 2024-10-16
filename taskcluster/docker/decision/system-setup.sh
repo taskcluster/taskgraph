@@ -9,7 +9,7 @@ apt-get install -y --force-yes --no-install-recommends \
     python3-pip
 
 pushd /setup/taskgraph
-uv export --no-dev > /setup/requirements.txt
+uv export --no-cache --no-dev > /setup/requirements.txt
 uv pip install --no-cache --system --break-system-packages -r /setup/requirements.txt
 uv pip install --no-cache --system --break-system-packages --no-deps .
 popd
