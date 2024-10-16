@@ -1,5 +1,11 @@
 # Change Log
 
+## [11.2.4] - 2024-10-16
+
+### Fixed
+
+- Regression to `static-url` fetches when using the `strip_components` or `add_prefix` features
+
 ## [11.2.3] - 2024-10-16
 
 ### Fixed
