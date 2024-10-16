@@ -18,3 +18,4 @@ apt-get clean
 apt-get autoclean
 rm -rf /var/lib/apt/lists/
 rm -rf /setup
+rm /tmp/uv-*.lock
