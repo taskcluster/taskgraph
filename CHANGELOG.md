@@ -1,5 +1,15 @@
 # Change Log
 
+## [11.2.3] - 2024-10-16
+
+### Fixed
+
+- A couple more regressions with the Decision image
+  - Cleaned up temporary `uv` lockfile owend by root
+  - Added another `--no-cache` flag to a `uv` command
+- `run-task` now installs packages to user site dir when installing requirements with `uv`
+- Fetch tasks using `static-url` will now properly rename non-archive files
+
 ## [11.2.2] - 2024-10-15
 
 ### Fixed
