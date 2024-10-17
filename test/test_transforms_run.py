@@ -86,6 +86,45 @@ def test_worker_caches(task, transform):
     validate_schema(partial_schema, taskdesc["worker"][key], "validation error")
 
 
+def test_rewrite_when_to_optimization(run_transform, make_transform_config):
+    config = make_transform_config()
+
+    task = {"foo": "bar"}
+    result = run_transform(run.rewrite_when_to_optimization, task)
+    assert list(result) == [{"foo": "bar"}]
+
+    task = {"foo": "bar", "when": {"files-changed": ["README.md"]}}
+    result = run_transform(run.rewrite_when_to_optimization, task)
+    assert list(result) == [
+        {
+            "foo": "bar",
+            "optimization": {
+                "skip-unless-changed": ["README.md", f"{config.path}/kind.yml"]
+            },
+        }
+    ]
+
+    task = {
+        "foo": "bar",
+        "when": {"files-changed": ["README.md"]},
+        "task-from": "foo.yml",
+    }
+    result = run_transform(run.rewrite_when_to_optimization, task)
+    assert list(result) == [
+        {
+            "foo": "bar",
+            "optimization": {
+                "skip-unless-changed": [
+                    "README.md",
+                    f"{config.path}/kind.yml",
+                    f"{config.path}/foo.yml",
+                ]
+            },
+            "task-from": "foo.yml",
+        }
+    ]
+
+
 def assert_use_fetches_toolchain_env(task):
     assert task["worker"]["env"]["FOO"] == "1"
 
