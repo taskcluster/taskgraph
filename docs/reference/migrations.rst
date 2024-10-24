@@ -3,6 +3,26 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+11.x -> 12.x
+------------
+
+* Add ``target_tasks_method`` to the front of the ``filters`` parameter wherever
+  you are also using a custom filter.
+
+  For example, if you are passing in:
+
+  .. code-block:: yaml
+
+     filters: ["my_custom_filter"]
+
+  Change it to:
+
+  .. code-block:: yaml
+
+     filters: ["target_tasks_method", "my_custom_filter"]
+
+  No action is necessary if the ``filters`` parameter was empty.
+
 10.x -> 11.x
 ------------
 
