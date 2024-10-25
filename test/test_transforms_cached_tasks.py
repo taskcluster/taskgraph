@@ -2,10 +2,9 @@ import base64
 from pprint import pprint
 
 import pytest
+from pytest_taskgraph import make_task
 
 from taskgraph.transforms import cached_tasks
-
-from .conftest import make_task
 
 
 def handle_exception(obj, exc=None):

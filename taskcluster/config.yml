@@ -15,6 +15,8 @@ index:
 task-priority: low
 
 taskgraph:
+    register: self_taskgraph:register
+    decision-parameters: 'self_taskgraph.custom_parameters:decision_parameters'
     repositories:
         ci:
             name: Taskgraph

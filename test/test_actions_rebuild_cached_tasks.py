@@ -3,12 +3,11 @@ Tests for the 'rebuild_cached_tasks' action.
 """
 
 import pytest
+from pytest_taskgraph import make_graph, make_task
 
 from taskgraph import create
 from taskgraph.actions import trigger_action_callback
 from taskgraph.util import taskcluster as tc_util
-
-from .conftest import make_graph, make_task
 
 
 @pytest.fixture

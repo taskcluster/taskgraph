@@ -45,6 +45,9 @@ taskgraph = "taskgraph.main:main"
 Repository = "https://github.com/taskcluster/taskgraph"
 Issues = "https://github.com/taskcluster/taskgraph/issues"
 
+[tool.uv.sources]
+pytest-taskgraph = { path = "packages/pytest-taskgraph" }
+
 [tool.uv]
 dev-dependencies = [
   "coverage",
@@ -53,6 +56,7 @@ dev-dependencies = [
   "pyright",
   "pytest",
   "pytest-mock",
+  "pytest-taskgraph",
   "responses",
   "sphinx",
   "sphinx-autobuild",
@@ -79,7 +83,7 @@ xfail_strict = true
 
 [tool.coverage.run]
 branch = true
-source = ["src/taskgraph/", "src/taskgraph/run-task/", "test"]
+source = ["src/taskgraph/", "src/taskgraph/run-task/", "packages", "test"]
 
 ### Lint and Format
 [tool.ruff]
@@ -103,7 +107,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["taskgraph"]
+known-first-party = ["pytest-taskgraph", "taskgraph"]
 
 [tool.pyright]
 include = ["src"]

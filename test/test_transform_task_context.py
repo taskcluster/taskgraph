@@ -6,10 +6,10 @@ import os.path
 from copy import deepcopy
 from pprint import pprint
 
+from pytest_taskgraph import FakeParameters
+
 from taskgraph.transforms import task_context
 from taskgraph.transforms.base import TransformConfig
-
-from .conftest import FakeParameters
 
 here = os.path.abspath(os.path.dirname(__file__))
 

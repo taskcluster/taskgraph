@@ -7,9 +7,9 @@ from datetime import datetime
 from time import mktime
 
 import pytest
+from pytest_taskgraph import make_task
 
 from taskgraph.optimize.strategies import IndexSearch, SkipUnlessChanged
-from test.fixtures.gen import make_task
 
 
 @pytest.fixture

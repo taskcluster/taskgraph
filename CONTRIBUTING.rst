@@ -150,8 +150,8 @@ Or if you'd like to update a specific dependency:
 
    uv sync -P <package>
 
-Releasing
----------
+Releasing taskcluster-taskgraph
+-------------------------------
 
 In order to release a new version of Taskgraph, you will need to:
 
@@ -161,10 +161,24 @@ In order to release a new version of Taskgraph, you will need to:
 4. Create a release in Github pointing to the above commit. Be sure to also
    create a new tag matching this version.
 5. Wait for the ``pypi-publish`` Github workflow and ``push-image-decision`` task to finish.
-6. Verify that expected version has been published to `pypi`_ and pushed to `DockerHub`_.
+6. Verify that expected version has been published to `pypi
+   <https://pypi.org/project/taskcluster-taskgraph>`__ and pushed to `DockerHub`_.
 
-.. _pypi: https://pypi.org/project/taskcluster-taskgraph
 .. _DockerHub: https://hub.docker.com/r/mozillareleases/taskgraph/tags
+
+Releasing pytest-taskgraph
+--------------------------
+
+There's also a Pytest plugin packaged under ``packages/pytest-taskgraph``. The
+release process for this package is:
+
+1. Update ``version`` in ``packages/pytest-taskgraph/pyproject.toml``
+2. Commit and land the changes with a commit message like "chore: bump pytest-taskgraph <version>"
+3. Create a release in Github pointing to the above commit. Be sure to also
+   create a new tag of the form ``pytest-taskgraph-v<version>``.
+4. Wait for the ``pypi-publish`` Github workflow and ``push-image-decision`` task to finish.
+5. Verify that expected version has been published to `pypi <https://pypi.org/project/pytest-taskgraph>`__.
+
 
 Building the Package
 --------------------

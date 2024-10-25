@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from functools import partial
 
 import pytest
+from pytest_taskgraph import make_graph, make_task
 
 from taskgraph.graph import Graph
 from taskgraph.optimize import base as optimize_mod
@@ -18,8 +19,6 @@ from taskgraph.optimize.base import (
 )
 from taskgraph.task import Task
 from taskgraph.taskgraph import TaskGraph
-
-from .conftest import make_graph, make_task
 
 
 class Remove(OptimizationStrategy):

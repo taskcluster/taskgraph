@@ -5,10 +5,9 @@ Tests for the 'from_deps' transforms.
 from pprint import pprint
 
 import pytest
+from pytest_taskgraph import make_task
 
 from taskgraph.transforms import from_deps
-
-from .conftest import make_task
 
 
 def handle_exception(obj, exc=None):

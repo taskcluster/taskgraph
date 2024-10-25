@@ -12,10 +12,10 @@ files_changed:
   - test/test_decision.py
 filters:
   - target_tasks_method
-head_ref: release-test
+head_ref: refs/tags/pytest-taskgraph-v1.0.0
 head_repository: https://github.com/taskcluster/taskgraph
 head_rev: release-test
-head_tag: ''
+head_tag: pytest-taskgraph-v1.0.0
 level: '3'
 moz_build_date: '20240207083344'
 next_version: null
@@ -26,6 +26,6 @@ project: taskgraph
 pushdate: 0
 pushlog_id: '0'
 repository_type: git
-target_tasks_method: default
+target_tasks_method: release
 tasks_for: github-release
 version: null
