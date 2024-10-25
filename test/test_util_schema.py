@@ -106,6 +106,20 @@ class TestResolveKeyedBy(unittest.TestCase):
             {"x": {"by-bar": {"B1": 11, "B2": 12}}},
         )
 
+    def test_list(self):
+        item = {
+            "y": {
+                "by-foo": {
+                    "F1": 10,
+                    "F2": 20,
+                },
+            }
+        }
+        self.assertEqual(
+            resolve_keyed_by({"x": [item, item]}, "x[].y", "name", foo="F1"),
+            {"x": [{"y": 10}, {"y": 10}]},
+        )
+
     def test_no_by_empty_dict(self):
         self.assertEqual(resolve_keyed_by({"x": {}}, "x", "n"), {"x": {}})
 
