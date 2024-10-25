@@ -1,5 +1,23 @@
 # Change Log
 
+## [12.0.0] - 2024-10-25
+
+### Added
+
+- New `matrix` transforms added to allow easily splitting tasks
+- The `-p/--parameters` flag now supports `index=<index>` as a means of discovering parameters
+
+### Fixed
+
+- BREAKING CHANGE: `target_tasks_method` filter no longer implicitly added if other filters are used
+- An OSError when generating docker contexts when many files were involved
+- A bug when attempting to find prior actions in Github action tasks
+- The `when.files-changed` optimization no longer implicitly adds unrelated `tasks-from` files
+
+### Changed
+
+- BREAKING CHANGE: docker image task labels changed from `build-docker-image` to `docker-image`
+
 ## [11.2.4] - 2024-10-16
 
 ### Fixed
