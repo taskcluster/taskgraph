@@ -151,6 +151,7 @@ class TestParameters(TestCase):
         tid = "abc"
         project = "foo"
         trust_domain = "bar"
+        index = f"{trust_domain}.v2.{project}.latest.taskgraph.cron"
         expected = {"some": "data"}
 
         # Setup mocks
@@ -170,6 +171,14 @@ class TestParameters(TestCase):
         )
         self.assertEqual(dict(ret), expected)
         self.assertRaises(ValueError, load_parameters_file, f"project={project}")
+
+        # Test `index=`
+        ret = load_parameters_file(f"index={index}")
+        mock_load_stream.assert_called_with(mock_urlopen())
+        mock_find_task_id.assert_called_with(
+            f"{trust_domain}.v2.{project}.latest.taskgraph.cron"
+        )
+        self.assertEqual(dict(ret), expected)
 
         # Test gzipped data
         r = mock.Mock()
@@ -238,6 +247,7 @@ def test_parameters_id():
         ("http://example.org/bar.yml?id=0", "bar"),
         ("task-id=123", "task-id=123"),
         ("project=autoland", "project=autoland"),
+        ("index=foo.v2.bar.latest", "index=foo.v2.bar.latest"),
     ),
 )
 def test_parameters_format_spec(spec, expected):
