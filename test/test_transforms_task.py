@@ -8,11 +8,10 @@ from pathlib import Path
 from pprint import pprint
 
 import pytest
+from pytest_taskgraph import FakeParameters
 
 from taskgraph.transforms import task
 from taskgraph.transforms.base import TransformConfig
-
-from .conftest import FakeParameters
 
 TASK_DEFAULTS = {
     "description": "fake description",

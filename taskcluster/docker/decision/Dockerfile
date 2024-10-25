@@ -4,6 +4,7 @@ LABEL maintainer="Release Engineering <release+taskgraph@mozilla.com>"
 ENV UV_PROJECT_ENVIRONMENT=/setup/taskgraph
 
 # %include src
+# %include packages
 # %include .hatch_build.py
 # %include README.rst
 # %include pyproject.toml

@@ -4,10 +4,9 @@ from pathlib import Path
 import pytest
 from responses import RequestsMock
 
-from .fixtures.gen import *  # noqa
-from .fixtures.vcs import *  # noqa
-
 here = Path(__file__).parent
+
+pytest_plugins = ("pytest-taskgraph",)
 
 # Disable as much system/user level configuration as we can to avoid
 # interference with tests.

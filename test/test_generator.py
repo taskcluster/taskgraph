@@ -4,12 +4,11 @@
 
 
 import pytest
+from pytest_taskgraph import FakeKind, WithFakeKind, fake_load_graph_config
 
 from taskgraph import generator, graph
 from taskgraph.generator import Kind, load_tasks_for_kind
 from taskgraph.loader.default import loader as default_loader
-
-from .conftest import FakeKind, WithFakeKind, fake_load_graph_config
 
 
 def test_kind_ordering(maketgg):

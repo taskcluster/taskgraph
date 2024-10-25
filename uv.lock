@@ -744,6 +744,21 @@ wheels = [
 ]
 
 [[package]]
+name = "pytest-taskgraph"
+version = "0.1.0"
+source = { directory = "packages/pytest-taskgraph" }
+dependencies = [
+    { name = "pytest" },
+    { name = "taskcluster-taskgraph" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pytest" },
+    { name = "taskcluster-taskgraph", specifier = ">=12.1.0" },
+]
+
+[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 source = { registry = "https://pypi.org/simple" }
@@ -1056,7 +1071,7 @@ wheels = [
 
 [[package]]
 name = "taskcluster-taskgraph"
-version = "11.0.0"
+version = "12.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "appdirs" },
@@ -1084,6 +1099,7 @@ dev = [
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-mock" },
+    { name = "pytest-taskgraph" },
     { name = "responses" },
     { name = "sphinx" },
     { name = "sphinx-argparse" },
@@ -1116,6 +1132,7 @@ dev = [
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-mock" },
+    { name = "pytest-taskgraph", directory = "packages/pytest-taskgraph" },
     { name = "responses" },
     { name = "sphinx" },
     { name = "sphinx-argparse" },

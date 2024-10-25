@@ -6,6 +6,7 @@ from functools import partial
 from itertools import chain
 
 import pytest
+from pytest_taskgraph import make_graph, make_task
 
 from taskgraph.task import Task
 from taskgraph.util.treeherder import split_symbol
@@ -15,8 +16,6 @@ from taskgraph.util.verify import (
     VerificationSequence,
     verifications,
 )
-
-from .conftest import make_graph, make_task
 
 
 def get_graph():

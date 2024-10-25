@@ -1,6 +1,6 @@
-from taskgraph.util.dependencies import get_dependencies, get_primary_dependency
+from pytest_taskgraph import make_task
 
-from .conftest import make_task
+from taskgraph.util.dependencies import get_dependencies, get_primary_dependency
 
 
 def test_get_dependencies(make_transform_config):
