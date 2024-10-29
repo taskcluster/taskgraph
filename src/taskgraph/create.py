@@ -124,7 +124,9 @@ def create_task(session, task_id, label, task_def):
         return
 
     logger.info(f"Creating task with taskId {task_id} for {label}")
-    proxy_url = os.environ.get("TASKCLUSTER_PROXY_URL", "http://taskcluster")
+    proxy_url = os.environ.get("TASKCLUSTER_PROXY_URL", "http://taskcluster").rstrip(
+        "/"
+    )
     res = session.put(
         f"{proxy_url}/queue/v1/task/{task_id}",
         json=task_def,
