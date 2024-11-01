@@ -10,15 +10,11 @@ Strategies for Removing Tasks
 skip-unless-changed
 ~~~~~~~~~~~~~~~~~~~
 
-.. note::
-
-   This strategy is only implemented for Mercurial repositories hosted on
-   ``hg.mozilla.org``.
-
 The :class:`skip-unless-changed
 <taskgraph.optimize.strategies.SkipUnlessChanged>` strategy will optimize the
-target task away *unless* a specified file is modified. Glob patterns are
-supported.
+target task away *unless* a specified file is modified. When there is no
+difference between head and base revs (for example, cron or action tasks), this
+optimization will not apply. Glob patterns are supported.
 
 Example:
 
