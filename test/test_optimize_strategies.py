@@ -135,7 +135,11 @@ def test_index_search(caplog, responses, params, state, expires, expected, logs)
             {"files_changed": ["bar.txt"]}, ["foo.txt"], True, id="files don't match"
         ),
         pytest.param(
-            {"head_rev": "8843d7f92416211de9ebb963ff4ce28125932878", "base_rev": "8843d7f92416211de9ebb963ff4ce28125932878", "files_changed": ["bar.txt"]},
+            {
+                "head_rev": "8843d7f92416211de9ebb963ff4ce28125932878",
+                "base_rev": "8843d7f92416211de9ebb963ff4ce28125932878",
+                "files_changed": ["bar.txt"],
+            },
             ["foo.txt"],
             False,
             id="cron task",
