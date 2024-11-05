@@ -82,7 +82,7 @@ class SkipUnlessChanged(OptimizationStrategy):
     def should_remove_task(self, task, params, file_patterns):
         # skip-unless-changed should not apply when there is no commit delta,
         # such as for cron and action tasks (there will never be file changes)
-        if params.get("head_rev") == params.get("base_rev"):
+        if params.get("base_rev") and params.get("head_rev") == params.get("base_rev"):
             return False
 
         changed = self.check(params["files_changed"], file_patterns)
