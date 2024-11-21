@@ -4,7 +4,7 @@
 
 ### Added
 
-- log x-cache-status when content size doesn't match expected (#606)
+- fetch-content: log x-cache-status when content size doesn't match expected (#606)
 
 ### Fixed
 
