@@ -1,5 +1,16 @@
 # Change Log
 
+## [12.1.0] - 2024-11-21
+
+### Added
+
+- log x-cache-status when content size doesn't match expected (#606)
+
+### Fixed
+
+- Don't assume the taskcluster proxy is running on http://taskcluster (#603)
+- Do not apply skip-unless-changed for cron triggers (#604)
+
 ## [12.0.0] - 2024-10-25
 
 ### Added
