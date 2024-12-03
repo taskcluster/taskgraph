@@ -454,7 +454,7 @@ def test_get_subgraph(monkeypatch, graph, kwargs, exp_subgraph, exp_label_to_tas
     4. The expected label_to_taskid.
     """
     monkeypatch.setattr(
-        optimize_mod, "slugid", partial(next, ("tid%d" % i for i in range(1, 10)))
+        optimize_mod, "slugid", partial(next, (f"tid{i}" for i in range(1, 10)))
     )
 
     kwargs.setdefault("removed_tasks", set())
