@@ -338,9 +338,7 @@ class TaskGraphGenerator:
             all_tasks, Graph(frozenset(full_task_set.graph.nodes), frozenset(edges))
         )
         logger.info(
-            "Full task graph contains {} tasks and {} dependencies".format(
-                len(full_task_set.graph.nodes), len(edges)
-            )
+            f"Full task graph contains {len(full_task_set.graph.nodes)} tasks and {len(edges)} dependencies"
         )
         yield self.verify("full_task_graph", full_task_graph, graph_config, parameters)
 
@@ -357,9 +355,7 @@ class TaskGraphGenerator:
                 Graph(frozenset(target_tasks), frozenset()),
             )
             logger.info(
-                "Filter {} pruned {} tasks ({} remain)".format(
-                    fltr.__name__, old_len - len(target_tasks), len(target_tasks)
-                )
+                f"Filter {fltr.__name__} pruned {old_len - len(target_tasks)} tasks ({len(target_tasks)} remain)"
             )
 
         yield self.verify("target_task_set", target_task_set, graph_config, parameters)
@@ -377,9 +373,7 @@ class TaskGraphGenerator:
         else:
             always_target_tasks = set()
         logger.info(
-            "Adding {} tasks with `always_target` attribute".format(
-                (len(always_target_tasks) - len(always_target_tasks & target_tasks))  # type: ignore
-            )
+            f"Adding {len(always_target_tasks) - len(always_target_tasks & target_tasks)} tasks with `always_target` attribute"  # type: ignore
         )
         requested_tasks = target_tasks | always_target_tasks  # type: ignore
         target_graph = full_task_graph.graph.transitive_closure(requested_tasks)
