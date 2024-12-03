@@ -204,7 +204,7 @@ class TestDocker(unittest.TestCase):
             extra = os.path.join(tmp, "extra")
             os.mkdir(extra)
             for i in range(3):
-                p = os.path.join(extra, "file%d" % i)
+                p = os.path.join(extra, f"file{i}")
                 with open(p, "wb") as fh:
                     fh.write(b"file%d" % i)
                 os.chmod(p, MODE_STANDARD)
@@ -249,7 +249,7 @@ class TestDocker(unittest.TestCase):
             extra = os.path.join(tmp, "extra")
             os.mkdir(extra)
             for i in range(3):
-                p = os.path.join(extra, "file%d" % i)
+                p = os.path.join(extra, f"file{i}")
                 with open(p, "wb") as fh:
                     fh.write(b"file%d" % i)
                 os.chmod(p, MODE_STANDARD)
