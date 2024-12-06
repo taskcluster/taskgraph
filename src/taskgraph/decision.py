@@ -63,7 +63,7 @@ def full_task_graph_to_runnable_tasks(full_task_json):
     return runnable_tasks
 
 
-def taskgraph_decision(options, parameters=None):
+def taskgraph_decision(options, parameters=None, task_group_id=None):
     """
     Run the decision task.  This function implements `mach taskgraph decision`,
     and is responsible for
@@ -152,6 +152,7 @@ def taskgraph_decision(options, parameters=None):
         tgg.label_to_taskid,
         tgg.parameters,
         decision_task_id=decision_task_id,
+        task_group_id=task_group_id,
     )
 
 
