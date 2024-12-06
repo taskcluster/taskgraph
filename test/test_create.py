@@ -58,6 +58,31 @@ class TestCreate(unittest.TestCase):
                     continue
                 self.assertIn(depid, self.created_tasks)
 
+    def test_create_tasks_explicit_group_id(self):
+        tasks = {
+            "tid-a": Task(
+                kind="test", label="a", attributes={}, task={"payload": "hello world"}
+            ),
+            "tid-b": Task(
+                kind="test", label="b", attributes={}, task={"payload": "hello world"}
+            ),
+        }
+        label_to_taskid = {"a": "tid-a", "b": "tid-b"}
+        graph = Graph(nodes={"tid-a", "tid-b"}, edges={("tid-a", "tid-b", "edge")})
+        taskgraph = TaskGraph(tasks, graph)
+
+        create.create_tasks(
+            GRAPH_CONFIG,
+            taskgraph,
+            label_to_taskid,
+            {"level": "4"},
+            decision_task_id="decisiontask",
+            task_group_id="task_group",
+        )
+
+        for _, task in self.created_tasks.items():
+            self.assertEqual(task["taskGroupId"], "task_group")
+
     def test_create_task_without_dependencies(self):
         "a task with no dependencies depends on the decision task"
         tasks = {
