@@ -21,7 +21,14 @@ logger = logging.getLogger(__name__)
 testing = False
 
 
-def create_tasks(graph_config, taskgraph, label_to_taskid, params, decision_task_id, task_group_id=None):
+def create_tasks(
+    graph_config,
+    taskgraph,
+    label_to_taskid,
+    params,
+    decision_task_id,
+    task_group_id=None,
+):
     taskid_to_label = {t: l for l, t in label_to_taskid.items()}
 
     # when running as an actual decision task, we use the decision task's
