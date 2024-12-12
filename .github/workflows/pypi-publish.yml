@@ -27,7 +27,7 @@ jobs:
     name: upload release to PyPI
     if: startsWith(github.ref, 'refs/tags/pytest-taskgraph')
     runs-on: ubuntu-latest
-    environment: release
+    environment: pytest-taskgraph-release
     permissions:
       id-token: write
     steps:
