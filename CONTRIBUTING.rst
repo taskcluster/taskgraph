@@ -158,8 +158,12 @@ In order to release a new version of Taskgraph, you will need to:
 1. Update ``CHANGELOG.md``
 2. Update ``__version__`` in ``src/taskgraph/__init__.py``
 3. Commit, and land the above changes with a commit message like "chore: bump <version>"
-4. Create a release in Github pointing to the above commit. Be sure to also
-   create a new tag matching this version.
+4. Draft a release in Github pointing to the above commit.
+
+   a. Create a new tag of the form ``X.Y.Z``
+   b. Ensure "Set as latest release" is checked
+   c. Submit the release
+
 5. Wait for the ``pypi-publish`` Github workflow and ``push-image-decision`` task to finish.
 6. Verify that expected version has been published to `pypi
    <https://pypi.org/project/taskcluster-taskgraph>`__ and pushed to `DockerHub`_.
@@ -174,9 +178,13 @@ release process for this package is:
 
 1. Update ``version`` in ``packages/pytest-taskgraph/pyproject.toml``
 2. Commit and land the changes with a commit message like "chore: bump pytest-taskgraph <version>"
-3. Create a release in Github pointing to the above commit. Be sure to also
-   create a new tag of the form ``pytest-taskgraph-v<version>``.
-4. Wait for the ``pypi-publish`` Github workflow and ``push-image-decision`` task to finish.
+3. Draft a release in Github pointing to the above commit.
+
+   a. Create a new tag of the form ``pytest-taskgraph-vX.Y.Z``
+   b. Uncheck "Set as latest release"
+   c. Submit the release
+
+4. Wait for the ``pypi-publish`` Github workflow to finish.
 5. Verify that expected version has been published to `pypi <https://pypi.org/project/pytest-taskgraph>`__.
 
 
