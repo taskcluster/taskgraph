@@ -12,10 +12,10 @@ files_changed:
   - test/test_decision.py
 filters:
   - target_tasks_method
-head_ref: refs/tags/1.0.0
+head_ref: 1.0.0
 head_repository: https://github.com/taskcluster/taskgraph
-head_rev: release-test
-head_tag: 1.0.0
+head_rev: 1.0.0
+head_tag: ''
 level: '3'
 moz_build_date: '20240207083344'
 next_version: null
