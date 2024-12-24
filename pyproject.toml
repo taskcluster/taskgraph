@@ -111,4 +111,5 @@ known-first-party = ["pytest-taskgraph", "taskgraph"]
 
 [tool.pyright]
 include = ["src"]
+exclude = ["src/taskgraph/run-task/robustcheckout.py"]
 reportIncompatibleMethodOverride = false
