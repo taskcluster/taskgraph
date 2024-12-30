@@ -13,6 +13,13 @@ import json
 from taskgraph.util import path
 from taskgraph.util.taskcluster import get_artifact_prefix
 
+CACHES = {
+    "cargo": {"env": "CARGO_HOME"},
+    "npm": {"env": "npm_config_cache"},
+    "pip": {"env": "PIP_CACHE_DIR"},
+    "uv": {"env": "UV_CACHE_DIR"},
+}
+
 
 def get_vcsdir_name(os):
     if os == "windows":
@@ -32,10 +39,13 @@ def add_cache(task, taskdesc, name, mount_point, skip_untrusted=False):
         skip_untrusted (bool): Whether cache is used in untrusted environments
             (default: False). Only applies to docker-worker.
     """
-    if not task["run"].get("use-caches", True):
+    worker = task["worker"]
+    if worker["implementation"] not in ("docker-worker", "generic-worker"):
+        # caches support not implemented
         return
 
-    worker = task["worker"]
+    if not task["run"].get("use-caches", True):
+        return
 
     if worker["implementation"] == "docker-worker":
         taskdesc["worker"].setdefault("caches", []).append(
@@ -54,10 +64,6 @@ def add_cache(task, taskdesc, name, mount_point, skip_untrusted=False):
                 "directory": mount_point,
             }
         )
-
-    else:
-        # Caches not implemented
-        pass
 
 
 def add_artifacts(config, task, taskdesc, path):
@@ -166,3 +172,24 @@ def support_vcs_checkout(config, task, taskdesc, repo_configs, sparse=False):
         taskdesc["worker"]["taskcluster-proxy"] = True
 
     return vcsdir
+
+
+def support_caches(task, taskdesc):
+    """Add caches for common tools."""
+    worker = task["worker"]
+    workdir = task["run"].get("workdir")
+    base_cache_dir = ".task-cache"
+    if worker["implementation"] == "docker-worker":
+        workdir = workdir or "/builds/worker"
+        base_cache_dir = path.join(workdir, base_cache_dir)
+
+    for name, config in CACHES.items():
+        cache_dir = f"{base_cache_dir}/{name}"
+
+        if config.get("env"):
+            env = taskdesc["worker"].setdefault("env", {})
+            # If cache_dir is already absolute, the `.join` call returns it as
+            # is. In that case, {task_workdir} will get interpolated by
+            # run-task.
+            env[config["env"]] = path.join("{task_workdir}", cache_dir)
+        add_cache(task, taskdesc, name, cache_dir)
