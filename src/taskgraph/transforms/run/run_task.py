@@ -106,7 +106,7 @@ def common_setup(config, task, taskdesc, command):
     if "cwd" in run:
         command.extend(("--task-cwd", run["cwd"]))
 
-    support_caches(task, taskdesc)
+    support_caches(config, task, taskdesc)
     taskdesc["worker"].setdefault("env", {})["MOZ_SCM_LEVEL"] = config.params["level"]
 
 

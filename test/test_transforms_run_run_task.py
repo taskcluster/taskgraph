@@ -53,14 +53,14 @@ def assert_docker_worker(task):
         "worker": {
             "caches": [
                 {
-                    "mount-point": "/builds/worker/checkouts",
-                    "name": "checkouts",
+                    "mount-point": "/builds/worker/.task-cache/cargo",
+                    "name": "cargo",
                     "skip-untrusted": False,
                     "type": "persistent",
                 },
                 {
-                    "mount-point": "/builds/worker/.task-cache/cargo",
-                    "name": "cargo",
+                    "mount-point": "/builds/worker/checkouts",
+                    "name": "checkouts",
                     "skip-untrusted": False,
                     "type": "persistent",
                 },
@@ -148,12 +148,12 @@ def assert_generic_worker(task):
             "implementation": "generic-worker",
             "mounts": [
                 {
-                    "cache-name": "checkouts",
-                    "directory": "build",
-                },
-                {
                     "cache-name": "cargo",
                     "directory": ".task-cache/cargo",
+                },
+                {
+                    "cache-name": "checkouts",
+                    "directory": "build",
                 },
                 {
                     "cache-name": "npm",
