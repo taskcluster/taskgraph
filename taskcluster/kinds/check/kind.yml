@@ -29,7 +29,7 @@ task-defaults:
     run:
         using: run-task
         cwd: '{checkout}'
-        cache-dotcache: true
+        use-caches: [checkout, uv]
 
 tasks:
     type:
