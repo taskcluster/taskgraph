@@ -86,7 +86,7 @@ def run_caches(transform):
 
 
 def test_caches_docker_worker(run_caches):
-    assert run_caches({"worker-type": "t-linux"}) == [
+    assert run_caches({"run": {"use-caches": True}, "worker-type": "t-linux"}) == [
         {
             "mount-point": "/cache1",
             "name": "cache1",
@@ -103,7 +103,7 @@ def test_caches_docker_worker(run_caches):
 
 
 def test_caches_generic_worker(run_caches):
-    assert run_caches({"worker-type": "t-win"}) == [
+    assert run_caches({"run": {"use-caches": True}, "worker-type": "t-win"}) == [
         {"cache-name": "cache1", "directory": "/cache1"},
         {"cache-name": "cache2", "directory": "/cache2"},
     ]
