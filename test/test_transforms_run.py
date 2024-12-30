@@ -58,32 +58,51 @@ def transform(monkeypatch, run_transform):
     return inner
 
 
-@pytest.mark.parametrize(
-    "task",
-    [
-        {"worker-type": "t-linux"},
-        pytest.param(
-            {"worker-type": "releng-hardware/gecko-t-win10-64-hw"},
-            marks=pytest.mark.xfail,
-        ),
-    ],
-    ids=["docker-worker", "generic-worker"],
-)
-def test_worker_caches(task, transform):
-    config, task, taskdesc, impl = transform(task)
-    add_cache(task, taskdesc, "cache1", "/cache1")
-    add_cache(task, taskdesc, "cache2", "/cache2", skip_untrusted=True)
+@pytest.fixture
+def run_caches(transform):
+    def inner(task):
+        config, task, taskdesc, impl = transform(task)
+        add_cache(task, taskdesc, "cache1", "/cache1")
+        add_cache(task, taskdesc, "cache2", "/cache2", skip_untrusted=True)
 
-    if impl not in ("docker-worker", "generic-worker"):
-        pytest.xfail(f"caches not implemented for '{impl}'")
+        if impl not in ("docker-worker", "generic-worker"):
+            pytest.xfail(f"caches not implemented for '{impl}'")
 
-    key = "caches" if impl == "docker-worker" else "mounts"
-    assert key in taskdesc["worker"]
-    assert len(taskdesc["worker"][key]) == 2
+        # Create a new schema object with just the part relevant to caches.
+        key = "caches" if impl == "docker-worker" else "mounts"
+        partial_schema = Schema(payload_builders[impl].schema.schema[key])
+        validate_schema(partial_schema, taskdesc["worker"][key], "validation error")
 
-    # Create a new schema object with just the part relevant to caches.
-    partial_schema = Schema(payload_builders[impl].schema.schema[key])
-    validate_schema(partial_schema, taskdesc["worker"][key], "validation error")
+        result = taskdesc["worker"].get(key)
+        print("Dumping for copy/paste:")
+        pprint(result, indent=2)
+        return result
+
+    return inner
+
+
+def test_caches_docker_worker(run_caches):
+    assert run_caches({"worker-type": "t-linux"}) == [
+        {
+            "mount-point": "/cache1",
+            "name": "cache1",
+            "skip-untrusted": False,
+            "type": "persistent",
+        },
+        {
+            "mount-point": "/cache2",
+            "name": "cache2",
+            "skip-untrusted": True,
+            "type": "persistent",
+        },
+    ]
+
+
+def test_caches_generic_worker(run_caches):
+    assert run_caches({"worker-type": "t-win"}) == [
+        {"cache-name": "cache1", "directory": "/cache1"},
+        {"cache-name": "cache2", "directory": "/cache2"},
+    ]
 
 
 def test_rewrite_when_to_optimization(run_transform, make_transform_config):

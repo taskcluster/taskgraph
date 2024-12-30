@@ -85,6 +85,12 @@ def fake_load_graph_config(root_dir):
                         "os": "linux",
                         "worker-type": "linux",
                     },
+                    "t-win": {
+                        "provisioner": "taskgraph-t",
+                        "implementation": "generic-worker",
+                        "os": "windows",
+                        "worker-type": "win",
+                    },
                 }
             },
             "task-priority": "low",
