@@ -57,7 +57,31 @@ def assert_docker_worker(task):
                     "name": "checkouts",
                     "skip-untrusted": False,
                     "type": "persistent",
-                }
+                },
+                {
+                    "mount-point": "/builds/worker/.task-cache/cargo",
+                    "name": "cargo",
+                    "skip-untrusted": False,
+                    "type": "persistent",
+                },
+                {
+                    "mount-point": "/builds/worker/.task-cache/npm",
+                    "name": "npm",
+                    "skip-untrusted": False,
+                    "type": "persistent",
+                },
+                {
+                    "mount-point": "/builds/worker/.task-cache/pip",
+                    "name": "pip",
+                    "skip-untrusted": False,
+                    "type": "persistent",
+                },
+                {
+                    "mount-point": "/builds/worker/.task-cache/uv",
+                    "name": "uv",
+                    "skip-untrusted": False,
+                    "type": "persistent",
+                },
             ],
             "command": [
                 "/usr/local/bin/run-task",
@@ -68,6 +92,7 @@ def assert_docker_worker(task):
                 "echo hello world",
             ],
             "env": {
+                "CARGO_HOME": "/builds/worker/.task-cache/cargo",
                 "CI_BASE_REPOSITORY": "http://hg.example.com",
                 "CI_HEAD_REF": "default",
                 "CI_HEAD_REPOSITORY": "http://hg.example.com",
@@ -75,8 +100,11 @@ def assert_docker_worker(task):
                 "CI_REPOSITORY_TYPE": "hg",
                 "HG_STORE_PATH": "/builds/worker/checkouts/hg-store",
                 "MOZ_SCM_LEVEL": "1",
+                "PIP_CACHE_DIR": "/builds/worker/.task-cache/pip",
                 "REPOSITORIES": '{"ci": "Taskgraph"}',
+                "UV_CACHE_DIR": "/builds/worker/.task-cache/uv",
                 "VCS_PATH": "/builds/worker/checkouts/vcs",
+                "npm_config_cache": "/builds/worker/.task-cache/npm",
             },
             "implementation": "docker-worker",
             "os": "linux",
@@ -103,6 +131,7 @@ def assert_generic_worker(task):
                 'world"'
             ],
             "env": {
+                "CARGO_HOME": "{task_workdir}/.task-cache/cargo",
                 "CI_BASE_REPOSITORY": "http://hg.example.com",
                 "CI_HEAD_REF": "default",
                 "CI_HEAD_REPOSITORY": "http://hg.example.com",
@@ -110,15 +139,37 @@ def assert_generic_worker(task):
                 "CI_REPOSITORY_TYPE": "hg",
                 "HG_STORE_PATH": "y:/hg-shared",
                 "MOZ_SCM_LEVEL": "1",
+                "PIP_CACHE_DIR": "{task_workdir}/.task-cache/pip",
                 "REPOSITORIES": '{"ci": "Taskgraph"}',
+                "UV_CACHE_DIR": "{task_workdir}/.task-cache/uv",
                 "VCS_PATH": "{task_workdir}/build/src",
+                "npm_config_cache": "{task_workdir}/.task-cache/npm",
             },
             "implementation": "generic-worker",
             "mounts": [
-                {"cache-name": "checkouts", "directory": "build"},
+                {
+                    "cache-name": "checkouts",
+                    "directory": "build",
+                },
+                {
+                    "cache-name": "cargo",
+                    "directory": ".task-cache/cargo",
+                },
+                {
+                    "cache-name": "npm",
+                    "directory": ".task-cache/npm",
+                },
+                {
+                    "cache-name": "pip",
+                    "directory": ".task-cache/pip",
+                },
+                {
+                    "cache-name": "uv",
+                    "directory": ".task-cache/uv",
+                },
                 {
                     "content": {
-                        "url": "https://tc-tests.localhost/api/queue/v1/task/<TASK_ID>/artifacts/public/run-task"  # noqa
+                        "url": "https://tc-tests.localhost/api/queue/v1/task/<TASK_ID>/artifacts/public/run-task"
                     },
                     "file": "./run-task",
                 },
@@ -172,7 +223,7 @@ def assert_run_task_command_generic_worker(task):
     "task",
     (
         pytest.param(
-            {},
+            {"worker": {"os": "linux"}},
             id="docker_worker",
         ),
         pytest.param(
