@@ -47,8 +47,8 @@ def transform(monkeypatch, run_transform):
     monkeypatch.setenv("TASK_ID", "fakeid")
 
     def inner(task_input):
-        task = deepcopy(TASK_DEFAULTS)
-        task.update(task_input)
+        defaults = deepcopy(TASK_DEFAULTS)
+        task = merge(defaults, task_input)
 
         with patch("taskgraph.transforms.run.configure_taskdesc_for_run") as m:
             # This forces the generator to be evaluated
@@ -68,14 +68,18 @@ def run_caches(transform):
         if impl not in ("docker-worker", "generic-worker"):
             pytest.xfail(f"caches not implemented for '{impl}'")
 
-        # Create a new schema object with just the part relevant to caches.
         key = "caches" if impl == "docker-worker" else "mounts"
-        partial_schema = Schema(payload_builders[impl].schema.schema[key])
-        validate_schema(partial_schema, taskdesc["worker"][key], "validation error")
 
         result = taskdesc["worker"].get(key)
-        print("Dumping for copy/paste:")
-        pprint(result, indent=2)
+
+        if result:
+            print("Dumping for copy/paste:")
+            pprint(result, indent=2)
+
+            # Create a new schema object with just the part relevant to caches.
+            partial_schema = Schema(payload_builders[impl].schema.schema[key])
+            validate_schema(partial_schema, taskdesc["worker"][key], "validation error")
+
         return result
 
     return inner
@@ -103,6 +107,13 @@ def test_caches_generic_worker(run_caches):
         {"cache-name": "cache1", "directory": "/cache1"},
         {"cache-name": "cache2", "directory": "/cache2"},
     ]
+
+
+@pytest.mark.parametrize("worker_type", ("t-linux", "t-win"))
+def test_caches_disabled(run_caches, worker_type):
+    assert (
+        run_caches({"run": {"use-caches": False}, "worker-type": worker_type}) is None
+    )
 
 
 def test_rewrite_when_to_optimization(run_transform, make_transform_config):
