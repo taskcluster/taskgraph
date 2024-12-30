@@ -3,6 +3,23 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+12.x -> 13.x
+------------
+
+* Remove all ``run.cache-dotcache`` keys. If it was set to ``true``, replace it
+  with:
+
+  .. code-block:: yaml
+
+     run:
+       use-caches: [checkout, <caches>]
+
+  Where caches can be any of ``cargo``, ``pip``, ``uv`` or ``npm``. If the task
+  was setting up ``.cache`` for another tool, a mount will need to be created
+  for it manually. If ``use-caches`` was previously set to ``false``, omit
+  ``checkout`` in the example above. If ``use-caches`` was previously set to
+  ``true``, replace ``true`` with the value above (including ``checkout``).
+
 11.x -> 12.x
 ------------
 
@@ -110,7 +127,7 @@ This page can help when migrating Taskgraph across major versions.
 5.x -> 6.x
 ----------
 
-* Replace all uses of ``command-context` with the more generalized ``task-context``
+* Replace all uses of ``command-context`` with the more generalized ``task-context``
 
 4.x -> 5.x
 ----------

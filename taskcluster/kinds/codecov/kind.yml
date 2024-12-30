@@ -44,6 +44,7 @@ tasks:
         run:
             using: run-task
             cwd: '{checkout}'
+            use-caches: [checkout, uv]
             command: >-
                 uv run coverage combine --data-file $MOZ_FETCHES_DIR/coverage $MOZ_FETCHES_DIR &&
                 uv run coverage xml --data-file $MOZ_FETCHES_DIR/coverage -o $MOZ_FETCHES_DIR/coverage.xml &&
