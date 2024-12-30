@@ -28,10 +28,6 @@ EXEC_COMMANDS = {
 run_task_schema = Schema(
     {
         Required("using"): "run-task",
-        # if true, add a cache at ~worker/.cache, which is where things like pip
-        # tend to hide their caches.  This cache is never added for level-1 tasks.
-        # TODO Once bug 1526028 is fixed, this and 'use-caches' should be merged.
-        Required("cache-dotcache"): bool,
         # Which caches to use. May take a boolean in which case either all
         # (True) or no (False) caches will be used. Alternatively, it can
         # accept a list of caches to enable. Defaults to only the checkout cache
@@ -115,7 +111,6 @@ def common_setup(config, task, taskdesc, command):
 
 
 worker_defaults = {
-    "cache-dotcache": False,
     "checkout": True,
     "sparse-profile": None,
     "run-as-root": False,
@@ -141,16 +136,6 @@ def docker_worker_run_task(config, task, taskdesc):
     worker = taskdesc["worker"] = task["worker"]
     command = run.pop("run-task-command", ["/usr/local/bin/run-task"])
     common_setup(config, task, taskdesc, command)
-
-    if run.get("cache-dotcache"):
-        worker["caches"].append(
-            {
-                "type": "persistent",
-                "name": "{project}-dotcache".format(**config.params),
-                "mount-point": "{workdir}/.cache".format(**run),
-                "skip-untrusted": True,
-            }
-        )
 
     run_command = run["command"]
 
@@ -184,13 +169,6 @@ def generic_worker_run_task(config, task, taskdesc):
     common_setup(config, task, taskdesc, command)
 
     worker.setdefault("mounts", [])
-    if run.get("cache-dotcache"):
-        worker["mounts"].append(
-            {
-                "cache-name": "{project}-dotcache".format(**config.params),
-                "directory": "{workdir}/.cache".format(**run),
-            }
-        )
     worker["mounts"].append(
         {
             "content": {
