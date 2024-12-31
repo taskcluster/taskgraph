@@ -12,12 +12,12 @@ from voluptuous import Any, Optional, Required
 
 from taskgraph.transforms.run import run_task_using
 from taskgraph.transforms.run.common import (
-    CACHES,
     support_caches,
     support_vcs_checkout,
 )
 from taskgraph.transforms.task import taskref_or_string
 from taskgraph.util import path, taskcluster
+from taskgraph.util.caches import CACHES
 from taskgraph.util.schema import Schema
 
 EXEC_COMMANDS = {
