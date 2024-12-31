@@ -9,7 +9,7 @@ consistency.
 
 import hashlib
 import json
-from typing import Any, Dict
+from typing import Any, Dict, List, Union
 
 from taskgraph.transforms.base import TransformConfig
 from taskgraph.util import path
@@ -85,9 +85,6 @@ def add_cache(task, taskdesc, name, mount_point, skip_untrusted=False):
     worker = task["worker"]
     if worker["implementation"] not in ("docker-worker", "generic-worker"):
         # caches support not implemented
-        return
-
-    if not task["run"].get("use-caches", True):
         return
 
     if worker["implementation"] == "docker-worker":
@@ -190,18 +187,42 @@ def support_vcs_checkout(config, task, taskdesc, repo_configs, sparse=False):
     return vcsdir
 
 
+def should_use_cache(
+    name: str,
+    use_caches: Union[bool, List[str]],
+    has_checkout: bool,
+) -> bool:
+    # Never enable the checkout cache if there's no clone. This allows
+    # 'checkout' to be specified as a default cache without impacting
+    # irrelevant tasks.
+    if name == "checkout" and not has_checkout:
+        return False
+
+    if isinstance(use_caches, bool):
+        return use_caches
+
+    return name in use_caches
+
+
 def support_caches(
     config: TransformConfig, task: Dict[str, Any], taskdesc: Dict[str, Any]
 ):
     """Add caches for common tools."""
+    run = task["run"]
     worker = task["worker"]
-    workdir = task["run"].get("workdir")
+    workdir = run.get("workdir")
     base_cache_dir = ".task-cache"
     if worker["implementation"] == "docker-worker":
         workdir = workdir or "/builds/worker"
         base_cache_dir = path.join(workdir, base_cache_dir)
 
+    # Default to all caches enabled.
+    use_caches = run.get("use-caches", True)
+
     for name, cache_cfg in CACHES.items():
+        if not should_use_cache(name, use_caches, run["checkout"]):
+            continue
+
         if "cache_dir" in cache_cfg:
             assert callable(cache_cfg["cache_dir"])
             cache_dir = cache_cfg["cache_dir"](task)
