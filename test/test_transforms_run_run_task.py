@@ -8,8 +8,8 @@ from pprint import pprint
 import pytest
 
 from taskgraph.transforms.run import make_task_description
-from taskgraph.transforms.run.common import CACHES
 from taskgraph.transforms.task import payload_builders
+from taskgraph.util.caches import CACHES
 from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.templates import merge
 
@@ -36,9 +36,9 @@ def run_task_using(mocker, run_transform):
         "taskcluster/scripts/toolchain/run.ps1",
     ]
 
-    def inner(task):
+    def inner(task, **kwargs):
         task = merge(TASK_DEFAULTS, task)
-        return run_transform(make_task_description, task)[0]
+        return run_transform(make_task_description, task, **kwargs)[0]
 
     return inner
 
@@ -273,12 +273,12 @@ def test_run_task(monkeypatch, request, run_task_using, task):
 
 @pytest.fixture
 def run_caches(run_task_using):
-    def inner(task):
+    def inner(task, **kwargs):
         task.setdefault("run", {}).setdefault("using", "run-task")
         impl = task.setdefault("worker", {}).setdefault(
             "implementation", "generic-worker"
         )
-        result = run_task_using(task)
+        result = run_task_using(task, **kwargs)
 
         key = "mounts" if impl == "generic-worker" else "caches"
 
@@ -329,3 +329,11 @@ def test_caches_explicit(run_caches):
     assert run_caches(task) == [
         {"cache-name": "cargo", "directory": ".task-cache/cargo"}
     ]
+
+
+def test_caches_project_explicit(run_caches):
+    caches = run_caches(
+        {},
+        extra_graph_config={"taskgraph": {"run": {"use-caches": ["cargo"]}}},
+    )
+    assert caches == [{"cache-name": "cargo", "directory": ".task-cache/cargo"}]

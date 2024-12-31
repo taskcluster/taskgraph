@@ -204,7 +204,11 @@ def make_transform_config(parameters, graph_config):
         if extra_params:
             parameters.update(extra_params)
         if extra_graph_config:
-            graph_config._config.update(extra_graph_config)
+            # We need this intermediate variable because `GraphConfig` is
+            # frozen and we can't set attributes on it.
+            new_graph_config = merge(graph_config._config, extra_graph_config)
+            graph_config._config.update(new_graph_config)
+
         return TransformConfig(
             "test",
             str(here),
@@ -220,12 +224,12 @@ def make_transform_config(parameters, graph_config):
 
 @pytest.fixture
 def run_transform(make_transform_config):
-    def inner(func, tasks, config=None):
+    def inner(func, tasks, config=None, **kwargs):
         if not isinstance(tasks, list):
             tasks = [tasks]
 
         if not config:
-            config = make_transform_config()
+            config = make_transform_config(**kwargs)
         return list(func(config, tasks))
 
     return inner
