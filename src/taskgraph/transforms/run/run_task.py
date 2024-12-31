@@ -12,6 +12,7 @@ from voluptuous import Any, Optional, Required
 
 from taskgraph.transforms.run import run_task_using
 from taskgraph.transforms.run.common import (
+    CACHES,
     support_caches,
     support_vcs_checkout,
 )
@@ -31,8 +32,11 @@ run_task_schema = Schema(
         # tend to hide their caches.  This cache is never added for level-1 tasks.
         # TODO Once bug 1526028 is fixed, this and 'use-caches' should be merged.
         Required("cache-dotcache"): bool,
-        # Whether or not to use caches.
-        Optional("use-caches"): bool,
+        # Which caches to use. May take a boolean in which case either all
+        # (True) or no (False) caches will be used. Alternatively, it can
+        # accept a list of caches to enable. Defaults to only the checkout cache
+        # enabled.
+        Optional("use-caches", "caches"): Any(bool, list(CACHES.keys())),
         # if true (the default), perform a checkout on the worker
         Required("checkout"): Any(bool, {str: dict}),
         Optional(

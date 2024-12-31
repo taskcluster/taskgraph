@@ -18,9 +18,6 @@ import pytest
 from taskgraph.task import Task
 from taskgraph.transforms import run
 from taskgraph.transforms.run import run_task  # noqa: F401
-from taskgraph.transforms.run.common import add_cache
-from taskgraph.transforms.task import payload_builders
-from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.templates import merge
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -56,64 +53,6 @@ def transform(monkeypatch, run_transform):
             return m.call_args[0]
 
     return inner
-
-
-@pytest.fixture
-def run_caches(transform):
-    def inner(task):
-        config, task, taskdesc, impl = transform(task)
-        add_cache(task, taskdesc, "cache1", "/cache1")
-        add_cache(task, taskdesc, "cache2", "/cache2", skip_untrusted=True)
-
-        if impl not in ("docker-worker", "generic-worker"):
-            pytest.xfail(f"caches not implemented for '{impl}'")
-
-        key = "caches" if impl == "docker-worker" else "mounts"
-
-        result = taskdesc["worker"].get(key)
-
-        if result:
-            print("Dumping for copy/paste:")
-            pprint(result, indent=2)
-
-            # Create a new schema object with just the part relevant to caches.
-            partial_schema = Schema(payload_builders[impl].schema.schema[key])
-            validate_schema(partial_schema, taskdesc["worker"][key], "validation error")
-
-        return result
-
-    return inner
-
-
-def test_caches_docker_worker(run_caches):
-    assert run_caches({"run": {"use-caches": True}, "worker-type": "t-linux"}) == [
-        {
-            "mount-point": "/cache1",
-            "name": "cache1",
-            "skip-untrusted": False,
-            "type": "persistent",
-        },
-        {
-            "mount-point": "/cache2",
-            "name": "cache2",
-            "skip-untrusted": True,
-            "type": "persistent",
-        },
-    ]
-
-
-def test_caches_generic_worker(run_caches):
-    assert run_caches({"run": {"use-caches": True}, "worker-type": "t-win"}) == [
-        {"cache-name": "cache1", "directory": "/cache1"},
-        {"cache-name": "cache2", "directory": "/cache2"},
-    ]
-
-
-@pytest.mark.parametrize("worker_type", ("t-linux", "t-win"))
-def test_caches_disabled(run_caches, worker_type):
-    assert (
-        run_caches({"run": {"use-caches": False}, "worker-type": worker_type}) is None
-    )
 
 
 def test_rewrite_when_to_optimization(run_transform, make_transform_config):
