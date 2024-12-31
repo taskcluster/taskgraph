@@ -43,13 +43,13 @@ def transform(monkeypatch, run_transform):
     # Needed by 'generic_worker_run_task'
     monkeypatch.setenv("TASK_ID", "fakeid")
 
-    def inner(task_input):
+    def inner(task_input, **kwargs):
         defaults = deepcopy(TASK_DEFAULTS)
         task = merge(defaults, task_input)
 
         with patch("taskgraph.transforms.run.configure_taskdesc_for_run") as m:
             # This forces the generator to be evaluated
-            run_transform(run.transforms, task)
+            run_transform(run.transforms, task, **kwargs)
             return m.call_args[0]
 
     return inner
