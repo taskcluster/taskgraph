@@ -232,7 +232,9 @@ def generate_taskgraph(options, parameters, overrides, logdir):
     defaults={"graph_attr": "full_task_set"},
 )
 @command(
-    "full", help="Show the full task graph. The full task graph consists of the full task set, with edges (dependencies) between tasks.", defaults={"graph_attr": "full_task_graph"}
+    "full",
+    help="Show the full task graph. The full task graph consists of the full task set, with edges (dependencies) between tasks.",
+    defaults={"graph_attr": "full_task_graph"},
 )
 @command(
     "target",
