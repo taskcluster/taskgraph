@@ -18,6 +18,7 @@ import os
 import pathlib
 import random
 import re
+import ssl
 import stat
 import subprocess
 import sys
@@ -190,9 +191,11 @@ def stream_download(url, sha256=None, size=None, headers=None):
         req_headers[key.strip()] = val.strip()
 
     req = urllib.request.Request(url, None, req_headers)
-    with urllib.request.urlopen(
-        req, timeout=60, cafile=certifi.where()
-    ) if certifi else urllib.request.urlopen(req, timeout=60) as fh:
+    kwargs = {}
+    if certifi:
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+        kwargs["context"] = context = ssl_context
+    with urllib.request.urlopen(req, timeout=60, **kwargs) as fh:
         if not url.endswith(".gz") and fh.info().get("Content-Encoding") == "gzip":
             fh = gzip.GzipFile(fileobj=fh)
         else:
