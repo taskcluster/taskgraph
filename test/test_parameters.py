@@ -264,6 +264,11 @@ def test_extend_parameters_schema(monkeypatch):
             }
         ),
     )
+    monkeypatch.setattr(
+        parameters,
+        "defaults_functions",
+        list(parameters.defaults_functions),
+    )
 
     with pytest.raises(ParameterMismatch):
         Parameters(strict=False).check()
@@ -437,7 +442,7 @@ def test_extend_parameters_schema(monkeypatch):
         ),
     ),
 )
-def test_get_defaults(
+def test_defaults(
     monkeypatch, repo_root, is_repo, raises, expected_repo_root, expected
 ):
     def mock_get_repository(repo_root):
@@ -478,4 +483,4 @@ def test_get_defaults(
     monkeypatch.setattr(parameters, "datetime", datetime_mock)
     monkeypatch.setattr(parameters, "get_version", lambda *_, **__: "1.0.0")
 
-    assert parameters._get_defaults(repo_root) == expected
+    assert parameters.Parameters(strict=False, repo_root=repo_root) == expected
