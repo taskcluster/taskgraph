@@ -98,7 +98,7 @@ class TestDocker(unittest.TestCase):
             os.chmod(os.path.join(d, "extra"), MODE_STANDARD)
 
             tp = os.path.join(tmp, "tar")
-            h = docker.create_context_tar(tmp, d, tp, "my_image")
+            h = docker.create_context_tar(tmp, d, tp)
             self.assertEqual(
                 h, "6c1cc23357625f64f775a08eace7bbc3877dd08d2f3546e0f2e308bac8491865"
             )
@@ -131,7 +131,7 @@ class TestDocker(unittest.TestCase):
             os.chmod(os.path.join(extra, "file0"), MODE_STANDARD)
 
             tp = os.path.join(tmp, "tar")
-            h = docker.create_context_tar(tmp, d, tp, "test_image")
+            h = docker.create_context_tar(tmp, d, tp)
             self.assertEqual(
                 h, "e7f14044b8ec1ba42e251d4b293af212ad08b30ec8ab6613abbdbe73c3c2b61f"
             )
@@ -158,7 +158,7 @@ class TestDocker(unittest.TestCase):
                 fh.write(b"# %include /etc/shadow\n")
 
             with self.assertRaisesRegex(Exception, "cannot be absolute"):
-                docker.create_context_tar(tmp, d, os.path.join(tmp, "tar"), "test")
+                docker.create_context_tar(tmp, d, os.path.join(tmp, "tar"))
         finally:
             shutil.rmtree(tmp)
 
@@ -172,7 +172,7 @@ class TestDocker(unittest.TestCase):
                 fh.write(b"# %include foo/../../../etc/shadow\n")
 
             with self.assertRaisesRegex(Exception, "path outside topsrcdir"):
-                docker.create_context_tar(tmp, d, os.path.join(tmp, "tar"), "test")
+                docker.create_context_tar(tmp, d, os.path.join(tmp, "tar"))
         finally:
             shutil.rmtree(tmp)
 
@@ -186,7 +186,7 @@ class TestDocker(unittest.TestCase):
                 fh.write(b"# %include does/not/exist\n")
 
             with self.assertRaisesRegex(Exception, "path does not exist"):
-                docker.create_context_tar(tmp, d, os.path.join(tmp, "tar"), "test")
+                docker.create_context_tar(tmp, d, os.path.join(tmp, "tar"))
         finally:
             shutil.rmtree(tmp)
 
@@ -214,7 +214,7 @@ class TestDocker(unittest.TestCase):
             os.chmod(os.path.join(tmp, "file0"), MODE_STANDARD)
 
             tp = os.path.join(tmp, "tar")
-            h = docker.create_context_tar(tmp, d, tp, "my_image")
+            h = docker.create_context_tar(tmp, d, tp)
 
             self.assertEqual(
                 h, "d2a3363b15d0eb547a6c81a72ddf3980e2f6e6360c29b4fb6818102896f43180"
