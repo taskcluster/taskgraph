@@ -1,5 +1,23 @@
 # Change Log
 
+## [12.2.0] - 2025-01-15
+
+### Added
+
+- fetch-content: support for downloading a single file and putting it in an archive
+
+### Fixed
+
+- use base repo for project name in github .taskcluster.yml template (#610)
+- added False as option in from-deps set-name config (#621)
+- fetch-content: use urlopen's context parameter instead of cafile (#618)
+- run-task: update our copy of robustcheckout hg extension (#617)
+- avoid computing expensive default values when the value is overridden anyways
+
+### Changed
+
+- hash the uncompressed contents of docker context tar (#626)
+
 ## [12.1.0] - 2024-11-21
 
 ### Added
@@ -40,7 +58,7 @@
 ### Fixed
 
 - A couple more regressions with the Decision image
-  - Cleaned up temporary `uv` lockfile owend by root
+  - Cleaned up temporary `uv` lockfile owned by root
   - Added another `--no-cache` flag to a `uv` command
 - `run-task` now installs packages to user site dir when installing requirements with `uv`
 - Fetch tasks using `static-url` will now properly rename non-archive files
