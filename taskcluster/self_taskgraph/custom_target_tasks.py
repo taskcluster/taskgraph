@@ -9,7 +9,7 @@ def target_tasks_release(full_task_graph, parameters, graph_config):
 
     # Ensure we don't run `taskcluster-taskgraph` release tasks when publishing
     # `pytest-taskgraph`.
-    head_ref = parameters.rsplit("/", 1)[-1]
+    head_ref = parameters["head_ref"].rsplit("/", 1)[-1]
     if head_ref.startswith("pytest-taskgraph"):
         tasks = {
             l: t
