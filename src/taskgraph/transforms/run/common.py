@@ -9,7 +9,6 @@ consistency.
 
 import hashlib
 import json
-import re
 
 from taskgraph.util.taskcluster import get_artifact_prefix
 
@@ -32,11 +31,7 @@ def add_cache(task, taskdesc, name, mount_point, skip_untrusted=False):
         skip_untrusted (bool): Whether cache is used in untrusted environments
             (default: False). Only applies to docker-worker.
     """
-    use_caches = task["run"].get("use-caches", True)
-    if isinstance(use_caches, list):
-        use_caches = any(re.match(pattern, name) for pattern in use_caches)
-
-    if not use_caches:
+    if not task["run"].get("use-caches", True):
         return
 
     worker = task["worker"]

@@ -28,10 +28,8 @@ run_task_schema = Schema(
         # tend to hide their caches.  This cache is never added for level-1 tasks.
         # TODO Once bug 1526028 is fixed, this and 'use-caches' should be merged.
         Required("cache-dotcache"): bool,
-        # Whether or not to use caches. If a boolean, all caches will be
-        # enabled or disabled. If a list, entries are regexes. Only cache names
-        # that match one of the listed regexes are enabled.
-        Optional("use-caches"): Any(bool, [str]),
+        # Whether or not to use caches.
+        Optional("use-caches"): bool,
         # if true (the default), perform a checkout on the worker
         Required("checkout"): Any(bool, {str: dict}),
         Optional(
