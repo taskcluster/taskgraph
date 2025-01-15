@@ -39,7 +39,7 @@ class TestDocker(unittest.TestCase):
                 docker.generate_context_hash(
                     tmpdir, os.path.join(tmpdir, "docker/my-image"), "my-image"
                 ),
-                "e1649b3427bd7a0387f4508d25057c2e89228748517aad6c70e3df54f47bd13a",
+                "ab46d51b191eb6c595cccf1fa02485b4e1decc6ba9737a8b8613038d3661be52",
             )
         finally:
             shutil.rmtree(tmpdir)
@@ -98,9 +98,9 @@ class TestDocker(unittest.TestCase):
             os.chmod(os.path.join(d, "extra"), MODE_STANDARD)
 
             tp = os.path.join(tmp, "tar")
-            h = docker.create_context_tar(tmp, d, tp, "my_image")
+            h = docker.create_context_tar(tmp, d, tp)
             self.assertEqual(
-                h, "6c1cc23357625f64f775a08eace7bbc3877dd08d2f3546e0f2e308bac8491865"
+                h, "3134fa88c39a604132b260c2c3cf09f6fe4a8234475a4272fd9438aac47caaae"
             )
 
             # File prefix should be "my_image"
@@ -131,9 +131,9 @@ class TestDocker(unittest.TestCase):
             os.chmod(os.path.join(extra, "file0"), MODE_STANDARD)
 
             tp = os.path.join(tmp, "tar")
-            h = docker.create_context_tar(tmp, d, tp, "test_image")
+            h = docker.create_context_tar(tmp, d, tp)
             self.assertEqual(
-                h, "e7f14044b8ec1ba42e251d4b293af212ad08b30ec8ab6613abbdbe73c3c2b61f"
+                h, "56657d2f428fe268cc3b0966649a3bf8477dcd2eade7a1d4accc5c312f075a2f"
             )
 
             with tarfile.open(tp, "r:gz") as tf:
@@ -158,7 +158,7 @@ class TestDocker(unittest.TestCase):
                 fh.write(b"# %include /etc/shadow\n")
 
             with self.assertRaisesRegex(Exception, "cannot be absolute"):
-                docker.create_context_tar(tmp, d, os.path.join(tmp, "tar"), "test")
+                docker.create_context_tar(tmp, d, os.path.join(tmp, "tar"))
         finally:
             shutil.rmtree(tmp)
 
@@ -172,7 +172,7 @@ class TestDocker(unittest.TestCase):
                 fh.write(b"# %include foo/../../../etc/shadow\n")
 
             with self.assertRaisesRegex(Exception, "path outside topsrcdir"):
-                docker.create_context_tar(tmp, d, os.path.join(tmp, "tar"), "test")
+                docker.create_context_tar(tmp, d, os.path.join(tmp, "tar"))
         finally:
             shutil.rmtree(tmp)
 
@@ -186,7 +186,7 @@ class TestDocker(unittest.TestCase):
                 fh.write(b"# %include does/not/exist\n")
 
             with self.assertRaisesRegex(Exception, "path does not exist"):
-                docker.create_context_tar(tmp, d, os.path.join(tmp, "tar"), "test")
+                docker.create_context_tar(tmp, d, os.path.join(tmp, "tar"))
         finally:
             shutil.rmtree(tmp)
 
@@ -214,10 +214,10 @@ class TestDocker(unittest.TestCase):
             os.chmod(os.path.join(tmp, "file0"), MODE_STANDARD)
 
             tp = os.path.join(tmp, "tar")
-            h = docker.create_context_tar(tmp, d, tp, "my_image")
+            h = docker.create_context_tar(tmp, d, tp)
 
             self.assertEqual(
-                h, "d2a3363b15d0eb547a6c81a72ddf3980e2f6e6360c29b4fb6818102896f43180"
+                h, "ba7b62e8f25977e8e6629aee1d121ae92b6007258c90a53fb94c8607e1e96e10"
             )
 
             with tarfile.open(tp, "r:gz") as tf:
@@ -261,11 +261,11 @@ class TestDocker(unittest.TestCase):
             # file objects are BufferedRandom instances
             out_file = BufferedRandom(BytesIO(b""))
             h = docker.stream_context_tar(
-                tmp, d, out_file, "my_image", args={"PYTHON_VERSION": "3.8"}
+                tmp, d, out_file, args={"PYTHON_VERSION": "3.8"}
             )
 
             self.assertEqual(
-                h, "e015aabf2677d90fee777c8813fd69402309a2d49bcdff2c28428134a53e36be"
+                h, "ba7b62e8f25977e8e6629aee1d121ae92b6007258c90a53fb94c8607e1e96e10"
             )
         finally:
             shutil.rmtree(tmp)
