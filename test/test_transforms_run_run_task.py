@@ -99,7 +99,7 @@ def assert_generic_worker(task):
         "worker": {
             "command": [
                 "C:/mozilla-build/python3/python3.exe run-task "
-                '--ci-checkout=./build/src/ -- bash -cx "echo hello '
+                '--ci-checkout=build/src/ -- bash -cx "echo hello '
                 'world"'
             ],
             "env": {
@@ -111,11 +111,11 @@ def assert_generic_worker(task):
                 "HG_STORE_PATH": "y:/hg-shared",
                 "MOZ_SCM_LEVEL": "1",
                 "REPOSITORIES": '{"ci": "Taskgraph"}',
-                "VCS_PATH": "./build/src",
+                "VCS_PATH": "{task_workdir}/build/src",
             },
             "implementation": "generic-worker",
             "mounts": [
-                {"cache-name": "checkouts", "directory": "./build"},
+                {"cache-name": "checkouts", "directory": "build"},
                 {
                     "content": {
                         "url": "https://tc-tests.localhost/api/queue/v1/task/<TASK_ID>/artifacts/public/run-task"  # noqa
@@ -159,7 +159,7 @@ def assert_run_task_command_generic_worker(task):
         [
             "/foo/bar/python3",
             "run-task",
-            "--ci-checkout=./checkouts/vcs/",
+            "--ci-checkout=checkouts/vcs/",
             "--",
             "bash",
             "-cx",

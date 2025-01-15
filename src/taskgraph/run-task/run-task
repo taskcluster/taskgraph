@@ -1091,10 +1091,10 @@ def _display_python_version():
 
 
 def main(args):
-    os.environ["TASK_WORKDIR"] = os.getcwd()
+    task_workdir = os.environ["TASK_WORKDIR"] = os.getcwd()
     print_line(
         b"setup",
-        b"run-task started in %s\n" % os.environ["TASK_WORKDIR"].encode("utf-8"),
+        b"run-task started in %s\n" % task_workdir.encode("utf-8"),
     )
     print_line(
         b"setup",
@@ -1313,20 +1313,27 @@ def main(args):
     for repo in repositories:
         vcs_checkout_from_args(repo)
 
-    resource_process = None
-
-    try:
-        for k in ["MOZ_FETCHES_DIR", "UPLOAD_DIR"] + [
-            "{}_PATH".format(repository["project"].upper())
-            for repository in repositories
-        ]:
-            if k in os.environ:
-                os.environ[k] = os.path.abspath(os.environ[k])
+    # Interpolate environment variables with defined substitution patterns. For
+    # example, the variable `CACHE_DIR={task_workdir}/.cache` will be
+    # interpolated with the task's working directory.
+    env_subs = {
+        "task_workdir": task_workdir,
+    }
+    for k, v in os.environ.items():
+        for subname, subval in env_subs.items():
+            # We check for an exact match rather than using a format string to
+            # avoid accidentally trying to interpolate environment variables
+            # that happen to contain brackets for some other reason.
+            pattern = f"{{{subname}}}"
+            if pattern in v:
+                os.environ[k] = v.replace(pattern, subval)
                 print_line(
                     b"setup",
                     b"%s is %s\n" % (k.encode("utf-8"), os.environ[k].encode("utf-8")),
                 )
 
+    resource_process = None
+    try:
         if "MOZ_FETCHES" in os.environ:
             fetch_artifacts()
 

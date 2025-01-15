@@ -10,6 +10,7 @@ consistency.
 import hashlib
 import json
 
+from taskgraph.util import path
 from taskgraph.util.taskcluster import get_artifact_prefix
 
 
@@ -98,16 +99,16 @@ def support_vcs_checkout(config, task, taskdesc, repo_configs, sparse=False):
     assert is_mac or is_win or is_linux
 
     if is_win:
-        checkoutdir = "./build"
+        checkoutdir = "build"
         hgstore = "y:/hg-shared"
     elif is_docker:
         checkoutdir = "{workdir}/checkouts".format(**task["run"])
         hgstore = f"{checkoutdir}/hg-store"
     else:
-        checkoutdir = "./checkouts"
+        checkoutdir = "checkouts"
         hgstore = f"{checkoutdir}/hg-shared"
 
-    vcsdir = checkoutdir + "/" + get_vcsdir_name(worker["os"])
+    vcsdir = f"{checkoutdir}/{get_vcsdir_name(worker['os'])}"
     cache_name = "checkouts"
 
     # Robust checkout does not clean up subrepositories, so ensure  that tasks
@@ -138,7 +139,8 @@ def support_vcs_checkout(config, task, taskdesc, repo_configs, sparse=False):
             "REPOSITORIES": json.dumps(
                 {repo.prefix: repo.name for repo in repo_configs.values()}
             ),
-            "VCS_PATH": vcsdir,
+            # If vcsdir is already absolute this will return it unmodified.
+            "VCS_PATH": path.join("{task_workdir}", vcsdir),
         }
     )
     for repo_config in repo_configs.values():
@@ -162,3 +164,5 @@ def support_vcs_checkout(config, task, taskdesc, repo_configs, sparse=False):
     # only some worker platforms have taskcluster-proxy enabled
     if task["worker"]["implementation"] in ("docker-worker",):
         taskdesc["worker"]["taskcluster-proxy"] = True
+
+    return vcsdir

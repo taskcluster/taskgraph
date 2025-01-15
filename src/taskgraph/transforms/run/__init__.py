@@ -367,7 +367,7 @@ def use_fetches(config, tasks):
             "task-reference": json.dumps(task_fetches, sort_keys=True)
         }
 
-        env.setdefault("MOZ_FETCHES_DIR", "fetches")
+        env.setdefault("MOZ_FETCHES_DIR", "{task_workdir}/fetches")
 
         yield task
 
