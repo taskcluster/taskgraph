@@ -438,7 +438,7 @@ def test_display_python_version_should_output_python_versions(run_task_mod, caps
 
 
 @pytest.fixture
-def run_main(tmp_path, capsys, mocker, mock_stdin, run_task_mod):
+def run_main(tmp_path, mocker, mock_stdin, run_task_mod):
     base_args = [
         f"--task-cwd={str(tmp_path)}",
     ]
@@ -463,21 +463,26 @@ def run_main(tmp_path, capsys, mocker, mock_stdin, run_task_mod):
         args.extend(base_command_args)
 
         result = run_task_mod.main(args)
-        out, err = capsys.readouterr()
-        return result, out, err, env
+        return result, env
 
     return inner
 
 
 def test_main_interpolate_environment(run_main):
-    result, out, err, env = run_main(
-        env={"MOZ_FETCHES_DIR": "file", "UPLOAD_DIR": "file", "FOO": "file"}
+    result, env = run_main(
+        env={
+            "MOZ_FETCHES_DIR": "{task_workdir}/file",
+            "UPLOAD_DIR": "$TASK_WORKDIR/file",
+            "FOO": "{foo}/file",
+            "BAR": "file",
+        }
     )
     assert result == 0
 
     assert env == {
         "MOZ_FETCHES_DIR": "/builds/worker/file",
-        "UPLOAD_DIR": "/builds/worker/file",
-        "FOO": "file",
+        "UPLOAD_DIR": "$TASK_WORKDIR/file",
+        "FOO": "{foo}/file",
+        "BAR": "file",
         "TASK_WORKDIR": "/builds/worker",
     }

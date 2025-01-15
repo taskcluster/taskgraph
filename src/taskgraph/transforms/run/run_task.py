@@ -70,7 +70,7 @@ def common_setup(config, task, taskdesc, command):
                 for (repo, config) in run["checkout"].items()
             }
 
-        support_vcs_checkout(
+        vcs_path = support_vcs_checkout(
             config,
             task,
             taskdesc,
@@ -78,7 +78,6 @@ def common_setup(config, task, taskdesc, command):
             sparse=bool(run["sparse-profile"]),
         )
 
-        vcs_path = taskdesc["worker"]["env"]["VCS_PATH"]
         for repo_config in repo_configs.values():
             checkout_path = path.join(vcs_path, repo_config.path)
             command.append(f"--{repo_config.prefix}-checkout={checkout_path}")
