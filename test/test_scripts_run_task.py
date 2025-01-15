@@ -435,3 +435,49 @@ def test_display_python_version_should_output_python_versions(run_task_mod, caps
 
     output = capsys.readouterr().out
     assert ("Python version: 3." in output) or ("Python version: 2." in output) is True
+
+
+@pytest.fixture
+def run_main(tmp_path, capsys, mocker, mock_stdin, run_task_mod):
+    base_args = [
+        f"--task-cwd={str(tmp_path)}",
+    ]
+
+    base_command_args = [
+        "bash",
+        "-c",
+        "echo hello",
+    ]
+
+    m = mocker.patch.object(run_task_mod.os, "getcwd")
+    m.return_value = "/builds/worker"
+
+    def inner(extra_args=None, env=None):
+        extra_args = extra_args or []
+        env = env or {}
+
+        mocker.patch.object(run_task_mod.os, "environ", env)
+
+        args = base_args + extra_args
+        args.append("--")
+        args.extend(base_command_args)
+
+        result = run_task_mod.main(args)
+        out, err = capsys.readouterr()
+        return result, out, err, env
+
+    return inner
+
+
+def test_main_interpolate_environment(run_main):
+    result, out, err, env = run_main(
+        env={"MOZ_FETCHES_DIR": "file", "UPLOAD_DIR": "file", "FOO": "file"}
+    )
+    assert result == 0
+
+    assert env == {
+        "MOZ_FETCHES_DIR": "/builds/worker/file",
+        "UPLOAD_DIR": "/builds/worker/file",
+        "FOO": "file",
+        "TASK_WORKDIR": "/builds/worker",
+    }
