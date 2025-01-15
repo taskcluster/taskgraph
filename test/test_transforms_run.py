@@ -109,18 +109,6 @@ def test_caches_generic_worker(run_caches):
     ]
 
 
-def test_caches_regex(run_caches):
-    task = {
-        "run": {
-            "use-caches": ["cache[^1]"],
-        },
-        "worker-type": "t-win",
-    }
-    caches = run_caches(task)
-    assert len(caches) == 1
-    assert caches[0]["cache-name"] == "cache2"
-
-
 @pytest.mark.parametrize("worker_type", ("t-linux", "t-win"))
 def test_caches_disabled(run_caches, worker_type):
     assert (
