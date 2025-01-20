@@ -175,7 +175,7 @@ def support_caches(
         use_caches = (
             config.graph_config.get("taskgraph", {})
             .get("run", {})
-            .get("use-caches", True)
+            .get("use-caches", ["checkout"])
         )
 
     for name, cache_cfg in CACHES.items():
