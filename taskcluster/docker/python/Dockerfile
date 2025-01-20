@@ -6,7 +6,7 @@ FROM debian:bookworm-slim
 LABEL maintainer="Release Engineering <release@mozilla.com>"
 
 VOLUME /builds/worker/checkouts
-VOLUME /builds/worker/.cache
+VOLUME /builds/worker/.task-cache/uv
 
 # Add worker user
 RUN mkdir -p /builds && \

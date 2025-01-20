@@ -8,6 +8,9 @@ from pprint import pprint
 import pytest
 
 from taskgraph.transforms.run import make_task_description
+from taskgraph.transforms.task import payload_builders
+from taskgraph.util.caches import CACHES
+from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.templates import merge
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -33,9 +36,9 @@ def run_task_using(mocker, run_transform):
         "taskcluster/scripts/toolchain/run.ps1",
     ]
 
-    def inner(task):
+    def inner(task, **kwargs):
         task = merge(TASK_DEFAULTS, task)
-        return run_transform(make_task_description, task)[0]
+        return run_transform(make_task_description, task, **kwargs)[0]
 
     return inner
 
@@ -57,7 +60,7 @@ def assert_docker_worker(task):
                     "name": "checkouts",
                     "skip-untrusted": False,
                     "type": "persistent",
-                }
+                },
             ],
             "command": [
                 "/usr/local/bin/run-task",
@@ -118,7 +121,7 @@ def assert_generic_worker(task):
                 {"cache-name": "checkouts", "directory": "build"},
                 {
                     "content": {
-                        "url": "https://tc-tests.localhost/api/queue/v1/task/<TASK_ID>/artifacts/public/run-task"  # noqa
+                        "url": "https://tc-tests.localhost/api/queue/v1/task/<TASK_ID>/artifacts/public/run-task"
                     },
                     "file": "./run-task",
                 },
@@ -172,7 +175,7 @@ def assert_run_task_command_generic_worker(task):
     "task",
     (
         pytest.param(
-            {},
+            {"worker": {"os": "linux"}},
             id="docker_worker",
         ),
         pytest.param(
@@ -218,3 +221,71 @@ def test_run_task(monkeypatch, request, run_task_using, task):
     param_id = request.node.callspec.id
     assert_func = globals()[f"assert_{param_id}"]
     assert_func(taskdesc)
+
+
+@pytest.fixture
+def run_caches(run_task_using):
+    def inner(task, **kwargs):
+        task.setdefault("run", {}).setdefault("using", "run-task")
+        impl = task.setdefault("worker", {}).setdefault(
+            "implementation", "generic-worker"
+        )
+        result = run_task_using(task, **kwargs)
+
+        key = "mounts" if impl == "generic-worker" else "caches"
+
+        caches = result["worker"][key]
+        caches = [c for c in caches if "cache-name" in c]
+        print("Dumping for copy/paste:")
+        pprint(caches, indent=2)
+
+        # Create a new schema object with just the part relevant to caches.
+        partial_schema = Schema(payload_builders[impl].schema.schema[key])
+        validate_schema(partial_schema, caches, "validation error")
+
+        return caches
+
+    return inner
+
+
+def test_caches_enabled(run_caches):
+    task = {
+        "run": {
+            "use-caches": True,
+        }
+    }
+    caches = run_caches(task)
+    assert len(caches) == len(CACHES)
+    cache_names = {c["cache-name"] for c in caches}
+    for name, cfg in CACHES.items():
+        if "cache_name" in cfg:
+            continue
+        assert name in cache_names
+
+
+def test_caches_disabled(run_caches):
+    task = {
+        "run": {
+            "use-caches": False,
+        }
+    }
+    assert run_caches(task) == []
+
+
+def test_caches_explicit(run_caches):
+    task = {
+        "run": {
+            "use-caches": ["cargo"],
+        }
+    }
+    assert run_caches(task) == [
+        {"cache-name": "cargo", "directory": ".task-cache/cargo"}
+    ]
+
+
+def test_caches_project_explicit(run_caches):
+    caches = run_caches(
+        {},
+        extra_graph_config={"taskgraph": {"run": {"use-caches": ["cargo"]}}},
+    )
+    assert caches == [{"cache-name": "cargo", "directory": ".task-cache/cargo"}]
