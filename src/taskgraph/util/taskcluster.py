@@ -14,7 +14,6 @@ import requests
 import taskcluster_urls as liburls
 from requests.packages.urllib3.util.retry import Retry  # type: ignore
 
-from taskgraph import task
 from taskgraph.task import Task
 from taskgraph.util import yaml
 
