@@ -448,10 +448,10 @@ def test_get_ancestors(responses, root_url):
 
     got = tc.get_ancestors(["bbb", "fff"])
     expected = {
-        "task-aaa": "aaa",
-        "task-ccc": "ccc",
-        "task-ddd": "ddd",
-        "task-eee": "eee",
+        "aaa": "task-aaa",
+        "ccc": "task-ccc",
+        "ddd": "task-ddd",
+        "eee": "task-eee",
     }
     assert got == expected, f"got: {got}, expected: {expected}"
 
@@ -505,8 +505,8 @@ def test_get_ancestors_404(responses, root_url):
 
     got = tc.get_ancestors(["bbb", "fff"])
     expected = {
-        "task-ddd": "ddd",
-        "task-eee": "eee",
+        "ddd": "task-ddd",
+        "eee": "task-eee",
     }
     assert got == expected, f"got: {got}, expected: {expected}"
 
@@ -578,10 +578,10 @@ def test_get_ancestors_string(responses, root_url):
 
     got = tc.get_ancestors("fff")
     expected = {
-        "task-aaa": "aaa",
-        "task-bbb": "bbb",
-        "task-ccc": "ccc",
-        "task-ddd": "ddd",
-        "task-eee": "eee",
+        "aaa": "task-aaa",
+        "bbb": "task-bbb",
+        "ccc": "task-ccc",
+        "ddd": "task-ddd",
+        "eee": "task-eee",
     }
     assert got == expected, f"got: {got}, expected: {expected}"
