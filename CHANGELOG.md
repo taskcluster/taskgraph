@@ -1,5 +1,23 @@
 # Change Log
 
+## [13.0.0] - 2025-01-23
+
+### Added
+
+- automatically interpolate {task_workdir} in environment (#630)
+- add caches for common package managers (#623)
+- support setting repo wide default values for cache selection (#623)
+- support list of caches in `use-caches` key (#623)
+
+### Fixed
+
+- `get_ancestors` now returns tasks keyed by taskid, to avoid missing tasks when multiple tasks exist with the same label in a graph (#633)
+
+### Removed
+
+- unused resource-monitor code (#636)
+- `cache-dotcache` key (#623)
+
 ## [12.2.0] - 2025-01-15
 
 ### Added
