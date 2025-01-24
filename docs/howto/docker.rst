@@ -201,6 +201,65 @@ process the ``Dockerfile`` and handle the special syntax. Whereas the
 only generated once and then re-used by all subsequent pushes until the image
 is modified.
 
+Layering images on top of each other
+....................................
+
+The ``parent`` value on a docker-image task can refer to another image's ``name``.
+The parent image can then be referenced from the dependent image's Dockerfile
+as ``$DOCKER_IMAGE_PARENT``.  Whenever the base image's definition (or
+something it includes) changes, that automatically also triggers a
+rebuild of the dependent image.
+
+For example, ``kind.yml`` could include:
+
+.. code-block:: yaml
+
+  tasks:
+    base:
+      symbol: I(base)
+    extras:
+      symbol: I(extras)
+      parent: base
+
+And the ``extras`` image's Dockerfile:
+
+.. code-block::
+
+  FROM $DOCKER_IMAGE_PARENT
+
+  RUN apt-get update && apt-get install -y extra software && apt-get clean
+
+
+.. note::
+   The ``taskgraph build-image`` command doesn't handle this syntax, so it won't work for those images.
+   In taskcluster this is handled by the ``image_builder`` tool, see
+   `the image_builder docker image <https://hub.docker.com/r/mozillareleases/image_builder>`_ and
+   `its source code <https://searchfox.org/mozilla-central/source/taskcluster/docker/image_builder>`_.
+
+
+Reusing image definitions
+.........................
+
+The same ``Dockerfile`` can be used for multiple images, by setting ``definition``, for example:
+
+.. code-block:: yaml
+
+  tasks:
+      debian12:
+          symbol: I(deb12)
+          definition: debian
+          args:
+              BASE_IMAGE: debian:12
+      debian11:
+          symbol: I(deb11)
+          definition: debian
+          args:
+              BASE_IMAGE: debian:11
+
+Both the ``debian11`` and ``debian12`` images will be built from the definition in
+``taskcluster/docker/debian``, but they'll be passed different ``BASE_IMAGE``
+variables (as in ``docker build --build-arg``).
+
 Context Directory Hashing
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
