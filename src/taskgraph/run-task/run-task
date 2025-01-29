@@ -115,10 +115,12 @@ NULL_REVISION = "0000000000000000000000000000000000000000"
 
 
 def print_line(prefix, m):
-    now = datetime.datetime.utcnow().isoformat().encode("utf-8")
-    # slice microseconds to 3 decimals.
-    now = now[:-3] if now[-7:-6] == b"." else now
-    sys.stdout.buffer.write(b"[%s %sZ] %s" % (prefix, now, m))
+    now = (
+        datetime.datetime.now(tz=datetime.timezone.utc)
+        .isoformat(timespec="milliseconds")
+        .encode("utf-8")
+    )
+    sys.stdout.buffer.write(b"[%s %s] %s" % (prefix, now, m))
     sys.stdout.buffer.flush()
 
 
