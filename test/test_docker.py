@@ -32,6 +32,7 @@ def test_build_image(capsys, mock_docker_build):
     m_run.assert_called_once_with(
         ["docker", "image", "build", "--no-cache", f"-t={tag}", "-"],
         input=b"xyz",
+        check=True,
     )
 
     out, _ = capsys.readouterr()
@@ -48,8 +49,33 @@ def test_build_image_no_tag(capsys, mock_docker_build):
     m_run.assert_called_once_with(
         ["docker", "image", "build", "--no-cache", "-"],
         input=b"xyz",
+        check=True,
     )
 
     out, _ = capsys.readouterr()
     assert f"Successfully built {image}" in out
     assert "Image is not suitable for deploying/pushing" in out
+
+
+def test_build_image_error(capsys, mock_docker_build):
+    m_stream, m_run = mock_docker_build
+
+    def mock_run(*popenargs, check=False, **kwargs):
+        if check:
+            raise docker.subprocess.CalledProcessError(1, popenargs)
+        return 1
+
+    m_run.side_effect = mock_run
+    image = "hello-world"
+
+    with pytest.raises(Exception):
+        docker.build_image(image, None)
+    m_stream.assert_called_once()
+    m_run.assert_called_once_with(
+        ["docker", "image", "build", "--no-cache", "-"],
+        input=b"xyz",
+        check=True,
+    )
+
+    out, _ = capsys.readouterr()
+    assert f"Successfully built {image}" not in out
