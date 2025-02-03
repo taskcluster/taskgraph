@@ -175,4 +175,6 @@ def test_should_repack_archive(
             orig, dest, strip_components, add_prefix
         )
         == expected
-    ), f"Failed for orig: {orig}, dest: {dest}, strip_components: {strip_components}, add_prefix: {add_prefix}, expected {expected} but received {not expected}"
+    ), (
+        f"Failed for orig: {orig}, dest: {dest}, strip_components: {strip_components}, add_prefix: {add_prefix}, expected {expected} but received {not expected}"
+    )
