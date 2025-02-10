@@ -250,8 +250,8 @@ def test_init_taskgraph(mocker, tmp_path, project_root, repo_with_upstream):
     config.write_text(
         dedent(
             f"""
-        cookiecutters_dir: {d / 'cookiecutters'}
-        replay_dir: {d / 'replay'}
+        cookiecutters_dir: {d / "cookiecutters"}
+        replay_dir: {d / "replay"}
     """
         )
     )
@@ -302,8 +302,8 @@ def test_init_taskgraph_unsupported(mocker, tmp_path, repo_with_upstream):
     config.write_text(
         dedent(
             f"""
-        cookiecutters_dir: {d / 'cookiecutters'}
-        replay_dir: {d / 'replay'}
+        cookiecutters_dir: {d / "cookiecutters"}
+        replay_dir: {d / "replay"}
     """
         )
     )

@@ -199,9 +199,9 @@ def test_load_tasks_for_kind(monkeypatch):
 )
 def test_default_loader(config, expected_transforms):
     loader = Kind("", "", config, {})._get_loader()
-    assert (
-        loader is default_loader
-    ), "Default Kind loader should be taskgraph.loader.default.loader"
+    assert loader is default_loader, (
+        "Default Kind loader should be taskgraph.loader.default.loader"
+    )
     loader("", "", config, {}, [])
 
     assert config["transforms"] == expected_transforms

@@ -204,7 +204,7 @@ TC_TREEHERDER_SCHEMA_URL = (
 
 
 UNKNOWN_GROUP_NAME = (
-    "Treeherder group {} (from {}) has no name; " "add it to taskcluster/config.yml"
+    "Treeherder group {} (from {}) has no name; add it to taskcluster/config.yml"
 )
 
 V2_ROUTE_TEMPLATES = [
@@ -372,9 +372,9 @@ def build_docker_worker_payload(config, task, task_def):
         if "in-tree" in image:
             name = image["in-tree"]
             docker_image_task = "docker-image-" + image["in-tree"]
-            assert "docker-image" not in task.get(
-                "dependencies", ()
-            ), "docker-image key in dependencies object is reserved"
+            assert "docker-image" not in task.get("dependencies", ()), (
+                "docker-image key in dependencies object is reserved"
+            )
             task.setdefault("dependencies", {})["docker-image"] = docker_image_task
 
             image = {
