@@ -18,8 +18,13 @@ class Attrmatch(unittest.TestCase):
         self.assertTrue(attrmatch({}))
 
     def test_missing_attribute(self):
-        """If a filtering attribute is not present, no match"""
-        self.assertFalse(attrmatch({}, someattr=10))
+        """If a filtering attribute is not present, no match unless it is
+        None"""
+        self.assertFalse(attrmatch({"a": 1}, a=1, b=2))
+        self.assertTrue(attrmatch({"a": 1}, a=1, b=None))
+        self.assertTrue(attrmatch({"a": 1, "b": None}, a=1, b=None))
+        self.assertTrue(attrmatch({"a": 1}, a=1, b=[None, 2]))
+        self.assertTrue(attrmatch({"a": 1, "b": 2}, a=1, b=[None, 2]))
 
     def test_literal_attribute(self):
         """Literal attributes must match exactly"""
