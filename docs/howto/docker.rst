@@ -198,7 +198,7 @@ with the following contents:
 And that's it! The :mod:`~taskgraph.transforms.docker_image` transforms will
 process the ``Dockerfile`` and handle the special syntax. Whereas the
 :mod:`~taskgraph.transforms.cached_tasks` transforms will ensure the image is
-only generated once and then re-used by all subsequent pushes until the image
+only generated once and then reused by all subsequent pushes until the image
 is modified.
 
 Layering images on top of each other

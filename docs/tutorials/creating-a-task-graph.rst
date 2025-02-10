@@ -62,7 +62,7 @@ Create the ``config.yml`` file to look like:
 Here's an explanation of the required top-level keys:
 
 * ``trust-domain`` - :term:`Trust domains <Trust Domain>` help prevent
-  permissions and worker pools from one project from being re-used in another. The
+  permissions and worker pools from one project from being reused in another. The
   value you should use here will be configured by your Taskcluster administrator.
   But we'll use ``myrepo`` for the purposes of this tutorial.
 * ``task-priority`` - The priority of tasks for this repo.
