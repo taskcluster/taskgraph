@@ -1,5 +1,17 @@
 # Change Log
 
+## [13.1.0] - 2025-02-13
+
+### Added
+
+- Support for generic-worker's `runAsCurrentUser` feature
+
+### Fixed
+
+- Error handling during docker image builds
+- Issue in `get_changed_files()` utility with merge commits in Mercurial
+- Deprecation warning in `run-task` with Python 3.12
+
 ## [13.0.0] - 2025-01-23
 
 ### Added
