@@ -649,6 +649,8 @@ def build_docker_worker_payload(config, task, task_def):
         Optional("os-groups"): [str],
         # feature for test task to run as administarotr
         Optional("run-as-administrator"): bool,
+        # feature for task to run as current OS user
+        Optional("run-task-as-current-user"): bool,
         # optional features
         Required("chain-of-trust"): bool,
         Optional("taskcluster-proxy"): bool,
@@ -755,6 +757,12 @@ def build_generic_worker_payload(config, task, task_def):
         features["runAsAdministrator"] = True
         task_def["scopes"].append(
             "generic-worker:run-as-administrator:{}".format(task["worker-type"]),
+        )
+
+    if worker.get("run-task-as-current-user", False):
+        features["runTaskAsCurrentUser"] = True
+        task_def["scopes"].append(
+            "generic-worker:run-task-as-current-user:{}".format(task["worker-type"]),
         )
 
     if features:
