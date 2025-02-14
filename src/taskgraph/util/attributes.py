@@ -16,8 +16,10 @@ def attrmatch(attributes, **kwargs):
         * Given a set or list, the attribute value must be contained within it.
         * A callable is called with the attribute value and returns a boolean.
 
-    If an attribute is specified as a keyword argument but not present in the
-    task's attributes, the result is False.
+    Attributes that are not defined in a task are considered to have a value of
+    None. Therefore to match tasks that *don't* have an attribute, you can use:
+
+        { "attr_name": None }
 
     Args:
         attributes (dict): The task's attributes object.
@@ -27,16 +29,14 @@ def attrmatch(attributes, **kwargs):
         bool: Whether the task's attributes match the conditions or not.
     """
     for kwkey, kwval in kwargs.items():
-        if kwkey not in attributes:
-            return False
-        attval = attributes[kwkey]
+        attval = attributes.get(kwkey)
         if isinstance(kwval, (set, list)):
             if attval not in kwval:
                 return False
         elif callable(kwval):
             if not kwval(attval):
                 return False
-        elif kwval != attributes[kwkey]:
+        elif kwval != attval:
             return False
     return True
 
