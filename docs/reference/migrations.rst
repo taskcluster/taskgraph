@@ -19,6 +19,10 @@ This page can help when migrating Taskgraph across major versions.
   for it manually. If ``use-caches`` was previously set to ``false``, omit
   ``checkout`` in the example above. If ``use-caches`` was previously set to
   ``true``, replace ``true`` with the value above (including ``checkout``).
+
+  In Dockerfiles, replace `VOLUME /builds/worker/.cache` by
+  `VOLUME /builds/worker/.task-cache/{uv, cargo, pip, npm}` as necessary.
+
 * Invert any usage of the dict keys and values returned by `get_ancestors`:
 
   For example, if you were using:
