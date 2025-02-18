@@ -13,6 +13,7 @@ from unittest.mock import Mock
 import pytest
 
 import taskgraph
+from taskgraph.util.caches import CACHES
 
 
 @pytest.fixture(scope="module")
@@ -468,21 +469,15 @@ def run_main(tmp_path, mocker, mock_stdin, run_task_mod):
     return inner
 
 
-def test_main_interpolate_environment(run_main):
-    result, env = run_main(
-        env={
-            "MOZ_FETCHES_DIR": "{task_workdir}/file",
-            "UPLOAD_DIR": "$TASK_WORKDIR/file",
-            "FOO": "{foo}/file",
-            "BAR": "file",
-        }
-    )
+def test_main_abspath_environment(run_main):
+    envvars = ["MOZ_FETCHES_DIR", "UPLOAD_DIR"]
+    envvars += [cache["env"] for cache in CACHES.values() if "env" in cache]
+    env = {key: "file" for key in envvars}
+    env["FOO"] = "file"
+
+    result, env = run_main(env=env)
     assert result == 0
 
-    assert env == {
-        "MOZ_FETCHES_DIR": "/builds/worker/file",
-        "UPLOAD_DIR": "$TASK_WORKDIR/file",
-        "FOO": "{foo}/file",
-        "BAR": "file",
-        "TASK_WORKDIR": "/builds/worker",
-    }
+    assert env.get("FOO") == "file"
+    for key in envvars:
+        assert env[key] == "/builds/worker/file"

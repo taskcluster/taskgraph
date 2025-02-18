@@ -114,7 +114,7 @@ def assert_generic_worker(task):
                 "HG_STORE_PATH": "y:/hg-shared",
                 "MOZ_SCM_LEVEL": "1",
                 "REPOSITORIES": '{"ci": "Taskgraph"}',
-                "VCS_PATH": "{task_workdir}/build/src",
+                "VCS_PATH": "build/src",
             },
             "implementation": "generic-worker",
             "mounts": [
