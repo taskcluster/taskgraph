@@ -3,6 +3,14 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+13.x -> 14.x
+------------
+
+* The `{task_workdir}` string in environment variables no longer gets
+  interpolated by `run-task`. This is backing out a feature introduced in
+  version 13.x, so this release introduces no new backwards incompatibilities
+  with version 12.x or earlier.
+
 12.x -> 13.x
 ------------
 
