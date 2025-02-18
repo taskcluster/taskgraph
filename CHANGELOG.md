@@ -1,5 +1,11 @@
 # Change Log
 
+## [14.0.0] - 2025-02-18
+
+### Removed
+
+- BREAKING CHANGE: removed {task_workdir} interpolation in run-task environment variables
+
 ## [13.1.0] - 2025-02-13
 
 ### Added
