@@ -1,8 +1,6 @@
 FROM $DOCKER_IMAGE_PARENT
 LABEL maintainer="Release Engineering <release+taskgraph@mozilla.com>"
 
-ENV UV_PROJECT_ENVIRONMENT=/setup/taskgraph
-
 # %include src
 # %include packages
 # %include .hatch_build.py
