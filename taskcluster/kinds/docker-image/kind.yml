@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 ---
+meta:
+    - &uv_version 0.4.9
 
 loader: taskgraph.loader.transform:loader
 
@@ -9,10 +11,6 @@ transforms:
     - taskgraph.transforms.docker_image:transforms
     - taskgraph.transforms.cached_tasks:transforms
     - taskgraph.transforms.task:transforms
-
-task-defaults:
-    args:
-        UV_VERSION: 0.4.9
 
 # make a task for each docker-image we might want.  For the moment, since we
 # write artifacts for each, these are whitelisted, but ideally that will change
@@ -31,7 +29,10 @@ tasks:
         symbol: I(py)
         args:
             PYTHON_VERSIONS: "3.13 3.12 3.11 3.10 3.9 3.8"
+            UV_VERSION: *uv_version
     run-task:
         symbol: I(rt)
+        args:
+            UV_VERSION: *uv_version
     skopeo:
         symbol: I(skopeo)
