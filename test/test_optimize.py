@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from datetime import datetime, timedelta
+import datetime
 from functools import partial
 
 import pytest
@@ -28,9 +28,14 @@ class Remove(OptimizationStrategy):
 
 class Replace(OptimizationStrategy):
     def should_replace_task(self, task, params, deadline, taskid):
-        expires = datetime.utcnow() + timedelta(days=1)
-        if deadline and expires < datetime.strptime(deadline, "%Y-%m-%dT%H:%M:%S.%fZ"):
-            return False
+        expires = datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=1)
+        if deadline:
+            deadline_dt = datetime.datetime.strptime(
+                deadline.replace("+00:00Z", "Z"), "%Y-%m-%dT%H:%M:%S.%fZ"
+            ).replace(tzinfo=datetime.UTC)
+
+            if expires < deadline_dt:
+                return False
         return taskid
 
 

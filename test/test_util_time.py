@@ -4,7 +4,7 @@
 
 
 import unittest
-from datetime import datetime
+from datetime import datetime, UTC
 from unittest.mock import patch
 
 from taskgraph.util.time import (
@@ -53,8 +53,8 @@ class FromNowTest(unittest.TestCase):
 
     def test_current_json_time(self):
         with patch("taskgraph.util.time.datetime.datetime") as mock_datetime:
-            mock_datetime.utcnow.return_value = datetime(2014, 1, 1)
+            mock_datetime.now.return_value = datetime(2014, 1, 1, tzinfo=UTC)
             mock_datetime.side_effect = datetime
 
             assert current_json_time() == "2014-01-01T00:00:00.000Z"
-            assert current_json_time(True) == datetime(2014, 1, 1)
+            assert current_json_time(True) == datetime(2014, 1, 1, tzinfo=UTC)
