@@ -88,7 +88,7 @@ def json_time_from_now(input_str, now=None, datetime_format=False):
     """
 
     if now is None:
-        now = datetime.datetime.now(datetime.UTC)
+        now = datetime.datetime.now(datetime.timezone.utc)
 
     time = now + value_of(input_str)
 
@@ -106,7 +106,7 @@ def current_json_time(datetime_format=False):
     :param boolean datetime_format: Set `True` to get a `datetime` output
     :returns: JSON string representation of the current time.
     """
-    now = datetime.datetime.now(datetime.UTC)
+    now = datetime.datetime.now(datetime.timezone.utc)
     if datetime_format is True:
         return now
     else:

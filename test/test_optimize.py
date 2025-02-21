@@ -28,7 +28,9 @@ class Remove(OptimizationStrategy):
 
 class Replace(OptimizationStrategy):
     def should_replace_task(self, task, params, deadline, taskid):
-        expires = datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=1)
+        expires = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
+            days=1
+        )
         if deadline:
             deadline_dt = datetime.datetime.strptime(
                 deadline.replace("+00:00Z", "Z"), "%Y-%m-%dT%H:%M:%S.%fZ"
