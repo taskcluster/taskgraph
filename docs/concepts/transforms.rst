@@ -120,44 +120,6 @@ about the state of the tasks at given points. Here is an example:
 In the above example, we can be sure that every task dict has a string field
 called ``foo``, and may or may not have a boolean field called ``bar``.
 
-Keyed By
-........
-
-Fields in the input tasks can be "keyed by" another value in the task.
-For example, a task's ``max-runtime`` may be keyed by ``platform``.
-In the task, this looks like:
-
-.. code-block:: yaml
-
-    max-runtime:
-        by-platform:
-            android: 7200
-            windows: 3600
-            default: 1800
-
-This is a simple but powerful way to encode business rules in the tasks
-provided as input to the transforms, rather than expressing those rules in the
-transforms themselves. The structure is easily resolved to a single value
-using the :func:`~taskgraph.util.schema.resolve_keyed_by` utility function:
-
-.. code-block:: python
-
-   from taskgraph.util.schema import resolve_keyed_by
-
-   @transforms.add
-   def resolve_max_runtime(config, tasks):
-       for task in tasks:
-           # Note that task["label"] is not a standard key, use whatever best
-           # identifies your task at this stage of the transformation.
-           resolve_keyed_by(task, "max-runtime", task["label"])
-           yield task
-
-Exact matches are used immediately. If no exact matches are found, each
-alternative is treated as a regular expression, matched against the whole
-value. Thus ``android.*`` would match ``android-arm/debug``. If nothing
-matches as a regular expression, but there is a ``default`` alternative, it is
-used. Otherwise, an exception is raised and graph generation stops.
-
 Organization
 -------------
 
