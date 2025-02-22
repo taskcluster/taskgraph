@@ -26,6 +26,7 @@ graph_config_schema = Schema(
         Required("trust-domain"): str,
         Required("task-priority"): optionally_keyed_by(
             "project",
+            "level",
             Any(
                 "highest",
                 "very-high",
