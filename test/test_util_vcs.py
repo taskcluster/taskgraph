@@ -274,7 +274,7 @@ def test_get_changed_files_one_added_file(repo):
     assert_files(repo.get_changed_files("A", "all", revision), ["second_file"])
 
 
-def test_get_changed_files_two_revisions(repo):
+def test_get_changed_files_two_revisions(repo):  # here 2
     with open(os.path.join(repo.path, "second_file"), "w") as f:
         f.write("some data for the second file")
     with open(os.path.join(repo.path, "fourth_file"), "w") as f:
@@ -345,36 +345,65 @@ def test_get_changed_files_two_revisions(repo):
     )
 
 
-def test_workdir_outgoing(repo_with_upstream):
+import time
+
+
+def test_workdir_outgoing(repo_with_upstream):  # slowest case
     repo, upstream_location = repo_with_upstream
 
+    start = time.perf_counter()
+
+    # Segment 1: File modifications
     os.remove(os.path.join(repo.path, "first_file"))
     with open(os.path.join(repo.path, "second_file"), "w") as f:
         f.write("new data for second file")
     with open(os.path.join(repo.path, "third_file"), "w") as f:
         f.write("third type of data")
+    print(f"Segment 1: {time.perf_counter() - start:.4f} sec")
 
+    start = time.perf_counter()
+    # Segment 2: Initial outgoing file checks
     assert_files(repo.get_outgoing_files("AMD"), [])
     assert_files(repo.get_outgoing_files("AMD", upstream_location), [])
+    print(f"Segment 2: {time.perf_counter() - start:.4f} sec")
 
+    start = time.perf_counter()
+    # Segment 3: Repo operations
     repo.run("rm", "first_file")
     repo.run("add", ".")
+    print(f"Segment 3: {time.perf_counter() - start:.4f} sec")
+
+    start = time.perf_counter()
+    # Segment 4: Outgoing file checks after first commit
     assert_files(repo.get_outgoing_files("AMD"), [])
     assert_files(repo.get_outgoing_files("AMD", upstream_location), [])
+    print(f"Segment 4: {time.perf_counter() - start:.4f} sec")
 
+    start = time.perf_counter()
+    # Segment 5: First commit
     repo.run("commit", "-m", "Remove first_file; modify second_file; add third_file")
+    print(f"Segment 5: {time.perf_counter() - start:.4f} sec")
+
+    start = time.perf_counter()
+    # Segment 6: Checking outgoing files after commit
     assert_files(repo.get_outgoing_files("A"), ["third_file"])
     assert_files(repo.get_outgoing_files("M"), ["second_file"])
     assert_files(repo.get_outgoing_files("D"), ["first_file"])
     assert_files(repo.get_outgoing_files("A", upstream_location), ["third_file"])
     assert_files(repo.get_outgoing_files("M", upstream_location), ["second_file"])
     assert_files(repo.get_outgoing_files("D", upstream_location), ["first_file"])
+    print(f"Segment 6: {time.perf_counter() - start:.4f} sec")
 
+    start = time.perf_counter()
+    # Segment 7: Second commit
     with open(os.path.join(repo.path, "fourth_file"), "w") as f:
         f.write("breaking the fourth wall")
     repo.run("add", ".")
     repo.run("commit", "-m", "Add fourth file")
+    print(f"Segment 7: {time.perf_counter() - start:.4f} sec")
 
+    start = time.perf_counter()
+    # Segment 8: Final outgoing file checks
     assert_files(repo.get_outgoing_files("A"), ["fourth_file", "third_file"])
     assert_files(repo.get_outgoing_files("M"), ["second_file"])
     assert_files(repo.get_outgoing_files("D"), ["first_file"])
@@ -383,9 +412,10 @@ def test_workdir_outgoing(repo_with_upstream):
     )
     assert_files(repo.get_outgoing_files("M", upstream_location), ["second_file"])
     assert_files(repo.get_outgoing_files("D", upstream_location), ["first_file"])
+    print(f"Segment 8: {time.perf_counter() - start:.4f} sec")
 
 
-def test_working_directory_clean(repo):
+def test_working_directory_clean(repo):  # here 3
     assert repo.working_directory_clean()
 
     # untracked file
@@ -417,7 +447,7 @@ def test_working_directory_clean(repo):
     assert not repo.working_directory_clean()
 
 
-def test_find_latest_common_revision(repo_with_remote):
+def test_find_latest_common_revision(repo_with_remote):  # here 4
     repo, remote_name = repo_with_remote
 
     expected_latest_common_revision = repo.head_rev
