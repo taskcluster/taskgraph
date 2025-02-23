@@ -152,7 +152,7 @@ class Repository(ABC):
         """
 
     @abstractmethod
-    def get_outgoing_files(self, diff_filter, upstream):
+    def get_outgoing_files(self, diff_filter, upstream):  # heavy load here
         """Return a list of changed files compared to upstream.
 
         ``diff_filter`` works the same as `get_changed_files`.
