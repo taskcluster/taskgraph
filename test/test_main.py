@@ -375,15 +375,15 @@ def test_dump_actions_json(
 ):
     expected_actions_len, expected_fields = expected
 
-    actions = []
-    callbacks = {}
-    monkeypatch.setattr(registry, "actions", actions)
-    monkeypatch.setattr(registry, "callbacks", callbacks)
-
-    def fake_actions_load(_graph_config):
-        return callbacks, actions
-
     if not with_generic_actions:
+        actions = []
+        callbacks = {}
+        monkeypatch.setattr(registry, "actions", actions)
+        monkeypatch.setattr(registry, "callbacks", callbacks)
+
+        def fake_actions_load(_graph_config):
+            return callbacks, actions
+
         monkeypatch.setattr(registry, "_load", fake_actions_load)
 
     if new_action:
