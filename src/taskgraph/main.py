@@ -738,7 +738,7 @@ def actions(args):
         logging.root.setLevel(logging.DEBUG)
 
     try:
-        parameters = parameters_loader(args["parameters"])
+        parameters = parameters_loader(args["parameters"], strict=False)
         tgg = TaskGraphGenerator(root_dir=args.get("root"), parameters=parameters)
 
         actions = render_actions_json(tgg.parameters, tgg.graph_config, "DECISION-TASK")
@@ -746,6 +746,8 @@ def actions(args):
     except Exception:
         traceback.print_exc()
         sys.exit(1)
+
+    return 0
 
 
 @command("action-callback", description="Run action callback used by action tasks")

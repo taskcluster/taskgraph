@@ -1,6 +1,7 @@
 # Any copyright is dedicated to the public domain.
 # http://creativecommons.org/publicdomain/zero/1.0/
 
+import json
 import os
 import sys
 from pathlib import Path
@@ -9,6 +10,7 @@ from textwrap import dedent
 import pytest
 
 import taskgraph
+from taskgraph.actions import registry
 from taskgraph.graph import Graph
 from taskgraph.main import get_filtered_taskgraph
 from taskgraph.main import main as taskgraph_main
@@ -350,3 +352,51 @@ def test_action_callback(mocker, run_taskgraph):
     )
     root = Path(trigger_mock.call_args.kwargs["root"])
     assert root.joinpath("config.yml").is_file()
+
+
+FAKE_ACTION = {
+    "name": "test",
+    "title": "Test action",
+    "symbol": "ts",
+    "description": "A test action",
+}
+
+
+@pytest.mark.parametrize(
+    "with_generic_actions,new_action,expected",
+    (
+        pytest.param(True, {}, (9, None)),
+        pytest.param(False, {}, (0, None)),
+        pytest.param(False, FAKE_ACTION, (1, FAKE_ACTION)),
+    ),
+)
+def test_dump_actions_json(
+    monkeypatch, run_taskgraph, capsys, with_generic_actions, new_action, expected
+):
+    expected_actions_len, expected_fields = expected
+
+    actions = []
+    callbacks = {}
+    monkeypatch.setattr(registry, "actions", actions)
+    monkeypatch.setattr(registry, "callbacks", callbacks)
+
+    def fake_actions_load(_graph_config):
+        return callbacks, actions
+
+    if not with_generic_actions:
+        monkeypatch.setattr(registry, "_load", fake_actions_load)
+
+    if new_action:
+        registry.register_callback_action(**new_action)(lambda *args: None)
+
+    res = run_taskgraph(["actions"], target_tasks=[])
+    assert res == 0
+
+    output = json.loads(capsys.readouterr().out)
+
+    actions = output["actions"]
+    assert len(actions) == expected_actions_len
+    if expected_fields is not None:
+        action = actions[0]
+        for field_name in ("name", "title", "description"):
+            assert action[field_name] == expected_fields[field_name]
