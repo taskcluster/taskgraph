@@ -34,7 +34,7 @@ class Replace(OptimizationStrategy):
         if deadline:
             deadline_dt = datetime.datetime.strptime(
                 deadline.replace("+00:00Z", "Z"), "%Y-%m-%dT%H:%M:%S.%fZ"
-            ).replace(tzinfo=datetime.UTC)
+            ).replace(tzinfo=datetime.timezone.utc)
 
             if expires < deadline_dt:
                 return False
