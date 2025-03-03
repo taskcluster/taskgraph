@@ -263,9 +263,14 @@ def test_init_taskgraph(mocker, tmp_path, project_root, repo_with_upstream):
     oldcwd = Path.cwd()
     try:
         os.chdir(repo_root)
-        taskgraph_main(["init", "--template", str(project_root)])
+        ret = taskgraph_main(["init", "--template", str(project_root)])
     finally:
         os.chdir(oldcwd)
+
+    if repo.tool == "hg":
+        assert ret == 1
+        assert not (repo_root / ".taskcluster.yml").exists()
+        return
 
     # Make assertions about the repository state.
     expected_files = [
