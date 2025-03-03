@@ -98,7 +98,7 @@ def json_time_from_now(input_str, now=None, datetime_format=False):
         # Sorta a big hack but the json schema validator for date does not like the
         # ISO dates until 'Z' (for timezone) is added...
         # Microseconds are excluded (see bug 1381801)
-        return time.isoformat(timespec="milliseconds") + "Z"
+        return time.replace(tzinfo=None).isoformat(timespec="milliseconds") + "Z"
 
 
 def current_json_time(datetime_format=False):
@@ -111,4 +111,4 @@ def current_json_time(datetime_format=False):
         return now
     else:
         # Microseconds are excluded (see bug 1381801)
-        return now.isoformat(timespec="milliseconds").replace("+00:00", "") + "Z"
+        return now.replace(tzinfo=None).isoformat(timespec="milliseconds") + "Z"

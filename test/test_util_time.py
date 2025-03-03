@@ -58,3 +58,8 @@ class FromNowTest(unittest.TestCase):
 
             assert current_json_time() == "2014-01-01T00:00:00.000Z"
             assert current_json_time(True) == datetime(2014, 1, 1, tzinfo=timezone.utc)
+
+    def test_json_from_now_tzinfo(self):
+        now = datetime(2014, 1, 1, tzinfo=timezone.utc)
+        self.assertEqual(json_time_from_now("1 years", now), "2015-01-01T00:00:00.000Z")
+        self.assertEqual(json_time_from_now("6 days", now), "2014-01-07T00:00:00.000Z")
