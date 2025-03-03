@@ -912,16 +912,14 @@ def init_taskgraph(options):
 
     if repo.tool == "git" and "github.com" in repo_url:
         context["repo_host"] = "github"
-    elif repo.tool == "hg" and "hg.mozilla.org" in repo_url:
-        context["repo_host"] = "hgmo"
     else:
         print(
             dedent(
                 """\
             Repository not supported!
 
-            Taskgraph only supports repositories hosted on Github or hg.mozilla.org.
-            Ensure you have a remote that points to one of these locations.
+            The `taskgraph init` command only supports repositories hosted on
+            Github. Ensure you use a remote that points to a Github repository.
             """
             ),
             file=sys.stderr,
