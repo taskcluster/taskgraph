@@ -600,6 +600,7 @@ def git_checkout(
     commit: Optional[str],
     ssh_key_file: Optional[Path],
     ssh_known_hosts_file: Optional[Path],
+    shallow: bool = True,
 ):
     env = {
         # abort if transfer speed is lower than 1kB/s for 1 minute
@@ -639,6 +640,9 @@ def git_checkout(
             base_repo if base_repo else head_repo,
             destination_path,
         ]
+
+        if shallow:
+            args.append("--depth=1")
 
         retry_required_command(b"vcs", args, extra_env=env)
 
