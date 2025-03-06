@@ -634,14 +634,16 @@ def git_checkout(
 
     if not os.path.exists(destination_path):
         # Repository doesn't already exist, needs to be cloned
+        repo_url = base_repo if base_repo else head_repo
         args = [
             "git",
             "clone",
-            base_repo if base_repo else head_repo,
+            repo_url,
             destination_path,
         ]
-
-        if shallow:
+        
+        # Only add --depth=1 for non-local repositories
+        if shallow and not os.path.exists(repo_url):
             args.append("--depth=1")
 
         retry_required_command(b"vcs", args, extra_env=env)
@@ -934,6 +936,7 @@ def collect_vcs_options(args, project, name):
         "repo-type": repo_type,
         "ssh-secret-name": private_key_secret,
         "pip-requirements": pip_requirements,
+        "shallow": args.shallow,
     }
 
 
@@ -982,6 +985,7 @@ def vcs_checkout_from_args(options):
                 revision,
                 ssh_key_file,
                 ssh_known_hosts_file,
+                options.get("shallow", True),
             )
         elif options["repo-type"] == "hg":
             if not revision and not ref:
@@ -1065,6 +1069,9 @@ def main(args):
     parser.add_argument("--user", default="worker", help="user to run as")
     parser.add_argument("--group", default="worker", help="group to run as")
     parser.add_argument("--task-cwd", help="directory to run the provided command in")
+    parser.add_argument("--shallow", type=lambda x: x.lower() == "true",
+        default=True, help="perform a shallow clone (true/false, default: true)",
+    )
 
     repositories = os.environ.get("REPOSITORIES")
     if repositories:
