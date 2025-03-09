@@ -57,6 +57,7 @@ dev-dependencies = [
   "pytest",
   "pytest-mock",
   "pytest-taskgraph",
+  "pytest-xdist",
   "responses",
   "sphinx",
   "sphinx-autobuild",
