@@ -178,6 +178,7 @@ def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
     args = Namespace()
     setattr(args, f"{name}_checkout", checkout)
     setattr(args, f"{name}_sparse_profile", False)
+    setattr(args, "shallow", True)
 
     result = run_task_mod.collect_vcs_options(args, name, name)
 
@@ -197,6 +198,7 @@ def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
         "ssh-secret-name": env.get("SSH_SECRET_NAME"),
         "sparse-profile": False,
         "store-path": env.get("HG_STORE_PATH"),
+        "shallow": True,
     }
     if "PIP_REQUIREMENTS" in env:
         expected["pip-requirements"] = os.path.join(
@@ -354,13 +356,14 @@ def mock_git_repo():
 
 
 @pytest.mark.parametrize(
-    "base_ref,ref,files,hash_key",
+    "base_ref,ref,files,hash_key,shallow",
     [
-        (None, None, ["mainfile"], "main"),
-        (None, "main", ["mainfile"], "main"),
-        (None, "mybranch", ["mainfile", "branchfile"], "branch"),
-        ("main", "main", ["mainfile"], "main"),
-        ("main", "mybranch", ["mainfile", "branchfile"], "branch"),
+        (None, None, ["mainfile"], "main", True),
+        (None, "main", ["mainfile"], "main", False),
+        (None, "mybranch", ["mainfile", "branchfile"], "branch", True),
+        ("main", "main", ["mainfile"], "main", False),
+        ("main", "mybranch", ["mainfile", "branchfile"], "branch", True),
+        ("main", "mybranch", ["mainfile", "branchfile"], "branch", False),
     ],
 )
 def test_git_checkout(
@@ -371,6 +374,7 @@ def test_git_checkout(
     ref,
     files,
     hash_key,
+    shallow,
 ):
     with tempfile.TemporaryDirectory() as workdir:
         destination = os.path.join(workdir, "destination")
@@ -384,6 +388,7 @@ def test_git_checkout(
             commit=None,
             ssh_key_file=None,
             ssh_known_hosts_file=None,
+            shallow=shallow,
         )
 
         # Check desired files exist
@@ -403,10 +408,12 @@ def test_git_checkout(
             assert current_rev == mock_git_repo[hash_key]
 
 
+@pytest.mark.parametrize("shallow", [True, False])
 def test_git_checkout_with_commit(
     mock_stdin,
     run_task_mod,
     mock_git_repo,
+    shallow,
 ):
     with tempfile.TemporaryDirectory() as workdir:
         destination = os.path.join(workdir, "destination")
@@ -420,6 +427,7 @@ def test_git_checkout_with_commit(
             commit=mock_git_repo["branch"],
             ssh_key_file=None,
             ssh_known_hosts_file=None,
+            shallow=shallow,
         )
 
 
