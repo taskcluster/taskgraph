@@ -600,7 +600,7 @@ def git_checkout(
     commit: Optional[str],
     ssh_key_file: Optional[Path],
     ssh_known_hosts_file: Optional[Path],
-    shallow: bool = True,
+    shallow: bool = False,
 ):
     env = {
         # abort if transfer speed is lower than 1kB/s for 1 minute
@@ -985,7 +985,7 @@ def vcs_checkout_from_args(options):
                 revision,
                 ssh_key_file,
                 ssh_known_hosts_file,
-                options.get("shallow", True),
+                options.get("shallow", False),
             )
         elif options["repo-type"] == "hg":
             if not revision and not ref:
@@ -1069,8 +1069,8 @@ def main(args):
     parser.add_argument("--user", default="worker", help="user to run as")
     parser.add_argument("--group", default="worker", help="group to run as")
     parser.add_argument("--task-cwd", help="directory to run the provided command in")
-    parser.add_argument("--shallow", type=lambda x: x.lower() == "true",
-        default=True, help="perform a shallow clone (true/false, default: true)",
+    parser.add_argument("--shallow", action="store_true",
+        default=False, help="perform a shallow clone (default: false)",
     )
 
     repositories = os.environ.get("REPOSITORIES")

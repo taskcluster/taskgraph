@@ -178,7 +178,7 @@ def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
     args = Namespace()
     setattr(args, f"{name}_checkout", checkout)
     setattr(args, f"{name}_sparse_profile", False)
-    setattr(args, "shallow", True)
+    setattr(args, "shallow", False)
 
     result = run_task_mod.collect_vcs_options(args, name, name)
 
@@ -198,7 +198,7 @@ def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
         "ssh-secret-name": env.get("SSH_SECRET_NAME"),
         "sparse-profile": False,
         "store-path": env.get("HG_STORE_PATH"),
-        "shallow": True,
+        "shallow": False,
     }
     if "PIP_REQUIREMENTS" in env:
         expected["pip-requirements"] = os.path.join(
@@ -358,12 +358,12 @@ def mock_git_repo():
 @pytest.mark.parametrize(
     "base_ref,ref,files,hash_key,shallow",
     [
-        (None, None, ["mainfile"], "main", True),
+        (None, None, ["mainfile"], "main", False),
         (None, "main", ["mainfile"], "main", False),
-        (None, "mybranch", ["mainfile", "branchfile"], "branch", True),
+        (None, "mybranch", ["mainfile", "branchfile"], "branch", False),
         ("main", "main", ["mainfile"], "main", False),
-        ("main", "mybranch", ["mainfile", "branchfile"], "branch", True),
         ("main", "mybranch", ["mainfile", "branchfile"], "branch", False),
+        ("main", "mybranch", ["mainfile", "branchfile"], "branch", True),
     ],
 )
 def test_git_checkout(
