@@ -477,6 +477,7 @@ def show_taskgraph(options):
             print(f"Generating {options['graph_attr']} @ {base_rev}", file=sys.stderr)
             ret |= generate_taskgraph(options, parameters, overrides, logdir)
         finally:
+            assert cur_rev
             repo.update(cur_rev)
 
         # Generate diff(s)
