@@ -69,7 +69,7 @@ class Repository(ABC):
 
     @property
     @abstractmethod
-    def branch(self) -> str | None:
+    def branch(self) -> Optional[str]:
         """Current branch or bookmark the checkout has active."""
 
     @property
@@ -124,6 +124,15 @@ class Repository(ABC):
     @abstractmethod
     def get_commit_message(self, revision: Optional[str]) -> str:
         """Commit message of specified revision or current commit."""
+
+    @abstractmethod
+    def get_tracked_files(self, *paths: str, rev: Optional[str] = None) -> List[str]:
+        """Return list of tracked files.
+
+        ``*paths`` are path specifiers to limit results to.
+        ``rev`` is a revision specifier at which to retrieve the files.
+        Defaults to the parent of the working copy if unspecified.
+        """
 
     @abstractmethod
     def get_changed_files(
@@ -279,6 +288,10 @@ class HgRepository(Repository):
         if "m" in df:
             template += "{file_mods % '{file}\\n'}"
         return template
+
+    def get_tracked_files(self, *paths, rev=None):
+        rev = rev or "."
+        return self.run("files", "-r", rev, *paths).splitlines()
 
     def get_changed_files(self, diff_filter=None, mode=None, rev=None, base_rev=None):
         diff_filter = diff_filter or "ADM"
@@ -461,6 +474,10 @@ class GitRepository(Repository):
     def get_commit_message(self, revision=None):
         revision = revision or "HEAD"
         return self.run("log", "-n1", "--format=%B", revision)
+
+    def get_tracked_files(self, *paths, rev=None):
+        rev = rev or "HEAD"
+        return self.run("ls-tree", "-r", "--name-only", rev, *paths).splitlines()
 
     def get_changed_files(self, diff_filter=None, mode=None, rev=None, base_rev=None):
         diff_filter = diff_filter or "ADM"
