@@ -51,5 +51,5 @@ def test_rebuild_cached_tasks(run_action):
         make_task(label="bar", task_def={"name": "bar"}),
     )
     out, _ = run_action("rebuild-cached-tasks", graph)
-    assert "foo" in out
-    assert "bar" not in out
+    assert '"name": "foo"' in out
+    assert '"name": "bar"' not in out
