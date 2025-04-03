@@ -290,6 +290,7 @@ class HgRepository(Repository):
         return template
 
     def get_tracked_files(self, *paths, rev=None):
+        paths = [p for p in paths if p]
         rev = rev or "."
         return self.run("files", "-r", rev, *paths).splitlines()
 
@@ -476,6 +477,7 @@ class GitRepository(Repository):
         return self.run("log", "-n1", "--format=%B", revision)
 
     def get_tracked_files(self, *paths, rev=None):
+        paths = [p for p in paths if p]
         rev = rev or "HEAD"
         return self.run("ls-tree", "-r", "--name-only", rev, *paths).splitlines()
 
