@@ -229,6 +229,7 @@ def test_get_tracked_files(repo):
     repo.run("commit", "-m", "Add second file")
     rev = ".~1" if repo.tool == "hg" else "HEAD~1"
     assert_files(repo.get_tracked_files(), ["first_file", "subdir/second_file"])
+    assert_files(repo.get_tracked_files(""), ["first_file", "subdir/second_file"])
     assert_files(repo.get_tracked_files("subdir"), ["subdir/second_file"])
     assert_files(repo.get_tracked_files(rev=rev), ["first_file"])
 
