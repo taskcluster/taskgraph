@@ -121,7 +121,9 @@ def assert_generic_worker(task):
                 {"cache-name": "checkouts", "directory": "build"},
                 {
                     "content": {
-                        "url": "https://tc-tests.localhost/api/queue/v1/task/<TASK_ID>/artifacts/public/run-task"
+                        "artifact": "public/run-task",
+                        "sha256": "581ca6876fac84fa2dd8e8c2c18677d790890e9675229fd34c912c937ae19fae",
+                        "taskId": {"task-reference": "<decision>"},
                     },
                     "file": "./run-task",
                 },
