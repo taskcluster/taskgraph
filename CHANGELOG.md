@@ -1,5 +1,20 @@
 # Change Log
 
+## [14.1.0] - 2025-04-07
+
+## Added
+
+- allow task-priority to be keyed by level (#653)
+- implement `taskgraph action` command to generate actions.json on the command line (#645)
+- pass push.base_revision to in-tree-action hook (#656)
+- support for `volume` artifact type (#667)
+
+## Fixed
+
+- bug deleting long path names with forward slashes on Windows (#661)
+- replace deprecated datetime.utcnow() with timezone-aware alternative (#652)
+- only consider tracked files when building toolchain hashes (#664)
+
 ## [14.0.0] - 2025-02-18
 
 ### Removed
