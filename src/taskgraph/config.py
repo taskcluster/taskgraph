@@ -112,6 +112,11 @@ class GraphConfig:
 
     _PATH_MODIFIED = False
 
+    def __post_init__(self):
+        # ensure we have an absolute path; this is required for assumptions
+        # made later, such as the `vcs_root` being a directory above `root_dir`
+        object.__setattr__(self, "root_dir", os.path.abspath(self.root_dir))
+
     def __getitem__(self, name):
         return self._config[name]
 
