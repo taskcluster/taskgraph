@@ -145,7 +145,7 @@ class GraphConfig:
             raise Exception(
                 "Not guessing path to vcs root. Graph config in non-standard location."
             )
-        return os.path.dirname(self.root_dir)
+        return os.path.dirname(os.path.join(".", self.root_dir))
 
     @property
     def taskcluster_yml(self):
