@@ -1,5 +1,11 @@
 # Change Log
 
+## [14.1.1] - 2025-04-10
+
+## Fixed
+
+- ensure GraphConfig.root_dir is an absolute path (#673)
+
 ## [14.1.0] - 2025-04-07
 
 ## Added
