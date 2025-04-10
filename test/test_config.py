@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import os.path
+
 import pytest
 
 from taskgraph.config import GraphConfig
@@ -9,6 +11,8 @@ from taskgraph.config import GraphConfig
 
 def test_graph_config_basic():
     graph_config = GraphConfig({"foo": "bar"}, "root")
+
+    assert os.path.isabs(graph_config.root_dir)
 
     assert "foo" in graph_config
     assert graph_config["foo"] == "bar"
