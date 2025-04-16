@@ -9,13 +9,4 @@ jobs:
     name: Run pre-commit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-      - run: python -m pip install pre-commit
-        shell: bash
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/pre-commit
-          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
-      - run: pre-commit run --show-diff-on-failure --color=always -a
-        shell: bash
+      - uses: mozilla-releng/actions/pre-commit@main
