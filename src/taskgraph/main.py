@@ -618,10 +618,10 @@ def load_image(args):
     validate_docker()
     try:
         if args["task_id"]:
-            ok = load_image_by_task_id(args["task_id"], args.get("tag"))
+            tag = load_image_by_task_id(args["task_id"], args.get("tag"))
         else:
-            ok = load_image_by_name(args["image_name"], args.get("tag"))
-        if not ok:
+            tag = load_image_by_name(args["image_name"], args.get("tag"))
+        if not tag:
             sys.exit(1)
     except Exception:
         traceback.print_exc()
@@ -650,6 +650,28 @@ def image_digest(args):
     except Exception:
         traceback.print_exc()
         sys.exit(1)
+
+
+@command(
+    "load-task",
+    help="Loads a pre-built Docker image and drops you into a container with "
+    "the same environment variables and run-task setup as the specified task. "
+    "The task's payload.command will be replaced with 'bash'. You need to have "
+    "docker installed and running for this to work.",
+)
+@argument("task_id", help="The task id to load into a docker container.")
+@argument(
+    "--keep",
+    dest="remove",
+    action="store_false",
+    default=True,
+    help="Keep the docker container after exiting.",
+)
+def load_task(args):
+    from taskgraph.docker import load_task
+
+    validate_docker()
+    return load_task(args["task_id"], remove=args["remove"])
 
 
 @command("decision", help="Run the decision task")
