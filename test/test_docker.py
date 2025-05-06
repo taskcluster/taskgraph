@@ -158,7 +158,7 @@ def test_load_task(run_load_task):
         "-c",
         "/usr/bin/run-task --repo-checkout=/builds/worker/vcs/repo "
         "--task-cwd=/builds/worker/vcs/repo -- echo 'Task setup complete!\n"
-        "Run `exec-task` to execute the task'\"'\"'s command.' && cd $TASK_WORKDIR && bash",
+        "Run `exec-task` to execute the task'\"'\"'s command.' && cd $TASK_WORKDIR && su -p worker",
     ]
 
     mocks["subprocess_run"].assert_called_once()

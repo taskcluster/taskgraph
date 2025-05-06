@@ -316,7 +316,7 @@ def load_task(task_id, remove=True):
             image_tag,
             "bash",
             "-c",
-            f"{shlex.join(command)} && cd $TASK_WORKDIR && bash",
+            f"{shlex.join(command)} && cd $TASK_WORKDIR && su -p worker",
         ]
 
         if remove:
