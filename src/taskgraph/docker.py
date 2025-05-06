@@ -21,6 +21,7 @@ except ImportError as e:
 from taskgraph.util import docker
 from taskgraph.util.taskcluster import (
     get_artifact_url,
+    get_root_url,
     get_session,
     get_task_definition,
 )
@@ -295,7 +296,15 @@ def load_task(task_id, remove=True):
     image_task_id = task_def["payload"]["image"]["taskId"]
     image_tag = load_image_by_task_id(image_task_id)
 
-    env = task_def["payload"].get("env")
+    # Set some env vars the worker would normally set.
+    env = {
+        "RUN_ID": "0",
+        "TASK_GROUP_ID": task_def.get("taskGroupId", ""),
+        "TASK_ID": task_id,
+        "TASKCLUSTER_ROOT_URL": get_root_url(False),
+    }
+    # Add the task's environment variables.
+    env.update(task_def["payload"].get("env", {}))
 
     envfile = None
     initfile = None
