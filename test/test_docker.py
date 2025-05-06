@@ -151,6 +151,7 @@ def test_load_task(run_load_task):
         "run",
         "-v",
         re.compile(f"{tempfile.gettempdir()}/tmp.*:/builds/worker/.bashrc"),
+        re.compile(f"--env-file={tempfile.gettempdir()}/tmp.*"),
         "-it",
         "image/tag",
         "bash",
@@ -163,6 +164,8 @@ def test_load_task(run_load_task):
     mocks["subprocess_run"].assert_called_once()
     actual = mocks["subprocess_run"].call_args[0][0]
 
+    print(expected)
+    print(actual)
     assert len(expected) == len(actual)
     for i, exp in enumerate(expected):
         if isinstance(exp, re.Pattern):
