@@ -81,7 +81,7 @@ Alternatively, the repo can be cloned and installed directly:
 
   git clone https://github.com/taskcluster/taskgraph
   cd taskgraph
-  python setup.py install
+  pip install .
 
 In both cases, it's recommended to use a Python `virtual environment`_.
 
