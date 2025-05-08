@@ -34,7 +34,7 @@ need to test against a specific revision:
 
    git clone https://github.com/taskcluster/taskgraph
    cd taskgraph
-   python setup.py develop
+   pip install --editable .
 
 Getting Started
 ---------------
