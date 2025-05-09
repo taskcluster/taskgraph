@@ -667,11 +667,12 @@ def image_digest(args):
     default=True,
     help="Keep the docker container after exiting.",
 )
+@argument("--user", default=None, help="Container user to start shell with.")
 def load_task(args):
     from taskgraph.docker import load_task
 
     validate_docker()
-    return load_task(args["task_id"], remove=args["remove"])
+    return load_task(args["task_id"], remove=args["remove"], user=args["user"])
 
 
 @command("decision", help="Run the decision task")

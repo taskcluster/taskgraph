@@ -251,7 +251,8 @@ def _index(l: List, s: str) -> Optional[int]:
         pass
 
 
-def load_task(task_id, remove=True):
+def load_task(task_id, remove=True, user=None):
+    user = user or "worker"
     task_def = get_task_definition(task_id)
 
     if (
@@ -316,7 +317,7 @@ def load_task(task_id, remove=True):
             image_tag,
             "bash",
             "-c",
-            f"{shlex.join(command)} && cd $TASK_WORKDIR && su -p worker",
+            f"{shlex.join(command)} && cd $TASK_WORKDIR && su -p {user}",
         ]
 
         if remove:
