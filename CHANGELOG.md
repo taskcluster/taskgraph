@@ -1,5 +1,19 @@
 # Change Log
 
+## [14.2.0] - 2025-04-10
+
+## Fixed
+
+- fix actions scope check on mercurial (#686)
+
+## Changed
+
+- generic-worker will now verify run-task/fetch-content integrity (#666)
+
+## Added
+
+- new 'load-task' command to debug tasks locally (#680)
+
 ## [14.1.1] - 2025-04-10
 
 ## Fixed
