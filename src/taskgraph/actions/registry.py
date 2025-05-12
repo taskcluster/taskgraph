@@ -300,14 +300,12 @@ def sanity_check_task_scope(callback, parameters, graph_config):
     else:
         raise ValueError(f"No action with cb_name {callback}")
 
-    raw_url = parameters["base_repository"]
-    parsed_url = parse(raw_url)
+    parsed_base_url = parse(parameters["base_repository"])
+    parsed_head_url = parse(parameters["head_repository"])
     action_scope = (
-        f"assume:{parsed_url.taskcluster_role_prefix}:action:{action.permission}"
+        f"assume:{parsed_head_url.taskcluster_role_prefix}:action:{action.permission}"
     )
-    pr_action_scope = (
-        f"assume:{parsed_url.taskcluster_role_prefix}:pr-action:{action.permission}"
-    )
+    pr_action_scope = f"assume:{parsed_base_url.taskcluster_role_prefix}:pr-action:{action.permission}"
 
     # the scope should appear literally; no need for a satisfaction check. The use of
     # get_current_scopes here calls the auth service through the Taskcluster Proxy, giving

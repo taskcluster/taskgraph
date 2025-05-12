@@ -55,37 +55,64 @@ def test_register_callback_action(request, monkeypatch, kwargs):
         ("non-existing-action", {}, [], pytest.raises(ValueError)),
         (
             "retrigger",
-            {"base_repository": "https://some.git.repo"},
+            {
+                "base_repository": "https://some.git.repo",
+                "head_repository": "https://some.git.repo",
+            },
             [],
             pytest.raises(InvalidRepoUrlError),
         ),
         (
             "retrigger",
-            {"base_repository": "https://hg.mozilla.org/try"},
+            {
+                "base_repository": "https://hg.mozilla.org/mozilla-unified",
+                "head_repository": "https://hg.mozilla.org/try",
+            },
             ["unrelated:scope"],
             pytest.raises(ValueError),
         ),
         (
             "retrigger",
-            {"base_repository": "https://hg.mozilla.org/mozilla-central"},
+            {
+                "base_repository": "https://hg.mozilla.org/mozilla-unified",
+                "head_repository": "https://hg.mozilla.org/try",
+            },
+            ["assume:repo:hg.mozilla.org/try:action:generic"],
+            does_not_raise(),
+        ),
+        (
+            "retrigger",
+            {
+                "base_repository": "https://hg.mozilla.org/mozilla-central",
+                "head_repository": "https://hg.mozilla.org/mozilla-central",
+            },
             ["assume:repo:hg.mozilla.org/mozilla-central:action:generic"],
             does_not_raise(),
         ),
         (
             "retrigger",
-            {"base_repository": "https://github.com/taskcluster/taskgraph"},
+            {
+                "base_repository": "https://github.com/taskcluster/taskgraph",
+                "head_repository": "https://github.com/taskcluster/taskgraph",
+            },
             ["assume:repo:github.com/taskcluster/taskgraph:action:generic"],
             does_not_raise(),
         ),
         (
             "retrigger",
-            {"base_repository": "git@github.com:mozilla-mobile/firefox-android.git"},
+            {
+                "base_repository": "git@github.com:mozilla-mobile/firefox-android.git",
+                "head_repository": "git@github.com:mozilla-mobile/firefox-android.git",
+            },
             ["assume:repo:github.com/mozilla-mobile/firefox-android:action:generic"],
             does_not_raise(),
         ),
         (
             "retrigger",
-            {"base_repository": "git@github.com:mozilla-mobile/firefox-android.git"},
+            {
+                "base_repository": "git@github.com:mozilla-mobile/firefox-android.git",
+                "head_repository": "git@github.com:someuser/firefox-android.git",
+            },
             ["assume:repo:github.com/mozilla-mobile/firefox-android:pr-action:generic"],
             does_not_raise(),
         ),
