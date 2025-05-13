@@ -179,7 +179,7 @@ def generic_worker_run_task(config, task, taskdesc):
     worker["mounts"].append(
         {
             "content": {
-                "taskId": {"task-reference": "<decision>"},
+                "task-id": {"task-reference": "<decision>"},
                 "artifact": "public/run-task",
                 "sha256": run_task_sha256,
             },
@@ -190,7 +190,7 @@ def generic_worker_run_task(config, task, taskdesc):
         worker["mounts"].append(
             {
                 "content": {
-                    "taskId": {"task-reference": "<decision>"},
+                    "task-id": {"task-reference": "<decision>"},
                     "artifact": "public/fetch-content",
                     "sha256": fetch_content_sha256,
                 },

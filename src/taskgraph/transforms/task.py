@@ -622,6 +622,8 @@ def build_docker_worker_payload(config, task, task_def):
                     # URL that supplies the content in response to an unauthenticated
                     # GET request.
                     Optional("url"): str,
+                    # SHA256 checksum of the content body
+                    Optional("sha256"): str,
                 },
                 # *** Either file or directory must be specified. ***
                 # If mounting a cache or read-only directory, the filesystem location of
