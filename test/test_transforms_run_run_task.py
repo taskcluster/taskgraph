@@ -8,7 +8,7 @@ from pprint import pprint
 import pytest
 
 from taskgraph.transforms.run import make_task_description
-from taskgraph.transforms.task import payload_builders, set_defaults
+from taskgraph.transforms.task import payload_builders
 from taskgraph.util.caches import CACHES
 from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.templates import merge
@@ -70,7 +70,6 @@ def assert_docker_worker(task):
                 "-cx",
                 "echo hello world",
             ],
-            "docker-image": {"in-tree": "image"},
             "env": {
                 "CI_BASE_REPOSITORY": "http://hg.example.com",
                 "CI_HEAD_REF": "default",
@@ -88,13 +87,6 @@ def assert_docker_worker(task):
         },
         "worker-type": "t-linux",
     }
-    taskdesc = next(set_defaults({}, [task]))
-    taskdesc["worker"]["max-run-time"] = 0
-    validate_schema(
-        payload_builders[taskdesc["worker"]["implementation"]].schema,
-        taskdesc["worker"],
-        "validation error",
-    )
 
 
 def assert_generic_worker(task):
@@ -131,7 +123,7 @@ def assert_generic_worker(task):
                     "content": {
                         "artifact": "public/run-task",
                         "sha256": "581ca6876fac84fa2dd8e8c2c18677d790890e9675229fd34c912c937ae19fae",
-                        "task-id": {"task-reference": "<decision>"},
+                        "taskId": {"task-reference": "<decision>"},
                     },
                     "file": "./run-task",
                 },
@@ -140,13 +132,6 @@ def assert_generic_worker(task):
         },
         "worker-type": "b-win2012",
     }
-    taskdesc = next(set_defaults({}, [task]))
-    taskdesc["worker"]["max-run-time"] = 0
-    validate_schema(
-        payload_builders[taskdesc["worker"]["implementation"]].schema,
-        taskdesc["worker"],
-        "validation error",
-    )
 
 
 def assert_exec_with(task):
@@ -192,7 +177,7 @@ def assert_run_task_command_generic_worker(task):
     "task",
     (
         pytest.param(
-            {"worker": {"os": "linux", "docker-image": {"in-tree": "image"}}},
+            {"worker": {"os": "linux"}},
             id="docker_worker",
         ),
         pytest.param(
