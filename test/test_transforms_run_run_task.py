@@ -8,7 +8,7 @@ from pprint import pprint
 import pytest
 
 from taskgraph.transforms.run import make_task_description
-from taskgraph.transforms.task import payload_builders
+from taskgraph.transforms.task import payload_builders, set_defaults
 from taskgraph.util.caches import CACHES
 from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.templates import merge
@@ -23,6 +23,7 @@ TASK_DEFAULTS = {
         "implementation": "docker-worker",
         "os": "linux",
         "env": {},
+        "max-run-time": 0,
     },
     "run": {"using": "run-task", "command": "echo hello world"},
 }
@@ -70,6 +71,7 @@ def assert_docker_worker(task):
                 "-cx",
                 "echo hello world",
             ],
+            "docker-image": {"in-tree": "image"},
             "env": {
                 "CI_BASE_REPOSITORY": "http://hg.example.com",
                 "CI_HEAD_REF": "default",
@@ -82,6 +84,7 @@ def assert_docker_worker(task):
                 "VCS_PATH": "/builds/worker/checkouts/vcs",
             },
             "implementation": "docker-worker",
+            "max-run-time": 0,
             "os": "linux",
             "taskcluster-proxy": True,
         },
@@ -117,6 +120,7 @@ def assert_generic_worker(task):
                 "VCS_PATH": "build/src",
             },
             "implementation": "generic-worker",
+            "max-run-time": 0,
             "mounts": [
                 {"cache-name": "checkouts", "directory": "build"},
                 {
@@ -175,7 +179,7 @@ def assert_run_task_command_generic_worker(task):
     "task",
     (
         pytest.param(
-            {"worker": {"os": "linux"}},
+            {"worker": {"os": "linux", "docker-image": {"in-tree": "image"}}},
             id="docker_worker",
         ),
         pytest.param(
@@ -193,12 +197,14 @@ def assert_run_task_command_generic_worker(task):
                 "run": {
                     "exec-with": "powershell",
                 },
+                "worker": {"docker-image": "powershell"},
             },
             id="exec_with",
         ),
         pytest.param(
             {
                 "run": {"run-task-command": ["/foo/bar/python3", "run-task"]},
+                "worker": {"docker-image": "python"},
             },
             id="run_task_command_docker_worker",
         ),
@@ -221,6 +227,12 @@ def test_run_task(monkeypatch, request, run_task_using, task):
     param_id = request.node.callspec.id
     assert_func = globals()[f"assert_{param_id}"]
     assert_func(taskdesc)
+    taskdesc = next(set_defaults({}, [taskdesc]))
+    validate_schema(
+        payload_builders[taskdesc["worker"]["implementation"]].schema,
+        taskdesc["worker"],
+        "validation error",
+    )
 
 
 @pytest.fixture
