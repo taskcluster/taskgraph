@@ -6,9 +6,7 @@ Support for running tasks that are invoked via the `run-task` script.
 """
 
 import dataclasses
-import hashlib
 import os
-from pathlib import Path
 
 from voluptuous import Any, Optional, Required
 
@@ -26,9 +24,6 @@ EXEC_COMMANDS = {
     "bash": ["bash", "-cx"],
     "powershell": ["powershell.exe", "-ExecutionPolicy", "Bypass"],
 }
-
-RUN_TASK_PATH = Path(__file__).parent.parent.parent / "run-task" / "run-task"
-FETCH_CONTENT_PATH = Path(__file__).parent.parent.parent / "run-task" / "fetch-content"
 
 run_task_schema = Schema(
     {
@@ -174,14 +169,10 @@ def generic_worker_run_task(config, task, taskdesc):
     common_setup(config, task, taskdesc, command)
 
     worker.setdefault("mounts", [])
-    run_task_sha256 = hashlib.sha256(RUN_TASK_PATH.read_bytes()).hexdigest()
-    fetch_content_sha256 = hashlib.sha256(FETCH_CONTENT_PATH.read_bytes()).hexdigest()
     worker["mounts"].append(
         {
             "content": {
-                "task-id": {"task-reference": "<decision>"},
-                "artifact": "public/run-task",
-                "sha256": run_task_sha256,
+                "url": script_url(config, "run-task"),
             },
             "file": "./run-task",
         }
@@ -190,9 +181,7 @@ def generic_worker_run_task(config, task, taskdesc):
         worker["mounts"].append(
             {
                 "content": {
-                    "task-id": {"task-reference": "<decision>"},
-                    "artifact": "public/fetch-content",
-                    "sha256": fetch_content_sha256,
+                    "url": script_url(config, "fetch-content"),
                 },
                 "file": "./fetch-content",
             }

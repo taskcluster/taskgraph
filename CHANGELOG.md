@@ -4,8 +4,8 @@
 
 ### Fixed
 
-- regression in 14.2.0 causing schema validation failure for generic-worker
-  tasks using run-task (#688)
+- Revert "generic-worker will now verify run-task/fetch-content integrity" from
+  14.2.0 for being broken
 
 ## [14.2.0] - 2025-05-12
 
