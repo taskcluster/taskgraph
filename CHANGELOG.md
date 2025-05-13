@@ -1,35 +1,42 @@
 # Change Log
 
-## [14.2.0] - 2025-04-10
+## [14.2.1] - 2025-05-13
 
-## Fixed
+### Fixed
+
+- regression in 14.2.0 causing schema validation failure for generic-worker
+  tasks using run-task (#688)
+
+## [14.2.0] - 2025-05-12
+
+### Fixed
 
 - fix actions scope check on mercurial (#686)
 
-## Changed
+### Changed
 
 - generic-worker will now verify run-task/fetch-content integrity (#666)
 
-## Added
+### Added
 
 - new 'load-task' command to debug tasks locally (#680)
 
 ## [14.1.1] - 2025-04-10
 
-## Fixed
+### Fixed
 
 - ensure GraphConfig.root_dir is an absolute path (#673)
 
 ## [14.1.0] - 2025-04-07
 
-## Added
+### Added
 
 - allow task-priority to be keyed by level (#653)
 - implement `taskgraph action` command to generate actions.json on the command line (#645)
 - pass push.base_revision to in-tree-action hook (#656)
 - support for `volume` artifact type (#667)
 
-## Fixed
+### Fixed
 
 - bug deleting long path names with forward slashes on Windows (#661)
 - replace deprecated datetime.utcnow() with timezone-aware alternative (#652)
