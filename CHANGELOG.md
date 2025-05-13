@@ -1,6 +1,12 @@
 # Change Log
 
-## [14.2.0] - 2025-04-10
+## [14.2.1] - 2025-05-13
+
+## Fixed
+
+- fix a regression from #666 with run-task/fetch-content mount definitions (#688)
+
+## [14.2.0] - 2025-05-12
 
 ## Fixed
 
