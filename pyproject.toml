@@ -34,9 +34,8 @@ dependencies = [
 dynamic = ["version"]  # set in src/taskgraph/__init__.py
 
 [project.optional-dependencies]
-load-image = [
-  "zstandard"
-]
+load-image = ["zstandard"]
+orjson = ["orjson"]
 
 [project.scripts]
 taskgraph = "taskgraph.main:main"
