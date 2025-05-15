@@ -4,7 +4,6 @@
 
 
 import functools
-import json
 from collections import namedtuple
 from types import FunctionType
 
@@ -13,7 +12,7 @@ from mozilla_repo_urls import parse
 from taskgraph import create
 from taskgraph.config import load_graph_config
 from taskgraph.parameters import Parameters
-from taskgraph.util import hash, taskcluster, yaml
+from taskgraph.util import hash, json, taskcluster, yaml
 from taskgraph.util.python_path import import_sibling_modules
 
 actions = []
