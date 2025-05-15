@@ -4,7 +4,6 @@
 
 import argparse
 import atexit
-import json
 import logging
 import os
 import re
@@ -56,9 +55,9 @@ def format_taskgraph_labels(taskgraph):
 
 
 def format_taskgraph_json(taskgraph):
-    return json.dumps(
-        taskgraph.to_json(), sort_keys=True, indent=2, separators=(",", ": ")
-    )
+    from taskgraph.util import json
+
+    return json.dumps(taskgraph.to_json(), sort_keys=True, indent=2)
 
 
 def format_taskgraph_yaml(taskgraph):
@@ -757,6 +756,7 @@ def actions(args):
     from taskgraph.actions import render_actions_json
     from taskgraph.generator import TaskGraphGenerator
     from taskgraph.parameters import parameters_loader
+    from taskgraph.util import json
 
     if args.pop("verbose", False):
         logging.root.setLevel(logging.DEBUG)
@@ -766,7 +766,7 @@ def actions(args):
         tgg = TaskGraphGenerator(root_dir=args.get("root"), parameters=parameters)
 
         actions = render_actions_json(tgg.parameters, tgg.graph_config, "DECISION-TASK")
-        print(json.dumps(actions, sort_keys=True, indent=2, separators=(",", ": ")))
+        print(json.dumps(actions, sort_keys=True, indent=2))
     except Exception:
         traceback.print_exc()
         sys.exit(1)
@@ -784,6 +784,7 @@ def actions(args):
 def action_callback(options):
     from taskgraph.actions import trigger_action_callback
     from taskgraph.actions.util import get_parameters
+    from taskgraph.util import json
 
     try:
         # the target task for this action (or null if it's a group action)
@@ -833,7 +834,7 @@ def test_action_callback(options):
     import taskgraph.actions
     import taskgraph.parameters
     from taskgraph.config import load_graph_config
-    from taskgraph.util import yaml
+    from taskgraph.util import json, yaml
 
     def load_data(filename):
         with open(filename) as f:

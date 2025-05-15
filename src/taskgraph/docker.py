@@ -3,7 +3,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-import json
 import os
 import shlex
 import subprocess
@@ -18,7 +17,7 @@ try:
 except ImportError as e:
     zstd = e
 
-from taskgraph.util import docker
+from taskgraph.util import docker, json
 from taskgraph.util.taskcluster import (
     get_artifact_url,
     get_root_url,
