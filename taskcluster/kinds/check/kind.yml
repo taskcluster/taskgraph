@@ -38,4 +38,4 @@ tasks:
             symbol: check(type)
         run:
             command: >-
-                uv run pyright
+                uv run --all-extras pyright
