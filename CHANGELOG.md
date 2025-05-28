@@ -1,5 +1,16 @@
 # Change Log
 
+## [14.3.0] - 2025-05-28
+
+### Fixed
+
+- MAX_ROUTES bumped up to actual limit of 64
+
+### Added
+
+- `load-task` command now accepts a `--user` flag to run in container as
+- optionally use `orjson` for faster json operations if available
+
 ## [14.2.1] - 2025-05-13
 
 ### Fixed
