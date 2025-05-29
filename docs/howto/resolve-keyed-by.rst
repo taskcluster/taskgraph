@@ -163,8 +163,8 @@ Specifying the Subkey
 
 The subkey in :func:`~taskgraph.util.schema.resolve_keyed_by` is expressed in
 dot path notation with each part of the path representing a nested dictionary.
-If any part of the subkey is a list, each item in the list will be operated on.
-For example, consider this excerpt of a task definition:
+If any part of the subkey is a list, you can use `[]` to operate on each item
+in the list. For example, consider this excerpt of a task definition:
 
 .. code-block:: yaml
 
@@ -188,7 +188,7 @@ With the associated transform:
    @transforms.add
    def resolve_artifact_paths(config, tasks):
        for task in tasks:
-           resolve_keyed_by(task, "worker.artifacts.path", task["label"])
+           resolve_keyed_by(task, "worker.artifacts[].path", task["label"])
            yield task
 
 In this example, Taskgraph resolves ``by-platform`` in both the *foo* and *bar*
