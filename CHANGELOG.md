@@ -1,5 +1,11 @@
 # Change Log
 
+## [14.4.0] - 2025-05-29
+
+## Added
+
+- support lists in `resolve_keyed_by` (#608)
+
 ## [14.3.0] - 2025-05-28
 
 ### Fixed
