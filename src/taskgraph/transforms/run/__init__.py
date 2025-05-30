@@ -269,7 +269,9 @@ def use_fetches(config, tasks):
                     if len(dep_tasks) != 1:
                         raise Exception(
                             "{name} can't fetch {kind} artifacts because "
-                            "there are {tasks} with label {label} in kind dependencies!".format(
+                            "there are {tasks} with label {label} in kind dependencies!\n"
+                            "Available tasks:"
+                            "\n - {labels}".format(
                                 name=name,
                                 kind=kind,
                                 label=dependencies[kind],
@@ -277,6 +279,9 @@ def use_fetches(config, tasks):
                                     "no tasks"
                                     if len(dep_tasks) == 0
                                     else "multiple tasks"
+                                ),
+                                labels="\n - ".join(
+                                    config.kind_dependencies_tasks.keys()
                                 ),
                             )
                         )
