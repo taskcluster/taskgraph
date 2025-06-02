@@ -1,5 +1,16 @@
 # Change Log
 
+## [14.4.0] - 2025-06-02
+
+## Added
+
+- support lists in `resolve_keyed_by` (#608)
+- improved error message when a kind dependency cannot be found (#696)
+
+### Fixed
+
+- don't decode YAML response before parsing them in get_artifact (#700)
+
 ## [14.3.0] - 2025-05-28
 
 ### Fixed
