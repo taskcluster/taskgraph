@@ -211,8 +211,8 @@ def test_artifact_refs_private(monkeypatch, assert_artifact_refs):
     monkeypatch.setenv("TASKCLUSTER_PROXY_URL", tc_proxy_url)
 
     assert_artifact_refs(
-        {"artifact-reference": "<edge1/private/foo>"},
-        f"{tc_proxy_url}/api/queue/v1/task/tid1/artifacts/private/foo",
+        {"url": {"artifact-reference": "<edge1/private/foo>"}},
+        {"url": f"{tc_proxy_url}/api/queue/v1/task/tid1/artifacts/private/foo"},
     )
 
 
@@ -255,6 +255,10 @@ def test_artifact_refs_badly_formed():
     "resolve_task_references ignores badly-formatted artifact references"
     for inv in ["<edge1>", "edge1/foo>", "<edge1>/foo", "<edge1>foo"]:
         resolved = resolve_task_references(
-            "subject", {"artifact-reference": inv}, "tid-self", "tid-decision", {}
+            "subject",
+            {"key": {"artifact-reference": inv}},
+            "tid-self",
+            "tid-decision",
+            {},
         )
-        assert resolved == inv
+        assert resolved == {"key": inv}
