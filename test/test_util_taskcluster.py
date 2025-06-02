@@ -154,6 +154,21 @@ def test_get_artifact(responses, root_url):
     )
     assert tc.get_artifact(tid, "artifact.yml") == {"foo": "bar"}
 
+    responses.add(
+        responses.GET,
+        f"{root_url}/api/queue/v1/task/{tid}/artifacts/artifact.yml",
+        body=b"foo: \xe2\x81\x83",
+    )
+    assert tc.get_artifact(tid, "artifact.yml") == {"foo": b"\xe2\x81\x83".decode()}
+
+    responses.add(
+        responses.GET,
+        f"{root_url}/api/queue/v1/task/{tid}/artifacts/artifact.yml",
+        body=b"foo: \xe2\x81\x83".decode().encode("utf-16"),
+        headers={"Content-Type": "text/yaml; charset=utf-16"},
+    )
+    assert tc.get_artifact(tid, "artifact.yml") == {"foo": b"\xe2\x81\x83".decode()}
+
 
 def test_list_artifact(responses, root_url):
     tid = 123
