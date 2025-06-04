@@ -1,8 +1,14 @@
 # Change Log
 
+## [14.4.1] - 2025-06-04
+
+### Fixed
+
+- file url handling for Thunderbird repos
+
 ## [14.4.0] - 2025-06-02
 
-## Added
+### Added
 
 - support lists in `resolve_keyed_by` (#608)
 - improved error message when a kind dependency cannot be found (#696)
