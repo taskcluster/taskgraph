@@ -97,6 +97,25 @@ class TestParameters(TestCase):
         p = Parameters(strict=False, xyz=10, **self.vals)
         p.check()  # should not raise
 
+    def test_Parameters_file_url_hg_comm(self):
+        vals = self.vals.copy()
+        vals["repository_type"] = "hg"
+
+        vals["comm_head_repository"] = "https://hg.mozilla.org/releases/comm-beta"
+        vals["comm_head_rev"] = "branch"
+        vals["head_repository"] = "https://hg.mozilla.org/releases/mozilla-beta"
+        p = Parameters(**vals)
+
+        path = (
+            "/builds/worker/checkouts/gecko/comm/taskcluster/kinds/"
+            "shippable-l10n-signing"
+        )
+        kind_path = (
+            "https://hg.mozilla.org/releases/comm-beta/file/branch/"
+            "taskcluster/kinds/shippable-l10n-signing"
+        )
+        self.assertTrue(p.file_url(path, pretty=True) == kind_path)
+
     def test_Parameters_file_url_git_remote(self):
         vals = self.vals.copy()
         vals["repository_type"] = "git"
