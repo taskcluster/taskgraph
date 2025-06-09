@@ -8,6 +8,12 @@ resolution-markers = [
     "python_full_version < '3.9'",
 ]
 
+[manifest]
+members = [
+    "pytest-taskgraph",
+    "taskcluster-taskgraph",
+]
+
 [[package]]
 name = "accessible-pygments"
 version = "0.0.4"
@@ -1364,7 +1370,7 @@ wheels = [
 [[package]]
 name = "pytest-taskgraph"
 version = "0.2.0"
-source = { directory = "packages/pytest-taskgraph" }
+source = { editable = "packages/pytest-taskgraph" }
 dependencies = [
     { name = "pytest" },
     { name = "taskcluster-taskgraph" },
@@ -1373,7 +1379,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "pytest" },
-    { name = "taskcluster-taskgraph", specifier = ">=12.1.0" },
+    { name = "taskcluster-taskgraph", editable = "." },
 ]
 
 [[package]]
@@ -2061,7 +2067,7 @@ dev = [
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-mock" },
-    { name = "pytest-taskgraph", directory = "packages/pytest-taskgraph" },
+    { name = "pytest-taskgraph", editable = "packages/pytest-taskgraph" },
     { name = "responses" },
     { name = "sphinx" },
     { name = "sphinx-argparse" },
