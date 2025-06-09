@@ -39,7 +39,7 @@ FROM_DEPS_SCHEMA = Schema(
                 and copy attributes (if `copy-attributes` is True).
                 """.lstrip()
                 ),
-            ): list,
+            ): [str],
             Optional(
                 "set-name",
                 description=dedent(
