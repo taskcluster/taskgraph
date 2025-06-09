@@ -45,7 +45,10 @@ Repository = "https://github.com/taskcluster/taskgraph"
 Issues = "https://github.com/taskcluster/taskgraph/issues"
 
 [tool.uv.sources]
-pytest-taskgraph = { path = "packages/pytest-taskgraph" }
+pytest-taskgraph = { workspace = true }
+
+[tool.uv.workspace]
+members = ["packages/pytest-taskgraph"]
 
 [tool.uv]
 dev-dependencies = [
