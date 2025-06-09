@@ -46,3 +46,26 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: packages/pytest-taskgraph/dist
+  pypi-publish-sphinx-taskgraph:
+    name: upload release to PyPI
+    if: startsWith(github.ref, 'refs/tags/sphinx-taskgraph')
+    runs-on: ubuntu-latest
+    environment: sphinx-taskgraph-release
+    permissions:
+      id-token: write
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Build sphinx-taskgraph package distributions
+        working-directory: packages/sphinx-taskgraph
+        run: |
+          pip install build
+          python -m build
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: packages/sphinx-taskgraph/dist
