@@ -30,6 +30,7 @@ IMAGE_BUILDER_IMAGE = (
 
 transforms = TransformSequence()
 
+#: Schema for docker_image transforms
 docker_image_schema = Schema(
     {
         # Name of the docker image.

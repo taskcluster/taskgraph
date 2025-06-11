@@ -39,6 +39,7 @@ PER_PROJECT_PARAMETERS = {
 }
 
 
+#: Schema for try_task_config.json version 2
 try_task_config_schema_v2 = Schema(
     {
         Optional("parameters"): {str: object},

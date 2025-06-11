@@ -21,6 +21,7 @@ from taskgraph.util.shell import quote as shell_quote
 
 CACHE_TYPE = "toolchains.v3"
 
+#: Schema for run.using toolchain
 toolchain_run_schema = Schema(
     {
         Required("using"): "toolchain-script",

@@ -23,6 +23,7 @@ from taskgraph.util.dependencies import GROUP_BY_MAP, get_dependencies
 from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.set_name import SET_NAME_MAP
 
+#: Schema for from_deps transforms
 FROM_DEPS_SCHEMA = Schema(
     {
         Required("from-deps"): {
@@ -111,7 +112,6 @@ FROM_DEPS_SCHEMA = Schema(
         Extra: object,
     },
 )
-"""Schema for from_deps transforms."""
 
 transforms = TransformSequence()
 transforms.add_validate(FROM_DEPS_SCHEMA)

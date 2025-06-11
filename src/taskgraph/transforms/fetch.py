@@ -23,6 +23,7 @@ from .base import TransformSequence
 
 CACHE_TYPE = "content.v1"
 
+#: Schema for fetch transforms
 FETCH_SCHEMA = Schema(
     {
         # Name of the task.
@@ -52,7 +53,6 @@ FETCH_SCHEMA = Schema(
         },
     }
 )
-
 
 # define a collection of payload builders, depending on the worker implementation
 fetch_builders = {}
