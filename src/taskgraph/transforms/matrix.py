@@ -16,6 +16,7 @@ from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.schema import Schema
 from taskgraph.util.templates import substitute_task_fields
 
+#: Schema for matrix transforms
 MATRIX_SCHEMA = Schema(
     {
         Required("name"): str,
@@ -60,7 +61,6 @@ MATRIX_SCHEMA = Schema(
         Extra: object,
     },
 )
-"""Schema for matrix transforms."""
 
 transforms = TransformSequence()
 transforms.add_validate(MATRIX_SCHEMA)
