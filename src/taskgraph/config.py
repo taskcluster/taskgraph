@@ -19,6 +19,8 @@ from .util.yaml import load_yaml
 
 logger = logging.getLogger(__name__)
 
+
+#: Schema for the graph config
 graph_config_schema = Schema(
     {
         # The trust-domain for this graph.
@@ -102,7 +104,6 @@ graph_config_schema = Schema(
         Extra: object,
     }
 )
-"""Schema for GraphConfig"""
 
 
 @dataclass(frozen=True, eq=False)

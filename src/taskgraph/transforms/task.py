@@ -48,7 +48,7 @@ def _run_task_suffix():
     return hash_path(RUN_TASK)[0:20]
 
 
-# A task description is a general description of a TaskCluster task
+#: Schema for the task transforms
 task_description_schema = Schema(
     {
         # the label for this task
