@@ -11,6 +11,11 @@ These transforms are useful when you want to create follow-up tasks for some
 indeterminate subset of existing tasks. For example, maybe you want to run
 a signing task after each build task.
 
+Schema
+------
+
+All tasks must conform to the :py:data:`from_deps schema
+<taskgraph.transforms.from_deps.FROM_DEPS_SCHEMA>`.
 
 Usage
 -----
