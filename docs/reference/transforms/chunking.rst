@@ -7,6 +7,12 @@ The :mod:`taskgraph.transforms.chunking` module contains transforms that aid
 in splitting a single entry in a ``kind`` into multiple tasks. This is often
 used to parallelize expensive or slow work.
 
+Schema
+------
+
+All tasks must conform to the :py:data:`chunking schema
+<taskgraph.transforms.chunking.CHUNK_SCHEMA>`.
+
 Usage
 -----
 
