@@ -3,7 +3,6 @@ LABEL maintainer="Release Engineering <release+taskgraph@mozilla.com>"
 
 # %include src
 # %include packages
-# %include .hatch_build.py
 # %include README.rst
 # %include pyproject.toml
 # %include uv.lock

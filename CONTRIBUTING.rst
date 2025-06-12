@@ -156,7 +156,7 @@ Releasing taskcluster-taskgraph
 In order to release a new version of Taskgraph, you will need to:
 
 1. Update ``CHANGELOG.md``
-2. Update ``__version__`` in ``src/taskgraph/__init__.py``
+2. Update ``version`` in ``pyproject.toml``
 3. Commit, and land the above changes with a commit message like "chore: bump <version>"
 4. Draft a release in Github pointing to the above commit.
 
