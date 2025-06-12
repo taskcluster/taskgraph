@@ -36,7 +36,7 @@ fetches_schema = {
     Optional("verify-hash"): bool,
 }
 
-# Schema for a build description
+#: Schema for a run transforms
 run_description_schema = Schema(
     {
         # The name of the task and the task's label.  At least one must be specified,

@@ -11,6 +11,7 @@ resolution-markers = [
 [manifest]
 members = [
     "pytest-taskgraph",
+    "sphinx-taskgraph",
     "taskcluster-taskgraph",
 ]
 
@@ -1821,6 +1822,25 @@ wheels = [
 ]
 
 [[package]]
+name = "sphinx-taskgraph"
+version = "0.1.0"
+source = { editable = "packages/sphinx-taskgraph" }
+dependencies = [
+    { name = "sphinx", version = "6.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "sphinx", version = "7.4.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
+    { name = "sphinx", version = "8.1.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
+    { name = "sphinx", version = "8.2.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "voluptuous", version = "0.14.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "voluptuous", version = "0.15.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "sphinx" },
+    { name = "voluptuous" },
+]
+
+[[package]]
 name = "sphinxcontrib-applehelp"
 version = "1.0.4"
 source = { registry = "https://pypi.org/simple" }
@@ -2038,6 +2058,7 @@ dev = [
     { name = "sphinx-autobuild", version = "2024.10.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "sphinx-book-theme", version = "1.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "sphinx-book-theme", version = "1.1.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "sphinx-taskgraph" },
     { name = "sphinxcontrib-mermaid" },
     { name = "zstandard" },
 ]
@@ -2073,6 +2094,7 @@ dev = [
     { name = "sphinx-argparse" },
     { name = "sphinx-autobuild" },
     { name = "sphinx-book-theme", specifier = ">=1" },
+    { name = "sphinx-taskgraph", editable = "packages/sphinx-taskgraph" },
     { name = "sphinxcontrib-mermaid" },
     { name = "zstandard" },
 ]

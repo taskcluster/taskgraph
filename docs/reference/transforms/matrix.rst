@@ -9,6 +9,12 @@ task into many subtasks based on a defined matrix.
 These transforms are useful if you need to have many tasks that are very
 similar except for some small configuration differences.
 
+Schema
+------
+
+All tasks must conform to the :py:data:`matrix schema
+<taskgraph.transforms.matrix.MATRIX_SCHEMA>`.
+
 Usage
 -----
 

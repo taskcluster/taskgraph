@@ -9,6 +9,12 @@ until ``taskgraph`` runs.
 
 This data can be provided in a few ways, as described below.
 
+Schema
+------
+
+All tasks must conform to the :py:data:`task_context schema
+<taskgraph.transforms.task_context.SCHEMA>`.
+
 Usage
 -----
 

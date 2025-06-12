@@ -1,0 +1,17 @@
+[project]
+name = "sphinx-taskgraph"
+version = "0.1.0"
+description = "Sphinx extensions to assist with Taskgraph documentation"
+readme = "README.md"
+authors = [
+    { name = "Andrew Halberstadt", email = "ahal@mozilla.com" }
+]
+requires-python = ">=3.8"
+dependencies = [
+    "sphinx",
+    "voluptuous",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
