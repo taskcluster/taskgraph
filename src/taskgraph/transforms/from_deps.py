@@ -14,7 +14,7 @@ after each build task, whatever builds may exist.
 from copy import deepcopy
 from textwrap import dedent
 
-from voluptuous import Any, Extra, Optional, Required
+from voluptuous import ALLOW_EXTRA, Any, Extra, Optional, Required
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.transforms.run import fetches_schema
@@ -109,8 +109,8 @@ FROM_DEPS_SCHEMA = Schema(
                 ),
             ): {str: [fetches_schema]},
         },
-        Extra: object,
     },
+    extra=ALLOW_EXTRA,
 )
 
 transforms = TransformSequence()
