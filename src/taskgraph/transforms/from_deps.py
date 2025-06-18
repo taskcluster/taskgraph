@@ -14,7 +14,7 @@ after each build task, whatever builds may exist.
 from copy import deepcopy
 from textwrap import dedent
 
-from voluptuous import ALLOW_EXTRA, Any, Extra, Optional, Required
+from voluptuous import ALLOW_EXTRA, Any, Optional, Required
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.transforms.run import fetches_schema
