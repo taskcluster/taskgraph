@@ -10,7 +10,7 @@ matrix defined in the definition.
 from copy import deepcopy
 from textwrap import dedent
 
-from voluptuous import Extra, Optional, Required
+from voluptuous import ALLOW_EXTRA, Extra, Optional, Required
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.schema import Schema
@@ -58,8 +58,8 @@ MATRIX_SCHEMA = Schema(
             ): [str],
             Extra: [str],
         },
-        Extra: object,
     },
+    extra=ALLOW_EXTRA,
 )
 
 transforms = TransformSequence()

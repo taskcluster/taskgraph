@@ -9,7 +9,7 @@ import sys
 from dataclasses import dataclass
 from typing import Dict
 
-from voluptuous import All, Any, Extra, Length, Optional, Required
+from voluptuous import ALLOW_EXTRA, All, Any, Extra, Length, Optional, Required
 
 from .util import path
 from .util.caches import CACHES
@@ -101,8 +101,8 @@ graph_config_schema = Schema(
                 Length(min=1),
             ),
         },
-        Extra: object,
-    }
+    },
+    extra=ALLOW_EXTRA,
 )
 
 
