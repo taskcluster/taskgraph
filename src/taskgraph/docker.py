@@ -194,6 +194,21 @@ def load_image(url, imageName=None, imageTag=None):
                 # Open stream reader for the member
                 reader = tarin.extractfile(member)
 
+                # If the member is `manifest.json` and we're retagging the image,
+                # override RepoTags.
+                if member.name == "manifest.json" and imageName:
+                    manifest = json.loads(reader.read())  # type: ignore
+                    reader.close()  # type: ignore
+
+                    if len(manifest) > 1:
+                        raise Exception("file contains more than one manifest")
+
+                    manifest[0]["RepoTags"] = [f"{imageName}:{imageTag}"]
+
+                    data = json.dumps(manifest)
+                    reader = BytesIO(data.encode("utf-8"))
+                    member.size = len(data)
+
                 # If member is `repositories`, we parse and possibly rewrite the
                 # image tags.
                 if member.name == "repositories":
