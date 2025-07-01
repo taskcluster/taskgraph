@@ -43,8 +43,8 @@ The VERSION file contains the version of the image.
 
 
 def get_image_digest(image_name):
-    from taskgraph.generator import load_tasks_for_kind
-    from taskgraph.parameters import Parameters
+    from taskgraph.generator import load_tasks_for_kind  # noqa: PLC0415
+    from taskgraph.parameters import Parameters  # noqa: PLC0415
 
     params = Parameters(
         level=os.environ.get("MOZ_SCM_LEVEL", "3"),
@@ -56,9 +56,9 @@ def get_image_digest(image_name):
 
 
 def load_image_by_name(image_name, tag=None):
-    from taskgraph.generator import load_tasks_for_kind
-    from taskgraph.optimize.strategies import IndexSearch
-    from taskgraph.parameters import Parameters
+    from taskgraph.generator import load_tasks_for_kind  # noqa: PLC0415
+    from taskgraph.optimize.strategies import IndexSearch  # noqa: PLC0415
+    from taskgraph.parameters import Parameters  # noqa: PLC0415
 
     params = Parameters(
         level=os.environ.get("MOZ_SCM_LEVEL", "3"),

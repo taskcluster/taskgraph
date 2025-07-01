@@ -27,7 +27,7 @@ def test_find_object_no_such_object():
 
 def test_find_object_exists():
     """find_object finds an existing object"""
-    from testmod.thing import TestObject
+    from testmod.thing import TestObject  # noqa: PLC0415
 
     obj = python_path.find_object("testmod.thing:TestObject.testClassProperty")
     assert obj is TestObject.testClassProperty
