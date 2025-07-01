@@ -377,7 +377,7 @@ def write_artifact(filename, data):
         with open(path, "w") as f:
             json.dump(data, f, sort_keys=True, indent=2)
     elif filename.endswith(".gz"):
-        import gzip
+        import gzip  # noqa: PLC0415
 
         with gzip.open(path, "wb") as f:
             f.write(json.dumps(data))  # type: ignore
@@ -393,7 +393,7 @@ def read_artifact(filename):
         with open(path) as f:
             return json.load(f)
     elif filename.endswith(".gz"):
-        import gzip
+        import gzip  # noqa: PLC0415
 
         with gzip.open(path, "rb") as f:
             return json.load(f)

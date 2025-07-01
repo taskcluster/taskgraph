@@ -10,7 +10,7 @@ def setup(app):
     """
     Entry point for the Sphinx extension.
     """
-    from .autoschema import SchemaDocumenter
+    from .autoschema import SchemaDocumenter  # noqa: PLC0415
 
     # Register the custom autodocumenter.
     app.add_autodocumenter(SchemaDocumenter)
