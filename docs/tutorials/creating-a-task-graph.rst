@@ -85,7 +85,7 @@ you have a ``hello`` kind. For this next section we'll be editing
 
 #. Declare the set of :term:`transforms <transform>` that will be applied
    to tasks. By default, taskgraph will include the
-   :mod:`-taskgraph.transforms.run` and :mod:`-taskgraph.transforms.task`
+   :mod:`~taskgraph.transforms.run` and :mod:`~taskgraph.transforms.task`
    transforms, which are used by the vast majority of simple tasks. It is also
    quite common for kind-specific transforms to be used, which we will do here
    for the purpose of demonstration. In our example:
@@ -125,7 +125,7 @@ Create the Transform
 --------------------
 
 :term:`Transforms <Transform>` are Python generators that take a
-:class:`-taskgraph.transforms.base.TransformConfig` instance and a generator
+:class:`~taskgraph.transforms.base.TransformConfig` instance and a generator
 that yields task definitions (in dictionary form) as input. It yields task
 definitions (which may or may not be modified) from the original inputs.
 
