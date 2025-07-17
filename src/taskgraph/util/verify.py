@@ -206,9 +206,17 @@ def verify_routes_notification_filters(
     )
     task_dict = task.task
     routes = task_dict.get("routes", [])
+    print(f"DEBUG: Task {task.label} routes: {routes}")  
 
     for route in routes:
+        print(f"DEBUG: Checking route: {route}")  
         if route.startswith(route_prefix):
+            # Check for invalid characters in the route
+            if "/" in route:
+                print(f"DEBUG: Found slash in route: {route}")  
+                raise Exception(
+                    f"{task.label} has invalid route with forward slash: {route}"
+                )
             # Get the filter of the route
             route_filter = route.split(".")[-1]
             if route_filter not in valid_filters:
