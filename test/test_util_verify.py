@@ -204,7 +204,11 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
             make_graph(
                 make_task(
                     "invalid_slash",
-                    task_def={"routes": ["notify.email.default@email/address.on-completed"]},
+                    task_def={
+                        "routes": [
+                            "notify.email.default@email.address1/address2.on-completed"
+                        ]
+                    },
                 ),
             ),
             Exception,

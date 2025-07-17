@@ -172,6 +172,11 @@ def verify_trust_domain_v2_routes(
 
     for route in routes:
         if route.startswith(route_prefix):
+            # Check for invalid / in the route
+            if "/" in route:
+                raise Exception(
+                    f"{task.label} has invalid route with forward slash: {route}"
+                )
             if route in scratch_pad:
                 raise Exception(
                     f"conflict between {task.label}:{scratch_pad[route]} for route: {route}"
@@ -206,14 +211,11 @@ def verify_routes_notification_filters(
     )
     task_dict = task.task
     routes = task_dict.get("routes", [])
-    print(f"DEBUG: Task {task.label} routes: {routes}")  
 
     for route in routes:
-        print(f"DEBUG: Checking route: {route}")  
         if route.startswith(route_prefix):
-            # Check for invalid characters in the route
+            # Check for invalid / in the route
             if "/" in route:
-                print(f"DEBUG: Found slash in route: {route}")  
                 raise Exception(
                     f"{task.label} has invalid route with forward slash: {route}"
                 )
