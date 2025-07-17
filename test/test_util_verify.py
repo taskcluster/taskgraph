@@ -199,6 +199,17 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
             DeprecationWarning,
             id="routes_notfication_filter: deprecated",
         ),
+        pytest.param(
+            "verify_routes_notification_filters",
+            make_graph(
+                make_task(
+                    "invalid_slash",
+                    task_def={"routes": ["notify.email.default@email/address.on-completed"]},
+                ),
+            ),
+            Exception,
+            id="routes_notification_filter: invalid slash in route",
+        ),
     ),
 )
 @pytest.mark.filterwarnings("error")
