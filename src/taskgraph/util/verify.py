@@ -223,10 +223,9 @@ def verify_routes_notification_filters(
                     )
                 )
 
+
 @verifications.add("full_task_graph")
-def verify_routes_invalid_slash(
-    task, taskgraph, scratch_pad, graph_config, parameters
-):
+def verify_index_route(task, taskgraph, scratch_pad, graph_config, parameters):
     """
     This function ensures that routes do not contain forward slashes.
     """
@@ -234,10 +233,11 @@ def verify_routes_invalid_slash(
         return
     task_dict = task.task
     routes = task_dict.get("routes", [])
+    route_prefix = "index."
 
     for route in routes:
-        # Check for invalid / in the route
-        if "/" in route:
+        # Check for invalid / in the index route
+        if route.startswith(route_prefix) and "/" in route:
             raise Exception(
                 f"{task.label} has invalid route with forward slash: {route}"
             )

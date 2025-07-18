@@ -200,19 +200,19 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
             id="routes_notfication_filter: deprecated",
         ),
         pytest.param(
-            "verify_routes_invalid_slash",
+            "verify_index_route",
             make_graph(
                 make_task(
                     "invalid_slash",
                     task_def={
                         "routes": [
-                            "notify.email.default@email.address1/address2.on-completed"
+                            "index.example.com/foobar.v2.latest.taskgraph.decision"
                         ]
                     },
                 ),
             ),
             Exception,
-            id="routes_invalid_slash: invalid slash in route",
+            id="verify_index_route: invalid slash in route",
         ),
     ),
 )
