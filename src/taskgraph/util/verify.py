@@ -172,11 +172,6 @@ def verify_trust_domain_v2_routes(
 
     for route in routes:
         if route.startswith(route_prefix):
-            # Check for invalid / in the route
-            if "/" in route:
-                raise Exception(
-                    f"{task.label} has invalid route with forward slash: {route}"
-                )
             if route in scratch_pad:
                 raise Exception(
                     f"conflict between {task.label}:{scratch_pad[route]} for route: {route}"
@@ -214,11 +209,6 @@ def verify_routes_notification_filters(
 
     for route in routes:
         if route.startswith(route_prefix):
-            # Check for invalid / in the route
-            if "/" in route:
-                raise Exception(
-                    f"{task.label} has invalid route with forward slash: {route}"
-                )
             # Get the filter of the route
             route_filter = route.split(".")[-1]
             if route_filter not in valid_filters:
@@ -232,6 +222,25 @@ def verify_routes_notification_filters(
                         "'on-transition' or 'on-resolved'."
                     )
                 )
+
+@verifications.add("full_task_graph")
+def verify_routes_invalid_slash(
+    task, taskgraph, scratch_pad, graph_config, parameters
+):
+    """
+    This function ensures that routes do not contain forward slashes.
+    """
+    if task is None:
+        return
+    task_dict = task.task
+    routes = task_dict.get("routes", [])
+
+    for route in routes:
+        # Check for invalid / in the route
+        if "/" in route:
+            raise Exception(
+                f"{task.label} has invalid route with forward slash: {route}"
+            )
 
 
 @verifications.add("full_task_graph")

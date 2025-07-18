@@ -200,7 +200,7 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
             id="routes_notfication_filter: deprecated",
         ),
         pytest.param(
-            "verify_routes_notification_filters",
+            "verify_routes_invalid_slash",
             make_graph(
                 make_task(
                     "invalid_slash",
@@ -212,7 +212,7 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
                 ),
             ),
             Exception,
-            id="routes_notification_filter: invalid slash in route",
+            id="routes_invalid_slash: invalid slash in route",
         ),
     ),
 )
