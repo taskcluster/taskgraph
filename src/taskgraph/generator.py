@@ -306,7 +306,14 @@ class TaskGraphGenerator:
         all_tasks = {}
         for kind_name in kind_graph.visit_postorder():
             logger.debug(f"Loading tasks for kind {kind_name}")
-            kind = kinds[kind_name]
+
+            kind = kinds.get(kind_name)
+            if not kind:
+                message = f'Could not find the kind "{kind_name}"\nAvailable kinds:\n'
+                for k in sorted(kinds):
+                    message += f' - "{k}"\n'
+                raise Exception(message)
+
             try:
                 new_tasks = kind.load_tasks(
                     parameters,
