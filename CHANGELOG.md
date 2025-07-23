@@ -1,5 +1,19 @@
 # Change Log
 
+## [14.5.0] - 2025-06-22
+
+### Added
+
+- add a more descriptive error when a kind cannot be found (#721)
+- error out when index routes have a `/` in them (#722)
+
+### Fixed
+
+- handle github submodule checks better in fetch-content (#708)
+- make `hash_paths` work when `base_path` is set (#723)
+- return dict from 'status_task_batched' when testing (#720)
+- retag images when a tag is passed to taskgraph load-image (#713)
+
 ## [14.4.1] - 2025-06-04
 
 ### Fixed
