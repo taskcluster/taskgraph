@@ -2010,7 +2010,7 @@ wheels = [
 
 [[package]]
 name = "taskcluster-taskgraph"
-version = "14.4.1"
+version = "14.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "appdirs" },
