@@ -346,6 +346,7 @@ def load_task(task_id, remove=True, user=None):
 
         if task_command:
             initfile = tempfile.NamedTemporaryFile("w+", delete=False)
+            os.fchmod(initfile.fileno(), 0o644)
             initfile.write(
                 dedent(
                     f"""
