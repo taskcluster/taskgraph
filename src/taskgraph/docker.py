@@ -350,9 +350,9 @@ def load_task(task_id, remove=True, user=None):
                 dedent(
                     f"""
             function exec-task() {{
-                echo "Starting task: {task_command}";
-                pushd {task_cwd};
-                {task_command};
+                echo Starting task: {shlex.quote(task_command)}
+                pushd {task_cwd}
+                {task_command}
                 popd
             }}
             """
