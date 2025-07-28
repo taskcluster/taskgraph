@@ -566,6 +566,12 @@ def show_taskgraph(options):
 @command("build-image", help="Build a Docker image")
 @argument("image_name", help="Name of the image to build")
 @argument(
+    "--root",
+    "-r",
+    default="taskcluster",
+    help="relative path for the root of the taskgraph definition",
+)
+@argument(
     "-t", "--tag", help="tag that the image should be built as.", metavar="name:tag"
 )
 @argument(
@@ -575,13 +581,20 @@ def show_taskgraph(options):
     metavar="context.tar",
 )
 def build_image(args):
+    from taskgraph.config import load_graph_config  # noqa: PLC0415
     from taskgraph.docker import build_context, build_image  # noqa: PLC0415
 
     validate_docker()
+
+    root = args["root"]
+    graph_config = load_graph_config(root)
+
     if args["context_only"] is None:
-        build_image(args["image_name"], args["tag"], os.environ)
+        build_image(args["image_name"], args["tag"], os.environ, graph_config)
     else:
-        build_context(args["image_name"], args["context_only"], os.environ)
+        build_context(
+            args["image_name"], args["context_only"], os.environ, graph_config
+        )
 
 
 @command(
