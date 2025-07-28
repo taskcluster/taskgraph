@@ -28,8 +28,9 @@ graph_config_schema = Schema(
         Required("trust-domain"): str,
         Optional(
             "docker-image-kind",
-            description="What kind of docker image to use for the task.",
-        ): [str],
+            default="docker-image",
+            description="Name of the docker image kind (default: docker-image)",
+        ): str,
         Required("task-priority"): optionally_keyed_by(
             "project",
             "level",
