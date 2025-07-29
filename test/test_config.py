@@ -30,3 +30,15 @@ def test_graph_config_basic():
 
     with pytest.raises(TypeError):
         graph_config["baz"] = 2
+
+
+def test_vcs_root_property():
+    """Test the vcs_root property returns the parent directory of root_dir without throwing an exception."""
+
+    # Test with a standard taskcluster directory structure
+    graph_config = GraphConfig({}, "/path/to/project/taskcluster")
+    assert graph_config.vcs_root == "/path/to/project"
+
+    # Test with a different directory structure
+    graph_config = GraphConfig({}, "/path/to/custom/.taskgraph")
+    assert graph_config.vcs_root == "/path/to/custom"
