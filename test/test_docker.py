@@ -4,6 +4,7 @@ import tempfile
 import pytest
 
 from taskgraph import docker
+from taskgraph.config import GraphConfig
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -30,7 +31,15 @@ def test_build_image(capsys, mock_docker_build):
     image = "hello-world-tag"
     tag = f"test/{image}:1.0"
 
-    assert docker.build_image(image, None) is None
+    graph_config = GraphConfig(
+        {
+            "trust-domain": "test-domain",
+            "docker-image-kind": "docker-image",
+        },
+        "test/data/taskcluster",
+    )
+
+    assert docker.build_image(image, None, graph_config=graph_config) is None
     m_stream.assert_called_once()
     m_run.assert_called_once_with(
         ["docker", "image", "build", "--no-cache", f"-t={tag}", "-"],
@@ -47,7 +56,15 @@ def test_build_image_no_tag(capsys, mock_docker_build):
     m_stream, m_run = mock_docker_build
     image = "hello-world"
 
-    assert docker.build_image(image, None) is None
+    graph_config = GraphConfig(
+        {
+            "trust-domain": "test-domain",
+            "docker-image-kind": "docker-image",
+        },
+        "test/data/taskcluster",
+    )
+
+    assert docker.build_image(image, None, graph_config=graph_config) is None
     m_stream.assert_called_once()
     m_run.assert_called_once_with(
         ["docker", "image", "build", "--no-cache", "-"],
@@ -71,8 +88,16 @@ def test_build_image_error(capsys, mock_docker_build):
     m_run.side_effect = mock_run
     image = "hello-world"
 
+    graph_config = GraphConfig(
+        {
+            "trust-domain": "test-domain",
+            "docker-image-kind": "docker-image",
+        },
+        "test/data/taskcluster",
+    )
+
     with pytest.raises(Exception):
-        docker.build_image(image, None)
+        docker.build_image(image, None, graph_config=graph_config)
     m_stream.assert_called_once()
     m_run.assert_called_once_with(
         ["docker", "image", "build", "--no-cache", "-"],
