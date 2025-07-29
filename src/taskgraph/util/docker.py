@@ -210,9 +210,8 @@ def image_paths(graph_config):
     """Return a map of image name to paths containing their Dockerfile."""
 
     config = load_yaml(
-        graph_config.root_dir,
-        "kinds",
-        graph_config["docker-image-kind"],
+        graph_config.kinds_dir,
+        graph_config.get("docker-image-kind", "docker-image"),
         "kind.yml",
     )
 

@@ -14,8 +14,6 @@ index:
 
 task-priority: low
 
-docker-image-kind: docker-image
-
 taskgraph:
     register: self_taskgraph:register
     decision-parameters: 'self_taskgraph.custom_parameters:decision_parameters'
