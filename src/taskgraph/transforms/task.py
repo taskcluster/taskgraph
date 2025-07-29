@@ -575,7 +575,7 @@ def build_docker_worker_payload(config, task, task_def):
             }
 
             # Find VOLUME in Dockerfile.
-            volumes = dockerutil.parse_volumes(name)
+            volumes = dockerutil.parse_volumes(name, config.graph_config)
             for v in sorted(volumes):
                 if v in worker["volumes"]:
                     raise Exception(

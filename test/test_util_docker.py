@@ -14,6 +14,7 @@ from unittest import mock
 
 import taskcluster_urls as liburls
 
+from taskgraph.config import GraphConfig
 from taskgraph.util import docker
 
 from .mockedopen import MockedOpen
@@ -269,3 +270,81 @@ class TestDocker(unittest.TestCase):
             )
         finally:
             shutil.rmtree(tmp)
+
+    def test_image_paths_with_custom_kind(self):
+        """Test image_paths function with graph_config parameter."""
+        temp_dir = tempfile.mkdtemp()
+        try:
+            # Create the kinds directory structure
+            kinds_dir = os.path.join(temp_dir, "kinds", "docker-test-image")
+            os.makedirs(kinds_dir)
+
+            # Create the kind.yml file with task definitions
+            kind_yml_path = os.path.join(kinds_dir, "kind.yml")
+            with open(kind_yml_path, "w") as f:
+                f.write("tasks:\n")
+                f.write("  test-image:\n")
+                f.write("    definition: test-image\n")
+                f.write("  another-image:\n")
+                f.write("    definition: custom-path\n")
+
+            # Create graph config pointing to our test directory
+            temp_graph_config = GraphConfig(
+                {
+                    "trust-domain": "test-domain",
+                    "docker-image-kind": "docker-test-image",
+                },
+                temp_dir,
+            )
+
+            paths = docker.image_paths(temp_graph_config)
+
+            expected_docker_dir = os.path.join(temp_graph_config.root_dir, "docker")
+            self.assertEqual(
+                paths["test-image"], os.path.join(expected_docker_dir, "test-image")
+            )
+            self.assertEqual(
+                paths["another-image"], os.path.join(expected_docker_dir, "custom-path")
+            )
+        finally:
+            shutil.rmtree(temp_dir)
+
+    def test_parse_volumes_with_graph_config(self):
+        """Test parse_volumes function with graph_config parameter."""
+        temp_dir = tempfile.mkdtemp()
+        try:
+            kinds_dir = os.path.join(temp_dir, "kinds", "docker-test-image")
+            os.makedirs(kinds_dir)
+
+            kind_yml_path = os.path.join(kinds_dir, "kind.yml")
+            with open(kind_yml_path, "w") as f:
+                f.write("tasks:\n")
+                f.write("  test-image:\n")
+                f.write("    definition: test-image\n")
+
+            docker_dir = os.path.join(temp_dir, "docker")
+            os.makedirs(docker_dir)
+
+            image_dir = os.path.join(docker_dir, "test-image")
+            os.makedirs(image_dir)
+
+            dockerfile_path = os.path.join(image_dir, "Dockerfile")
+            with open(dockerfile_path, "wb") as fh:
+                fh.write(b"VOLUME /foo/bar \n")
+                fh.write(b"VOLUME /hello  /world \n")
+
+            test_graph_config = GraphConfig(
+                {
+                    "trust-domain": "test-domain",
+                    "docker-image-kind": "docker-test-image",
+                },
+                temp_dir,
+            )
+
+            volumes = docker.parse_volumes("test-image", test_graph_config)
+
+            expected_volumes = {"/foo/bar", "/hello", "/world"}
+            self.assertEqual(volumes, expected_volumes)
+
+        finally:
+            shutil.rmtree(temp_dir)

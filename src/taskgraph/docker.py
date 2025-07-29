@@ -97,21 +97,21 @@ def load_image_by_task_id(task_id, tag=None):
     return tag
 
 
-def build_context(name, outputFile, args=None):
+def build_context(name, outputFile, graph_config, args=None):
     """Build a context.tar for image with specified name."""
     if not name:
         raise ValueError("must provide a Docker image name")
     if not outputFile:
         raise ValueError("must provide a outputFile")
 
-    image_dir = docker.image_path(name)
+    image_dir = docker.image_path(name, graph_config)
     if not os.path.isdir(image_dir):
         raise Exception(f"image directory does not exist: {image_dir}")
 
     docker.create_context_tar(".", image_dir, outputFile, args)
 
 
-def build_image(name, tag, args=None):
+def build_image(name, tag, graph_config, args=None):
     """Build a Docker image of specified name.
 
     Output from image building process will be printed to stdout.
@@ -119,7 +119,7 @@ def build_image(name, tag, args=None):
     if not name:
         raise ValueError("must provide a Docker image name")
 
-    image_dir = docker.image_path(name)
+    image_dir = docker.image_path(name, graph_config)
     if not os.path.isdir(image_dir):
         raise Exception(f"image directory does not exist: {image_dir}")
 

@@ -26,6 +26,10 @@ graph_config_schema = Schema(
         # The trust-domain for this graph.
         # (See https://firefox-source-docs.mozilla.org/taskcluster/taskcluster/taskgraph.html#taskgraph-trust-domain)  # noqa
         Required("trust-domain"): str,
+        Optional(
+            "docker-image-kind",
+            description="Name of the docker image kind (default: docker-image)",
+        ): str,
         Required("task-priority"): optionally_keyed_by(
             "project",
             "level",
@@ -156,6 +160,14 @@ class GraphConfig:
     @property
     def taskcluster_yml(self):
         return os.path.join(self.vcs_root, ".taskcluster.yml")
+
+    @property
+    def docker_dir(self):
+        return os.path.join(self.root_dir, "docker")
+
+    @property
+    def kinds_dir(self):
+        return os.path.join(self.root_dir, "kinds")
 
 
 def validate_graph_config(config):
