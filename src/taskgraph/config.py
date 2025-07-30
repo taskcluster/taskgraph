@@ -11,6 +11,7 @@ from typing import Dict
 
 from voluptuous import ALLOW_EXTRA, All, Any, Extra, Length, Optional, Required
 
+from .util import path
 from .util.caches import CACHES
 from .util.python_path import find_object
 from .util.schema import Schema, optionally_keyed_by, validate_schema
@@ -150,6 +151,10 @@ class GraphConfig:
 
     @property
     def vcs_root(self):
+        if path.split(self.root_dir)[-1:] != ["taskcluster"]:
+            raise Exception(
+                "Not guessing path to vcs root. Graph config in non-standard location."
+            )
         return os.path.dirname(self.root_dir)
 
     @property
