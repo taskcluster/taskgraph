@@ -363,10 +363,7 @@ def load_parameters_file(
 
 def parameters_loader(spec, strict=True, overrides=None):
     def get_parameters(graph_config):
-        try:
-            repo_root = graph_config.vcs_root
-        except Exception:
-            repo_root = None
+        repo_root = graph_config.vcs_root
 
         parameters = load_parameters_file(
             spec,
