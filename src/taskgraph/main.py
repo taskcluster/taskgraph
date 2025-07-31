@@ -740,6 +740,7 @@ def load_task(args):
     "--tasks-for", required=True, help="the tasks_for value used to generate this task"
 )
 @argument("--try-task-config-file", help="path to try task configuration file")
+@argument("--no-verify", help="Skip graph verifications")
 @argument(
     "--verbose", "-v", action="store_true", help="include debug-level logging output"
 )
