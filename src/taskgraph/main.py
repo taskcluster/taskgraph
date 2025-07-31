@@ -741,6 +741,13 @@ def load_task(args):
 )
 @argument("--try-task-config-file", help="path to try task configuration file")
 @argument(
+    "--no-verify",
+    dest="verify",
+    default=True,
+    action="store_false",
+    help="Skip graph verifications",
+)
+@argument(
     "--verbose", "-v", action="store_true", help="include debug-level logging output"
 )
 def decision(options):
