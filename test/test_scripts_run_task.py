@@ -443,11 +443,8 @@ def test_display_subprocess_python_version_should_output_python_versions_title(
 ):
     run_task_mod._display_subprocess_python_version()
 
-    assert (
-        ("Subprocess python3 version:" in capsys.readouterr().out)
-        or ("Subprocess python2 version:" in capsys.readouterr().out)
-        or ("Subprocess python version:" in capsys.readouterr().out) is True
-    )
+    output = capsys.readouterr().out
+    assert "Subprocess" in output and "version:" in output
 
 
 @pytest.fixture

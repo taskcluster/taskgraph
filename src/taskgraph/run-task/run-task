@@ -1034,21 +1034,31 @@ def _display_python_version():
     )
 
 def _display_subprocess_python_version():
+    try:
+        output = subprocess.check_output(
+            ["uv", "python", "list", "--only-installed"],
+        ).strip()    
 
-    python_versions = ["python","python3"]
+        if output:
+            for line in output.splitlines():
+                print_line(b"setup", b"Subprocess python version: " + line + b"\n")
 
-    for python_executable in python_versions:
-        try:
-            version = subprocess.check_output(
-                [python_executable, "-c", "import platform; print(platform.python_version())"],
-            ).strip()
+    except FileNotFoundError:
 
-            print_line(
-                b"setup", b"Subprocess %s version: %s\n" % (python_executable.encode(), version)
-            )
+        python_versions = ["python","python3"]
 
-        except FileNotFoundError:
-            pass
+        for python_executable in python_versions:
+            try:
+                version = subprocess.check_output(
+                    [python_executable, "-c", "import platform; print(platform.python_version())"],
+                ).strip()
+
+                print_line(
+                    b"setup", b"Subprocess %s version: %s\n" % (python_executable.encode(), version)
+                )
+
+            except FileNotFoundError:
+                pass
 
 
 def main(args):
