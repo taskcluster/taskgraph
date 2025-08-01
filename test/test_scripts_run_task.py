@@ -438,6 +438,15 @@ def test_display_python_version_should_output_python_versions(run_task_mod, caps
     assert ("Python version: 3." in output) or ("Python version: 2." in output) is True
 
 
+def test_display_subprocess_python_version_should_output_python_versions_title(
+    run_task_mod, capsys
+):
+    run_task_mod._display_subprocess_python_version()
+
+    output = capsys.readouterr().out
+    assert "Subprocess" in output and "version:" in output
+
+
 @pytest.fixture
 def run_main(tmp_path, mocker, mock_stdin, run_task_mod):
     base_args = [
