@@ -110,6 +110,7 @@ def taskgraph_decision(options, parameters=None):
         parameters=parameters,
         decision_task_id=decision_task_id,
         write_artifacts=True,
+        enable_verifications=not options.get("no_verify", False),
     )
 
     # write out the parameters used to generate this graph
