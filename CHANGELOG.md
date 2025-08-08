@@ -1,5 +1,18 @@
 # Change Log
 
+## [14.6.0] - 2025-08-05
+
+### Added
+
+- `--no-verify` command line flag to disable verifications
+
+### Fixed
+
+- docker-image transforms work with a non-standard `--root`
+- accessing `GraphConfig.vcs_root` no longer raises with a non-standard `--root`
+- container permission issue when running `taskgraph load-task`
+- properly quoted command in `taskgraph load-task`
+
 ## [14.5.0] - 2025-06-22
 
 ### Added
