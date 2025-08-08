@@ -1036,7 +1036,7 @@ def _display_python_versions():
     print_line(b"setup", b"Subprocess python version: " + b"\n")
 
     try:
-        subprocess.run(["uv", "python", "list", "--only-installed"], check=True)
+        subprocess.run(["uv", "python", "list","--no-cache","--only-installed"], check=True)
 
     except (FileNotFoundError, subprocess.CalledProcessError):
 
