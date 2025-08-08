@@ -206,6 +206,7 @@ def from_deps(config, tasks):
             )
 
             primary_dep = [dep for dep in group if dep.kind == primary_kind][0]
+            new_task["attributes"]["primary-dependency-label"] = primary_dep.label
 
             if set_name:
                 func = SET_NAME_MAP[set_name]

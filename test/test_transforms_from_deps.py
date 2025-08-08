@@ -3,11 +3,23 @@ Tests for the 'from_deps' transforms.
 """
 
 from pprint import pprint
+from typing import Dict
 
 import pytest
 from pytest_taskgraph import make_task
 
+from taskgraph.task import Task
 from taskgraph.transforms import from_deps
+
+
+def get_task_label_by_attributes(
+    tasks: Dict[str, Task], attributes: Dict[str, str]
+) -> str:
+    for task in tasks.values():
+        if all([task.attributes[k] == v for k, v in attributes.items()]):
+            return task.label
+
+    return ""
 
 
 def handle_exception(obj, exc=None):
@@ -17,21 +29,27 @@ def handle_exception(obj, exc=None):
         raise obj
 
 
-def assert_no_kind_dependencies(e):
+def assert_no_kind_dependencies(_, e):
     handle_exception(e, exc=Exception)
 
 
-def assert_invalid_only_kinds(e):
+def assert_invalid_only_kinds(_, e):
     handle_exception(e, exc=Exception)
 
 
-def assert_defaults(tasks):
+def assert_defaults(deps, tasks):
     handle_exception(tasks)
     assert len(tasks) == 2
-    assert tasks[0]["attributes"] == {"primary-kind-dependency": "foo"}
+    assert tasks[0]["attributes"] == {
+        "primary-kind-dependency": "foo",
+        "primary-dependency-label": get_task_label_by_attributes(deps, {"kind": "foo"}),
+    }
     assert tasks[0]["dependencies"] == {"foo": "a"}
     assert tasks[0]["name"] == "a"
-    assert tasks[1]["attributes"] == {"primary-kind-dependency": "bar"}
+    assert tasks[1]["attributes"] == {
+        "primary-kind-dependency": "bar",
+        "primary-dependency-label": get_task_label_by_attributes(deps, {"kind": "bar"}),
+    }
     assert tasks[1]["dependencies"] == {"bar": "bar-b"}
     assert tasks[1]["name"] == "b"
 
@@ -39,29 +57,49 @@ def assert_defaults(tasks):
 assert_group_by_single = assert_defaults
 
 
-def assert_group_by_attribute(tasks):
+def assert_group_by_attribute(deps, tasks):
     handle_exception(tasks)
     assert len(tasks) == 2
     assert tasks[0]["dependencies"] == {"foo": "a"}
-    assert tasks[0]["attributes"] == {"primary-kind-dependency": "foo"}
+    assert tasks[0]["attributes"] == {
+        "primary-kind-dependency": "foo",
+        "primary-dependency-label": get_task_label_by_attributes(
+            deps, {"kind": "foo", "build-type": "linux"}
+        ),
+    }
     assert tasks[1]["dependencies"] == {"foo": "b", "bar": "c"}
-    assert tasks[1]["attributes"] == {"primary-kind-dependency": "foo"}
+    assert tasks[1]["attributes"] == {
+        "primary-kind-dependency": "foo",
+        "primary-dependency-label": get_task_label_by_attributes(
+            deps, {"kind": "foo", "build-type": "win"}
+        ),
+    }
 
 
-def assert_group_by_attribute_dupe(e):
+def assert_group_by_attribute_dupe(_, e):
     handle_exception(e, exc=Exception)
 
 
-def assert_group_by_attribute_dupe_allowed(tasks):
+def assert_group_by_attribute_dupe_allowed(deps, tasks):
     handle_exception(tasks)
     assert len(tasks) == 2
     assert tasks[0]["dependencies"] == {"a": "a"}
-    assert tasks[0]["attributes"] == {"primary-kind-dependency": "foo"}
+    assert tasks[0]["attributes"] == {
+        "primary-kind-dependency": "foo",
+        "primary-dependency-label": get_task_label_by_attributes(
+            deps, {"kind": "foo", "build-type": "linux"}
+        ),
+    }
     assert tasks[1]["dependencies"] == {"b": "b", "c": "c"}
-    assert tasks[1]["attributes"] == {"primary-kind-dependency": "foo"}
+    assert tasks[1]["attributes"] == {
+        "primary-kind-dependency": "foo",
+        "primary-dependency-label": get_task_label_by_attributes(
+            deps, {"kind": "foo", "build-type": "win"}
+        ),
+    }
 
 
-def assert_copy_attributes(tasks):
+def assert_copy_attributes(deps, tasks):
     handle_exception(tasks)
     assert len(tasks) == 1
 
@@ -70,48 +108,49 @@ def assert_copy_attributes(tasks):
         "build-type": "win",
         "kind": "foo",
         "primary-kind-dependency": "foo",
+        "primary-dependency-label": get_task_label_by_attributes(deps, {"kind": "foo"}),
     }
 
 
-def assert_group_by_all(tasks):
+def assert_group_by_all(deps, tasks):
     handle_exception(tasks)
     assert len(tasks) == 1
     assert tasks[0]["dependencies"] == {"foo": "a", "bar": "bar-b"}
 
 
-def assert_group_by_all_dupe_allowed(tasks):
+def assert_group_by_all_dupe_allowed(deps, tasks):
     handle_exception(tasks)
     assert len(tasks) == 1
     assert tasks[0]["dependencies"] == {"a": "a", "b": "b", "c": "c"}
 
 
-def assert_dont_set_name(tasks):
+def assert_dont_set_name(deps, tasks):
     handle_exception(tasks)
     assert len(tasks) == 1
     assert tasks[0]["name"] == "a-special-name"
 
 
-def assert_dont_set_name_false(tasks):
+def assert_dont_set_name_false(deps, tasks):
     handle_exception(tasks)
     assert len(tasks) == 1
     assert tasks[0]["name"] == "a-special-name"
 
 
-def assert_set_name_strip_kind(tasks):
+def assert_set_name_strip_kind(deps, tasks):
     handle_exception(tasks)
     assert len(tasks) == 2
     assert tasks[0]["name"] == "a"
     assert tasks[1]["name"] == "b"
 
 
-def assert_set_name_retain_kind(tasks):
+def assert_set_name_retain_kind(deps, tasks):
     handle_exception(tasks)
     assert len(tasks) == 2
     assert tasks[0]["name"] == "a"
     assert tasks[1]["name"] == "bar-b"
 
 
-def assert_group_by_all_with_fetch(tasks):
+def assert_group_by_all_with_fetch(deps, tasks):
     handle_exception(tasks)
     assert len(tasks) == 1
     assert tasks[0]["dependencies"] == {
@@ -412,4 +451,4 @@ def test_transforms(
 
     param_id = request.node.callspec.id
     assert_func = globals()[f"assert_{param_id}"]
-    assert_func(result)
+    assert_func(deps, result)
