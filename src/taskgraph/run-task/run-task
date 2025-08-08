@@ -1038,7 +1038,7 @@ def _display_python_versions():
     try:
         subprocess.run(["uv", "python", "list", "--only-installed"], check=True)
 
-    except FileNotFoundError or subprocess.CalledProcessError:
+    except (FileNotFoundError, subprocess.CalledProcessError):
 
         python_versions = ["python","python3"]
 
