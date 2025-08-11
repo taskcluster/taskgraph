@@ -153,7 +153,7 @@ run_description_schema = Schema(
             Extra: object,
         },
         Required("worker-type"): task_description_schema["worker-type"],
-        Required(
+        Optional(
             "worker",
             description=dedent(
                 """
