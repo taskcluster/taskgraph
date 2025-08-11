@@ -97,7 +97,7 @@ toolchain_run_schema = Schema(
                 """
             ),
         ): {str: object},
-        Optional(
+        Required(
             "workdir",
             description=dedent(
                 """
