@@ -152,10 +152,16 @@ class GraphConfig:
 
     @property
     def vcs_root(self):
-        repo = get_repository(os.getcwd())
-        path = Path(repo.path)
-
-        return path
+        try:
+            repo = get_repository(os.getcwd())
+            return Path(repo.path)
+        except RuntimeError:
+            root = Path(self.root_dir)
+            if root.parts[-1:] != ("taskcluster",):
+                raise Exception(
+                    "Not guessing path to vcs root. Graph config in non-standard location."
+                )
+            return root.parent
 
     @property
     def taskcluster_yml(self):

@@ -48,3 +48,15 @@ def test_vcs_root_with_non_standard_dir():
         expected_path = Path("/path/to/repo")
 
         assert vcs_root == expected_path
+
+
+def test_vcs_root_fallback(mocker):
+    mocker.patch("os.getcwd", return_value="/path/to/repo")
+
+    cfg = {"foo": "bar"}
+    with mocker.patch("taskgraph.config.get_repository", side_effect=RuntimeError):
+        assert GraphConfig(cfg, "taskcluster").vcs_root == Path("/path/to/repo")
+
+    with mocker.patch("taskgraph.config.get_repository", side_effect=RuntimeError):
+        with pytest.raises(Exception):
+            GraphConfig(cfg, "root/data").vcs_root
