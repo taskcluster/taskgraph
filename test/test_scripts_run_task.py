@@ -426,16 +426,19 @@ def test_git_checkout_with_commit(
 def test_display_python_version_should_output_python_versions_title(
     run_task_mod, capsys
 ):
-    run_task_mod._display_python_version()
+    run_task_mod._display_python_versions()
 
-    assert ("Python version:" in capsys.readouterr().out) is True
+    output = capsys.readouterr().out
+    assert ("Python version:" in output) is True
+    assert "Subprocess" in output and "version:" in output
 
 
 def test_display_python_version_should_output_python_versions(run_task_mod, capsys):
-    run_task_mod._display_python_version()
+    run_task_mod._display_python_versions()
 
     output = capsys.readouterr().out
     assert ("Python version: 3." in output) or ("Python version: 2." in output) is True
+    assert "Subprocess" in output and "version:" in output
 
 
 @pytest.fixture
