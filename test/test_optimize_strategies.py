@@ -2,7 +2,7 @@
 # http://creativecommons.org/publicdomain/zero/1.0/
 
 import logging
-import os
+import unittest.mock as mock
 from datetime import datetime
 from time import mktime
 
@@ -10,6 +10,7 @@ import pytest
 from pytest_taskgraph import make_task
 
 from taskgraph.optimize.strategies import IndexSearch, SkipUnlessChanged
+from taskgraph.util import taskcluster as tc
 
 
 @pytest.fixture
@@ -57,29 +58,25 @@ def params():
         ),
     ),
 )
-def test_index_search(caplog, responses, params, state, expires, expected, logs):
+def test_index_search(caplog, monkeypatch, params, state, expires, expected, logs):
     caplog.set_level(logging.DEBUG, "optimization")
     taskid = "abc"
     index_path = "foo.bar.latest"
 
-    responses.add(
-        responses.GET,
-        f"{os.environ['TASKCLUSTER_ROOT_URL']}/api/index/v1/task/{index_path}",
-        json={"taskId": taskid},
-        status=200,
-    )
+    mock_index = mock.MagicMock()
+    mock_queue = mock.MagicMock()
 
-    responses.add(
-        responses.GET,
-        f"{os.environ['TASKCLUSTER_ROOT_URL']}/api/queue/v1/task/{taskid}/status",
-        json={
-            "status": {
-                "state": state,
-                "expires": expires,
-            }
-        },
-        status=200,
-    )
+    mock_index.findTask.return_value = {"taskId": taskid}
+
+    mock_queue.status.return_value = {
+        "status": {
+            "state": state,
+            "expires": expires,
+        }
+    }
+
+    monkeypatch.setattr(tc, "get_taskcluster_index", lambda: mock_index)
+    monkeypatch.setattr(tc, "get_taskcluster_queue", lambda: mock_queue)
 
     label_to_taskid = {index_path: taskid}
     taskid_to_status = {
