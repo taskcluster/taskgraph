@@ -3,6 +3,15 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+14.x -> 15.x
+------------
+
+* `get_primary_dependency` now requires a `primary-dependency-label` to be set
+  on the task it is passed instead of `primary-kind-dependency`. Update any tasks
+  you were calling this for to set this attribute. (If your only usage of this
+  is indirectly through `from_deps`, no change is needed: `from-deps` generated
+  tasks will set this for you.)
+
 13.x -> 14.x
 ------------
 
