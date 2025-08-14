@@ -267,12 +267,6 @@ class TaskGraphGenerator:
         futures = set()
         edges = set(kind_graph.edges)
 
-        def add_new_tasks(future):
-            for task in future.result():
-                if task.label in all_tasks:
-                    raise Exception("duplicate tasks with label " + task.label)
-                all_tasks[task.label] = task
-
         with ProcessPoolExecutor() as executor:
 
             def submit_ready_kinds():
@@ -303,7 +297,6 @@ class TaskGraphGenerator:
                         },
                         self._write_artifacts,
                     )
-                    future.add_done_callback(add_new_tasks)
                     futures.add(future)
                     futures_to_kind[future] = name
 
@@ -316,6 +309,11 @@ class TaskGraphGenerator:
                         raise exc
                     kind = futures_to_kind.pop(future)
                     futures.remove(future)
+
+                    for task in future.result():
+                        if task.label in all_tasks:
+                            raise Exception("duplicate tasks with label " + task.label)
+                        all_tasks[task.label] = task
 
                     # Update state for next batch of futures.
                     del kinds[kind]
