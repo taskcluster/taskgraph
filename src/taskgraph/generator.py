@@ -5,11 +5,6 @@
 import copy
 import logging
 import os
-from concurrent.futures import (
-    FIRST_COMPLETED,
-    ProcessPoolExecutor,
-    wait,
-)
 from dataclasses import dataclass
 from typing import Callable, Dict, Optional, Union
 
@@ -49,20 +44,16 @@ class Kind:
             loader = "taskgraph.loader.default:loader"
         return find_object(loader)
 
-    def load_tasks(self, parameters, kind_dependencies_tasks, write_artifacts):
-        logger.debug(f"Loading tasks for kind {self.name}")
-
-        parameters = Parameters(**parameters)
+    def load_tasks(self, parameters, loaded_tasks, write_artifacts):
         loader = self._get_loader()
         config = copy.deepcopy(self.config)
 
-        inputs = loader(
-            self.name,
-            self.path,
-            config,
-            parameters,
-            list(kind_dependencies_tasks.values()),
-        )
+        kind_dependencies = config.get("kind-dependencies", [])
+        kind_dependencies_tasks = {
+            task.label: task for task in loaded_tasks if task.kind in kind_dependencies
+        }
+
+        inputs = loader(self.name, self.path, config, parameters, loaded_tasks)
 
         transforms = TransformSequence()
         for xform_path in config["transforms"]:
@@ -96,7 +87,6 @@ class Kind:
             )
             for task_dict in transforms(trans_config, inputs)
         ]
-        logger.info(f"Generated {len(tasks)} tasks for kind {self.name}")
         return tasks
 
     @classmethod
@@ -261,69 +251,6 @@ class TaskGraphGenerator:
                 except KindNotFound:
                     continue
 
-    def _load_tasks(self, kinds, kind_graph, parameters):
-        all_tasks = {}
-        futures_to_kind = {}
-        futures = set()
-        edges = set(kind_graph.edges)
-
-        with ProcessPoolExecutor() as executor:
-
-            def submit_ready_kinds():
-                """Create the next batch of tasks for kinds without dependencies."""
-                nonlocal kinds, edges, futures
-                loaded_tasks = all_tasks.copy()
-                kinds_with_deps = {edge[0] for edge in edges}
-                ready_kinds = (
-                    set(kinds) - kinds_with_deps - set(futures_to_kind.values())
-                )
-                for name in ready_kinds:
-                    kind = kinds.get(name)
-                    if not kind:
-                        message = (
-                            f'Could not find the kind "{name}"\nAvailable kinds:\n'
-                        )
-                        for k in sorted(kinds):
-                            message += f' - "{k}"\n'
-                        raise Exception(message)
-
-                    future = executor.submit(
-                        kind.load_tasks,
-                        dict(parameters),
-                        {
-                            k: t
-                            for k, t in loaded_tasks.items()
-                            if t.kind in kind.config.get("kind-dependencies", [])
-                        },
-                        self._write_artifacts,
-                    )
-                    futures.add(future)
-                    futures_to_kind[future] = name
-
-            submit_ready_kinds()
-            while futures:
-                done, _ = wait(futures, return_when=FIRST_COMPLETED)
-                for future in done:
-                    if exc := future.exception():
-                        executor.shutdown(wait=False, cancel_futures=True)
-                        raise exc
-                    kind = futures_to_kind.pop(future)
-                    futures.remove(future)
-
-                    for task in future.result():
-                        if task.label in all_tasks:
-                            raise Exception("duplicate tasks with label " + task.label)
-                        all_tasks[task.label] = task
-
-                    # Update state for next batch of futures.
-                    del kinds[kind]
-                    edges = {e for e in edges if e[1] != kind}
-
-                # Submit any newly unblocked kinds
-                submit_ready_kinds()
-
-        return all_tasks
-
     def _run(self):
         logger.info("Loading graph configuration.")
         graph_config = load_graph_config(self.root_dir)
@@ -378,8 +305,31 @@ class TaskGraphGenerator:
             )
 
         logger.info("Generating full task set")
-        all_tasks = self._load_tasks(kinds, kind_graph, parameters)
+        all_tasks = {}
+        for kind_name in kind_graph.visit_postorder():
+            logger.debug(f"Loading tasks for kind {kind_name}")
 
+            kind = kinds.get(kind_name)
+            if not kind:
+                message = f'Could not find the kind "{kind_name}"\nAvailable kinds:\n'
+                for k in sorted(kinds):
+                    message += f' - "{k}"\n'
+                raise Exception(message)
+
+            try:
+                new_tasks = kind.load_tasks(
+                    parameters,
+                    list(all_tasks.values()),
+                    self._write_artifacts,
+                )
+            except Exception:
+                logger.exception(f"Error loading tasks for kind {kind_name}:")
+                raise
+            for task in new_tasks:
+                if task.label in all_tasks:
+                    raise Exception("duplicate tasks with label " + task.label)
+                all_tasks[task.label] = task
+            logger.info(f"Generated {len(new_tasks)} tasks for kind {kind_name}")
         full_task_set = TaskGraph(all_tasks, Graph(frozenset(all_tasks), frozenset()))
         yield self.verify("full_task_set", full_task_set, graph_config, parameters)
 
