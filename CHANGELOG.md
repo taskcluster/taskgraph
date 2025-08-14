@@ -1,5 +1,11 @@
 # Change Log
 
+## [15.0.1] - 2025-08-14
+
+## Reverted
+
+- multiprocess kind processing (#746)
+
 ## [15.0.0] - 2025-08-13
 
 ## Added
