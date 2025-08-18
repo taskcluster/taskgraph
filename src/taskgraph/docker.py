@@ -270,12 +270,12 @@ def load_task(task_id, remove=True, user=None):
     task_def = get_task_definition(task_id)
 
     if (
-        impl := task_def.get("tags", {}).get("worker-implementation")  # type: ignore
+        impl := task_def.get("tags", {}).get("worker-implementation")
     ) != "docker-worker":
         print(f"Tasks with worker-implementation '{impl}' are not supported!")
         return 1
 
-    command = task_def["payload"].get("command")  # type: ignore
+    command = task_def["payload"].get("command")
     if not command or not command[0].endswith("run-task"):
         print("Only tasks using `run-task` are supported!")
         return 1
@@ -308,18 +308,18 @@ def load_task(task_id, remove=True, user=None):
         else:
             task_cwd = "$TASK_WORKDIR"
 
-    image_task_id = task_def["payload"]["image"]["taskId"]  # type: ignore
+    image_task_id = task_def["payload"]["image"]["taskId"]
     image_tag = load_image_by_task_id(image_task_id)
 
     # Set some env vars the worker would normally set.
     env = {
         "RUN_ID": "0",
-        "TASK_GROUP_ID": task_def.get("taskGroupId", ""),  # type: ignore
+        "TASK_GROUP_ID": task_def.get("taskGroupId", ""),
         "TASK_ID": task_id,
         "TASKCLUSTER_ROOT_URL": get_root_url(False),
     }
     # Add the task's environment variables.
-    env.update(task_def["payload"].get("env", {}))  # type: ignore
+    env.update(task_def["payload"].get("env", {}))
 
     envfile = None
     initfile = None
