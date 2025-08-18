@@ -235,7 +235,6 @@ def list_artifacts(task_id, use_proxy=False):
     task = queue.task(task_id)
     if task:
         return task["artifacts"]
-    raise KeyError(f"task {task_id} not found")
 
 
 def get_artifact_prefix(task):
@@ -261,9 +260,7 @@ def get_index_url(index_path, use_proxy=False, multiple=False):
 def find_task_id(index_path, use_proxy=False):
     index = get_taskcluster_index()
     task = index.findTask(index_path)
-    if not task:
-        raise KeyError(f"index path {index_path} not found")
-    else:
+    if task:
         return task["taskId"]
 
 
@@ -461,7 +458,7 @@ def get_current_scopes():
     proxy enabled, where it returns the actual scopes accorded to the task."""
     auth = get_taskcluster_auth()
     resp = auth.currentScopes()
-    return resp.get("scopes", []) if resp else []
+    return resp and resp.get("scopes") or []
 
 
 def get_purge_cache_url(provisioner_id, worker_type, use_proxy=False):
@@ -522,8 +519,6 @@ def _get_deps(task_ids, use_proxy):
     upstream_tasks = {}
     for task_id in task_ids:
         task_def = get_task_definition(task_id, use_proxy)
-        if not task_def:
-            continue
 
         if isinstance(task_def, dict):
             metadata = task_def.get("metadata", {})

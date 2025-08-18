@@ -65,6 +65,8 @@ def retrigger_decision_action(parameters, graph_config, input, task_group_id, ta
     # make all of the timestamps relative; they will then be turned back into
     # absolute timestamps relative to the current time.
     task = taskcluster.get_task_definition(task_id)
+    if not task:
+        raise KeyError(f"Task {task_id} not found")
     task = relativize_datestamps(task)
     create_task_from_def(
         slugid(), task, parameters["level"], graph_config["trust-domain"]
@@ -147,7 +149,9 @@ def retrigger_action(parameters, graph_config, input, task_group_id, task_id):
     )
 
     task = taskcluster.get_task_definition(task_id)
-    label = task["metadata"]["name"]
+    if not task:
+        raise KeyError(f"Task {task_id} not found")
+    label = task["metadata"]["name"]  # type: ignore
 
     with_downstream = " "
     to_run = [label]
@@ -198,11 +202,13 @@ def retrigger_action(parameters, graph_config, input, task_group_id, task_id):
 )
 def rerun_action(parameters, graph_config, input, task_group_id, task_id):
     task = taskcluster.get_task_definition(task_id)
+    if not task:
+        raise KeyError(f"Task {task_id} not found")
     parameters = dict(parameters)
     decision_task_id, full_task_graph, label_to_taskid = fetch_graph_and_labels(
         parameters, graph_config, task_group_id=task_group_id
     )
-    label = task["metadata"]["name"]
+    label = task["metadata"]["name"]  # type: ignore
     if label_to_taskid and task_id not in label_to_taskid.values():
         logger.error(
             f"Refusing to rerun {label}: taskId {task_id} not in decision task {decision_task_id} label_to_taskid!"
