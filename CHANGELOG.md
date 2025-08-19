@@ -1,5 +1,32 @@
 # Change Log
 
+## [15.0.1] - 2025-08-14
+
+## Reverted
+
+- multiprocess kind processing (#746)
+
+## [15.0.0] - 2025-08-13
+
+## Added
+
+- Process kinds in parallel with a pool of processes (#738)
+- use `uv` to check python version, when available(#733)
+
+## Changed
+
+- BREAKING CHANGE: Use `primary-dependency-label` attribute to find primary dependency of tasks (#736)
+
+## Fixed
+
+- Fallback to guessing repo root in config.py (#742)
+
+## [14.6.1] - 2025-08-11
+
+### Fixed
+
+- Reverted accidental schema changes to run and toolchain transforms
+
 ## [14.6.0] - 2025-08-05
 
 ### Added
