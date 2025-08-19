@@ -400,7 +400,9 @@ def get_current_scopes():
     proxy enabled, where it returns the actual scopes accorded to the task."""
     auth = get_taskcluster_client("auth")
     resp = auth.currentScopes()
-    return resp.get("scopes") or [] if resp else []  # type: ignore
+    if resp:
+        return resp.get("scopes")  # type: ignore
+    return []
 
 
 def get_purge_cache_url(provisioner_id, worker_type, use_proxy=False):
