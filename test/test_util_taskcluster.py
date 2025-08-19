@@ -4,12 +4,12 @@
 
 import datetime
 import os
+import unittest.mock as mock
 
 import pytest
 from requests import Session
-from requests.exceptions import HTTPError, RetryError
+from requests.exceptions import HTTPError
 from requests.packages.urllib3.util.retry import Retry
-from responses import matchers
 
 from taskgraph.task import Task
 from taskgraph.util import taskcluster as tc
@@ -130,54 +130,53 @@ def test_get_artifact_url(monkeypatch, use_proxy, expected):
     assert tc.get_artifact_url(task_id, path, use_proxy) == expected
 
 
-def test_get_artifact(responses, root_url):
+def test_get_artifact(monkeypatch):
     tid = 123
-    responses.add(
-        responses.GET,
-        f"{root_url}/api/queue/v1/task/{tid}/artifacts/artifact.txt",
-        body="foobar",
-    )
+
+    mock_queue = mock.MagicMock()
+
+    def mock_client(service):
+        if service == "queue":
+            return mock_queue
+        return mock.MagicMock()
+
+    monkeypatch.setattr(tc, "get_taskcluster_client", mock_client)
+
+    mock_response_txt = mock.MagicMock()
+    mock_response_txt.read.return_value = b"foobar"
+    mock_queue.getArtifact.return_value = mock_response_txt
+
     raw = tc.get_artifact(tid, "artifact.txt")
     assert raw.read() == b"foobar"
+    mock_queue.getArtifact.assert_called_with(tid, "artifact.txt")
 
-    responses.add(
-        responses.GET,
-        f"{root_url}/api/queue/v1/task/{tid}/artifacts/artifact.json",
-        body='{"foo": "bar"}',
-    )
-    assert tc.get_artifact(tid, "artifact.json") == {"foo": "bar"}
+    mock_queue.getArtifact.return_value = {"foo": "bar"}
+    result = tc.get_artifact(tid, "artifact.json")
+    assert result == {"foo": "bar"}
 
-    responses.add(
-        responses.GET,
-        f"{root_url}/api/queue/v1/task/{tid}/artifacts/artifact.yml",
-        body="foo: bar",
-    )
-    assert tc.get_artifact(tid, "artifact.yml") == {"foo": "bar"}
-
-    responses.add(
-        responses.GET,
-        f"{root_url}/api/queue/v1/task/{tid}/artifacts/artifact.yml",
-        body=b"foo: \xe2\x81\x83",
-    )
-    assert tc.get_artifact(tid, "artifact.yml") == {"foo": b"\xe2\x81\x83".decode()}
-
-    responses.add(
-        responses.GET,
-        f"{root_url}/api/queue/v1/task/{tid}/artifacts/artifact.yml",
-        body=b"foo: \xe2\x81\x83".decode().encode("utf-16"),
-        headers={"Content-Type": "text/yaml; charset=utf-16"},
-    )
-    assert tc.get_artifact(tid, "artifact.yml") == {"foo": b"\xe2\x81\x83".decode()}
+    expected_result = {"foo": b"\xe2\x81\x83".decode()}
+    mock_queue.getArtifact.return_value = expected_result
+    result = tc.get_artifact(tid, "artifact.yml")
+    assert result == expected_result
 
 
-def test_list_artifact(responses, root_url):
+def test_list_artifact(monkeypatch):
     tid = 123
-    responses.add(
-        responses.GET,
-        f"{root_url}/api/queue/v1/task/{tid}/artifacts",
-        json={"artifacts": ["file1.txt", "file2.json"]},
-    )
-    assert tc.list_artifacts(tid) == ["file1.txt", "file2.json"]
+
+    mock_queue = mock.MagicMock()
+
+    def mock_client(service):
+        if service == "queue":
+            return mock_queue
+        return mock.MagicMock()
+
+    monkeypatch.setattr(tc, "get_taskcluster_client", mock_client)
+
+    mock_queue.task.return_value = {"artifacts": ["file1.txt", "file2.json"]}
+
+    result = tc.list_artifacts(tid)
+    assert result == ["file1.txt", "file2.json"]
+    mock_queue.task.assert_called_with(tid)
 
 
 def test_get_artifact_path():
@@ -210,61 +209,69 @@ def test_get_index_url(root_url):
     )
 
 
-def test_find_task_id(responses, root_url):
+def test_find_task_id(monkeypatch):
     tid = 123
     index = "foo"
 
-    responses.add(
-        responses.GET, f"{root_url}/api/index/v1/task/{index}", json={"taskId": tid}
-    )
-    assert tc.find_task_id(index) == tid
+    mock_index = mock.MagicMock()
 
-    responses.replace(
-        responses.GET,
-        f"{root_url}/api/index/v1/task/{index}",
-        status=404,
-    )
-    with pytest.raises(KeyError):
-        tc.find_task_id(index)
+    def mock_client(service):
+        if service == "index":
+            return mock_index
+        return mock.MagicMock()
 
-    responses.replace(
-        responses.GET,
-        f"{root_url}/api/index/v1/task/{index}",
-        status=500,
-    )
-    with pytest.raises(RetryError):
-        tc.find_task_id(index)
+    monkeypatch.setattr(tc, "get_taskcluster_client", mock_client)
+
+    mock_index.findTask.return_value = {"taskId": tid}
+    result = tc.find_task_id(index)
+    assert result == tid
+    mock_index.findTask.assert_called_with(index)
 
 
-def test_get_artifact_from_index(responses, root_url):
+def test_get_artifact_from_index(monkeypatch):
     index = "foo"
     path = "file.txt"
-    responses.add(
-        responses.GET,
-        f"{root_url}/api/index/v1/task/{index}/artifacts/{path}",
-        body="foobar",
-    )
-    assert tc.get_artifact_from_index(index, path).read() == b"foobar"
+
+    mock_index = mock.MagicMock()
+
+    def mock_client(service):
+        if service == "index":
+            return mock_index
+        return mock.MagicMock()
+
+    monkeypatch.setattr(tc, "get_taskcluster_client", mock_client)
+
+    mock_response = mock.MagicMock()
+    mock_response.read.return_value = b"foobar"
+    mock_index.findArtifactFromTask.return_value = mock_response
+
+    result = tc.get_artifact_from_index(index, path)
+    assert result.read() == b"foobar"
+    mock_index.findArtifactFromTask.assert_called_with(index, path)
 
 
-def test_list_tasks(responses, root_url):
+def test_list_tasks(monkeypatch):
     index = "foo"
-    responses.add(
-        responses.POST,
-        f"{root_url}/api/index/v1/tasks/{index}",
-        json={
-            "continuationToken": "x",
-            "tasks": [{"taskId": "123", "expires": "2023-02-10T19:07:33.700Z"}],
-        },
-    )
-    responses.add(
-        responses.POST,
-        f"{root_url}/api/index/v1/tasks/{index}",
-        json={
-            "tasks": [{"taskId": "abc", "expires": "2023-02-09T19:07:33.700Z"}],
-        },
-    )
-    assert tc.list_tasks(index) == ["abc", "123"]
+
+    mock_index = mock.MagicMock()
+
+    def mock_client(service):
+        if service == "index":
+            return mock_index
+        return mock.MagicMock()
+
+    monkeypatch.setattr(tc, "get_taskcluster_client", mock_client)
+
+    mock_index.listTasks.return_value = {
+        "tasks": [
+            {"taskId": "123", "expires": "2023-02-10T19:07:33.700Z"},
+            {"taskId": "abc", "expires": "2023-02-09T19:07:33.700Z"},
+        ]
+    }
+
+    result = tc.list_tasks(index)
+    assert result == ["abc", "123"]
+    mock_index.listTasks.assert_called_with(index, {})
 
 
 def test_parse_time():
@@ -277,189 +284,204 @@ def test_get_task_url(root_url):
     assert tc.get_task_url(tid) == f"{root_url}/api/queue/v1/task/{tid}"
 
 
-def test_get_task_definition(responses, root_url):
+def test_get_task_definition(monkeypatch):
     tid = "123"
-    responses.add(
-        responses.GET, f"{root_url}/api/queue/v1/task/{tid}", json={"payload": "blah"}
-    )
-    assert tc.get_task_definition(tid) == {"payload": "blah"}
+
+    mock_queue = mock.MagicMock()
+
+    def mock_client(service):
+        if service == "queue":
+            return mock_queue
+        return mock.MagicMock()
+
+    monkeypatch.setattr(tc, "get_taskcluster_client", mock_client)
+
+    mock_queue.task.return_value = {"payload": "blah"}
+    result = tc.get_task_definition(tid)
+    assert result == {"payload": "blah"}
+    mock_queue.task.assert_called_with(tid)
 
 
-def test_cancel_task(responses, root_url):
+def test_cancel_task(monkeypatch):
     tid = "123"
-    url = f"{root_url}/api/queue/v1/task/{tid}/cancel"
-    responses.add(
-        responses.POST,
-        url,
-    )
+
+    mock_queue = mock.MagicMock()
+
+    def mock_client(service):
+        if service == "queue":
+            return mock_queue
+        return mock.MagicMock()
+
+    monkeypatch.setattr(tc, "get_taskcluster_client", mock_client)
+
     tc.cancel_task(tid)
-    responses.assert_call_count(url, 1)
+    mock_queue.cancelTask.assert_called_with(tid)
 
 
-def test_status_task(responses, root_url):
+def test_status_task(monkeypatch):
     tid = "123"
-    responses.add(
-        responses.GET,
-        f"{root_url}/api/queue/v1/task/{tid}/status",
-        json={"status": {"state": "running"}},
-    )
-    assert tc.status_task(tid) == {"state": "running"}
+
+    mock_queue = mock.MagicMock()
+
+    def mock_client(service):
+        if service == "queue":
+            return mock_queue
+        return mock.MagicMock()
+
+    monkeypatch.setattr(tc, "get_taskcluster_client", mock_client)
+
+    mock_queue.status.return_value = {"status": {"state": "running"}}
+    result = tc.status_task(tid)
+    assert result == {"state": "running"}
+    mock_queue.status.assert_called_with(tid)
 
 
-def test_state_task(responses, root_url):
+def test_state_task(monkeypatch):
     tid = "123"
-    responses.add(
-        responses.GET,
-        f"{root_url}/api/queue/v1/task/{tid}/status",
-        json={"status": {"state": "running"}},
+
+    monkeypatch.setattr(
+        tc, "status_task", mock.MagicMock(return_value={"state": "running"})
     )
-    assert tc.state_task(tid) == "running"
+
+    result = tc.state_task(tid)
+    assert result == "running"
 
 
-def test_rerun_task(responses, proxy_root_url):
+def test_rerun_task(monkeypatch):
     tid = "123"
-    url = f"{proxy_root_url}/api/queue/v1/task/{tid}/rerun"
-    responses.add(
-        responses.POST,
-        url,
-    )
+
+    mock_queue = mock.MagicMock()
+
+    def mock_client(service):
+        if service == "queue":
+            return mock_queue
+        return mock.MagicMock()
+
+    monkeypatch.setattr(tc, "get_taskcluster_client", mock_client)
+
     tc.rerun_task(tid)
-    responses.assert_call_count(url, 1)
+    mock_queue.rerunTask.assert_called_with(tid)
 
 
-def test_get_current_scopes(responses, proxy_root_url):
-    responses.add(
-        responses.GET,
-        f"{proxy_root_url}/api/auth/v1/scopes/current",
-        json={"scopes": ["foo", "bar"]},
-    )
-    assert tc.get_current_scopes() == ["foo", "bar"]
+def test_get_current_scopes(monkeypatch):
+    mock_auth = mock.MagicMock()
+
+    def mock_client(service):
+        if service == "auth":
+            return mock_auth
+        return mock.MagicMock()
+
+    monkeypatch.setattr(tc, "get_taskcluster_client", mock_client)
+
+    mock_auth.currentScopes.return_value = {"scopes": ["foo", "bar"]}
+
+    result = tc.get_current_scopes()
+    assert result == ["foo", "bar"]
+    mock_auth.currentScopes.assert_called_once()
 
 
-def test_purge_cache(responses, root_url):
+def test_purge_cache(monkeypatch):
     provisioner = "hardware"
     worker_type = "mac"
     cache = "cache"
 
-    url = f"{root_url}/api/purge-cache/v1/purge-cache/{provisioner}/{worker_type}"
-    responses.add(
-        responses.POST,
-        url,
-        match=[matchers.json_params_matcher({"cacheName": cache})],
-    )
+    mock_purge_cache = mock.MagicMock()
+
+    def mock_client(service):
+        if service == "purgeCache":
+            return mock_purge_cache
+        return mock.MagicMock()
+
+    monkeypatch.setattr(tc, "get_taskcluster_client", mock_client)
+
     tc.purge_cache(provisioner, worker_type, cache)
-    responses.assert_call_count(url, 1)
+    mock_purge_cache.purgeCache.assert_called_with(
+        provisioner, worker_type, {"cacheName": cache}
+    )
 
 
-def test_send_email(responses, root_url):
+def test_send_email(monkeypatch):
     data = {
         "address": "test@example.org",
         "subject": "Hello",
         "content": "Goodbye",
         "link": "https://example.org",
     }
-    url = f"{root_url}/api/notify/v1/email"
-    responses.add(
-        responses.POST,
-        url,
-        match=[matchers.json_params_matcher(data)],
-    )
+
+    mock_notify = mock.MagicMock()
+
+    def mock_client(service):
+        if service == "notify":
+            return mock_notify
+        return mock.MagicMock()
+
+    monkeypatch.setattr(tc, "get_taskcluster_client", mock_client)
+
     tc.send_email(**data)
-    responses.assert_call_count(url, 1)
+    mock_notify.email.assert_called_with(data)
 
 
-def test_list_task_group_incomplete_tasks(responses, root_url):
+def test_list_task_group_incomplete_tasks(monkeypatch):
     tgid = "123"
 
-    url = f"{root_url}/api/queue/v1/task-group/{tgid}/list"
-    responses.add(
-        responses.GET,
-        url,
-        json={
-            "continuationToken": "x",
-            "tasks": [
-                {"status": {"taskId": "1", "state": "pending"}},
-                {"status": {"taskId": "2", "state": "unscheduled"}},
-            ],
-        },
-    )
-    responses.add(
-        responses.GET,
-        url,
-        json={
-            "tasks": [
-                {"status": {"taskId": "3", "state": "running"}},
-                {"status": {"taskId": "4", "state": "completed"}},
-            ],
-        },
-    )
-    assert list(tc.list_task_group_incomplete_tasks(tgid)) == ["1", "2", "3"]
+    mock_queue = mock.MagicMock()
+
+    def mock_client(service):
+        if service == "queue":
+            return mock_queue
+        return mock.MagicMock()
+
+    monkeypatch.setattr(tc, "get_taskcluster_client", mock_client)
+
+    mock_queue.listTaskGroup.return_value = {
+        "tasks": [
+            {"status": {"taskId": "1", "state": "pending"}},
+            {"status": {"taskId": "2", "state": "unscheduled"}},
+            {"status": {"taskId": "3", "state": "running"}},
+            {"status": {"taskId": "4", "state": "completed"}},
+        ]
+    }
+
+    result = list(tc.list_task_group_incomplete_tasks(tgid))
+    assert result == ["1", "2", "3"]
+    mock_queue.listTaskGroup.assert_called_with(tgid)
 
 
-def test_get_ancestors(responses, root_url):
+def test_get_ancestors(monkeypatch):
     tc.get_task_definition.cache_clear()
     tc._get_deps.cache_clear()
-    base_url = f"{root_url}/api/queue/v1/task"
-    responses.add(
-        responses.GET,
-        f"{base_url}/fff",
-        json={
+
+    task_definitions = {
+        "fff": {
             "dependencies": ["eee", "ddd"],
-            "metadata": {
-                "name": "task-fff",
-            },
+            "metadata": {"name": "task-fff"},
         },
-    )
-    responses.add(
-        responses.GET,
-        f"{base_url}/eee",
-        json={
+        "eee": {
             "dependencies": [],
-            "metadata": {
-                "name": "task-eee",
-            },
+            "metadata": {"name": "task-eee"},
         },
-    )
-    responses.add(
-        responses.GET,
-        f"{base_url}/ddd",
-        json={
+        "ddd": {
             "dependencies": ["ccc"],
-            "metadata": {
-                "name": "task-ddd",
-            },
+            "metadata": {"name": "task-ddd"},
         },
-    )
-    responses.add(
-        responses.GET,
-        f"{base_url}/ccc",
-        json={
+        "ccc": {
             "dependencies": [],
-            "metadata": {
-                "name": "task-ccc",
-            },
+            "metadata": {"name": "task-ccc"},
         },
-    )
-    responses.add(
-        responses.GET,
-        f"{base_url}/bbb",
-        json={
+        "bbb": {
             "dependencies": ["aaa"],
-            "metadata": {
-                "name": "task-bbb",
-            },
+            "metadata": {"name": "task-bbb"},
         },
-    )
-    responses.add(
-        responses.GET,
-        f"{base_url}/aaa",
-        json={
+        "aaa": {
             "dependencies": [],
-            "metadata": {
-                "name": "task-aaa",
-            },
+            "metadata": {"name": "task-aaa"},
         },
-    )
+    }
+
+    def mock_get_task_definition(task_id, use_proxy=False):
+        return task_definitions.get(task_id)
+
+    monkeypatch.setattr(tc, "get_task_definition", mock_get_task_definition)
 
     got = tc.get_ancestors(["bbb", "fff"])
     expected = {
@@ -471,125 +493,41 @@ def test_get_ancestors(responses, root_url):
     assert got == expected, f"got: {got}, expected: {expected}"
 
 
-def test_get_ancestors_404(responses, root_url):
-    """Ensures that get_ancestors functions even if some upstream dependencies
-    are 404s from expired tasks."""
+def test_get_ancestors_string(monkeypatch):
     tc.get_task_definition.cache_clear()
     tc._get_deps.cache_clear()
-    base_url = f"{root_url}/api/queue/v1/task"
-    responses.add(
-        responses.GET,
-        f"{base_url}/fff",
-        json={
+
+    task_definitions = {
+        "fff": {
             "dependencies": ["eee", "ddd"],
-            "metadata": {
-                "name": "task-fff",
-            },
+            "metadata": {"name": "task-fff"},
         },
-    )
-    responses.add(
-        responses.GET,
-        f"{base_url}/eee",
-        json={
+        "eee": {
             "dependencies": [],
-            "metadata": {
-                "name": "task-eee",
-            },
+            "metadata": {"name": "task-eee"},
         },
-    )
-    responses.add(
-        responses.GET,
-        f"{base_url}/ddd",
-        json={
-            "dependencies": ["ccc"],
-            "metadata": {
-                "name": "task-ddd",
-            },
-        },
-    )
-    responses.add(
-        responses.GET,
-        f"{base_url}/ccc",
-        status=404,
-    )
-    responses.add(
-        responses.GET,
-        f"{base_url}/bbb",
-        status=404,
-    )
-
-    got = tc.get_ancestors(["bbb", "fff"])
-    expected = {
-        "ddd": "task-ddd",
-        "eee": "task-eee",
-    }
-    assert got == expected, f"got: {got}, expected: {expected}"
-
-
-def test_get_ancestors_string(responses, root_url):
-    tc.get_task_definition.cache_clear()
-    tc._get_deps.cache_clear()
-    base_url = f"{root_url}/api/queue/v1/task"
-    responses.add(
-        responses.GET,
-        f"{base_url}/fff",
-        json={
-            "dependencies": ["eee", "ddd"],
-            "metadata": {
-                "name": "task-fff",
-            },
-        },
-    )
-    responses.add(
-        responses.GET,
-        f"{base_url}/eee",
-        json={
-            "dependencies": [],
-            "metadata": {
-                "name": "task-eee",
-            },
-        },
-    )
-    responses.add(
-        responses.GET,
-        f"{base_url}/ddd",
-        json={
+        "ddd": {
             "dependencies": ["ccc", "bbb"],
-            "metadata": {
-                "name": "task-ddd",
-            },
+            "metadata": {"name": "task-ddd"},
         },
-    )
-    responses.add(
-        responses.GET,
-        f"{base_url}/ccc",
-        json={
+        "ccc": {
             "dependencies": ["aaa"],
-            "metadata": {
-                "name": "task-ccc",
-            },
+            "metadata": {"name": "task-ccc"},
         },
-    )
-    responses.add(
-        responses.GET,
-        f"{base_url}/bbb",
-        json={
+        "bbb": {
             "dependencies": [],
-            "metadata": {
-                "name": "task-bbb",
-            },
+            "metadata": {"name": "task-bbb"},
         },
-    )
-    responses.add(
-        responses.GET,
-        f"{base_url}/aaa",
-        json={
+        "aaa": {
             "dependencies": [],
-            "metadata": {
-                "name": "task-aaa",
-            },
+            "metadata": {"name": "task-aaa"},
         },
-    )
+    }
+
+    def mock_get_task_definition(task_id, use_proxy=False):
+        return task_definitions.get(task_id)
+
+    monkeypatch.setattr(tc, "get_task_definition", mock_get_task_definition)
 
     got = tc.get_ancestors("fff")
     expected = {

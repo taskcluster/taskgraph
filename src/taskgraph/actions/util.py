@@ -56,12 +56,10 @@ def fetch_graph_and_labels(parameters, graph_config, task_group_id=None):
         # for old ones
         def fetch_action(task_id):
             logger.info(f"fetching label-to-taskid.json for action task {task_id}")
-            try:
-                run_label_to_id = get_artifact(task_id, "public/label-to-taskid.json")
+            run_label_to_id = get_artifact(task_id, "public/label-to-taskid.json")
+            if label_to_taskid and run_label_to_id:
                 label_to_taskid.update(run_label_to_id)
-            except HTTPError as e:
-                if e.response.status_code != 404:
-                    raise
+            else:
                 logger.debug(f"No label-to-taskid.json found for {task_id}: {e}")
 
         # for backwards compatibility, look up actions via pushlog-id
@@ -84,7 +82,7 @@ def fetch_graph_and_labels(parameters, graph_config, task_group_id=None):
             logger.info(f"fetching label-to-taskid.json for cron task {task_id}")
             try:
                 run_label_to_id = get_artifact(task_id, "public/label-to-taskid.json")
-                label_to_taskid.update(run_label_to_id)
+                label_to_taskid.update(run_label_to_id)  # type: ignore
             except HTTPError as e:
                 if e.response.status_code != 404:
                     raise
