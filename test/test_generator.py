@@ -184,7 +184,10 @@ def test_load_tasks_for_kind(monkeypatch):
         "_example-kind",
         "/root",
     )
-    assert "t-1" in tasks and tasks["t-1"].label == "_example-kind-t-1"
+    assert (
+        "_example-kind-t-1" in tasks
+        and tasks["_example-kind-t-1"].label == "_example-kind-t-1"
+    )
 
 
 @pytest.mark.parametrize(
