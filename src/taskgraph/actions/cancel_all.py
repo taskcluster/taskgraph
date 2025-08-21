@@ -35,7 +35,7 @@ def cancel_all_action(parameters, graph_config, input, task_group_id, task_id):
     def do_cancel_task(task_id):
         logger.info(f"Cancelling task {task_id}")
         try:
-            cancel_task(task_id, use_proxy=True)
+            cancel_task(task_id)
         except requests.HTTPError as e:
             if e.response.status_code == 409:
                 # A 409 response indicates that this task is past its deadline.  It

@@ -7,9 +7,6 @@ import os
 import unittest.mock as mock
 
 import pytest
-from requests import Session
-from requests.exceptions import HTTPError
-from requests.packages.urllib3.util.retry import Retry
 
 from taskgraph.task import Task
 from taskgraph.util import taskcluster as tc
@@ -73,37 +70,6 @@ def test_get_root_url(monkeypatch):
     monkeypatch.delenv("TASKCLUSTER_ROOT_URL")
     with pytest.raises(RuntimeError):
         tc.get_root_url(False)
-
-
-def test_get_session():
-    session = tc.get_session()
-    assert isinstance(session, Session)
-    assert list(session.adapters.keys()) == ["https://", "http://"]
-
-    adapter = session.adapters["https://"]
-    assert adapter._pool_connections == tc.CONCURRENCY
-    assert adapter._pool_maxsize == tc.CONCURRENCY
-
-    retry = adapter.max_retries
-    assert isinstance(retry, Retry)
-    assert retry.total == 5
-
-
-def test_do_request(responses):
-    responses.add(responses.GET, "https://example.org", body="method:get")
-    r = tc._do_request("https://example.org")
-    assert r.text == "method:get"
-
-    responses.add(responses.POST, "https://example.org", body="method:post")
-    r = tc._do_request("https://example.org", method="post")
-    assert r.text == "method:post"
-
-    r = tc._do_request("https://example.org", data={"foo": "bar"})
-    assert r.text == "method:post"
-
-    responses.replace(responses.GET, "https://example.org", status=404)
-    with pytest.raises(HTTPError):
-        tc._do_request("https://example.org")
 
 
 @pytest.mark.parametrize(
@@ -478,7 +444,7 @@ def test_get_ancestors(monkeypatch):
         },
     }
 
-    def mock_get_task_definition(task_id, use_proxy=False):
+    def mock_get_task_definition(task_id):
         return task_definitions.get(task_id)
 
     monkeypatch.setattr(tc, "get_task_definition", mock_get_task_definition)

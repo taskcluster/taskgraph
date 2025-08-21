@@ -16,7 +16,6 @@ from requests.packages.urllib3.util.retry import Retry  # type: ignore
 
 import taskcluster
 from taskgraph.task import Task
-from taskgraph.util import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -126,39 +125,6 @@ def get_session():
     return requests_retry_session(retries=5)
 
 
-@functools.lru_cache(maxsize=None)
-def get_retry_post_session():
-    allowed_methods = set(("POST",)) | Retry.DEFAULT_ALLOWED_METHODS
-    return requests_retry_session(retries=5, allowed_methods=allowed_methods)
-
-
-def _do_request(url, method=None, session=None, **kwargs):
-    if method is None:
-        method = "post" if kwargs else "get"
-    if session is None:
-        session = get_session()
-    if method == "get":
-        kwargs["stream"] = True
-
-    response = getattr(session, method)(url, **kwargs)
-
-    if response.status_code >= 400:
-        # Consume content before raise_for_status, so that the connection can be
-        # reused.
-        response.content
-    response.raise_for_status()
-    return response
-
-
-def _handle_artifact(path, response):
-    if path.endswith(".json"):
-        return response.json()
-    if path.endswith(".yml"):
-        return yaml.load_stream(response.content)
-    response.raw.read = functools.partial(response.raw.read, decode_content=True)
-    return response.raw
-
-
 def get_artifact_url(task_id, path, use_proxy=False):
     artifact_tmpl = liburls.api(
         get_root_url(use_proxy), "queue", "v1", "task/{}/artifacts/{}"
@@ -166,7 +132,7 @@ def get_artifact_url(task_id, path, use_proxy=False):
     return artifact_tmpl.format(task_id, path)
 
 
-def get_artifact(task_id, path, use_proxy=False):
+def get_artifact(task_id, path):
     """
     Returns the artifact with the given path for the given task id.
 
@@ -180,7 +146,7 @@ def get_artifact(task_id, path, use_proxy=False):
     return response
 
 
-def list_artifacts(task_id, use_proxy=False):
+def list_artifacts(task_id):
     queue = get_taskcluster_client("queue")
     task = queue.task(task_id)
     if task:
@@ -207,18 +173,17 @@ def get_index_url(index_path, use_proxy=False, multiple=False):
     return index_tmpl.format("s" if multiple else "", index_path)
 
 
-def find_task_id(index_path, use_proxy=False):
+def find_task_id(index_path):
     index = get_taskcluster_client("index")
     task = index.findTask(index_path)
     return task["taskId"]  # type: ignore
 
 
-def find_task_id_batched(index_paths, use_proxy=False):
+def find_task_id_batched(index_paths):
     """Gets the task id of multiple tasks given their respective index.
 
     Args:
         index_paths (List[str]): A list of task indexes.
-        use_proxy (bool): Whether to use taskcluster-proxy (default: False)
 
     Returns:
         Dict[str, str]: A dictionary object mapping each valid index path
@@ -243,12 +208,12 @@ def find_task_id_batched(index_paths, use_proxy=False):
     return task_ids
 
 
-def get_artifact_from_index(index_path, artifact_path, use_proxy=False):
+def get_artifact_from_index(index_path, artifact_path):
     index = get_taskcluster_client("index")
     return index.findArtifactFromTask(index_path, artifact_path)
 
 
-def list_tasks(index_path, use_proxy=False):
+def list_tasks(index_path):
     """
     Returns a list of task_ids where each task_id is indexed under a path
     in the index. Results are sorted by expiration date from oldest to newest.
@@ -291,12 +256,12 @@ def get_task_url(task_id, use_proxy=False):
 
 
 @functools.lru_cache(maxsize=None)
-def get_task_definition(task_id, use_proxy=False):
+def get_task_definition(task_id):
     queue = get_taskcluster_client("queue")
     return queue.task(task_id)
 
 
-def cancel_task(task_id, use_proxy=False):
+def cancel_task(task_id):
     """Cancels a task given a task_id. In testing mode, just logs that it would
     have cancelled."""
     if testing:
@@ -306,14 +271,13 @@ def cancel_task(task_id, use_proxy=False):
         queue.cancelTask(task_id)
 
 
-def status_task(task_id, use_proxy=False):
+def status_task(task_id):
     """Gets the status of a task given a task_id.
 
     In testing mode, just logs that it would have retrieved status.
 
     Args:
         task_id (str): A task id.
-        use_proxy (bool): Whether to use taskcluster-proxy (default: False)
 
     Returns:
         dict: A dictionary object as defined here:
@@ -330,14 +294,13 @@ def status_task(task_id, use_proxy=False):
             return {}
 
 
-def status_task_batched(task_ids, use_proxy=False):
+def status_task_batched(task_ids):
     """Gets the status of multiple tasks given task_ids.
 
     In testing mode, just logs that it would have retrieved statuses.
 
     Args:
         task_id (List[str]): A list of task ids.
-        use_proxy (bool): Whether to use taskcluster-proxy (default: False)
 
     Returns:
         dict: A dictionary object as defined here:
@@ -364,7 +327,7 @@ def status_task_batched(task_ids, use_proxy=False):
     return statuses
 
 
-def state_task(task_id, use_proxy=False):
+def state_task(task_id):
     """Gets the state of a task given a task_id.
 
     In testing mode, just logs that it would have retrieved state. This is a subset of the
@@ -372,7 +335,6 @@ def state_task(task_id, use_proxy=False):
 
     Args:
         task_id (str): A task id.
-        use_proxy (bool): Whether to use taskcluster-proxy (default: False)
 
     Returns:
         str: The state of the task, one of
@@ -381,7 +343,7 @@ def state_task(task_id, use_proxy=False):
     if testing:
         logger.info(f"Would have gotten state for {task_id}.")
     else:
-        status = status_task(task_id, use_proxy=use_proxy).get("state") or "unknown"  # type: ignore
+        status = status_task(task_id).get("state") or "unknown"  # type: ignore
         return status
 
 
@@ -412,7 +374,7 @@ def get_purge_cache_url(provisioner_id, worker_type, use_proxy=False):
     return url_tmpl.format(provisioner_id, worker_type)
 
 
-def purge_cache(provisioner_id, worker_type, cache_name, use_proxy=False):
+def purge_cache(provisioner_id, worker_type, cache_name):
     """Requests a cache purge from the purge-caches service."""
     if testing:
         logger.info(f"Would have purged {provisioner_id}/{worker_type}/{cache_name}.")
@@ -424,7 +386,7 @@ def purge_cache(provisioner_id, worker_type, cache_name, use_proxy=False):
         )
 
 
-def send_email(address, subject, content, link, use_proxy=False):
+def send_email(address, subject, content, link):
     """Sends an email using the notify service"""
     logger.info(f"Sending email to {address}.")
     notify = get_taskcluster_client("notify")
@@ -457,10 +419,10 @@ def list_task_group_incomplete_tasks(task_group_id):
 
 
 @functools.lru_cache(maxsize=None)
-def _get_deps(task_ids, use_proxy):
+def _get_deps(task_ids):
     upstream_tasks = {}
     for task_id in task_ids:
-        task_def = get_task_definition(task_id, use_proxy)
+        task_def = get_task_definition(task_id)
         if not task_def:
             continue
 
@@ -471,19 +433,16 @@ def _get_deps(task_ids, use_proxy):
 
         dependencies = task_def.get("dependencies", [])
         if dependencies:
-            upstream_tasks.update(_get_deps(tuple(dependencies), use_proxy))
+            upstream_tasks.update(_get_deps(tuple(dependencies)))
 
     return upstream_tasks
 
 
-def get_ancestors(
-    task_ids: Union[List[str], str], use_proxy: bool = False
-) -> Dict[str, str]:
+def get_ancestors(task_ids: Union[List[str], str]) -> Dict[str, str]:
     """Gets the ancestor tasks of the given task_ids as a dictionary of taskid -> label.
 
     Args:
         task_ids (str or [str]): A single task id or a list of task ids to find the ancestors of.
-        use_proxy (bool): See get_root_url.
 
     Returns:
         dict: A dict whose keys are task ids and values are task labels.
@@ -494,7 +453,7 @@ def get_ancestors(
         task_ids = [task_ids]
 
     for task_id in task_ids:
-        task_def = get_task_definition(task_id, use_proxy)
+        task_def = get_task_definition(task_id)
         if not task_def:
             # Task has most likely expired, which means it's no longer a
             # dependency for the purposes of this function.
@@ -502,6 +461,6 @@ def get_ancestors(
 
         dependencies = task_def.get("dependencies", [])
         if dependencies:
-            upstream_tasks.update(_get_deps(tuple(dependencies), use_proxy))
+            upstream_tasks.update(_get_deps(tuple(dependencies)))
 
     return copy.deepcopy(upstream_tasks)
