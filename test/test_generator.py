@@ -7,7 +7,7 @@ import pytest
 from pytest_taskgraph import FakeKind, WithFakeKind, fake_load_graph_config
 
 from taskgraph import generator, graph
-from taskgraph.generator import Kind, load_tasks_for_kind
+from taskgraph.generator import Kind, load_tasks_for_kind, load_tasks_for_kinds
 from taskgraph.loader.default import loader as default_loader
 
 
@@ -184,7 +184,25 @@ def test_load_tasks_for_kind(monkeypatch):
         "_example-kind",
         "/root",
     )
-    assert "t-1" in tasks and tasks["t-1"].label == "_example-kind-t-1"
+    assert "docker-image-t-1" not in tasks
+    assert (
+        "_example-kind-t-1" in tasks
+        and tasks["_example-kind-t-1"].label == "_example-kind-t-1"
+    )
+
+    tasks = load_tasks_for_kinds(
+        {"_kinds": [("_example-kind", []), ("docker-image", [])]},
+        ["_example-kind", "docker-image"],
+        "/root",
+    )
+    assert (
+        "docker-image-t-1" in tasks
+        and tasks["docker-image-t-0"].label == "docker-image-t-0"
+    )
+    assert (
+        "_example-kind-t-1" in tasks
+        and tasks["_example-kind-t-1"].label == "_example-kind-t-1"
+    )
 
 
 @pytest.mark.parametrize(

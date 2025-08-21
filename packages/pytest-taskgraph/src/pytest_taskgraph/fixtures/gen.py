@@ -30,7 +30,7 @@ def fake_loader(kind, path, config, parameters, loaded_tasks):
             "attributes": {"_tasknum": str(i)},
             "task": {
                 "i": i,
-                "metadata": {"name": f"t-{i}"},
+                "metadata": {"name": f"{kind}-t-{i}"},
                 "deadline": "soon",
             },
             "dependencies": dependencies,
