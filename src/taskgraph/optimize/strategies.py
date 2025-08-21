@@ -48,14 +48,15 @@ class IndexSearch(OptimizationStrategy):
                     status = status_task(task_id)
                 # status can be `None` if we're in `testing` mode
                 # (e.g. test-action-callback)
-                if not status or status.get("state") in ("exception", "failed"):
+                if not status or status.get("state") in ("exception", "failed"):  # type: ignore
                     logger.debug(
                         f"not replacing {task.label} with {task_id} because it is in failed or exception state"
                     )
                     continue
 
                 if deadline and datetime.strptime(
-                    status["expires"], self.fmt
+                    status["expires"],  # type: ignore
+                    self.fmt,
                 ) < datetime.strptime(deadline, self.fmt):
                     logger.debug(
                         f"not replacing {task.label} with {task_id} because it expires before {deadline}"

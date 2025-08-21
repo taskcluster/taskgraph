@@ -147,7 +147,7 @@ def retrigger_action(parameters, graph_config, input, task_group_id, task_id):
     )
 
     task = taskcluster.get_task_definition(task_id)
-    label = task["metadata"]["name"]
+    label = task["metadata"]["name"]  # type: ignore
 
     with_downstream = " "
     to_run = [label]
@@ -163,7 +163,8 @@ def retrigger_action(parameters, graph_config, input, task_group_id, task_id):
         to_run = full_task_graph.graph.transitive_closure(
             set(to_run), reverse=True
         ).nodes
-        to_run = to_run & set(label_to_taskid.keys())
+        if label_to_taskid:
+            to_run = to_run & set(label_to_taskid.keys())
         with_downstream = " (with downstream) "
 
     times = input.get("times", 1)
@@ -201,8 +202,8 @@ def rerun_action(parameters, graph_config, input, task_group_id, task_id):
     decision_task_id, full_task_graph, label_to_taskid = fetch_graph_and_labels(
         parameters, graph_config, task_group_id=task_group_id
     )
-    label = task["metadata"]["name"]
-    if task_id not in label_to_taskid.values():
+    label = task["metadata"]["name"]  # type: ignore
+    if label_to_taskid and task_id not in label_to_taskid.values():
         logger.error(
             f"Refusing to rerun {label}: taskId {task_id} not in decision task {decision_task_id} label_to_taskid!"
         )
@@ -276,7 +277,8 @@ def retrigger_multiple(parameters, graph_config, input, task_group_id, task_id):
             # In practice, this shouldn't matter, as only completed tasks
             # are pulled in from other pushes and treeherder won't pass
             # those labels.
-            _rerun_task(label_to_taskid[label], label)
+            if label_to_taskid and label in label_to_taskid:
+                _rerun_task(label_to_taskid[label], label)
 
         for j in range(times):
             suffix = f"{i}-{j}"
