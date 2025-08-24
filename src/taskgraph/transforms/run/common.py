@@ -113,6 +113,11 @@ def support_vcs_checkout(config, task, taskdesc, repo_configs, sparse=False):
         }
     )
     for repo_config in repo_configs.values():
+        if isinstance(repo_config.submodules, list):
+            repo_submods = ":".join(repo_config.submodules)
+        else:
+            repo_submods = "auto" if repo_config.submodules else None
+
         env.update(
             {
                 f"{repo_config.prefix.upper()}_{key}": value
@@ -123,6 +128,7 @@ def support_vcs_checkout(config, task, taskdesc, repo_configs, sparse=False):
                     "HEAD_REF": repo_config.head_ref,
                     "REPOSITORY_TYPE": repo_config.type,
                     "SSH_SECRET_NAME": repo_config.ssh_secret_name,
+                    "SUBMODULES": repo_submods,
                 }.items()
                 if value is not None
             }
