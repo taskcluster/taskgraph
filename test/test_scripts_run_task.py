@@ -1,5 +1,6 @@
 import io
 import os
+import site
 import stat
 import subprocess
 import sys
@@ -12,6 +13,7 @@ from unittest.mock import Mock
 import pytest
 
 import taskgraph
+from taskgraph.util.caches import CACHES
 
 
 @pytest.fixture(scope="module")
@@ -59,10 +61,13 @@ def mock_stdin(monkeypatch):
 
 
 def test_install_pip_requirements(
+    mocker,
     tmp_path,
     patch_run_command,
     run_task_mod,
 ):
+    mocker.patch("shutil.which", return_value=False)
+
     # no requirements
     repositories = [{"pip-requirements": None}]
     called = patch_run_command()
@@ -82,6 +87,7 @@ def test_install_pip_requirements(
             sys.executable,
             "-mpip",
             "install",
+            "--user",
             "--break-system-packages",
             "--require-hashes",
             "-r",
@@ -102,12 +108,44 @@ def test_install_pip_requirements(
             sys.executable,
             "-mpip",
             "install",
+            "--user",
             "--break-system-packages",
             "--require-hashes",
             "-r",
             str(req),
             "-r",
             str(req2),
+        ],
+    )
+
+
+def test_install_pip_requirements_with_uv(
+    mocker,
+    tmp_path,
+    patch_run_command,
+    run_task_mod,
+):
+    mocker.patch("shutil.which", return_value=True)
+
+    req = tmp_path.joinpath("requirements.txt")
+    req.write_text("taskcluster-taskgraph==1.0.0")
+    repositories = [{"pip-requirements": str(req)}]
+    called = patch_run_command()
+    run_task_mod.install_pip_requirements(repositories)
+    assert len(called) == 1
+    assert called[0][0] == (
+        b"pip-install",
+        [
+            "uv",
+            "pip",
+            "install",
+            "--python",
+            sys.executable,
+            "--target",
+            site.getusersitepackages(),
+            "--require-hashes",
+            "-r",
+            str(req),
         ],
     )
 
@@ -388,13 +426,61 @@ def test_git_checkout_with_commit(
 def test_display_python_version_should_output_python_versions_title(
     run_task_mod, capsys
 ):
-    run_task_mod._display_python_version()
+    run_task_mod._display_python_versions()
 
-    assert ("Python version:" in capsys.readouterr().out) is True
+    output = capsys.readouterr().out
+    assert ("Python version:" in output) is True
+    assert "Subprocess" in output and "version:" in output
 
 
 def test_display_python_version_should_output_python_versions(run_task_mod, capsys):
-    run_task_mod._display_python_version()
+    run_task_mod._display_python_versions()
 
     output = capsys.readouterr().out
     assert ("Python version: 3." in output) or ("Python version: 2." in output) is True
+    assert "Subprocess" in output and "version:" in output
+
+
+@pytest.fixture
+def run_main(tmp_path, mocker, mock_stdin, run_task_mod):
+    base_args = [
+        f"--task-cwd={str(tmp_path)}",
+    ]
+
+    base_command_args = [
+        "bash",
+        "-c",
+        "echo hello",
+    ]
+
+    m = mocker.patch.object(run_task_mod.os, "getcwd")
+    m.return_value = "/builds/worker"
+
+    def inner(extra_args=None, env=None):
+        extra_args = extra_args or []
+        env = env or {}
+
+        mocker.patch.object(run_task_mod.os, "environ", env)
+
+        args = base_args + extra_args
+        args.append("--")
+        args.extend(base_command_args)
+
+        result = run_task_mod.main(args)
+        return result, env
+
+    return inner
+
+
+def test_main_abspath_environment(run_main):
+    envvars = ["MOZ_FETCHES_DIR", "UPLOAD_DIR"]
+    envvars += [cache["env"] for cache in CACHES.values() if "env" in cache]
+    env = {key: "file" for key in envvars}
+    env["FOO"] = "file"
+
+    result, env = run_main(env=env)
+    assert result == 0
+
+    assert env.get("FOO") == "file"
+    for key in envvars:
+        assert env[key] == "/builds/worker/file"

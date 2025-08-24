@@ -34,7 +34,7 @@ need to test against a specific revision:
 
    git clone https://github.com/taskcluster/taskgraph
    cd taskgraph
-   python setup.py develop
+   pip install --editable .
 
 Getting Started
 ---------------
@@ -70,7 +70,7 @@ of tasks, and submit them all to Taskcluster. But you can also test out the
    taskgraph full
 
 You'll notice that ``taskgraph init`` has created a couple of tasks for us
-already, namely ``build-docker-image-linux`` and ``hello-world``.
+already, namely ``docker-image-linux`` and ``hello-world``.
 
 .. note::
 

@@ -4,9 +4,10 @@
 
 import functools
 import hashlib
-from pathlib import Path
+import os
 
 from taskgraph.util import path as mozpath
+from taskgraph.util.vcs import get_repository
 
 
 @functools.lru_cache(maxsize=None)
@@ -37,23 +38,22 @@ def hash_paths(base_path, patterns):
             found.update(matches)
         else:
             raise Exception(f"{pattern} did not match anything")
-    for path in sorted(found):
-        h.update(
-            f"{hash_path(mozpath.abspath(mozpath.join(base_path, path)))} {mozpath.normsep(path)}\n".encode()
-        )
+    for abs_path, path in sorted(found):
+        h.update(f"{hash_path(abs_path)} {mozpath.normsep(path)}\n".encode())
     return h.hexdigest()
 
 
 @functools.lru_cache(maxsize=None)
 def _find_matching_files(base_path, pattern):
-    files = _get_all_files(base_path)
-    return [path for path in files if mozpath.match(path, pattern)]
+    repo = get_repository(os.getcwd())
+    files = _get_all_files(base_path, repo)
+    return [
+        (mozpath.join(repo.path, path), path)
+        for path in files
+        if mozpath.match(path, pattern)
+    ]
 
 
 @functools.lru_cache(maxsize=None)
-def _get_all_files(base_path):
-    return [
-        mozpath.normsep(str(path))
-        for path in Path(base_path).rglob("*")
-        if path.is_file()
-    ]
+def _get_all_files(base_path, repo):
+    return repo.get_tracked_files(base_path)

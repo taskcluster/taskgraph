@@ -3,12 +3,11 @@ Tests for the 'rebuild_cached_tasks' action.
 """
 
 import pytest
+from pytest_taskgraph import make_graph, make_task
 
 from taskgraph import create
 from taskgraph.actions import trigger_action_callback
 from taskgraph.util import taskcluster as tc_util
-
-from .conftest import make_graph, make_task
 
 
 @pytest.fixture
@@ -52,5 +51,5 @@ def test_rebuild_cached_tasks(run_action):
         make_task(label="bar", task_def={"name": "bar"}),
     )
     out, _ = run_action("rebuild-cached-tasks", graph)
-    assert "foo" in out
-    assert "bar" not in out
+    assert '"name": "foo"' in out
+    assert '"name": "bar"' not in out

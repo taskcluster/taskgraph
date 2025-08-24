@@ -7,24 +7,33 @@ import logging
 import os
 import sys
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict
 
-from voluptuous import All, Any, Extra, Length, Optional, Required
+from voluptuous import ALLOW_EXTRA, All, Any, Extra, Length, Optional, Required
 
-from .util import path
+from .util.caches import CACHES
 from .util.python_path import find_object
 from .util.schema import Schema, optionally_keyed_by, validate_schema
+from .util.vcs import get_repository
 from .util.yaml import load_yaml
 
 logger = logging.getLogger(__name__)
 
+
+#: Schema for the graph config
 graph_config_schema = Schema(
     {
         # The trust-domain for this graph.
         # (See https://firefox-source-docs.mozilla.org/taskcluster/taskcluster/taskgraph.html#taskgraph-trust-domain)  # noqa
         Required("trust-domain"): str,
+        Optional(
+            "docker-image-kind",
+            description="Name of the docker image kind (default: docker-image)",
+        ): str,
         Required("task-priority"): optionally_keyed_by(
             "project",
+            "level",
             Any(
                 "highest",
                 "very-high",
@@ -74,6 +83,16 @@ graph_config_schema = Schema(
                 "index-path-regexes",
                 description="Regular expressions matching index paths to be summarized.",
             ): [str],
+            Optional(
+                "run",
+                description="Configuration related to the 'run' transforms.",
+            ): {
+                Optional(
+                    "use-caches",
+                    description="List of caches to enable, or a boolean to "
+                    "enable/disable all of them.",
+                ): Any(bool, list(CACHES.keys())),
+            },
             Required("repositories"): All(
                 {
                     str: {
@@ -87,10 +106,9 @@ graph_config_schema = Schema(
                 Length(min=1),
             ),
         },
-        Extra: object,
-    }
+    },
+    extra=ALLOW_EXTRA,
 )
-"""Schema for GraphConfig"""
 
 
 @dataclass(frozen=True, eq=False)
@@ -100,11 +118,19 @@ class GraphConfig:
 
     _PATH_MODIFIED = False
 
+    def __post_init__(self):
+        # ensure we have an absolute path; this is required for assumptions
+        # made later, such as the `vcs_root` being a directory above `root_dir`
+        object.__setattr__(self, "root_dir", os.path.abspath(self.root_dir))
+
     def __getitem__(self, name):
         return self._config[name]
 
     def __contains__(self, name):
         return name in self._config
+
+    def get(self, name, default=None):
+        return self._config.get(name, default)
 
     def register(self):
         """
@@ -126,16 +152,28 @@ class GraphConfig:
 
     @property
     def vcs_root(self):
-        if path.split(self.root_dir)[-1:] != ["taskcluster"]:
-            raise Exception(
-                "Not guessing path to vcs root. "
-                "Graph config in non-standard location."
-            )
-        return os.path.dirname(self.root_dir)
+        try:
+            repo = get_repository(os.getcwd())
+            return Path(repo.path)
+        except RuntimeError:
+            root = Path(self.root_dir)
+            if root.parts[-1:] != ("taskcluster",):
+                raise Exception(
+                    "Not guessing path to vcs root. Graph config in non-standard location."
+                )
+            return root.parent
 
     @property
     def taskcluster_yml(self):
         return os.path.join(self.vcs_root, ".taskcluster.yml")
+
+    @property
+    def docker_dir(self):
+        return os.path.join(self.root_dir, "docker")
+
+    @property
+    def kinds_dir(self):
+        return os.path.join(self.root_dir, "kinds")
 
 
 def validate_graph_config(config):

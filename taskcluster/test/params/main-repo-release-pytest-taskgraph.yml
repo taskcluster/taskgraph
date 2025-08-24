@@ -1,0 +1,31 @@
+---
+base_ref: release-test
+base_repository: https://github.com/taskcluster/taskgraph
+base_rev: 5fe502ea8fd2a3f21bba2e8b99bb483507cac130
+build_date: 1707294824
+build_number: 1
+do_not_optimize: []
+enable_always_target: true
+existing_tasks: {}
+files_changed:
+  - src/taskgraph/decision.py
+  - test/test_decision.py
+filters:
+  - target_tasks_method
+head_ref: pytest-taskgraph-v1.0.0
+head_repository: https://github.com/taskcluster/taskgraph
+head_rev: pytest-taskgraph-v1.0.0
+head_tag: ''
+level: '3'
+moz_build_date: '20240207083344'
+next_version: null
+optimize_strategies: null
+optimize_target_tasks: true
+owner: user@example.com
+project: taskgraph
+pushdate: 0
+pushlog_id: '0'
+repository_type: git
+target_tasks_method: release
+tasks_for: github-release
+version: null

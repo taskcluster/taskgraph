@@ -38,22 +38,22 @@ class TestArchive(unittest.TestCase):
     def _create_files(self, root):
         files = {}
         for i in range(10):
-            p = os.path.join(root, "file%02d" % i)
+            p = os.path.join(root, f"file{i:02d}")
             with open(p, "wb") as fh:
                 fh.write(b"file%02d" % i)
             # Need to set permissions or umask may influence testing.
             os.chmod(p, MODE_STANDARD)
-            files["file%02d" % i] = p
+            files[f"file{i:02d}"] = p
 
         for i in range(10):
-            files["file%02d" % (i + 10)] = io.BytesIO(b"file%02d" % (i + 10))
+            files[f"file{i + 10:02d}"] = io.BytesIO(b"file%02d" % (i + 10))
 
         return files
 
     def _verify_basic_tarfile(self, tf):
         self.assertEqual(len(tf.getmembers()), 20)
 
-        names = ["file%02d" % i for i in range(20)]
+        names = [f"file{i:02d}" for i in range(20)]
         self.assertEqual(tf.getnames(), names)
 
         for ti in tf.getmembers():

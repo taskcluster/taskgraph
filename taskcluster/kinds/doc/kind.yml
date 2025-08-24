@@ -12,7 +12,7 @@ transforms:
 task-defaults:
     worker-type: t-linux
     worker:
-        docker-image: {in-tree: py312}
+        docker-image: {in-tree: python}
         max-run-time: 3600
     treeherder:
         kind: test
@@ -21,7 +21,7 @@ task-defaults:
     run:
         using: run-task
         cwd: '{checkout}'
-        cache-dotcache: true
+        use-caches: [checkout, uv]
 
 tasks:
     generate:
@@ -33,6 +33,4 @@ tasks:
                 SPHINXOPTS: "-W"
         run:
             command: >-
-                pip install --user -r requirements/docs.txt --require-hashes &&
-                pip install --user --no-deps . &&
-                make html
+                uv run make html

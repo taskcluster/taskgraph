@@ -13,72 +13,16 @@ with your repo in as few steps as possible.
 
 There are three steps to getting running tasks:
 
-1. Install Taskcluster Github
+1. Define Tasks
 2. Request Permissions
-3. Define Tasks
+3. Install Taskcluster Github
 
 Let's dive into each!
-
-Install Taskcluster Github
---------------------------
-
-.. note::
-
-   If you are not using Github, skip to the next section.
-
-Each Taskcluster deployment has an associated Github app that needs to be added
-to your repo. Some apps for known Taskcluster deployments are as follows:
-
-.. list-table:: Taskcluster Github Apps
-   :widths: 20 60
-   :header-rows: 1
-
-   * - Instance
-     - Github App
-   * - `Firefox-CI <https://firefox-ci-tc.services.mozilla.com>`_
-     - https://github.com/apps/firefoxci-taskcluster
-   * - `Community <https://community-tc.services.mozilla.com>`_
-     - https://github.com/apps/community-tc-integration
-
-Follow the link to the Github app for your deployment and click ``Configure``
-near the top right. Then select the repository you'd like to enable. If you are
-not an admin of the organization you are enabling the repo for, this will send
-a request to your Github administrators.
-
-.. note::
-
-   If you do not see a ``Configure`` button, contact your Github administrators
-   for assistance.
-
-Request Permissions
--------------------
-
-Your repository is now connected to Taskcluster, but it won't have permission
-to run anything. In the Taskcluster world, permissions are also known as
-:term:`scopes <Scope>`. So the next step is to contact your Taskcluster
-administrators and request scopes for your project so that it has access to the
-resources it needs to run tasks.
-
-Each Taskcluster instance can be managed differently, but here are the processes
-to request scopes for some known Taskcluster deployments:
-
-.. list-table:: Taskcluster Github Apps
-   :widths: 20 60
-   :header-rows: 1
-
-   * - Instance
-     - Process
-   * - `Firefox-CI <https://firefox-ci-tc.services.mozilla.com>`_
-     - `File a Bug <https://bugzilla.mozilla.org/enter_bug.cgi?product=Release%20Engineering&component=Firefox-CI%20Administration>`_
-   * - `Community <https://community-tc.services.mozilla.com>`_
-     - `File an Issue <https://github.com/taskcluster/community-tc-config/issues/new>`_
-
-Use a title such as: *Please setup `org/my-repo` with Taskcluster*.
 
 Create Tasks
 ------------
 
-The last step is to define your tasks. You'll need:
+The first step is to define your tasks. You'll need:
 
 1. A :term:`Decision Task` defined in ``.taskcluster.yml``
 2. A Taskgraph setup in the ``taskcluster`` directory
@@ -98,6 +42,57 @@ generated:
 
    $ git add .
    $ git commit -m "Add Taskcluster files"
+
+Land your changes on the default branch (typically ``main``). Nothing will
+happen yet, but we need that ``.taskcluster.yml`` file to exist at the root of
+the repository for the next step.
+
+Request Permissions
+-------------------
+
+Your repository now has some tasks defined, but it won't have permission to run
+anything. In the Taskcluster world, permissions are also known as :term:`scopes
+<Scope>`. So the next step is to contact your Taskcluster administrators and
+request scopes for your project so that it has access to the resources it needs
+to run tasks.
+
+.. note::
+
+   For Mozilla's `Firefox-CI <https://firefox-ci-tc.services.mozilla.com>`_ instance,
+   file a bug under `Release Engineering :: Firefox-CI Administration
+   <https://bugzilla.mozilla.org/enter_bug.cgi?product=Release%20Engineering&component=Firefox-CI%20Administration>`_
+
+   Use a title such as: *Please setup `org/my-repo` with Taskcluster*.
+
+Install Taskcluster Github
+--------------------------
+
+.. note::
+
+   If you are not using Github, skip this section and reach out to your
+   Taskcluster administrators, there may be other steps to integrate your
+   repository.
+
+Each Taskcluster deployment has an associated Github app that needs to be added
+to your repo. If you are unsure which app your deployment uses, ask your
+Taskcluster administrators.
+
+.. note::
+
+   The Github app for Mozilla's `Firefox-CI
+   <https://firefox-ci-tc.services.mozilla.com>`_ instance can be found here:
+
+   https://github.com/apps/firefoxci-taskcluster
+
+Open the page of the Github app for your deployment and click ``Configure``
+near the top right. Then select the repository you'd like to enable. If you are
+not an admin of the organization you are enabling the repo for, this will send
+a request to your Github administrators.
+
+.. note::
+
+   If you do not see a ``Configure`` button, contact your Github administrators
+   for assistance.
 
 Now when you push, you should have a working Decision task that generates a
 ``hello-world`` task as well as a ``docker-image`` task that it depends on!

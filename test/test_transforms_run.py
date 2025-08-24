@@ -18,9 +18,6 @@ import pytest
 from taskgraph.task import Task
 from taskgraph.transforms import run
 from taskgraph.transforms.run import run_task  # noqa: F401
-from taskgraph.transforms.run.common import add_cache
-from taskgraph.transforms.task import payload_builders
-from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.templates import merge
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -46,44 +43,55 @@ def transform(monkeypatch, run_transform):
     # Needed by 'generic_worker_run_task'
     monkeypatch.setenv("TASK_ID", "fakeid")
 
-    def inner(task_input):
-        task = deepcopy(TASK_DEFAULTS)
-        task.update(task_input)
+    def inner(task_input, **kwargs):
+        defaults = deepcopy(TASK_DEFAULTS)
+        task = merge(defaults, task_input)
 
         with patch("taskgraph.transforms.run.configure_taskdesc_for_run") as m:
             # This forces the generator to be evaluated
-            run_transform(run.transforms, task)
+            run_transform(run.transforms, task, **kwargs)
             return m.call_args[0]
 
     return inner
 
 
-@pytest.mark.parametrize(
-    "task",
-    [
-        {"worker-type": "t-linux"},
-        pytest.param(
-            {"worker-type": "releng-hardware/gecko-t-win10-64-hw"},
-            marks=pytest.mark.xfail,
-        ),
-    ],
-    ids=["docker-worker", "generic-worker"],
-)
-def test_worker_caches(task, transform):
-    config, task, taskdesc, impl = transform(task)
-    add_cache(task, taskdesc, "cache1", "/cache1")
-    add_cache(task, taskdesc, "cache2", "/cache2", skip_untrusted=True)
+def test_rewrite_when_to_optimization(run_transform, make_transform_config):
+    config = make_transform_config()
 
-    if impl not in ("docker-worker", "generic-worker"):
-        pytest.xfail(f"caches not implemented for '{impl}'")
+    task = {"foo": "bar"}
+    result = run_transform(run.rewrite_when_to_optimization, task)
+    assert list(result) == [{"foo": "bar"}]
 
-    key = "caches" if impl == "docker-worker" else "mounts"
-    assert key in taskdesc["worker"]
-    assert len(taskdesc["worker"][key]) == 2
+    task = {"foo": "bar", "when": {"files-changed": ["README.md"]}}
+    result = run_transform(run.rewrite_when_to_optimization, task)
+    assert list(result) == [
+        {
+            "foo": "bar",
+            "optimization": {
+                "skip-unless-changed": ["README.md", f"{config.path}/kind.yml"]
+            },
+        }
+    ]
 
-    # Create a new schema object with just the part relevant to caches.
-    partial_schema = Schema(payload_builders[impl].schema.schema[key])
-    validate_schema(partial_schema, taskdesc["worker"][key], "validation error")
+    task = {
+        "foo": "bar",
+        "when": {"files-changed": ["README.md"]},
+        "task-from": "foo.yml",
+    }
+    result = run_transform(run.rewrite_when_to_optimization, task)
+    assert list(result) == [
+        {
+            "foo": "bar",
+            "optimization": {
+                "skip-unless-changed": [
+                    "README.md",
+                    f"{config.path}/kind.yml",
+                    f"{config.path}/foo.yml",
+                ]
+            },
+            "task-from": "foo.yml",
+        }
+    ]
 
 
 def assert_use_fetches_toolchain_env(task):

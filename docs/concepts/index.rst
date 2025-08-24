@@ -16,8 +16,8 @@ create the tasks.
    :maxdepth: 2
    :caption: More Concepts
 
+   overview
    task-graphs
-   taskcluster
    kind
    loading
    transforms

@@ -1,8 +1,8 @@
 FROM debian:12-slim
-MAINTAINER Release Engineering <release@mozilla.com>
+LABEL maintainer="Release Engineering <release@mozilla.com>"
 
 ### Add worker user and setup its workspace.
-RUN mkdir /builds && \
+RUN mkdir -p /builds && \
     groupadd -g 1000 worker && \
     useradd -u 1000 -g 1000 -d /builds/worker -s /bin/bash -m worker && \
     mkdir -p /builds/worker/workspace && \

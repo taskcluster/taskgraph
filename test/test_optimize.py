@@ -2,18 +2,23 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import partial
 
 import pytest
+from pytest_taskgraph import make_graph, make_task
 
 from taskgraph.graph import Graph
 from taskgraph.optimize import base as optimize_mod
-from taskgraph.optimize.base import All, Any, Not, OptimizationStrategy
+from taskgraph.optimize.base import (
+    All,
+    Any,
+    Not,
+    OptimizationStrategy,
+    register_strategy,
+)
 from taskgraph.task import Task
 from taskgraph.taskgraph import TaskGraph
-
-from .conftest import make_graph, make_task
 
 
 class Remove(OptimizationStrategy):
@@ -23,8 +28,10 @@ class Remove(OptimizationStrategy):
 
 class Replace(OptimizationStrategy):
     def should_replace_task(self, task, params, deadline, taskid):
-        expires = datetime.utcnow() + timedelta(days=1)
-        if deadline and expires < datetime.strptime(deadline, "%Y-%m-%dT%H:%M:%S.%fZ"):
+        expires = datetime.now(timezone.utc) + timedelta(days=1)
+        if deadline and expires.replace(tzinfo=None) < datetime.strptime(
+            deadline, "%Y-%m-%dT%H:%M:%S.%fZ"
+        ):
             return False
         return taskid
 
@@ -448,7 +455,7 @@ def test_get_subgraph(monkeypatch, graph, kwargs, exp_subgraph, exp_label_to_tas
     4. The expected label_to_taskid.
     """
     monkeypatch.setattr(
-        optimize_mod, "slugid", partial(next, ("tid%d" % i for i in range(1, 10)))
+        optimize_mod, "slugid", partial(next, (f"tid{i}" for i in range(1, 10)))
     )
 
     kwargs.setdefault("removed_tasks", set())
@@ -467,3 +474,10 @@ def test_get_subgraph_removed_dep():
     graph = make_triangle()
     with pytest.raises(Exception):
         optimize_mod.get_subgraph(graph, {"t2"}, set(), {})
+
+
+def test_register_strategy(mocker):
+    m = mocker.Mock()
+    func = register_strategy("foo", args=("one", "two"), kwargs={"n": 1})
+    func(m)
+    m.assert_called_with("one", "two", n=1)

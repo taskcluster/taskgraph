@@ -2,12 +2,14 @@
 Tests for the 'toolchain' transforms.
 """
 
+import os.path
 from pprint import pprint
 
 import pytest
 
 from taskgraph.transforms.run import make_task_description
 from taskgraph.util.templates import merge
+from taskgraph.util.vcs import GitRepository
 
 TASK_DEFAULTS = {
     "description": "fake description",
@@ -33,14 +35,25 @@ def run_task_using(mocker, run_transform):
         "taskcluster/scripts/toolchain/run.sh",
         "taskcluster/scripts/toolchain/run.ps1",
     ]
+    # fake a repository during the test, which is needed for `_get_all_files` to
+    # work correctly
+    mocker.patch(
+        "taskgraph.util.hash.get_repository", new=lambda path: GitRepository(path)
+    )
 
     def inner(task):
         task = merge(TASK_DEFAULTS, task)
         m = mocker.patch(
             "taskgraph.transforms.run.toolchain.configure_taskdesc_for_run"
         )
-        run_transform(make_task_description, task)
-        return m.call_args[0]
+        repo_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "data"))
+        cwd = os.getcwd()
+        try:
+            os.chdir(repo_dir)
+            run_transform(make_task_description, task)
+            return m.call_args[0]
+        finally:
+            os.chdir(cwd)
 
     return inner
 

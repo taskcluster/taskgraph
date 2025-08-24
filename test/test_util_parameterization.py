@@ -42,7 +42,7 @@ def test_timestamps_appears_with_other_keys():
 @pytest.fixture
 def assert_task_refs():
     def inner(input, output):
-        taskid_for_edge_name = {"edge%d" % n: "tid%d" % n for n in range(1, 4)}
+        taskid_for_edge_name = {f"edge{n}": f"tid{n}" for n in range(1, 4)}
         assert (
             resolve_task_references(
                 "subject",
@@ -151,7 +151,7 @@ def assert_artifact_refs(monkeypatch):
     def inner(input, output):
         # Clear memoized function
         get_root_url.cache_clear()
-        taskid_for_edge_name = {"edge%d" % n: "tid%d" % n for n in range(1, 4)}
+        taskid_for_edge_name = {f"edge{n}": f"tid{n}" for n in range(1, 4)}
         assert (
             resolve_task_references(
                 "subject", input, "tid-self", "tid-decision", taskid_for_edge_name
@@ -211,8 +211,8 @@ def test_artifact_refs_private(monkeypatch, assert_artifact_refs):
     monkeypatch.setenv("TASKCLUSTER_PROXY_URL", tc_proxy_url)
 
     assert_artifact_refs(
-        {"artifact-reference": "<edge1/private/foo>"},
-        f"{tc_proxy_url}/api/queue/v1/task/tid1/artifacts/private/foo",
+        {"url": {"artifact-reference": "<edge1/private/foo>"}},
+        {"url": f"{tc_proxy_url}/api/queue/v1/task/tid1/artifacts/private/foo"},
     )
 
 
@@ -255,6 +255,10 @@ def test_artifact_refs_badly_formed():
     "resolve_task_references ignores badly-formatted artifact references"
     for inv in ["<edge1>", "edge1/foo>", "<edge1>/foo", "<edge1>foo"]:
         resolved = resolve_task_references(
-            "subject", {"artifact-reference": inv}, "tid-self", "tid-decision", {}
+            "subject",
+            {"key": {"artifact-reference": inv}},
+            "tid-self",
+            "tid-decision",
+            {},
         )
-        assert resolved == inv
+        assert resolved == {"key": inv}

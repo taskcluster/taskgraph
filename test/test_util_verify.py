@@ -6,6 +6,7 @@ from functools import partial
 from itertools import chain
 
 import pytest
+from pytest_taskgraph import make_graph, make_task
 
 from taskgraph.task import Task
 from taskgraph.util.treeherder import split_symbol
@@ -15,8 +16,6 @@ from taskgraph.util.verify import (
     VerificationSequence,
     verifications,
 )
-
-from .conftest import make_graph, make_task
 
 
 def get_graph():
@@ -199,6 +198,21 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
             ),
             DeprecationWarning,
             id="routes_notfication_filter: deprecated",
+        ),
+        pytest.param(
+            "verify_index_route",
+            make_graph(
+                make_task(
+                    "invalid_slash",
+                    task_def={
+                        "routes": [
+                            "index.example.com/foobar.v2.latest.taskgraph.decision"
+                        ]
+                    },
+                ),
+            ),
+            Exception,
+            id="verify_index_route: invalid slash in route",
         ),
     ),
 )

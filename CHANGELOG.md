@@ -1,5 +1,279 @@
 # Change Log
 
+## [15.0.1] - 2025-08-14
+
+## Reverted
+
+- multiprocess kind processing (#746)
+
+## [15.0.0] - 2025-08-13
+
+## Added
+
+- Process kinds in parallel with a pool of processes (#738)
+- use `uv` to check python version, when available(#733)
+
+## Changed
+
+- BREAKING CHANGE: Use `primary-dependency-label` attribute to find primary dependency of tasks (#736)
+
+## Fixed
+
+- Fallback to guessing repo root in config.py (#742)
+
+## [14.6.1] - 2025-08-11
+
+### Fixed
+
+- Reverted accidental schema changes to run and toolchain transforms
+
+## [14.6.0] - 2025-08-05
+
+### Added
+
+- `--no-verify` command line flag to disable verifications
+
+### Fixed
+
+- docker-image transforms work with a non-standard `--root`
+- accessing `GraphConfig.vcs_root` no longer raises with a non-standard `--root`
+- container permission issue when running `taskgraph load-task`
+- properly quoted command in `taskgraph load-task`
+
+## [14.5.0] - 2025-06-22
+
+### Added
+
+- add a more descriptive error when a kind cannot be found (#721)
+- error out when index routes have a `/` in them (#722)
+
+### Fixed
+
+- handle github submodule checks better in fetch-content (#708)
+- make `hash_paths` work when `base_path` is set (#723)
+- return dict from 'status_task_batched' when testing (#720)
+- retag images when a tag is passed to taskgraph load-image (#713)
+
+## [14.4.1] - 2025-06-04
+
+### Fixed
+
+- file url handling for Thunderbird repos
+
+## [14.4.0] - 2025-06-02
+
+### Added
+
+- support lists in `resolve_keyed_by` (#608)
+- improved error message when a kind dependency cannot be found (#696)
+
+### Fixed
+
+- don't decode YAML response before parsing them in get_artifact (#700)
+
+## [14.3.0] - 2025-05-28
+
+### Fixed
+
+- MAX_ROUTES bumped up to actual limit of 64
+
+### Added
+
+- `load-task` command now accepts a `--user` flag to run in container as
+- optionally use `orjson` for faster json operations if available
+
+## [14.2.1] - 2025-05-13
+
+### Fixed
+
+- Revert "generic-worker will now verify run-task/fetch-content integrity" from
+  14.2.0 for being broken
+
+## [14.2.0] - 2025-05-12
+
+### Fixed
+
+- fix actions scope check on mercurial (#686)
+
+### Changed
+
+- generic-worker will now verify run-task/fetch-content integrity (#666)
+
+### Added
+
+- new 'load-task' command to debug tasks locally (#680)
+
+## [14.1.1] - 2025-04-10
+
+### Fixed
+
+- ensure GraphConfig.root_dir is an absolute path (#673)
+
+## [14.1.0] - 2025-04-07
+
+### Added
+
+- allow task-priority to be keyed by level (#653)
+- implement `taskgraph action` command to generate actions.json on the command line (#645)
+- pass push.base_revision to in-tree-action hook (#656)
+- support for `volume` artifact type (#667)
+
+### Fixed
+
+- bug deleting long path names with forward slashes on Windows (#661)
+- replace deprecated datetime.utcnow() with timezone-aware alternative (#652)
+- only consider tracked files when building toolchain hashes (#664)
+
+## [14.0.0] - 2025-02-18
+
+### Removed
+
+- BREAKING CHANGE: removed {task_workdir} interpolation in run-task environment variables
+
+## [13.1.0] - 2025-02-13
+
+### Added
+
+- Support for generic-worker's `runAsCurrentUser` feature
+
+### Fixed
+
+- Error handling during docker image builds
+- Issue in `get_changed_files()` utility with merge commits in Mercurial
+- Deprecation warning in `run-task` with Python 3.12
+
+## [13.0.0] - 2025-01-23
+
+### Added
+
+- automatically interpolate {task_workdir} in environment (#630)
+- add caches for common package managers (#623)
+- support setting repo wide default values for cache selection (#623)
+- support list of caches in `use-caches` key (#623)
+
+### Fixed
+
+- `get_ancestors` now returns tasks keyed by taskid, to avoid missing tasks when multiple tasks exist with the same label in a graph (#633)
+
+### Removed
+
+- unused resource-monitor code (#636)
+- `cache-dotcache` key (#623)
+
+## [12.2.0] - 2025-01-15
+
+### Added
+
+- fetch-content: support for downloading a single file and putting it in an archive
+
+### Fixed
+
+- use base repo for project name in github .taskcluster.yml template (#610)
+- added False as option in from-deps set-name config (#621)
+- fetch-content: use urlopen's context parameter instead of cafile (#618)
+- run-task: update our copy of robustcheckout hg extension (#617)
+- avoid computing expensive default values when the value is overridden anyways
+
+### Changed
+
+- hash the uncompressed contents of docker context tar (#626)
+
+## [12.1.0] - 2024-11-21
+
+### Added
+
+- fetch-content: log x-cache-status when content size doesn't match expected (#606)
+
+### Fixed
+
+- Don't assume the taskcluster proxy is running on http://taskcluster (#603)
+- Do not apply skip-unless-changed for cron triggers (#604)
+
+## [12.0.0] - 2024-10-25
+
+### Added
+
+- New `matrix` transforms added to allow easily splitting tasks
+- The `-p/--parameters` flag now supports `index=<index>` as a means of discovering parameters
+
+### Fixed
+
+- BREAKING CHANGE: `target_tasks_method` filter no longer implicitly added if other filters are used
+- An OSError when generating docker contexts when many files were involved
+- A bug when attempting to find prior actions in Github action tasks
+- The `when.files-changed` optimization no longer implicitly adds unrelated `tasks-from` files
+
+### Changed
+
+- BREAKING CHANGE: docker image task labels changed from `build-docker-image` to `docker-image`
+
+## [11.2.4] - 2024-10-16
+
+### Fixed
+
+- Regression to `static-url` fetches when using the `strip_components` or `add_prefix` features
+
+## [11.2.3] - 2024-10-16
+
+### Fixed
+
+- A couple more regressions with the Decision image
+  - Cleaned up temporary `uv` lockfile owned by root
+  - Added another `--no-cache` flag to a `uv` command
+- `run-task` now installs packages to user site dir when installing requirements with `uv`
+- Fetch tasks using `static-url` will now properly rename non-archive files
+
+## [11.2.2] - 2024-10-15
+
+### Fixed
+
+- Regression in Decision image where `taskgraph` was no longer on the $PATH
+- Decision image no longer contains root owned `uv` cache
+- `uv` now included in the `run-task` image
+
+## [11.2.1] - 2024-10-03
+
+### Fixed
+
+- `taskgraph.optimize.register_strategy` can now pass kwargs on to the optimization class
+
+## [11.2.0] - 2024-09-26
+
+### Added
+
+- `taskgraph.config.GraphConfig` now implements a `get(<key>)` method (#577)
+- Global tags for `project` and `trust-domain` are now applied to all tasks (#579)
+
+### Fixed
+
+- `run-task` script no longer attempts to chmod `/dev/kvm` if it already has the right permissions (#578)
+  - This fixes an issue when using a container with podman
+
+## [11.1.0] - 2024-09-23
+
+### Added
+
+- Use `uv` to install requirements if available (#572)
+- Allow 9,999 upstream dependencies on a Task (#575)
+  - Taskcluster platform work that enabled this: https://github.com/taskcluster/taskcluster/issues/7151
+
+### Fixed
+
+- Ensure builds don't fail if `/builds` already exists in Dockerfile (#573)
+- Add `coreutils` to the `linux` Dockerfile (#573)
+
+## [11.0.0] - 2024-09-04
+
+### Added
+
+- BREAKING CHANGE: removed hardcode python3 path on macOS (#566)
+- BREAKING CHANGE: register_action_callback interface has changed (#553)
+- Task name is now available in `task_context` (#562)
+
+### Fixed
+
+- get_ancestors ignores 404s to avoid failing when some tasks have already expired (#569)
+
 ## [10.0.2] - 2024-07-31
 
 ### Fixed

@@ -1,13 +1,19 @@
-.. _task_context:
+.. _task_context transforms:
 
-Task Context
-============
+Task Context Transforms
+=======================
 
 The :mod:`taskgraph.transforms.task_context` transform can be used to
 substitute values into any field in a task with data that is not known
 until ``taskgraph`` runs.
 
 This data can be provided in a few ways, as described below.
+
+Schema
+------
+
+All tasks must conform to the :py:data:`task_context schema
+<taskgraph.transforms.task_context.SCHEMA>`.
 
 Usage
 -----

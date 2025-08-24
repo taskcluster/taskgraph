@@ -3,22 +3,26 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-import json
 import os
+import shlex
 import subprocess
 import tarfile
+import tempfile
 from io import BytesIO
 from textwrap import dedent
+from typing import List, Optional
 
 try:
     import zstandard as zstd
 except ImportError as e:
     zstd = e
 
-from taskgraph.util import docker
+from taskgraph.util import docker, json
 from taskgraph.util.taskcluster import (
     get_artifact_url,
+    get_root_url,
     get_session,
+    get_task_definition,
 )
 
 DEPLOY_WARNING = """
@@ -39,29 +43,29 @@ The VERSION file contains the version of the image.
 
 
 def get_image_digest(image_name):
-    from taskgraph.generator import load_tasks_for_kind
-    from taskgraph.parameters import Parameters
+    from taskgraph.generator import load_tasks_for_kind  # noqa: PLC0415
+    from taskgraph.parameters import Parameters  # noqa: PLC0415
 
     params = Parameters(
         level=os.environ.get("MOZ_SCM_LEVEL", "3"),
         strict=False,
     )
     tasks = load_tasks_for_kind(params, "docker-image")
-    task = tasks[f"build-docker-image-{image_name}"]
+    task = tasks[f"docker-image-{image_name}"]
     return task.attributes["cached_task"]["digest"]
 
 
 def load_image_by_name(image_name, tag=None):
-    from taskgraph.generator import load_tasks_for_kind
-    from taskgraph.optimize.strategies import IndexSearch
-    from taskgraph.parameters import Parameters
+    from taskgraph.generator import load_tasks_for_kind  # noqa: PLC0415
+    from taskgraph.optimize.strategies import IndexSearch  # noqa: PLC0415
+    from taskgraph.parameters import Parameters  # noqa: PLC0415
 
     params = Parameters(
         level=os.environ.get("MOZ_SCM_LEVEL", "3"),
         strict=False,
     )
     tasks = load_tasks_for_kind(params, "docker-image")
-    task = tasks[f"build-docker-image-{image_name}"]
+    task = tasks[f"docker-image-{image_name}"]
 
     indexes = task.optimization.get("index-search", [])
     task_id = IndexSearch().should_replace_task(task, {}, None, indexes)
@@ -90,24 +94,24 @@ def load_image_by_task_id(task_id, tag=None):
     else:
         tag = "{}:{}".format(result["image"], result["tag"])
     print(f"Try: docker run -ti --rm {tag} bash")
-    return True
+    return tag
 
 
-def build_context(name, outputFile, args=None):
+def build_context(name, outputFile, graph_config, args=None):
     """Build a context.tar for image with specified name."""
     if not name:
         raise ValueError("must provide a Docker image name")
     if not outputFile:
         raise ValueError("must provide a outputFile")
 
-    image_dir = docker.image_path(name)
+    image_dir = docker.image_path(name, graph_config)
     if not os.path.isdir(image_dir):
         raise Exception(f"image directory does not exist: {image_dir}")
 
     docker.create_context_tar(".", image_dir, outputFile, args)
 
 
-def build_image(name, tag, args=None):
+def build_image(name, tag, graph_config, args=None):
     """Build a Docker image of specified name.
 
     Output from image building process will be printed to stdout.
@@ -115,18 +119,18 @@ def build_image(name, tag, args=None):
     if not name:
         raise ValueError("must provide a Docker image name")
 
-    image_dir = docker.image_path(name)
+    image_dir = docker.image_path(name, graph_config)
     if not os.path.isdir(image_dir):
         raise Exception(f"image directory does not exist: {image_dir}")
 
     tag = tag or docker.docker_image(name, by_tag=True)
 
     buf = BytesIO()
-    docker.stream_context_tar(".", image_dir, buf, "", args)
+    docker.stream_context_tar(".", image_dir, buf, args)
     cmdargs = ["docker", "image", "build", "--no-cache", "-"]
     if tag:
         cmdargs.insert(-1, f"-t={tag}")
-    subprocess.run(cmdargs, input=buf.getvalue())
+    subprocess.run(cmdargs, input=buf.getvalue(), check=True)
 
     msg = f"Successfully built {name}"
     if tag:
@@ -190,6 +194,21 @@ def load_image(url, imageName=None, imageTag=None):
                 # Open stream reader for the member
                 reader = tarin.extractfile(member)
 
+                # If the member is `manifest.json` and we're retagging the image,
+                # override RepoTags.
+                if member.name == "manifest.json" and imageName:
+                    manifest = json.loads(reader.read())  # type: ignore
+                    reader.close()  # type: ignore
+
+                    if len(manifest) > 1:
+                        raise Exception("file contains more than one manifest")
+
+                    manifest[0]["RepoTags"] = [f"{imageName}:{imageTag}"]
+
+                    data = json.dumps(manifest)
+                    reader = BytesIO(data.encode("utf-8"))
+                    member.size = len(data)
+
                 # If member is `repositories`, we parse and possibly rewrite the
                 # image tags.
                 if member.name == "repositories":
@@ -237,3 +256,119 @@ def load_image(url, imageName=None, imageTag=None):
         raise Exception("No repositories file found!")
 
     return info
+
+
+def _index(l: List, s: str) -> Optional[int]:
+    try:
+        return l.index(s)
+    except ValueError:
+        pass
+
+
+def load_task(task_id, remove=True, user=None):
+    user = user or "worker"
+    task_def = get_task_definition(task_id)
+
+    if (
+        impl := task_def.get("tags", {}).get("worker-implementation")
+    ) != "docker-worker":
+        print(f"Tasks with worker-implementation '{impl}' are not supported!")
+        return 1
+
+    command = task_def["payload"].get("command")
+    if not command or not command[0].endswith("run-task"):
+        print("Only tasks using `run-task` are supported!")
+        return 1
+
+    # Remove the payload section of the task's command. This way run-task will
+    # set up the task (clone repos, download fetches, etc) but won't actually
+    # start the core of the task. Instead we'll drop the user into an interactive
+    # shell and provide the ability to resume the task command.
+    task_command = None
+    if index := _index(command, "--"):
+        task_command = shlex.join(command[index + 1 :])
+        # I attempted to run the interactive bash shell here, but for some
+        # reason when executed through `run-task`, the interactive shell
+        # doesn't work well. There's no shell prompt on newlines and tab
+        # completion doesn't work. That's why it is executed outside of
+        # `run-task` below, and why we need to parse `--task-cwd`.
+        command[index + 1 :] = [
+            "echo",
+            "Task setup complete!\nRun `exec-task` to execute the task's command.",
+        ]
+
+    # Parse `--task-cwd` so we know where to execute the task's command later.
+    if index := _index(command, "--task-cwd"):
+        task_cwd = command[index + 1]
+    else:
+        for arg in command:
+            if arg.startswith("--task-cwd="):
+                task_cwd = arg.split("=", 1)[1]
+                break
+        else:
+            task_cwd = "$TASK_WORKDIR"
+
+    image_task_id = task_def["payload"]["image"]["taskId"]
+    image_tag = load_image_by_task_id(image_task_id)
+
+    # Set some env vars the worker would normally set.
+    env = {
+        "RUN_ID": "0",
+        "TASK_GROUP_ID": task_def.get("taskGroupId", ""),
+        "TASK_ID": task_id,
+        "TASKCLUSTER_ROOT_URL": get_root_url(False),
+    }
+    # Add the task's environment variables.
+    env.update(task_def["payload"].get("env", {}))
+
+    envfile = None
+    initfile = None
+    try:
+        command = [
+            "docker",
+            "run",
+            "-it",
+            image_tag,
+            "bash",
+            "-c",
+            f"{shlex.join(command)} && cd $TASK_WORKDIR && su -p {user}",
+        ]
+
+        if remove:
+            command.insert(2, "--rm")
+
+        if env:
+            envfile = tempfile.NamedTemporaryFile("w+", delete=False)
+            envfile.write("\n".join([f"{k}={v}" for k, v in env.items()]))
+            envfile.close()
+
+            command.insert(2, f"--env-file={envfile.name}")
+
+        if task_command:
+            initfile = tempfile.NamedTemporaryFile("w+", delete=False)
+            os.fchmod(initfile.fileno(), 0o644)
+            initfile.write(
+                dedent(
+                    f"""
+            function exec-task() {{
+                echo Starting task: {shlex.quote(task_command)}
+                pushd {task_cwd}
+                {task_command}
+                popd
+            }}
+            """
+                ).lstrip()
+            )
+            initfile.close()
+
+            command[2:2] = ["-v", f"{initfile.name}:/builds/worker/.bashrc"]
+
+        proc = subprocess.run(command)
+    finally:
+        if envfile:
+            os.remove(envfile.name)
+
+        if initfile:
+            os.remove(initfile.name)
+
+    return proc.returncode

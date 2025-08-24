@@ -8,11 +8,10 @@ from pathlib import Path
 from pprint import pprint
 
 import pytest
+from pytest_taskgraph import FakeParameters
 
 from taskgraph.transforms import task
 from taskgraph.transforms.base import TransformConfig
-
-from .conftest import FakeParameters
 
 TASK_DEFAULTS = {
     "description": "fake description",
@@ -43,6 +42,15 @@ def assert_common(task_dict):
     assert "extra" in task_dict["task"]
     assert "payload" in task_dict["task"]
     assert "routes" in task_dict["task"]
+    assert task_dict["task"].get("tags", {}) == {
+        "createdForUser": "some-owner",
+        "kind": "test",
+        "label": "test-fake-task-name",
+        "os": "linux",
+        "project": "some-project",
+        "trust-domain": "test-domain",
+        "worker-implementation": "docker-worker",
+    }
     assert (
         "index.test-domain.v2.some-project.latest.fake.fake-job"
         in task_dict["task"]["routes"]
@@ -740,7 +748,7 @@ def test_treeherder_defaults(run_transform, graph_config, kind, task_def, expect
         (
             {
                 "label": "task3",
-                "dependencies": ["dependency"] * 98,
+                "dependencies": ["dependency"] * 9998,
                 "soft-dependencies": ["dependency"] * 1,
                 "if-dependencies": ["dependency"] * 1,
             },
@@ -749,7 +757,7 @@ def test_treeherder_defaults(run_transform, graph_config, kind, task_def, expect
         (
             {
                 "label": "task3",
-                "dependencies": ["dependency"] * 99,
+                "dependencies": ["dependency"] * 9999,
                 "soft-dependencies": ["dependency"],
                 "if-dependencies": ["dependency"],
             },

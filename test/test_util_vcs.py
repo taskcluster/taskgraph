@@ -4,6 +4,7 @@
 
 import os
 import subprocess
+from pathlib import Path
 from textwrap import dedent
 
 import pytest
@@ -211,7 +212,31 @@ def test_default_branch_cloned_metadata(tmpdir, default_git_branch, repo):
 
 
 def assert_files(actual, expected):
-    assert set(map(os.path.basename, actual)) == set(expected)
+    assert set(actual) == set(expected)
+
+
+def test_get_tracked_files(repo):
+    assert_files(repo.get_tracked_files(), ["first_file"])
+
+    second_file = Path(repo.path) / "subdir" / "second_file"
+    second_file.parent.mkdir()
+    second_file.write_text("foo")
+    assert_files(repo.get_tracked_files(), ["first_file"])
+
+    repo.run("add", str(second_file))
+    assert_files(repo.get_tracked_files(), ["first_file"])
+
+    repo.run("commit", "-m", "Add second file")
+    rev = ".~1" if repo.tool == "hg" else "HEAD~1"
+    assert_files(repo.get_tracked_files(), ["first_file", "subdir/second_file"])
+    assert_files(repo.get_tracked_files("subdir"), ["subdir/second_file"])
+    assert_files(repo.get_tracked_files(rev=rev), ["first_file"])
+
+    if repo.tool == "git":
+        assert_files(repo.get_tracked_files("subdir", rev=rev), [])
+    elif repo.tool == "hg":
+        with pytest.raises(subprocess.CalledProcessError):
+            repo.get_tracked_files("subdir", rev=rev)
 
 
 def test_get_changed_files_no_changes(repo):

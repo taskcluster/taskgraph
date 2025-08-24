@@ -23,10 +23,10 @@ tasks:
             set-name: null
             fetches:
                 test:
-                    - artifact: coverage.{python_version}
+                    - artifact: coverage.py{matrix[python]}
         worker-type: t-linux
         worker:
-            docker-image: {in-tree: py312}
+            docker-image: {in-tree: python}
             max-run-time: 1800
             env:
                 MOZ_FETCHES_DIR: /builds/worker/fetches
@@ -44,8 +44,8 @@ tasks:
         run:
             using: run-task
             cwd: '{checkout}'
+            use-caches: [checkout, uv]
             command: >-
-                pip install --user -r requirements/test.txt --require-hashes &&
-                coverage combine --data-file $MOZ_FETCHES_DIR/coverage $MOZ_FETCHES_DIR &&
-                coverage xml --data-file $MOZ_FETCHES_DIR/coverage -o $MOZ_FETCHES_DIR/coverage.xml &&
-                python taskcluster/scripts/codecov-upload.py
+                uv run coverage combine --data-file $MOZ_FETCHES_DIR/coverage $MOZ_FETCHES_DIR &&
+                uv run coverage xml --data-file $MOZ_FETCHES_DIR/coverage -o $MOZ_FETCHES_DIR/coverage.xml &&
+                uv run python taskcluster/scripts/codecov-upload.py

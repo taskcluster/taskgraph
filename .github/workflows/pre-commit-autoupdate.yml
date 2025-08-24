@@ -1,0 +1,15 @@
+name: Auto update pre-commit hooks every month
+on:
+  schedule:
+    - cron: '0 0 1 * *'
+jobs:
+  pre-commit:
+    name: Pre-commit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: mozilla-releng/actions/pre-commit-autoupdate@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

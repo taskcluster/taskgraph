@@ -4,12 +4,11 @@
 
 
 import pytest
+from pytest_taskgraph import FakeKind, WithFakeKind, fake_load_graph_config
 
 from taskgraph import generator, graph
 from taskgraph.generator import Kind, load_tasks_for_kind
 from taskgraph.loader.default import loader as default_loader
-
-from .conftest import FakeKind, WithFakeKind, fake_load_graph_config
 
 
 def test_kind_ordering(maketgg):
@@ -161,6 +160,18 @@ def test_optimized_task_graph(maketgg):
     )
 
 
+def test_verifications(mocker, maketgg):
+    m = mocker.patch.object(generator, "verifications")
+    tgg = maketgg(["_fake-t-2"], enable_verifications=True)
+    tgg.morphed_task_graph
+    assert m.call_count == 9
+
+    m = mocker.patch.object(generator, "verifications")
+    tgg = maketgg(["_fake-t-2"], enable_verifications=False)
+    tgg.morphed_task_graph
+    m.assert_not_called()
+
+
 def test_load_tasks_for_kind(monkeypatch):
     """
     `load_tasks_for_kinds` will load the tasks for the provided kind
@@ -200,9 +211,9 @@ def test_load_tasks_for_kind(monkeypatch):
 )
 def test_default_loader(config, expected_transforms):
     loader = Kind("", "", config, {})._get_loader()
-    assert (
-        loader is default_loader
-    ), "Default Kind loader should be taskgraph.loader.default.loader"
+    assert loader is default_loader, (
+        "Default Kind loader should be taskgraph.loader.default.loader"
+    )
     loader("", "", config, {}, [])
 
     assert config["transforms"] == expected_transforms

@@ -78,6 +78,8 @@ following formats are accepted:
   and used.
 * A value of ``project=<project>``. The ``parameters.yml`` artifact from the
   latest decision task on ``<project>`` will be downloaded and used.
+* A value of ``index=<index>``. The ``parameters.yml`` artifact will be
+  downloaded from the decision task pointed to by the specified index path.
 * Path to a directory containing multiple parameter files. Any ``.yml`` file in
   the directory will be considered a parameter set.
 

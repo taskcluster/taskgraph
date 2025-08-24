@@ -5,6 +5,7 @@
 # Imported from
 # https://searchfox.org/mozilla-central/rev/c3ebaf6de2d481c262c04bb9657eaf76bf47e2ac/config/mozunit/mozunit/mozunit.py#116-232
 
+import builtins
 import os
 import sys
 from io import StringIO
@@ -85,8 +86,6 @@ class MockedOpen:
         return file
 
     def __enter__(self):
-        import builtins
-
         self.open = builtins.open
         self._orig_path_exists = os.path.exists
         self._orig_path_isdir = os.path.isdir
@@ -97,8 +96,6 @@ class MockedOpen:
         os.path.isfile = self._wrapped_isfile
 
     def __exit__(self, type, value, traceback):
-        import builtins
-
         builtins.open = self.open
         os.path.exists = self._orig_path_exists
         os.path.isdir = self._orig_path_isdir

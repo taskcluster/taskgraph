@@ -1,0 +1,20 @@
+[project]
+name = "pytest-taskgraph"
+version = "0.2.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Andrew Halberstadt", email = "ahal@mozilla.com" }
+]
+requires-python = ">=3.8"
+dependencies = ["pytest", "taskcluster-taskgraph>=12.1.0"]
+
+[project.entry-points.pytest11]
+pytest-taskgraph = "pytest_taskgraph"
+
+[tool.uv.sources]
+taskcluster-taskgraph = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

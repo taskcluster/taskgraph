@@ -106,6 +106,20 @@ class TestResolveKeyedBy(unittest.TestCase):
             {"x": {"by-bar": {"B1": 11, "B2": 12}}},
         )
 
+    def test_list(self):
+        item = {
+            "y": {
+                "by-foo": {
+                    "F1": 10,
+                    "F2": 20,
+                },
+            }
+        }
+        self.assertEqual(
+            resolve_keyed_by({"x": [item, item]}, "x[].y", "name", foo="F1"),
+            {"x": [{"y": 10}, {"y": 10}]},
+        )
+
     def test_no_by_empty_dict(self):
         self.assertEqual(resolve_keyed_by({"x": {}}, "x", "n"), {"x": {}})
 
@@ -233,3 +247,20 @@ def test_optionally_keyed_by():
 
     with pytest.raises(MultipleInvalid):
         validator({"by-bar": {"a": "b"}})
+
+
+def test_optionally_keyed_by_mulitple_keys():
+    validator = optionally_keyed_by("foo", "bar", str)
+    assert validator("baz") == "baz"
+    assert validator({"by-foo": {"a": "b", "c": "d"}}) == {"a": "b", "c": "d"}
+    assert validator({"by-bar": {"x": "y"}}) == {"x": "y"}
+    assert validator({"by-foo": {"a": {"by-bar": {"x": "y"}}}}) == {"a": {"x": "y"}}
+
+    with pytest.raises(Invalid):
+        validator({"by-foo": {"a": 123, "c": "d"}})
+
+    with pytest.raises(MultipleInvalid):
+        validator({"by-bar": {"a": 1}})
+
+    with pytest.raises(MultipleInvalid):
+        validator({"by-unknown": {"a": "b"}})

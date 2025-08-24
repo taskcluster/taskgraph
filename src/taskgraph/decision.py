@@ -3,7 +3,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-import json
 import logging
 import os
 import pathlib
@@ -19,6 +18,7 @@ from taskgraph.create import create_tasks
 from taskgraph.generator import TaskGraphGenerator
 from taskgraph.parameters import Parameters, get_version
 from taskgraph.taskgraph import TaskGraph
+from taskgraph.util import json
 from taskgraph.util.python_path import find_object
 from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.vcs import Repository, get_repository
@@ -39,6 +39,7 @@ PER_PROJECT_PARAMETERS = {
 }
 
 
+#: Schema for try_task_config.json version 2
 try_task_config_schema_v2 = Schema(
     {
         Optional("parameters"): {str: object},
@@ -109,6 +110,7 @@ def taskgraph_decision(options, parameters=None):
         parameters=parameters,
         decision_task_id=decision_task_id,
         write_artifacts=True,
+        enable_verifications=options.get("verify", True),
     )
 
     # write out the parameters used to generate this graph
@@ -374,9 +376,9 @@ def write_artifact(filename, data):
             yaml.safe_dump(data, f, allow_unicode=True, default_flow_style=False)
     elif filename.endswith(".json"):
         with open(path, "w") as f:
-            json.dump(data, f, sort_keys=True, indent=2, separators=(",", ": "))
+            json.dump(data, f, sort_keys=True, indent=2)
     elif filename.endswith(".gz"):
-        import gzip
+        import gzip  # noqa: PLC0415
 
         with gzip.open(path, "wb") as f:
             f.write(json.dumps(data))  # type: ignore
@@ -392,7 +394,7 @@ def read_artifact(filename):
         with open(path) as f:
             return json.load(f)
     elif filename.endswith(".gz"):
-        import gzip
+        import gzip  # noqa: PLC0415
 
         with gzip.open(path, "rb") as f:
             return json.load(f)

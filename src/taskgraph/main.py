@@ -4,7 +4,6 @@
 
 import argparse
 import atexit
-import json
 import logging
 import os
 import re
@@ -56,9 +55,9 @@ def format_taskgraph_labels(taskgraph):
 
 
 def format_taskgraph_json(taskgraph):
-    return json.dumps(
-        taskgraph.to_json(), sort_keys=True, indent=2, separators=(",", ": ")
-    )
+    from taskgraph.util import json  # noqa: PLC0415
+
+    return json.dumps(taskgraph.to_json(), sort_keys=True, indent=2)
 
 
 def format_taskgraph_yaml(taskgraph):
@@ -70,9 +69,9 @@ def get_filtered_taskgraph(taskgraph, tasksregex, exclude_keys):
     Filter all the tasks on basis of a regular expression
     and returns a new TaskGraph object
     """
-    from taskgraph.graph import Graph
-    from taskgraph.task import Task
-    from taskgraph.taskgraph import TaskGraph
+    from taskgraph.graph import Graph  # noqa: PLC0415
+    from taskgraph.task import Task  # noqa: PLC0415
+    from taskgraph.taskgraph import TaskGraph  # noqa: PLC0415
 
     if tasksregex:
         named_links_dict = taskgraph.graph.named_links_dict()
@@ -88,10 +87,12 @@ def get_filtered_taskgraph(taskgraph, tasksregex, exclude_keys):
                     if regexprogram.match(dep):
                         filterededges.add((key, dep, depname))
 
-        taskgraph = TaskGraph(filteredtasks, Graph(set(filteredtasks), filterededges))  # type: ignore
+        taskgraph = TaskGraph(
+            filteredtasks, Graph(frozenset(filteredtasks), frozenset(filterededges))
+        )
 
     if exclude_keys:
-        for label, task in taskgraph.tasks.items():  # type: ignore
+        for label, task in taskgraph.tasks.items():
             task = task.to_json()
             for key in exclude_keys:
                 obj = task
@@ -116,14 +117,14 @@ FORMAT_METHODS = {
 
 def get_taskgraph_generator(root, parameters):
     """Helper function to make testing a little easier."""
-    from taskgraph.generator import TaskGraphGenerator
+    from taskgraph.generator import TaskGraphGenerator  # noqa: PLC0415
 
     return TaskGraphGenerator(root_dir=root, parameters=parameters)
 
 
 def format_taskgraph(options, parameters, overrides, logfile=None):
-    import taskgraph
-    from taskgraph.parameters import parameters_loader
+    import taskgraph  # noqa: PLC0415
+    from taskgraph.parameters import parameters_loader  # noqa: PLC0415
 
     if logfile:
         handler = logging.FileHandler(logfile, mode="w")
@@ -152,7 +153,7 @@ def format_taskgraph(options, parameters, overrides, logfile=None):
 
 
 def dump_output(out, path=None, params_spec=None):
-    from taskgraph.parameters import Parameters
+    from taskgraph.parameters import Parameters  # noqa: PLC0415
 
     params_name = Parameters.format_spec(params_spec)
     fh = None
@@ -174,7 +175,7 @@ def dump_output(out, path=None, params_spec=None):
 
 
 def generate_taskgraph(options, parameters, overrides, logdir):
-    from taskgraph.parameters import Parameters
+    from taskgraph.parameters import Parameters  # noqa: PLC0415
 
     def logfile(spec):
         """Determine logfile given a parameters specification."""
@@ -226,30 +227,32 @@ def generate_taskgraph(options, parameters, overrides, logdir):
 
 @command(
     "tasks",
-    help="Show all tasks in the taskgraph.",
+    help="Show the full task set in the task graph. The full task set includes all tasks defined by any kind, without edges (dependencies) between them.",
     defaults={"graph_attr": "full_task_set"},
 )
 @command(
-    "full", help="Show the full taskgraph.", defaults={"graph_attr": "full_task_graph"}
+    "full",
+    help="Show the full task graph. The full task graph consists of the full task set, with edges (dependencies) between tasks.",
+    defaults={"graph_attr": "full_task_graph"},
 )
 @command(
     "target",
-    help="Show the set of target tasks.",
+    help="Show the target task set in the task graph. The target task set includes the tasks which have indicated they should be run, without edges (dependencies) between them.",
     defaults={"graph_attr": "target_task_set"},
 )
 @command(
     "target-graph",
-    help="Show the target graph.",
+    help="Show the target task graph. The target task graph consists of the target task set, with edges (dependencies) between tasks.",
     defaults={"graph_attr": "target_task_graph"},
 )
 @command(
     "optimized",
-    help="Show the optimized graph.",
+    help="Show the optimized task graph, which is the target task set with tasks optimized out (filtered, omitted, or replaced) and edges representing dependencies.",
     defaults={"graph_attr": "optimized_task_graph"},
 )
 @command(
     "morphed",
-    help="Show the morphed graph.",
+    help="Show the morphed graph, which is the optimized task graph with additional morphs applied. It retains the same meaning as the optimized task graph but in a form more palatable to TaskCluster.",
     defaults={"graph_attr": "morphed_task_graph"},
 )
 @argument("--root", "-r", help="root of the taskgraph definition relative to topsrcdir")
@@ -322,7 +325,7 @@ def generate_taskgraph(options, parameters, overrides, logdir):
     "--tasks-regex",
     "--tasks",
     default=None,
-    help="only return tasks with labels matching this regular " "expression.",
+    help="only return tasks with labels matching this regular expression.",
 )
 @argument(
     "--exclude-key",
@@ -367,8 +370,8 @@ def generate_taskgraph(options, parameters, overrides, logdir):
     "when multiple parameters files are passed.",
 )
 def show_taskgraph(options):
-    from taskgraph.parameters import Parameters, parameters_loader
-    from taskgraph.util.vcs import get_repository
+    from taskgraph.parameters import Parameters, parameters_loader  # noqa: PLC0415
+    from taskgraph.util.vcs import get_repository  # noqa: PLC0415
 
     if options.pop("verbose", False):
         logging.root.setLevel(logging.DEBUG)
@@ -473,6 +476,7 @@ def show_taskgraph(options):
             print(f"Generating {options['graph_attr']} @ {base_rev}", file=sys.stderr)
             ret |= generate_taskgraph(options, parameters, overrides, logdir)
         finally:
+            assert cur_rev
             repo.update(cur_rev)
 
         # Generate diff(s)
@@ -562,6 +566,12 @@ def show_taskgraph(options):
 @command("build-image", help="Build a Docker image")
 @argument("image_name", help="Name of the image to build")
 @argument(
+    "--root",
+    "-r",
+    default="taskcluster",
+    help="relative path for the root of the taskgraph definition",
+)
+@argument(
     "-t", "--tag", help="tag that the image should be built as.", metavar="name:tag"
 )
 @argument(
@@ -571,13 +581,20 @@ def show_taskgraph(options):
     metavar="context.tar",
 )
 def build_image(args):
-    from taskgraph.docker import build_context, build_image
+    from taskgraph.config import load_graph_config  # noqa: PLC0415
+    from taskgraph.docker import build_context, build_image  # noqa: PLC0415
 
     validate_docker()
+
+    root = args["root"]
+    graph_config = load_graph_config(root)
+
     if args["context_only"] is None:
-        build_image(args["image_name"], args["tag"], os.environ)
+        build_image(args["image_name"], args["tag"], graph_config, os.environ)
     else:
-        build_context(args["image_name"], args["context_only"], os.environ)
+        build_context(
+            args["image_name"], args["context_only"], graph_config, os.environ
+        )
 
 
 @command(
@@ -605,7 +622,10 @@ def build_image(args):
     "or mozilla-inbound)",
 )
 def load_image(args):
-    from taskgraph.docker import load_image_by_name, load_image_by_task_id
+    from taskgraph.docker import (  # noqa: PLC0415
+        load_image_by_name,
+        load_image_by_task_id,
+    )
 
     if not args.get("image_name") and not args.get("task_id"):
         print("Specify either IMAGE-NAME or TASK-ID")
@@ -613,10 +633,10 @@ def load_image(args):
     validate_docker()
     try:
         if args["task_id"]:
-            ok = load_image_by_task_id(args["task_id"], args.get("tag"))
+            tag = load_image_by_task_id(args["task_id"], args.get("tag"))
         else:
-            ok = load_image_by_name(args["image_name"], args.get("tag"))
-        if not ok:
+            tag = load_image_by_name(args["image_name"], args.get("tag"))
+        if not tag:
             sys.exit(1)
     except Exception:
         traceback.print_exc()
@@ -637,7 +657,7 @@ def validate_docker():
     "contents of the tree.",
 )
 def image_digest(args):
-    from taskgraph.docker import get_image_digest
+    from taskgraph.docker import get_image_digest  # noqa: PLC0415
 
     try:
         digest = get_image_digest(args["image_name"])
@@ -645,6 +665,29 @@ def image_digest(args):
     except Exception:
         traceback.print_exc()
         sys.exit(1)
+
+
+@command(
+    "load-task",
+    help="Loads a pre-built Docker image and drops you into a container with "
+    "the same environment variables and run-task setup as the specified task. "
+    "The task's payload.command will be replaced with 'bash'. You need to have "
+    "docker installed and running for this to work.",
+)
+@argument("task_id", help="The task id to load into a docker container.")
+@argument(
+    "--keep",
+    dest="remove",
+    action="store_false",
+    default=True,
+    help="Keep the docker container after exiting.",
+)
+@argument("--user", default=None, help="Container user to start shell with.")
+def load_task(args):
+    from taskgraph.docker import load_task  # noqa: PLC0415
+
+    validate_docker()
+    return load_task(args["task_id"], remove=args["remove"], user=args["user"])
 
 
 @command("decision", help="Run the decision task")
@@ -698,12 +741,60 @@ def image_digest(args):
 )
 @argument("--try-task-config-file", help="path to try task configuration file")
 @argument(
+    "--no-verify",
+    dest="verify",
+    default=True,
+    action="store_false",
+    help="Skip graph verifications",
+)
+@argument(
     "--verbose", "-v", action="store_true", help="include debug-level logging output"
 )
 def decision(options):
-    from taskgraph.decision import taskgraph_decision
+    from taskgraph.decision import taskgraph_decision  # noqa: PLC0415
 
     taskgraph_decision(options)
+
+
+@command("actions", help="Print the rendered actions.json")
+@argument(
+    "--root",
+    "-r",
+    help="root of the taskgraph definition relative to topsrcdir",
+    default="taskcluster",
+)
+@argument(
+    "--verbose",
+    "-v",
+    action="store_true",
+    help="include debug-level logging output",
+)
+@argument(
+    "--parameters",
+    "-p",
+    default="",
+    help="parameters file (.yml or .json; see `taskcluster/docs/parameters.rst`)`",
+)
+def actions(args):
+    from taskgraph.actions import render_actions_json  # noqa: PLC0415
+    from taskgraph.generator import TaskGraphGenerator  # noqa: PLC0415
+    from taskgraph.parameters import parameters_loader  # noqa: PLC0415
+    from taskgraph.util import json  # noqa: PLC0415
+
+    if args.pop("verbose", False):
+        logging.root.setLevel(logging.DEBUG)
+
+    try:
+        parameters = parameters_loader(args["parameters"], strict=False)
+        tgg = TaskGraphGenerator(root_dir=args.get("root"), parameters=parameters)
+
+        actions = render_actions_json(tgg.parameters, tgg.graph_config, "DECISION-TASK")
+        print(json.dumps(actions, sort_keys=True, indent=2))
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)
+
+    return 0
 
 
 @command("action-callback", description="Run action callback used by action tasks")
@@ -714,8 +805,9 @@ def decision(options):
     help="root of the taskgraph definition relative to topsrcdir",
 )
 def action_callback(options):
-    from taskgraph.actions import trigger_action_callback
-    from taskgraph.actions.util import get_parameters
+    from taskgraph.actions import trigger_action_callback  # noqa: PLC0415
+    from taskgraph.actions.util import get_parameters  # noqa: PLC0415
+    from taskgraph.util import json  # noqa: PLC0415
 
     try:
         # the target task for this action (or null if it's a group action)
@@ -753,7 +845,7 @@ def action_callback(options):
     "--parameters",
     "-p",
     default="",
-    help="parameters file (.yml or .json; see " "`taskcluster/docs/parameters.rst`)`",
+    help="parameters file (.yml or .json; see `taskcluster/docs/parameters.rst`)`",
 )
 @argument("--task-id", default=None, help="TaskId to which the action applies")
 @argument(
@@ -762,10 +854,10 @@ def action_callback(options):
 @argument("--input", default=None, help="Action input (.yml or .json)")
 @argument("callback", default=None, help="Action callback name (Python function name)")
 def test_action_callback(options):
-    import taskgraph.actions
-    import taskgraph.parameters
-    from taskgraph.config import load_graph_config
-    from taskgraph.util import yaml
+    import taskgraph.actions  # noqa: PLC0415
+    import taskgraph.parameters  # noqa: PLC0415
+    from taskgraph.config import load_graph_config  # noqa: PLC0415
+    from taskgraph.util import json, yaml  # noqa: PLC0415
 
     def load_data(filename):
         with open(filename) as f:
@@ -831,10 +923,10 @@ def test_action_callback(options):
     help=argparse.SUPPRESS,  # used for testing
 )
 def init_taskgraph(options):
-    from cookiecutter.main import cookiecutter
+    from cookiecutter.main import cookiecutter  # noqa: PLC0415
 
-    import taskgraph
-    from taskgraph.util.vcs import get_repository
+    import taskgraph  # noqa: PLC0415
+    from taskgraph.util.vcs import get_repository  # noqa: PLC0415
 
     repo = get_repository(os.getcwd())
     root = Path(repo.path)
@@ -862,22 +954,20 @@ def init_taskgraph(options):
     context = {"project_name": root.name, "taskgraph_version": taskgraph.__version__}
 
     try:
-        repo_url = repo.get_url(remote=repo.remote_name)  # type: ignore
+        repo_url = repo.get_url(remote=repo.remote_name)
     except RuntimeError:
         repo_url = ""
 
     if repo.tool == "git" and "github.com" in repo_url:
         context["repo_host"] = "github"
-    elif repo.tool == "hg" and "hg.mozilla.org" in repo_url:
-        context["repo_host"] = "hgmo"
     else:
         print(
             dedent(
                 """\
             Repository not supported!
 
-            Taskgraph only supports repositories hosted on Github or hg.mozilla.org.
-            Ensure you have a remote that points to one of these locations.
+            The `taskgraph init` command only supports repositories hosted on
+            Github. Ensure you use a remote that points to a Github repository.
             """
             ),
             file=sys.stderr,
@@ -895,7 +985,7 @@ def init_taskgraph(options):
         directory="template",
         extra_context=context,
         no_input=options["no_input"],
-        output_dir=root.parent,  # type: ignore
+        output_dir=str(root.parent),
         overwrite_if_exists=True,
     )
 

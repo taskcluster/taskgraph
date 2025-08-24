@@ -97,6 +97,25 @@ class TestParameters(TestCase):
         p = Parameters(strict=False, xyz=10, **self.vals)
         p.check()  # should not raise
 
+    def test_Parameters_file_url_hg_comm(self):
+        vals = self.vals.copy()
+        vals["repository_type"] = "hg"
+
+        vals["comm_head_repository"] = "https://hg.mozilla.org/releases/comm-beta"
+        vals["comm_head_rev"] = "branch"
+        vals["head_repository"] = "https://hg.mozilla.org/releases/mozilla-beta"
+        p = Parameters(**vals)
+
+        path = (
+            "/builds/worker/checkouts/gecko/comm/taskcluster/kinds/"
+            "shippable-l10n-signing"
+        )
+        kind_path = (
+            "https://hg.mozilla.org/releases/comm-beta/file/branch/"
+            "taskcluster/kinds/shippable-l10n-signing"
+        )
+        self.assertTrue(p.file_url(path, pretty=True) == kind_path)
+
     def test_Parameters_file_url_git_remote(self):
         vals = self.vals.copy()
         vals["repository_type"] = "git"
@@ -151,6 +170,7 @@ class TestParameters(TestCase):
         tid = "abc"
         project = "foo"
         trust_domain = "bar"
+        index = f"{trust_domain}.v2.{project}.latest.taskgraph.cron"
         expected = {"some": "data"}
 
         # Setup mocks
@@ -170,6 +190,14 @@ class TestParameters(TestCase):
         )
         self.assertEqual(dict(ret), expected)
         self.assertRaises(ValueError, load_parameters_file, f"project={project}")
+
+        # Test `index=`
+        ret = load_parameters_file(f"index={index}")
+        mock_load_stream.assert_called_with(mock_urlopen())
+        mock_find_task_id.assert_called_with(
+            f"{trust_domain}.v2.{project}.latest.taskgraph.cron"
+        )
+        self.assertEqual(dict(ret), expected)
 
         # Test gzipped data
         r = mock.Mock()
@@ -238,6 +266,7 @@ def test_parameters_id():
         ("http://example.org/bar.yml?id=0", "bar"),
         ("task-id=123", "task-id=123"),
         ("project=autoland", "project=autoland"),
+        ("index=foo.v2.bar.latest", "index=foo.v2.bar.latest"),
     ),
 )
 def test_parameters_format_spec(spec, expected):
@@ -253,6 +282,11 @@ def test_extend_parameters_schema(monkeypatch):
                 Required("foo"): str,
             }
         ),
+    )
+    monkeypatch.setattr(
+        parameters,
+        "defaults_functions",
+        list(parameters.defaults_functions),
     )
 
     with pytest.raises(ParameterMismatch):
@@ -427,7 +461,7 @@ def test_extend_parameters_schema(monkeypatch):
         ),
     ),
 )
-def test_get_defaults(
+def test_defaults(
     monkeypatch, repo_root, is_repo, raises, expected_repo_root, expected
 ):
     def mock_get_repository(repo_root):
@@ -468,4 +502,4 @@ def test_get_defaults(
     monkeypatch.setattr(parameters, "datetime", datetime_mock)
     monkeypatch.setattr(parameters, "get_version", lambda *_, **__: "1.0.0")
 
-    assert parameters._get_defaults(repo_root) == expected
+    assert parameters.Parameters(strict=False, repo_root=repo_root) == expected

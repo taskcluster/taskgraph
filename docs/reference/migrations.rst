@@ -3,6 +3,83 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+14.x -> 15.x
+------------
+
+* `get_primary_dependency` now requires a `primary-dependency-label` to be set
+  on the task it is passed instead of `primary-kind-dependency`. Update any tasks
+  you were calling this for to set this attribute. (If your only usage of this
+  is indirectly through `from_deps`, no change is needed: `from-deps` generated
+  tasks will set this for you.)
+
+13.x -> 14.x
+------------
+
+* The `{task_workdir}` string in environment variables no longer gets
+  interpolated by `run-task`. This is backing out a feature introduced in
+  version 13.x, so this release introduces no new backwards incompatibilities
+  with version 12.x or earlier.
+
+12.x -> 13.x
+------------
+
+* Remove all ``run.cache-dotcache`` keys. If it was set to ``true``, replace it
+  with:
+
+  .. code-block:: yaml
+
+     run:
+       use-caches: [checkout, <caches>]
+
+  Where caches can be any of ``cargo``, ``pip``, ``uv`` or ``npm``. If the task
+  was setting up ``.cache`` for another tool, a mount will need to be created
+  for it manually. If ``use-caches`` was previously set to ``false``, omit
+  ``checkout`` in the example above. If ``use-caches`` was previously set to
+  ``true``, replace ``true`` with the value above (including ``checkout``).
+
+  In Dockerfiles, replace `VOLUME /builds/worker/.cache` by
+  `VOLUME /builds/worker/.task-cache/{uv, cargo, pip, npm}` as necessary.
+
+* Invert any usage of the dict keys and values returned by `get_ancestors`:
+
+  For example, if you were using:
+
+  .. code-block:: python
+
+    for label, taskid in get_ancestors(...):
+      ...
+
+  Change it to:
+
+  .. code-block:: python
+
+    for taskid, label in get_ancestors(...):
+      ...
+
+  Note that due to this change `get_ancestors` may return multiple tasks with
+  the same label now, which your code may need to deal with.
+
+11.x -> 12.x
+------------
+
+* Add ``target_tasks_method`` to the front of the ``filters`` parameter wherever
+  you are also using a custom filter.
+
+  For example, if you are passing in:
+
+  .. code-block:: yaml
+
+     filters: ["my_custom_filter"]
+
+  Change it to:
+
+  .. code-block:: yaml
+
+     filters: ["target_tasks_method", "my_custom_filter"]
+
+  No action is necessary if the ``filters`` parameter was empty.
+* Change all references from ``build-docker-image`` to ``docker-image``.
+
 10.x -> 11.x
 ------------
 
@@ -16,6 +93,14 @@ This page can help when migrating Taskgraph across major versions.
 
      run:
        run-task-command: ["/tools/python36/bin/python3", "run-task"]
+* When defining custom actions with
+  ``taskgraph.actions.registry.register_callback_action``, make the following
+  changes:
+
+  * If you are passing ``generic=True`` to the function, remove this argument.
+  * If the argument isn't present, or you are passing ``generic=False``, then
+    add a new argument called ``permission=<cb_name>``, where ``<cb_name>`` is
+    the value of whatever you are passing to the ``cb_name`` argument.
 
 9.x -> 10.x
 -----------
@@ -81,7 +166,7 @@ This page can help when migrating Taskgraph across major versions.
 5.x -> 6.x
 ----------
 
-* Replace all uses of ``command-context` with the more generalized ``task-context``
+* Replace all uses of ``command-context`` with the more generalized ``task-context``
 
 4.x -> 5.x
 ----------

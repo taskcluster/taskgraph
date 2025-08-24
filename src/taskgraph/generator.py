@@ -6,14 +6,14 @@ import copy
 import logging
 import os
 from dataclasses import dataclass
-from typing import Dict
+from typing import Callable, Dict, Optional, Union
 
 from . import filter_tasks
 from .config import GraphConfig, load_graph_config
 from .graph import Graph
 from .morph import morph
 from .optimize.base import optimize_task_graph
-from .parameters import parameters_loader
+from .parameters import Parameters, parameters_loader
 from .task import Task
 from .taskgraph import TaskGraph
 from .transforms.base import TransformConfig, TransformSequence
@@ -119,10 +119,11 @@ class TaskGraphGenerator:
 
     def __init__(
         self,
-        root_dir,
-        parameters,
-        decision_task_id="DECISION-TASK",
-        write_artifacts=False,
+        root_dir: Optional[str],
+        parameters: Union[Parameters, Callable[[GraphConfig], Parameters]],
+        decision_task_id: str = "DECISION-TASK",
+        write_artifacts: bool = False,
+        enable_verifications: bool = True,
     ):
         """
         @param root_dir: root directory containing the Taskgraph config.yml file
@@ -136,6 +137,7 @@ class TaskGraphGenerator:
         self._parameters = parameters
         self._decision_task_id = decision_task_id
         self._write_artifacts = write_artifacts
+        self._enable_verifications = enable_verifications
 
         # start the generator
         self._run = self._run()  # type: ignore
@@ -258,7 +260,7 @@ class TaskGraphGenerator:
         graph_config.register()
 
         # Initial verifications that don't depend on any generation state.
-        verifications("initial")
+        self.verify("initial")
 
         if callable(self._parameters):
             parameters = self._parameters(graph_config)
@@ -269,9 +271,9 @@ class TaskGraphGenerator:
         logger.debug(f"Dumping parameters:\n{repr(parameters)}")
 
         filters = parameters.get("filters", [])
-        # Always add legacy target tasks method until we deprecate that API.
-        if "target_tasks_method" not in filters:
-            filters.insert(0, "target_tasks_method")
+        if not filters:
+            # Default to target_tasks_method if none specified.
+            filters.append("target_tasks_method")
         filters = [filter_tasks.filter_task_functions[f] for f in filters]
 
         yield self.verify("parameters", parameters)
@@ -289,13 +291,13 @@ class TaskGraphGenerator:
         kinds = {
             kind.name: kind for kind in self._load_kinds(graph_config, target_kinds)
         }
-        verifications("kinds", kinds)
+        self.verify("kinds", kinds)
 
         edges = set()
         for kind in kinds.values():
             for dep in kind.config.get("kind-dependencies", []):
                 edges.add((kind.name, dep, "kind-dependency"))
-        kind_graph = Graph(set(kinds), edges)  # type: ignore
+        kind_graph = Graph(frozenset(kinds), frozenset(edges))
 
         if target_kinds:
             kind_graph = kind_graph.transitive_closure(
@@ -306,7 +308,14 @@ class TaskGraphGenerator:
         all_tasks = {}
         for kind_name in kind_graph.visit_postorder():
             logger.debug(f"Loading tasks for kind {kind_name}")
-            kind = kinds[kind_name]
+
+            kind = kinds.get(kind_name)
+            if not kind:
+                message = f'Could not find the kind "{kind_name}"\nAvailable kinds:\n'
+                for k in sorted(kinds):
+                    message += f' - "{k}"\n'
+                raise Exception(message)
+
             try:
                 new_tasks = kind.load_tasks(
                     parameters,
@@ -321,7 +330,7 @@ class TaskGraphGenerator:
                     raise Exception("duplicate tasks with label " + task.label)
                 all_tasks[task.label] = task
             logger.info(f"Generated {len(new_tasks)} tasks for kind {kind_name}")
-        full_task_set = TaskGraph(all_tasks, Graph(set(all_tasks), set()))  # type: ignore
+        full_task_set = TaskGraph(all_tasks, Graph(frozenset(all_tasks), frozenset()))
         yield self.verify("full_task_set", full_task_set, graph_config, parameters)
 
         logger.info("Generating full task graph")
@@ -334,28 +343,28 @@ class TaskGraphGenerator:
                     )
                 edges.add((t.label, dep, depname))
 
-        full_task_graph = TaskGraph(all_tasks, Graph(full_task_set.graph.nodes, edges))  # type: ignore
+        full_task_graph = TaskGraph(
+            all_tasks, Graph(frozenset(full_task_set.graph.nodes), frozenset(edges))
+        )
         logger.info(
-            "Full task graph contains %d tasks and %d dependencies"
-            % (len(full_task_set.graph.nodes), len(edges))
+            f"Full task graph contains {len(full_task_set.graph.nodes)} tasks and {len(edges)} dependencies"
         )
         yield self.verify("full_task_graph", full_task_graph, graph_config, parameters)
 
         logger.info("Generating target task set")
         target_task_set = TaskGraph(
             dict(all_tasks),
-            Graph(set(all_tasks.keys()), set()),  # type: ignore
+            Graph(frozenset(all_tasks.keys()), frozenset()),
         )
         for fltr in filters:
             old_len = len(target_task_set.graph.nodes)
             target_tasks = set(fltr(target_task_set, parameters, graph_config))
             target_task_set = TaskGraph(
                 {l: all_tasks[l] for l in target_tasks},
-                Graph(target_tasks, set()),  # type: ignore
+                Graph(frozenset(target_tasks), frozenset()),
             )
             logger.info(
-                "Filter %s pruned %d tasks (%d remain)"
-                % (fltr.__name__, old_len - len(target_tasks), len(target_tasks))
+                f"Filter {fltr.__name__} pruned {old_len - len(target_tasks)} tasks ({len(target_tasks)} remain)"
             )
 
         yield self.verify("target_task_set", target_task_set, graph_config, parameters)
@@ -373,8 +382,7 @@ class TaskGraphGenerator:
         else:
             always_target_tasks = set()
         logger.info(
-            "Adding %d tasks with `always_target` attribute"
-            % (len(always_target_tasks) - len(always_target_tasks & target_tasks))  # type: ignore
+            f"Adding {len(always_target_tasks) - len(always_target_tasks & target_tasks)} tasks with `always_target` attribute"  # type: ignore
         )
         requested_tasks = target_tasks | always_target_tasks  # type: ignore
         target_graph = full_task_graph.graph.transitive_closure(requested_tasks)
@@ -431,9 +439,11 @@ class TaskGraphGenerator:
             self._run_results[k] = v
         return self._run_results[name]
 
-    def verify(self, name, obj, *args, **kwargs):
-        verifications(name, obj, *args, **kwargs)
-        return name, obj
+    def verify(self, name, *args, **kwargs):
+        if self._enable_verifications:
+            verifications(name, *args, **kwargs)
+        if args:
+            return name, args[0]
 
 
 def load_tasks_for_kind(parameters, kind, root_dir=None):

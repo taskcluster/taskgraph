@@ -154,6 +154,21 @@ def test_get_artifact(responses, root_url):
     )
     assert tc.get_artifact(tid, "artifact.yml") == {"foo": "bar"}
 
+    responses.add(
+        responses.GET,
+        f"{root_url}/api/queue/v1/task/{tid}/artifacts/artifact.yml",
+        body=b"foo: \xe2\x81\x83",
+    )
+    assert tc.get_artifact(tid, "artifact.yml") == {"foo": b"\xe2\x81\x83".decode()}
+
+    responses.add(
+        responses.GET,
+        f"{root_url}/api/queue/v1/task/{tid}/artifacts/artifact.yml",
+        body=b"foo: \xe2\x81\x83".decode().encode("utf-16"),
+        headers={"Content-Type": "text/yaml; charset=utf-16"},
+    )
+    assert tc.get_artifact(tid, "artifact.yml") == {"foo": b"\xe2\x81\x83".decode()}
+
 
 def test_list_artifact(responses, root_url):
     tid = 123
@@ -448,10 +463,65 @@ def test_get_ancestors(responses, root_url):
 
     got = tc.get_ancestors(["bbb", "fff"])
     expected = {
-        "task-aaa": "aaa",
-        "task-ccc": "ccc",
-        "task-ddd": "ddd",
-        "task-eee": "eee",
+        "aaa": "task-aaa",
+        "ccc": "task-ccc",
+        "ddd": "task-ddd",
+        "eee": "task-eee",
+    }
+    assert got == expected, f"got: {got}, expected: {expected}"
+
+
+def test_get_ancestors_404(responses, root_url):
+    """Ensures that get_ancestors functions even if some upstream dependencies
+    are 404s from expired tasks."""
+    tc.get_task_definition.cache_clear()
+    tc._get_deps.cache_clear()
+    base_url = f"{root_url}/api/queue/v1/task"
+    responses.add(
+        responses.GET,
+        f"{base_url}/fff",
+        json={
+            "dependencies": ["eee", "ddd"],
+            "metadata": {
+                "name": "task-fff",
+            },
+        },
+    )
+    responses.add(
+        responses.GET,
+        f"{base_url}/eee",
+        json={
+            "dependencies": [],
+            "metadata": {
+                "name": "task-eee",
+            },
+        },
+    )
+    responses.add(
+        responses.GET,
+        f"{base_url}/ddd",
+        json={
+            "dependencies": ["ccc"],
+            "metadata": {
+                "name": "task-ddd",
+            },
+        },
+    )
+    responses.add(
+        responses.GET,
+        f"{base_url}/ccc",
+        status=404,
+    )
+    responses.add(
+        responses.GET,
+        f"{base_url}/bbb",
+        status=404,
+    )
+
+    got = tc.get_ancestors(["bbb", "fff"])
+    expected = {
+        "ddd": "task-ddd",
+        "eee": "task-eee",
     }
     assert got == expected, f"got: {got}, expected: {expected}"
 
@@ -523,10 +593,10 @@ def test_get_ancestors_string(responses, root_url):
 
     got = tc.get_ancestors("fff")
     expected = {
-        "task-aaa": "aaa",
-        "task-bbb": "bbb",
-        "task-ccc": "ccc",
-        "task-ddd": "ddd",
-        "task-eee": "eee",
+        "aaa": "task-aaa",
+        "bbb": "task-bbb",
+        "ccc": "task-ccc",
+        "ddd": "task-ddd",
+        "eee": "task-eee",
     }
     assert got == expected, f"got: {got}, expected: {expected}"

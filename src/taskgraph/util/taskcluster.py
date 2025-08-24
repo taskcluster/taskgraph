@@ -143,7 +143,7 @@ def _handle_artifact(path, response):
     if path.endswith(".json"):
         return response.json()
     if path.endswith(".yml"):
-        return yaml.load_stream(response.text)
+        return yaml.load_stream(response.content)
     response.raw.read = functools.partial(response.raw.read, decode_content=True)
     return response.raw
 
@@ -340,7 +340,7 @@ def status_task_batched(task_ids, use_proxy=False):
     """
     if testing:
         logger.info(f"Would have gotten status for {len(task_ids)} tasks.")
-        return
+        return {}
     endpoint = liburls.api(get_root_url(use_proxy), "queue", "v1", "tasks/status")
     statuses = {}
     continuation_token = None
@@ -463,8 +463,14 @@ def list_task_group_incomplete_tasks(task_group_id):
 def _get_deps(task_ids, use_proxy):
     upstream_tasks = {}
     for task_id in task_ids:
-        task_def = get_task_definition(task_id, use_proxy)
-        upstream_tasks[task_def["metadata"]["name"]] = task_id
+        try:
+            task_def = get_task_definition(task_id, use_proxy)
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                continue
+            raise e
+
+        upstream_tasks[task_id] = task_def["metadata"]["name"]
 
         upstream_tasks.update(_get_deps(tuple(task_def["dependencies"]), use_proxy))
 
@@ -474,14 +480,14 @@ def _get_deps(task_ids, use_proxy):
 def get_ancestors(
     task_ids: Union[List[str], str], use_proxy: bool = False
 ) -> Dict[str, str]:
-    """Gets the ancestor tasks of the given task_ids as a dictionary of label -> taskid.
+    """Gets the ancestor tasks of the given task_ids as a dictionary of taskid -> label.
 
     Args:
         task_ids (str or [str]): A single task id or a list of task ids to find the ancestors of.
         use_proxy (bool): See get_root_url.
 
     Returns:
-        dict: A dict whose keys are task labels and values are task ids.
+        dict: A dict whose keys are task ids and values are task labels.
     """
     upstream_tasks: Dict[str, str] = {}
 
@@ -489,7 +495,15 @@ def get_ancestors(
         task_ids = [task_ids]
 
     for task_id in task_ids:
-        task_def = get_task_definition(task_id, use_proxy)
+        try:
+            task_def = get_task_definition(task_id, use_proxy)
+        except requests.HTTPError as e:
+            # Task has most likely expired, which means it's no longer a
+            # dependency for the purposes of this function.
+            if e.response.status_code == 404:
+                continue
+
+            raise e
 
         upstream_tasks.update(_get_deps(tuple(task_def["dependencies"]), use_proxy))
 

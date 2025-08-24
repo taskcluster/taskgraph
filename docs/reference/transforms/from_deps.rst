@@ -1,7 +1,7 @@
-.. _from_deps:
+.. _from_deps transforms:
 
-From Dependencies
-=================
+From Dependencies Transforms
+============================
 
 The :mod:`taskgraph.transforms.from_deps` transforms can be used to create
 tasks based on the kind dependencies, filtering on common attributes like the
@@ -11,6 +11,11 @@ These transforms are useful when you want to create follow-up tasks for some
 indeterminate subset of existing tasks. For example, maybe you want to run
 a signing task after each build task.
 
+Schema
+------
+
+All tasks must conform to the :py:data:`from_deps schema
+<taskgraph.transforms.from_deps.FROM_DEPS_SCHEMA>`.
 
 Usage
 -----

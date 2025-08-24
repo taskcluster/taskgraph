@@ -10,14 +10,15 @@ run-using handlers in `taskcluster/taskgraph/transforms/run`.
 """
 
 import copy
-import json
 import logging
+from textwrap import dedent
 
 from voluptuous import Exclusive, Extra, Optional, Required
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.transforms.cached_tasks import order_tasks
 from taskgraph.transforms.task import task_description_schema
+from taskgraph.util import json
 from taskgraph.util import path as mozpath
 from taskgraph.util.python_path import import_sibling_modules
 from taskgraph.util.schema import Schema, validate_schema
@@ -36,16 +37,31 @@ fetches_schema = {
     Optional("verify-hash"): bool,
 }
 
-# Schema for a build description
+#: Schema for a run transforms
 run_description_schema = Schema(
     {
-        # The name of the task and the task's label.  At least one must be specified,
-        # and the label will be generated from the name if necessary, by prepending
-        # the kind.
-        Optional("name"): str,
-        Optional("label"): str,
+        Optional(
+            "name",
+            description=dedent(
+                """
+                The name of the task. At least one of 'name' or 'label' must be
+                specified. If 'label' is not provided, it will be generated from
+                the 'name' by prepending the kind.
+                """
+            ),
+        ): str,
+        Optional(
+            "label",
+            description=dedent(
+                """
+                The label of the task. At least one of 'name' or 'label' must be
+                specified. If 'label' is not provided, it will be generated from
+                the 'name' by prepending the kind.
+                """
+            ),
+        ): str,
         # the following fields are passed directly through to the task description,
-        # possibly modified by the run implementation.  See
+        # possibly modified by the run implementation. See
         # taskcluster/taskgraph/transforms/task.py for the schema details.
         Required("description"): task_description_schema["description"],
         Optional("priority"): task_description_schema["priority"],
@@ -72,37 +88,80 @@ run_description_schema = Schema(
             "optimization"
         ],
         Optional("needs-sccache"): task_description_schema["needs-sccache"],
-        # The "when" section contains descriptions of the circumstances under which
-        # this task should be included in the task graph.  This will be converted
-        # into an optimization, so it cannot be specified in a run description that
-        # also gives 'optimization'.
-        Exclusive("when", "optimization"): {
-            # This task only needs to be run if a file matching one of the given
-            # patterns has changed in the push.  The patterns use the mozpack
-            # match function (python/mozbuild/mozpack/path.py).
-            Optional("files-changed"): [str],
+        Exclusive(
+            "when",
+            "optimization",
+            description=dedent(
+                """
+                The "when" section contains descriptions of the circumstances under
+                which this task should be included in the task graph. This will be
+                converted into an optimization, so it cannot be specified in a run
+                description that also gives 'optimization'.
+                """
+            ),
+        ): {
+            Optional(
+                "files-changed",
+                description=dedent(
+                    """
+                    This task only needs to be run if a file matching one of the given
+                    patterns has changed in the push. The patterns use the mozpack
+                    match function (python/mozbuild/mozpack/path.py).
+                    """
+                ),
+            ): [str],
         },
-        # A list of artifacts to install from 'fetch' tasks.
-        Optional("fetches"): {
+        Optional(
+            "fetches",
+            description=dedent(
+                """
+                A list of artifacts to install from 'fetch' tasks.
+                """
+            ),
+        ): {
             str: [
                 str,
                 fetches_schema,
             ],
         },
-        # A description of how to run this task.
-        "run": {
-            # The key to a run implementation in a peer module to this one
-            "using": str,
-            # Base work directory used to set up the task.
-            Optional("workdir"): str,
+        Required(
+            "run",
+            description=dedent(
+                """
+                A description of how to run this task.
+                """
+            ),
+        ): {
+            Required(
+                "using",
+                description=dedent(
+                    """
+                    The key to a run implementation in a peer module to this one.
+                    """
+                ),
+            ): str,
+            Optional(
+                "workdir",
+                description=dedent(
+                    """
+                    Base work directory used to set up the task.
+                    """
+                ),
+            ): str,
             # Any remaining content is verified against that run implementation's
             # own schema.
             Extra: object,
         },
         Required("worker-type"): task_description_schema["worker-type"],
-        # This object will be passed through to the task description, with additions
-        # provided by the task's run-using function
-        Optional("worker"): dict,
+        Optional(
+            "worker",
+            description=dedent(
+                """
+                This object will be passed through to the task description, with additions
+                provided by the task's run-using function.
+                """
+            ),
+        ): dict,
     }
 )
 
@@ -121,7 +180,9 @@ def rewrite_when_to_optimization(config, tasks):
         files_changed = when.get("files-changed")
 
         # implicitly add task config directory.
-        files_changed.append(f"{config.path}/**")
+        files_changed.append(f"{config.path}/kind.yml")
+        if task.get("task-from") and task["task-from"] != "kind.yml":
+            files_changed.append(f"{config.path}/{task['task-from']}")
 
         # "only when files changed" implies "skip if files have not changed"
         task["optimization"] = {"skip-unless-changed": files_changed}
@@ -155,43 +216,6 @@ def set_label(config, tasks):
             task["label"] = "{}-{}".format(config.kind, task["name"])
         if task.get("name"):
             del task["name"]
-        yield task
-
-
-@transforms.add
-def add_resource_monitor(config, tasks):
-    for task in tasks:
-        if task.get("attributes", {}).get("resource-monitor"):
-            worker_implementation, worker_os = worker_type_implementation(
-                config.graph_config, task["worker-type"]
-            )
-            # Normalise worker os so that linux-bitbar and similar use linux tools.
-            if worker_os:
-                worker_os = worker_os.split("-")[0]
-            if "win7" in task["worker-type"]:
-                arch = "32"
-            else:
-                arch = "64"
-            task.setdefault("fetches", {})
-            task["fetches"].setdefault("toolchain", [])
-            task["fetches"]["toolchain"].append(f"{worker_os}{arch}-resource-monitor")
-
-            if worker_implementation == "docker-worker":
-                artifact_source = "/builds/worker/monitoring/resource-monitor.json"
-            else:
-                artifact_source = "monitoring/resource-monitor.json"
-            task["worker"].setdefault("artifacts", [])
-            task["worker"]["artifacts"].append(
-                {
-                    "name": "public/monitoring/resource-monitor.json",
-                    "type": "file",
-                    "path": artifact_source,
-                }
-            )
-            # Set env for output file
-            task["worker"].setdefault("env", {})
-            task["worker"]["env"]["RESOURCE_MONITOR_OUTPUT"] = artifact_source
-
         yield task
 
 
@@ -304,7 +328,9 @@ def use_fetches(config, tasks):
                     if len(dep_tasks) != 1:
                         raise Exception(
                             "{name} can't fetch {kind} artifacts because "
-                            "there are {tasks} with label {label} in kind dependencies!".format(
+                            "there are {tasks} with label {label} in kind dependencies!\n"
+                            "Available tasks:"
+                            "\n - {labels}".format(
                                 name=name,
                                 kind=kind,
                                 label=dependencies[kind],
@@ -312,6 +338,9 @@ def use_fetches(config, tasks):
                                     "no tasks"
                                     if len(dep_tasks) == 0
                                     else "multiple tasks"
+                                ),
+                                labels="\n - ".join(
+                                    config.kind_dependencies_tasks.keys()
                                 ),
                             )
                         )
