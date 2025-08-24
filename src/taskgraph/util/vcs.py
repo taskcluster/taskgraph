@@ -40,7 +40,7 @@ class Repository(ABC):
         cmd = (self.binary,) + args
 
         try:
-            return subprocess.check_output(
+            return subprocess.check_output(  # type: ignore
                 cmd,  # type: ignore
                 cwd=self.path,
                 env=self._env,
