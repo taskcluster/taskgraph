@@ -52,7 +52,7 @@ class Repository(ABC):
             raise
 
     @abstractproperty
-    def tool(self) -> str:  # type: ignore
+    def tool(self) -> str:
         """Version control system being used, either 'hg' or 'git'."""
 
     @abstractproperty
