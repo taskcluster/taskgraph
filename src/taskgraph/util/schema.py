@@ -3,7 +3,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-import collections
 import pprint
 import re
 
@@ -11,6 +10,8 @@ import voluptuous
 
 import taskgraph
 from taskgraph.util.keyed_by import evaluate_keyed_by, iter_dot_path
+
+from collections.abc import Mapping
 
 
 def validate_schema(schema, obj, msg_prefix):
@@ -184,7 +185,7 @@ def check_schema(schema):
                     f"Unexpected type in YAML schema: {type(k).__name__} @ {path}"
                 )
 
-        if isinstance(sch, collections.abc.Mapping):  # type: ignore
+        if isinstance(sch, Mapping):
             for k, v in sch.items():
                 child = f"{path}[{k!r}]"
                 check_identifier(child, k)
