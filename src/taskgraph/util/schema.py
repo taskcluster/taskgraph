@@ -5,6 +5,7 @@
 
 import pprint
 import re
+from collections.abc import Mapping
 
 import voluptuous
 
