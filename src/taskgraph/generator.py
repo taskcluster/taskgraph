@@ -388,7 +388,7 @@ class TaskGraphGenerator:
         target_graph = full_task_graph.graph.transitive_closure(requested_tasks)
         target_task_graph = TaskGraph(
             {l: all_tasks[l] for l in target_graph.nodes},
-            target_graph,  # type: ignore
+            target_graph,
         )
         yield self.verify(
             "target_task_graph", target_task_graph, graph_config, parameters
