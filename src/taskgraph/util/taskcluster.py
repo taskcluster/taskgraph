@@ -306,7 +306,7 @@ def cancel_task(task_id, use_proxy=False):
 def status_task(task_id, use_proxy=False):
     """Gets the status of a task given a task_id.
 
-    In testing mode, just logs that it would have retrieved status and return an empty dict
+    In testing mode, just logs that it would have retrieved status and return an empty dict.
 
     Args:
         task_id (str): A task id.
