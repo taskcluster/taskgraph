@@ -7,7 +7,7 @@ import logging
 import os
 import re
 import subprocess
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractmethod
 from shutil import which
 
 from taskgraph.util.path import ancestors
@@ -51,33 +51,40 @@ class Repository(ABC):
                 return ""
             raise
 
-    @abstractproperty
+    @property  
+    @abstractmethod
     def tool(self) -> str:
         """Version control system being used, either 'hg' or 'git'."""
 
-    @abstractproperty
+    @property  
+    @abstractmethod
     def head_rev(self) -> str:  # type: ignore
         """Hash of HEAD revision."""
 
-    @abstractproperty
+    @property  
+    @abstractmethod
     def base_rev(self):
         """Hash of revision the current topic branch is based on."""
 
-    @abstractproperty
+    @property  
+    @abstractmethod
     def branch(self):
         """Current branch or bookmark the checkout has active."""
 
-    @abstractproperty
+    @property  
+    @abstractmethod
     def all_remote_names(self):
         """Name of all configured remote repositories."""
 
-    @abstractproperty
+    @property  
+    @abstractmethod
     def default_remote_name(self):
         """Name the VCS defines for the remote repository when cloning
         it for the first time. This name may not exist anymore if users
         changed the default configuration, for instance."""
 
-    @abstractproperty
+    @property  
+    @abstractmethod
     def remote_name(self):
         """Name of the remote repository."""
 
@@ -99,7 +106,8 @@ class Repository(ABC):
 
         return first_remote
 
-    @abstractproperty
+    @property  
+    @abstractmethod
     def default_branch(self):
         """Name of the default branch."""
 
@@ -181,12 +189,17 @@ class Repository(ABC):
 
 
 class HgRepository(Repository):
-    tool = "hg"  # type: ignore
-    default_remote_name = "default"  # type: ignore
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._env["HGPLAIN"] = "1"
+
+    @property
+    def tool(self):
+        return "hg"
+    
+    @property
+    def default_remote_name(self):
+        return "default"
 
     @property
     def head_rev(self):
@@ -321,10 +334,15 @@ class HgRepository(Repository):
 
 
 class GitRepository(Repository):
-    tool = "git"  # type: ignore
-    default_remote_name = "origin"  # type: ignore
-
     _LS_REMOTE_PATTERN = re.compile(r"ref:\s+refs/heads/(?P<branch_name>\S+)\s+HEAD")
+
+    @property
+    def tool(self):
+        return "git"
+    
+    @property
+    def default_remote_name(self):
+        return "origin"
 
     @property
     def head_rev(self):
