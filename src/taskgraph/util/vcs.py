@@ -52,19 +52,19 @@ class Repository(ABC):
                 return ""
             raise
 
-    @property  
+    @property
     @abstractmethod
     def tool(self) -> str:
         """Version control system being used, either 'hg' or 'git'."""
 
-    @property  
+    @property
     @abstractmethod
     def head_rev(self) -> str:
         """Hash of HEAD revision."""
 
-    @property  
+    @property
     @abstractmethod
-    def base_rev(self):
+    def base_rev(self) -> str:
         """Hash of revision the current topic branch is based on."""
 
     @property
