@@ -5,11 +5,11 @@
 
 import pprint
 import re
+from collections.abc import Mapping
 
 import voluptuous
 
 import taskgraph
-from collections.abc import Mapping
 from taskgraph.util.keyed_by import evaluate_keyed_by, iter_dot_path
 
 
