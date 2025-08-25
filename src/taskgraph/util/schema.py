@@ -12,8 +12,6 @@ import voluptuous
 import taskgraph
 from taskgraph.util.keyed_by import evaluate_keyed_by, iter_dot_path
 
-from collections.abc import Mapping
-
 
 def validate_schema(schema, obj, msg_prefix):
     """
