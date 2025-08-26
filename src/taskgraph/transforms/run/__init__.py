@@ -11,162 +11,134 @@ run-using handlers in `taskcluster/taskgraph/transforms/run`.
 
 import copy
 import logging
-from textwrap import dedent
+from typing import Literal, Optional, Union
 
-from voluptuous import Exclusive, Extra, Optional, Required
+import msgspec
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.transforms.cached_tasks import order_tasks
-from taskgraph.transforms.task import task_description_schema
+from taskgraph.transforms.task import TaskDescriptionSchema, TaskDescriptionWorkerSchema
 from taskgraph.util import json
 from taskgraph.util import path as mozpath
 from taskgraph.util.python_path import import_sibling_modules
-from taskgraph.util.schema import LegacySchema, validate_schema
+from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.taskcluster import get_artifact_prefix
 from taskgraph.util.workertypes import worker_type_implementation
 
 logger = logging.getLogger(__name__)
 
-# Fetches may be accepted in other transforms and eventually passed along
-# to a `task` (eg: from_deps). Defining this here allows them to reuse
-# the schema and avoid duplication.
-fetches_schema = {
-    Required("artifact"): str,
-    Optional("dest"): str,
-    Optional("extract"): bool,
-    Optional("verify-hash"): bool,
-}
 
-#: Schema for a run transforms
-run_description_schema = LegacySchema(
-    {
-        Optional(
-            "name",
-            description=dedent(
-                """
-                The name of the task. At least one of 'name' or 'label' must be
-                specified. If 'label' is not provided, it will be generated from
-                the 'name' by prepending the kind.
-                """
-            ),
-        ): str,
-        Optional(
-            "label",
-            description=dedent(
-                """
-                The label of the task. At least one of 'name' or 'label' must be
-                specified. If 'label' is not provided, it will be generated from
-                the 'name' by prepending the kind.
-                """
-            ),
-        ): str,
-        # the following fields are passed directly through to the task description,
-        # possibly modified by the run implementation. See
-        # taskcluster/taskgraph/transforms/task.py for the schema details.
-        Required("description"): task_description_schema["description"],
-        Optional("priority"): task_description_schema["priority"],
-        Optional("attributes"): task_description_schema["attributes"],
-        Optional("task-from"): task_description_schema["task-from"],
-        Optional("dependencies"): task_description_schema["dependencies"],
-        Optional("soft-dependencies"): task_description_schema["soft-dependencies"],
-        Optional("if-dependencies"): task_description_schema["if-dependencies"],
-        Optional("requires"): task_description_schema["requires"],
-        Optional("deadline-after"): task_description_schema["deadline-after"],
-        Optional("expires-after"): task_description_schema["expires-after"],
-        Optional("routes"): task_description_schema["routes"],
-        Optional("scopes"): task_description_schema["scopes"],
-        Optional("tags"): task_description_schema["tags"],
-        Optional("extra"): task_description_schema["extra"],
-        Optional("treeherder"): task_description_schema["treeherder"],
-        Optional("index"): task_description_schema["index"],
-        Optional("run-on-projects"): task_description_schema["run-on-projects"],
-        Optional("run-on-tasks-for"): task_description_schema["run-on-tasks-for"],
-        Optional("run-on-git-branches"): task_description_schema["run-on-git-branches"],
-        Optional("shipping-phase"): task_description_schema["shipping-phase"],
-        Optional("always-target"): task_description_schema["always-target"],
-        Exclusive("optimization", "optimization"): task_description_schema[
-            "optimization"
-        ],
-        Optional("needs-sccache"): task_description_schema["needs-sccache"],
-        Exclusive(
-            "when",
-            "optimization",
-            description=dedent(
-                """
-                The "when" section contains descriptions of the circumstances under
-                which this task should be included in the task graph. This will be
-                converted into an optimization, so it cannot be specified in a run
-                description that also gives 'optimization'.
-                """
-            ),
-        ): {
-            Optional(
-                "files-changed",
-                description=dedent(
-                    """
-                    This task only needs to be run if a file matching one of the given
-                    patterns has changed in the push. The patterns use the mozpack
-                    match function (python/mozbuild/mozpack/path.py).
-                    """
-                ),
-            ): [str],
-        },
-        Optional(
-            "fetches",
-            description=dedent(
-                """
-                A list of artifacts to install from 'fetch' tasks.
-                """
-            ),
-        ): {
-            str: [
-                str,
-                fetches_schema,
-            ],
-        },
-        Required(
-            "run",
-            description=dedent(
-                """
-                A description of how to run this task.
-                """
-            ),
-        ): {
-            Required(
-                "using",
-                description=dedent(
-                    """
-                    The key to a run implementation in a peer module to this one.
-                    """
-                ),
-            ): str,
-            Optional(
-                "workdir",
-                description=dedent(
-                    """
-                    Base work directory used to set up the task.
-                    """
-                ),
-            ): str,
-            # Any remaining content is verified against that run implementation's
-            # own schema.
-            Extra: object,
-        },
-        Required("worker-type"): task_description_schema["worker-type"],
-        Optional(
-            "worker",
-            description=dedent(
-                """
-                This object will be passed through to the task description, with additions
-                provided by the task's run-using function.
-                """
-            ),
-        ): dict,
-    }
-)
+# Fetches schema using msgspec
+class FetchesSchema(Schema):
+    """Schema for fetch configuration."""
+
+    artifact: str
+    dest: Optional[str] = None
+    extract: bool = True
+    verify_hash: bool = False
+
+
+# When configuration using msgspec
+class WhenSchema(Schema):
+    """Configuration for when a task should be included."""
+
+    # This task only needs to be run if a file matching one of the given
+    # patterns has changed in the push. The patterns use the mozpack
+    # match function (python/mozbuild/mozpack/path.py).
+    files_changed: list[str] = msgspec.field(default_factory=list)
+
+
+# Run configuration using msgspec
+class RunSchema(Schema, rename=None, forbid_unknown_fields=False):
+    """Configuration for how to run a task.
+
+    This schema allows extra fields for run implementation-specific configuration.
+    """
+
+    # The key to a run implementation in a peer module to this one.
+    using: str
+    # Base work directory used to set up the task.
+    workdir: Optional[str] = None
+
+
+# Run description schema using msgspec
+class RunDescriptionSchema(Schema):
+    """Schema for run transforms."""
+
+    # Required fields first
+    description: TaskDescriptionSchema.__annotations__["description"]  # type: ignore  # noqa: F821
+    run: RunSchema
+    worker_type: TaskDescriptionSchema.__annotations__["worker_type"]  # type: ignore  # noqa: F821
+
+    # Optional fields
+    # The name of the task. At least one of 'name' or 'label' must be
+    # specified. If 'label' is not provided, it will be generated from
+    # the 'name' by prepending the kind.
+    name: Optional[str] = None
+    # The label of the task. At least one of 'name' or 'label' must be
+    # specified. If 'label' is not provided, it will be generated from
+    # the 'name' by prepending the kind.
+    label: Optional[str] = None
+
+    # Optional fields from task description
+    priority: TaskDescriptionSchema.__annotations__["priority"] = None  # type: ignore[misc,assignment]
+    attributes: TaskDescriptionSchema.__annotations__["attributes"] = msgspec.field(  # type: ignore[misc,assignment]
+        default_factory=dict
+    )
+    task_from: TaskDescriptionSchema.__annotations__["task_from"] = None  # type: ignore[misc,assignment]
+    dependencies: TaskDescriptionSchema.__annotations__["dependencies"] = msgspec.field(  # type: ignore[misc,assignment]
+        default_factory=dict
+    )
+    soft_dependencies: TaskDescriptionSchema.__annotations__["soft_dependencies"] = (  # type: ignore[misc,assignment]
+        msgspec.field(default_factory=list)
+    )
+    if_dependencies: TaskDescriptionSchema.__annotations__["if_dependencies"] = (  # type: ignore[misc,assignment]
+        msgspec.field(default_factory=list)
+    )
+    requires: TaskDescriptionSchema.__annotations__["requires"] = "all-completed"  # type: ignore[misc,assignment]
+    deadline_after: TaskDescriptionSchema.__annotations__["deadline_after"] = None  # type: ignore[misc,assignment]
+    expires_after: TaskDescriptionSchema.__annotations__["expires_after"] = None  # type: ignore[misc,assignment]
+    routes: TaskDescriptionSchema.__annotations__["routes"] = msgspec.field(  # type: ignore[misc,assignment]
+        default_factory=list
+    )
+    scopes: TaskDescriptionSchema.__annotations__["scopes"] = msgspec.field(  # type: ignore[misc,assignment]
+        default_factory=list
+    )
+    tags: TaskDescriptionSchema.__annotations__["tags"] = msgspec.field(  # type: ignore[misc,assignment]
+        default_factory=dict
+    )
+    extra: TaskDescriptionSchema.__annotations__["extra"] = msgspec.field(  # type: ignore[misc,assignment]
+        default_factory=dict
+    )
+    treeherder: TaskDescriptionSchema.__annotations__["treeherder"] = None  # type: ignore[misc,assignment]
+    index: TaskDescriptionSchema.__annotations__["index"] = None  # type: ignore[misc,assignment]
+    run_on_projects: TaskDescriptionSchema.__annotations__["run_on_projects"] = None  # type: ignore[misc,assignment]
+    run_on_tasks_for: TaskDescriptionSchema.__annotations__["run_on_tasks_for"] = (  # type: ignore[misc,assignment]
+        msgspec.field(default_factory=list)
+    )
+    run_on_git_branches: TaskDescriptionSchema.__annotations__[  # type: ignore[misc,assignment]
+        "run_on_git_branches"  # type: ignore[misc,assignment]
+    ] = msgspec.field(default_factory=list)
+    shipping_phase: TaskDescriptionSchema.__annotations__["shipping_phase"] = None  # type: ignore[misc,assignment]
+    always_target: TaskDescriptionSchema.__annotations__["always_target"] = False  # type: ignore[misc,assignment]
+    optimization: TaskDescriptionSchema.__annotations__["optimization"] = None  # type: ignore[misc,assignment]
+    needs_sccache: TaskDescriptionSchema.__annotations__["needs_sccache"] = False  # type: ignore[misc,assignment]
+    # The "when" section contains descriptions of the circumstances under
+    # which this task should be included in the task graph. This will be
+    # converted into an optimization, so it cannot be specified in a run
+    # description that also gives 'optimization'.
+    when: Optional[WhenSchema] = None
+    # A list of artifacts to install from 'fetch' tasks.
+    fetches: dict[str, list[Union[str, FetchesSchema]]] = msgspec.field(
+        default_factory=dict
+    )
+    # This object will be passed through to the task description, with additions
+    # provided by the task's run-using function.
+    worker: Optional[TaskDescriptionWorkerSchema] = None
+
 
 transforms = TransformSequence()
-transforms.add_validate(run_description_schema)
+transforms.add_validate(RunDescriptionSchema)
 
 
 @transforms.add
@@ -456,9 +428,14 @@ def run_task_using(worker_implementation, run_using, schema=None, defaults={}):
     return wrap
 
 
-@run_task_using(
-    "always-optimized", "always-optimized", LegacySchema({"using": "always-optimized"})
-)
+# Simple schema for always-optimized
+class AlwaysOptimizedRunSchema(Schema, omit_defaults=False):
+    """Schema for always-optimized run tasks."""
+
+    using: Literal["always-optimized"]
+
+
+@run_task_using("always-optimized", "always-optimized", AlwaysOptimizedRunSchema)
 def always_optimized(config, task, taskdesc):
     pass
 

@@ -8,12 +8,14 @@ See https://docs.taskcluster.net/docs/reference/core/notify/usage for
 more information.
 """
 
-from voluptuous import ALLOW_EXTRA, Any, Exclusive, Optional, Required
+from typing import Any, Literal, Optional, Union
+
+import msgspec
 
 from taskgraph.transforms.base import TransformSequence
-from taskgraph.util.schema import LegacySchema, optionally_keyed_by, resolve_keyed_by
+from taskgraph.util.schema import Schema, optionally_keyed_by, resolve_keyed_by
 
-_status_type = Any(
+StatusType = Literal[
     "on-completed",
     "on-defined",
     "on-exception",
@@ -21,29 +23,42 @@ _status_type = Any(
     "on-pending",
     "on-resolved",
     "on-running",
-)
+]
 
-_recipients = [
-    {
-        Required("type"): "email",
-        Required("address"): optionally_keyed_by("project", "level", str),
-        Optional("status-type"): _status_type,
-    },
-    {
-        Required("type"): "matrix-room",
-        Required("room-id"): str,
-        Optional("status-type"): _status_type,
-    },
-    {
-        Required("type"): "pulse",
-        Required("routing-key"): str,
-        Optional("status-type"): _status_type,
-    },
-    {
-        Required("type"): "slack-channel",
-        Required("channel-id"): str,
-        Optional("status-type"): _status_type,
-    },
+
+class EmailRecipientSchema(Schema, tag_field="type", tag="email"):
+    """Email notification recipient."""
+
+    address: optionally_keyed_by("project", "level", str, use_msgspec=True)  # type: ignore
+    status_type: Optional[StatusType] = None
+
+
+class MatrixRoomRecipientSchema(Schema, tag_field="type", tag="matrix-room"):
+    """Matrix room notification recipient."""
+
+    room_id: str
+    status_type: Optional[StatusType] = None
+
+
+class PulseRecipientSchema(Schema, tag_field="type", tag="pulse"):
+    """Pulse notification recipient."""
+
+    routing_key: str
+    status_type: Optional[StatusType] = None
+
+
+class SlackChannelRecipientSchema(Schema, tag_field="type", tag="slack-channel"):
+    """Slack channel notification recipient."""
+
+    channel_id: str
+    status_type: Optional[StatusType] = None
+
+
+Recipient = Union[
+    EmailRecipientSchema,
+    MatrixRoomRecipientSchema,
+    PulseRecipientSchema,
+    SlackChannelRecipientSchema,
 ]
 
 _route_keys = {
@@ -54,46 +69,92 @@ _route_keys = {
 }
 """Map each type to its primary key that will be used in the route."""
 
+
+class EmailLinkSchema(Schema, rename=None, omit_defaults=False):
+    """Email link configuration."""
+
+    text: str
+    href: str
+
+
+class EmailContentSchema(Schema, rename=None):
+    """Email notification content."""
+
+    subject: Optional[str] = None
+    content: Optional[str] = None
+    link: Optional[EmailLinkSchema] = None
+
+
+class MatrixContentSchema(Schema):
+    """Matrix notification content."""
+
+    body: Optional[str] = None
+    formatted_body: Optional[str] = None
+    format: Optional[str] = None
+    msg_type: Optional[str] = None
+
+
+class SlackContentSchema(Schema, rename=None):
+    """Slack notification content."""
+
+    text: Optional[str] = None
+    blocks: Optional[list[Any]] = None
+    attachments: Optional[list[Any]] = None
+
+
+class NotifyContentSchema(Schema, rename=None):
+    """Notification content configuration."""
+
+    email: Optional[EmailContentSchema] = None
+    matrix: Optional[MatrixContentSchema] = None
+    slack: Optional[SlackContentSchema] = None
+
+
+RecipientSchema = Union[
+    EmailRecipientSchema,
+    MatrixRoomRecipientSchema,
+    PulseRecipientSchema,
+    SlackChannelRecipientSchema,
+]
+
+
+class NotifyConfigSchema(Schema, rename=None):
+    """Modern notification configuration."""
+
+    recipients: list[RecipientSchema]
+    content: Optional[NotifyContentSchema] = None
+
+
+class LegacyNotificationsConfigSchema(Schema, rename="kebab"):
+    """Legacy notification configuration for backwards compatibility."""
+
+    emails: Union[list[str], dict[str, Any]]  # Can be keyed-by
+    subject: str
+    message: Optional[str] = None
+    status_types: Optional[list[StatusType]] = None
+
+
 #: Schema for notify transforms
-NOTIFY_SCHEMA = LegacySchema(
-    {
-        Exclusive("notify", "config"): {
-            Required("recipients"): [Any(*_recipients)],
-            Optional("content"): {
-                Optional("email"): {
-                    Optional("subject"): str,
-                    Optional("content"): str,
-                    Optional("link"): {
-                        Required("text"): str,
-                        Required("href"): str,
-                    },
-                },
-                Optional("matrix"): {
-                    Optional("body"): str,
-                    Optional("formatted-body"): str,
-                    Optional("format"): str,
-                    Optional("msg-type"): str,
-                },
-                Optional("slack"): {
-                    Optional("text"): str,
-                    Optional("blocks"): list,
-                    Optional("attachments"): list,
-                },
-            },
-        },
-        # Continue supporting the legacy schema for backwards compat.
-        Exclusive("notifications", "config"): {
-            Required("emails"): optionally_keyed_by("project", "level", [str]),
-            Required("subject"): str,
-            Optional("message"): str,
-            Optional("status-types"): [_status_type],
-        },
-    },
-    extra=ALLOW_EXTRA,
-)
+class NotifySchema(Schema, tag_field="notify_type", forbid_unknown_fields=False):
+    """Schema for notify transforms.
+
+    Note: This schema allows either 'notify' or 'notifications' field,
+    but not both. The validation will be done in __post_init__.
+    """
+
+    notify: Optional[NotifyConfigSchema] = None
+    notifications: Optional[LegacyNotificationsConfigSchema] = None
+
+    def __post_init__(self):
+        # Ensure only one of notify or notifications is present
+        if self.notify and self.notifications:
+            raise msgspec.ValidationError(
+                "Cannot specify both 'notify' and 'notifications'"
+            )
+
 
 transforms = TransformSequence()
-transforms.add_validate(NOTIFY_SCHEMA)
+transforms.add_validate(NotifySchema)
 
 
 def _convert_legacy(config, legacy, label):

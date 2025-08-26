@@ -5,17 +5,14 @@
 import logging
 import os
 import re
-from textwrap import dedent
-
-from voluptuous import Optional, Required
+from typing import Optional
 
 import taskgraph
 from taskgraph.transforms.base import TransformSequence
+from taskgraph.transforms.task import TaskDescriptionIndexSchema
 from taskgraph.util import json
 from taskgraph.util.docker import create_context_tar, generate_context_hash
-from taskgraph.util.schema import LegacySchema
-
-from .task import task_description_schema
+from taskgraph.util.schema import Schema
 
 logger = logging.getLogger(__name__)
 
@@ -31,87 +28,34 @@ IMAGE_BUILDER_IMAGE = (
 
 transforms = TransformSequence()
 
+
 #: Schema for docker_image transforms
-docker_image_schema = LegacySchema(
-    {
-        Required(
-            "name",
-            description=dedent(
-                """
-                Name of the docker image.
-                """
-            ).lstrip(),
-        ): str,
-        Optional(
-            "parent",
-            description=dedent(
-                """
-                Name of the parent docker image.
-                """
-            ).lstrip(),
-        ): str,
-        Optional(
-            "symbol",
-            description=dedent(
-                """
-                Treeherder symbol.
-                """
-            ).lstrip(),
-        ): str,
-        Optional(
-            "task-from",
-            description=dedent(
-                """
-                Relative path (from config.path) to the file the docker image was defined in.
-                """
-            ).lstrip(),
-        ): str,
-        Optional(
-            "args",
-            description=dedent(
-                """
-                Arguments to use for the Dockerfile.
-                """
-            ).lstrip(),
-        ): {str: str},
-        Optional(
-            "definition",
-            description=dedent(
-                """
-                Name of the docker image definition under taskcluster/docker, when
-                different from the docker image name.
-                """
-            ).lstrip(),
-        ): str,
-        Optional(
-            "packages",
-            description=dedent(
-                """
-                List of package tasks this docker image depends on.
-                """
-            ).lstrip(),
-        ): [str],
-        Optional(
-            "index",
-            description=dedent(
-                """
-                Information for indexing this build so its artifacts can be discovered.
-                """
-            ).lstrip(),
-        ): task_description_schema["index"],
-        Optional(
-            "cache",
-            description=dedent(
-                """
-                Whether this image should be cached based on inputs.
-                """
-            ).lstrip(),
-        ): bool,
-    }
-)
+class DockerImageSchema(Schema):
+    # Required field first
+    # Name of the docker image.
+    name: str
+
+    # Optional fields
+    # Name of the parent docker image.
+    parent: Optional[str] = None
+    # Treeherder symbol.
+    symbol: Optional[str] = None
+    # Relative path (from config.path) to the file the docker image was defined in.
+    task_from: Optional[str] = None
+    # Arguments to use for the Dockerfile.
+    args: Optional[dict[str, str]] = None
+    # Name of the docker image definition under taskcluster/docker, when
+    # different from the docker image name.
+    definition: Optional[str] = None
+    # List of package tasks this docker image depends on.
+    packages: Optional[list[str]] = None
+    # Information for indexing this build so its artifacts can be discovered.
+    index: Optional[TaskDescriptionIndexSchema] = None
+    # Whether this image should be cached based on inputs.
+    cache: Optional[bool] = None
 
 
-transforms.add_validate(docker_image_schema)
+transforms.add_validate(DockerImageSchema)
 
 
 @transforms.add
@@ -126,7 +70,8 @@ def fill_template(config, tasks):
     context_hashes = {}
 
     if not taskgraph.fast and config.write_artifacts:
-        os.makedirs(CONTEXTS_DIR, exist_ok=True)
+        if not os.path.isdir(CONTEXTS_DIR):
+            os.makedirs(CONTEXTS_DIR)
 
     for task in tasks:
         image_name = task.pop("name")

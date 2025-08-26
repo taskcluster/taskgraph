@@ -8,62 +8,50 @@ matrix defined in the definition.
 """
 
 from copy import deepcopy
-from textwrap import dedent
-
-from voluptuous import ALLOW_EXTRA, Extra, Optional, Required
+from typing import Optional
 
 from taskgraph.transforms.base import TransformSequence
-from taskgraph.util.schema import LegacySchema
+from taskgraph.util.schema import Schema
 from taskgraph.util.templates import substitute_task_fields
 
+
+class MatrixChildSchema(Schema, forbid_unknown_fields=False):
+    """
+    Matrix configuration for generating multiple tasks.
+    """
+
+    # Exclude the specified combination(s) of matrix values from the
+    # final list of tasks.
+    #
+    # If only a subset of the possible rows are present in the
+    # exclusion rule, then *all* combinations including that subset
+    # subset will be excluded.
+    exclude: Optional[list[dict[str, str]]] = None
+    # Sets the task name to the specified format string.
+    #
+    # Useful for cases where the default of joining matrix values by
+    # a dash is not desired.
+    set_name: Optional[str] = None
+    # List of fields in the task definition to substitute matrix values into.
+    #
+    # If not specified, all fields in the task definition will be
+    # substituted.
+    substitution_fields: Optional[list[str]] = None
+
+
 #: Schema for matrix transforms
-MATRIX_SCHEMA = LegacySchema(
-    {
-        Required("name"): str,
-        Optional("matrix"): {
-            Optional(
-                "exclude",
-                description=dedent(
-                    """
-                Exclude the specified combination(s) of matrix values from the
-                final list of tasks.
+class MatrixSchema(Schema, forbid_unknown_fields=False):
+    """Schema for matrix transforms.
 
-                If only a subset of the possible rows are present in the
-                exclusion rule, then *all* combinations including that subset
-                subset will be excluded.
-                """.lstrip()
-                ),
-            ): [{str: str}],
-            Optional(
-                "set-name",
-                description=dedent(
-                    """
-                Sets the task name to the specified format string.
+    This schema allows extra fields to be passed through to the task.
+    """
 
-                Useful for cases where the default of joining matrix values by
-                a dash is not desired.
-                """.lstrip()
-                ),
-            ): str,
-            Optional(
-                "substitution-fields",
-                description=dedent(
-                    """
-                List of fields in the task definition to substitute matrix values into.
+    name: str
+    matrix: Optional[MatrixChildSchema] = None
 
-                If not specified, all fields in the task definition will be
-                substituted.
-                """
-                ),
-            ): [str],
-            Extra: [str],
-        },
-    },
-    extra=ALLOW_EXTRA,
-)
 
 transforms = TransformSequence()
-transforms.add_validate(MATRIX_SCHEMA)
+transforms.add_validate(MatrixSchema)
 
 
 def _resolve_matrix(tasks, key, values, exclude):
