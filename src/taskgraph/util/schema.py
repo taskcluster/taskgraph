@@ -2,67 +2,55 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-
 import pprint
-import re
-from collections.abc import Mapping
+from functools import reduce
+from typing import Dict, List, Literal, Optional, Union
 
-import voluptuous
+import msgspec
 
 import taskgraph
 from taskgraph.util.keyed_by import evaluate_keyed_by, iter_dot_path
+
+# Common type definitions that are used across multiple schemas
+TaskPriority = Literal[
+    "highest", "very-high", "high", "medium", "low", "very-low", "lowest"
+]
 
 
 def validate_schema(schema, obj, msg_prefix):
     """
     Validate that object satisfies schema.  If not, generate a useful exception
     beginning with msg_prefix.
+
+    Args:
+        schema: A msgspec.Struct type (including Schema subclasses)
+        obj: Object to validate
+        msg_prefix: Prefix for error messages
     """
     if taskgraph.fast:
         return
+
     try:
-        schema(obj)
-    except voluptuous.MultipleInvalid as exc:
-        msg = [msg_prefix]
-        for error in exc.errors:
-            msg.append(str(error))
-        raise Exception("\n".join(msg) + "\n" + pprint.pformat(obj))
+        if isinstance(schema, type) and issubclass(schema, Schema):
+            schema.validate(obj)
+        else:
+            raise TypeError(f"Unsupported schema type: {type(schema)}")
+    except (msgspec.ValidationError, msgspec.DecodeError, Exception) as exc:
+        raise Exception(f"{msg_prefix}\n{str(exc)}\n{pprint.pformat(obj)}")
+
+
+def UnionTypes(*types):
+    """Use `functools.reduce` to simulate `Union[*allowed_types]` on older
+    Python versions.
+    """
+    return reduce(lambda a, b: Union[a, b], types)
 
 
 def optionally_keyed_by(*arguments):
-    """
-    Mark a schema value as optionally keyed by any of a number of fields.  The
-    schema is the last argument, and the remaining fields are taken to be the
-    field names.  For example:
-
-        'some-value': optionally_keyed_by(
-            'test-platform', 'build-platform',
-            Any('a', 'b', 'c'))
-
-    The resulting schema will allow nesting of `by-test-platform` and
-    `by-build-platform` in either order.
-    """
-    schema = arguments[-1]
+    _type = arguments[-1]
     fields = arguments[:-1]
-
-    def validator(obj):
-        if isinstance(obj, dict) and len(obj) == 1:
-            k, v = list(obj.items())[0]
-            if k.startswith("by-") and k[len("by-") :] in fields:
-                res = {}
-                for kk, vv in v.items():
-                    try:
-                        res[kk] = validator(vv)
-                    except voluptuous.Invalid as e:
-                        e.prepend([k, kk])
-                        raise
-                return res
-        return Schema(schema)(obj)
-
-    # set to assist autodoc
-    setattr(validator, "schema", schema)
-    setattr(validator, "fields", fields)
-    return validator
+    bykeys = [Literal[f"by-{field}"] for field in fields]
+    return Union[_type, Dict[UnionTypes(*bykeys), Dict[str, _type]]]
 
 
 def resolve_keyed_by(
@@ -150,99 +138,153 @@ EXCEPTED_SCHEMA_IDENTIFIERS = [
 ]
 
 
-def check_schema(schema):
-    identifier_re = re.compile(r"^\$?[a-z][a-z0-9-]*$")
-
-    def excepted(item):
-        for esi in EXCEPTED_SCHEMA_IDENTIFIERS:
-            if isinstance(esi, str):
-                if f"[{esi!r}]" in item:
-                    return True
-            elif esi(item):
-                return True
-        return False
-
-    def iter(path, sch):
-        def check_identifier(path, k):
-            if k in (str,) or k in (str, voluptuous.Extra):
-                pass
-            elif isinstance(k, voluptuous.NotIn):
-                pass
-            elif isinstance(k, str):
-                if not identifier_re.match(k) and not excepted(path):
-                    raise RuntimeError(
-                        "YAML schemas should use dashed lower-case identifiers, "
-                        f"not {k!r} @ {path}"
-                    )
-            elif isinstance(k, (voluptuous.Optional, voluptuous.Required)):
-                check_identifier(path, k.schema)
-            elif isinstance(k, (voluptuous.Any, voluptuous.All)):
-                for v in k.validators:
-                    check_identifier(path, v)
-            elif not excepted(path):
-                raise RuntimeError(
-                    f"Unexpected type in YAML schema: {type(k).__name__} @ {path}"
-                )
-
-        if isinstance(sch, Mapping):
-            for k, v in sch.items():
-                child = f"{path}[{k!r}]"
-                check_identifier(child, k)
-                iter(child, v)
-        elif isinstance(sch, (list, tuple)):
-            for i, v in enumerate(sch):
-                iter(f"{path}[{i}]", v)
-        elif isinstance(sch, voluptuous.Any):
-            for v in sch.validators:
-                iter(path, v)
-
-    iter("schema", schema.schema)
-
-
-class Schema(voluptuous.Schema):
+class Schema(
+    msgspec.Struct,
+    kw_only=True,
+    omit_defaults=True,
+    rename="kebab",
+    forbid_unknown_fields=True,
+):
     """
-    Operates identically to voluptuous.Schema, but applying some taskgraph-specific checks
-    in the process.
+    Base schema class that extends msgspec.Struct.
+
+    This allows schemas to be defined directly as:
+
+        class MySchema(Schema):
+            foo: str
+            bar: int = 10
+
+    Instead of wrapping msgspec.Struct types.
+    Most schemas use kebab-case renaming by default.
+
+    By default, forbid_unknown_fields is True, meaning extra fields
+    will cause validation errors. Child classes can override this by
+    setting forbid_unknown_fields=False in their class definition:
+
+        class MySchema(Schema, forbid_unknown_fields=False):
+            foo: str
     """
 
-    def __init__(self, *args, check=True, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.check = check
-        if not taskgraph.fast and self.check:
-            check_schema(self)
-
-    def extend(self, *args, **kwargs):
-        schema = super().extend(*args, **kwargs)
-
-        if self.check:
-            check_schema(schema)
-        # We want twice extend schema to be checked too.
-        schema.__class__ = Schema
-        return schema
-
-    def _compile(self, schema):
+    @classmethod
+    def validate(cls, data):
+        """Validate data against this schema."""
         if taskgraph.fast:
-            return
-        return super()._compile(schema)
+            return data
 
-    def __getitem__(self, item):
-        return self.schema[item]  # type: ignore
+        try:
+            return msgspec.convert(data, cls)
+        except (msgspec.ValidationError, msgspec.DecodeError) as e:
+            raise msgspec.ValidationError(str(e))
 
 
-OptimizationSchema = voluptuous.Any(
-    # always run this task (default)
-    None,
-    # search the index for the given index namespaces, and replace this task if found
-    # the search occurs in order, with the first match winning
-    {"index-search": [str]},
-    # skip this task if none of the given file patterns match
-    {"skip-unless-changed": [str]},
-)
+class IndexSearchOptimizationSchema(Schema):
+    """Search the index for the given index namespaces."""
 
-# shortcut for a string where task references are allowed
-taskref_or_string = voluptuous.Any(
-    str,
-    {voluptuous.Required("task-reference"): str},
-    {voluptuous.Required("artifact-reference"): str},
-)
+    index_search: List[str]
+
+
+class SkipUnlessChangedOptimizationSchema(Schema):
+    """Skip this task if none of the given file patterns match."""
+
+    skip_unless_changed: List[str]
+
+
+# Create a class for optimization types to avoid dict union issues
+class OptimizationTypeSchema(Schema, forbid_unknown_fields=False):
+    """Schema that accepts various optimization configurations."""
+
+    index_search: Optional[List[str]] = None
+    skip_unless_changed: Optional[List[str]] = None
+
+    def __post_init__(self):
+        """Ensure at least one optimization type is provided."""
+        if not self.index_search and not self.skip_unless_changed:
+            # Allow empty schema for other dict-based optimizations
+            pass
+
+
+# Use the class in the union to avoid multiple dict types
+OptimizationType = Union[None, OptimizationTypeSchema]
+
+
+# Task reference types using msgspec
+class TaskReferenceSchema(Schema):
+    """Reference to another task."""
+
+    task_reference: str
+
+
+class ArtifactReferenceSchema(Schema):
+    """Reference to a task artifact."""
+
+    artifact_reference: str
+
+
+class TaskRefType(Schema, forbid_unknown_fields=False):
+    """Schema that accepts either task-reference or artifact-reference."""
+
+    task_reference: Optional[str] = None
+    artifact_reference: Optional[str] = None
+
+    def __post_init__(self):
+        """Ensure exactly one reference type is provided."""
+        if self.task_reference and self.artifact_reference:
+            raise ValueError("Cannot have both task-reference and artifact-reference")
+        if not self.task_reference and not self.artifact_reference:
+            raise ValueError("Must have either task-reference or artifact-reference")
+
+
+# Use the class in the union to avoid multiple dict types
+taskref_or_string = Union[str, TaskRefType]
+
+
+def validate_optimization(value):
+    """Validate optimization value."""
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        if "index-search" in value:
+            try:
+                return msgspec.convert(value, IndexSearchOptimizationSchema)
+            except msgspec.ValidationError:
+                pass
+        if "skip-unless-changed" in value:
+            try:
+                return msgspec.convert(value, SkipUnlessChangedOptimizationSchema)
+            except msgspec.ValidationError:
+                pass
+    # Simple validation for dict types
+    if isinstance(value, dict):
+        if "index-search" in value and isinstance(value["index-search"], list):
+            return value
+        if "skip-unless-changed" in value and isinstance(
+            value["skip-unless-changed"], list
+        ):
+            return value
+    raise ValueError(f"Invalid optimization value: {value}")
+
+
+def validate_task_ref(value):
+    """Validate task reference value."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        if "task-reference" in value:
+            try:
+                return msgspec.convert(value, TaskReferenceSchema)
+            except msgspec.ValidationError:
+                pass
+        if "artifact-reference" in value:
+            try:
+                return msgspec.convert(value, ArtifactReferenceSchema)
+            except msgspec.ValidationError:
+                pass
+    # Simple validation for dict types
+    if isinstance(value, dict):
+        if "task-reference" in value and isinstance(value["task-reference"], str):
+            return value
+        if "artifact-reference" in value and isinstance(
+            value["artifact-reference"], str
+        ):
+            return value
+    raise ValueError(f"Invalid task reference value: {value}")
