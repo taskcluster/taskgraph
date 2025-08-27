@@ -374,7 +374,7 @@ class TaskGraphGenerator:
         if parameters["enable_always_target"]:
             always_target_tasks = {
                 t.label
-                for t in full_task_graph.tasks.values()  # type: ignore
+                for t in full_task_graph.tasks.values()
                 if t.attributes.get("always_target")
                 if parameters["enable_always_target"] is True
                 or t.kind in parameters["enable_always_target"]
@@ -388,7 +388,7 @@ class TaskGraphGenerator:
         target_graph = full_task_graph.graph.transitive_closure(requested_tasks)
         target_task_graph = TaskGraph(
             {l: all_tasks[l] for l in target_graph.nodes},
-            target_graph,  # type: ignore
+            target_graph,
         )
         yield self.verify(
             "target_task_graph", target_task_graph, graph_config, parameters
