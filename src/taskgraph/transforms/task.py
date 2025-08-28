@@ -273,9 +273,6 @@ class DockerWorkerPayloadSchema(Schema, forbid_unknown_fields=False, kw_only=Tru
     taskcluster_proxy: bool
     allow_ptrace: bool
     loopback_video: bool
-    loopback_audio: bool
-    docker_in_docker: bool  # (aka 'dind')
-    privileged: bool
     # environment variables
     env: dict[str, taskref_or_string_msgspec]
     # the maximum time to run, in seconds
@@ -356,9 +353,6 @@ def build_docker_worker_payload(config, task, task_def):
     if worker.get("chain-of-trust"):
         features["chainOfTrust"] = True
 
-    if worker.get("docker-in-docker"):
-        features["dind"] = True
-
     if task.get("needs-sccache"):
         features["taskclusterProxy"] = True
         task_def["scopes"].append(
@@ -375,16 +369,10 @@ def build_docker_worker_payload(config, task, task_def):
 
     capabilities = {}
 
-    for lo in "audio", "video":
-        if worker.get("loopback-" + lo):
-            capitalized = "loopback" + lo.capitalize()
-            devices = capabilities.setdefault("devices", {})
-            devices[capitalized] = True
-            task_def["scopes"].append("docker-worker:capability:device:" + capitalized)
-
-    if worker.get("privileged"):
-        capabilities["privileged"] = True
-        task_def["scopes"].append("docker-worker:capability:privileged")
+    if worker.get("loopback-video"):
+        devices = capabilities.setdefault("devices", {})
+        devices["loopbackVideo"] = True
+        task_def["scopes"].append("docker-worker:capability:device:loopbackVideo")
 
     task_def["payload"] = payload = {
         "image": image,
@@ -815,9 +803,6 @@ def set_defaults(config, tasks):
             worker.setdefault("taskcluster-proxy", False)
             worker.setdefault("allow-ptrace", False)
             worker.setdefault("loopback-video", False)
-            worker.setdefault("loopback-audio", False)
-            worker.setdefault("docker-in-docker", False)
-            worker.setdefault("privileged", False)
             worker.setdefault("volumes", [])
             worker.setdefault("env", {})
             if "caches" in worker:
