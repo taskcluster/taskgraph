@@ -496,9 +496,6 @@ def verify_index(config, index):
         Required("taskcluster-proxy"): bool,
         Required("allow-ptrace"): bool,
         Required("loopback-video"): bool,
-        Required("loopback-audio"): bool,
-        Required("docker-in-docker"): bool,  # (aka 'dind')
-        Required("privileged"): bool,
         # Paths to Docker volumes.
         #
         # For in-tree Docker images, volumes can be parsed from Dockerfile.
@@ -611,9 +608,6 @@ def build_docker_worker_payload(config, task, task_def):
     if worker.get("chain-of-trust"):
         features["chainOfTrust"] = True
 
-    if worker.get("docker-in-docker"):
-        features["dind"] = True
-
     if task.get("needs-sccache"):
         features["taskclusterProxy"] = True
         task_def["scopes"].append(
@@ -630,16 +624,11 @@ def build_docker_worker_payload(config, task, task_def):
 
     capabilities = {}
 
-    for lo in "audio", "video":
-        if worker.get("loopback-" + lo):
-            capitalized = "loopback" + lo.capitalize()
-            devices = capabilities.setdefault("devices", {})
-            devices[capitalized] = True
-            task_def["scopes"].append("docker-worker:capability:device:" + capitalized)
-
-    if worker.get("privileged"):
-        capabilities["privileged"] = True
-        task_def["scopes"].append("docker-worker:capability:privileged")
+    if worker.get("loopback-video"):
+        capitalized = "loopbackVideo"
+        devices = capabilities.setdefault("devices", {})
+        devices[capitalized] = True
+        task_def["scopes"].append("docker-worker:capability:device:" + capitalized)
 
     task_def["payload"] = payload = {
         "image": image,
@@ -1081,9 +1070,6 @@ def set_defaults(config, tasks):
             worker.setdefault("taskcluster-proxy", False)
             worker.setdefault("allow-ptrace", False)
             worker.setdefault("loopback-video", False)
-            worker.setdefault("loopback-audio", False)
-            worker.setdefault("docker-in-docker", False)
-            worker.setdefault("privileged", False)
             worker.setdefault("volumes", [])
             worker.setdefault("env", {})
             if "caches" in worker:
