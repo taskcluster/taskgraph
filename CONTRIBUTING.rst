@@ -157,15 +157,16 @@ In order to release a new version of Taskgraph, you will need to:
 
 1. Update ``CHANGELOG.md``
 2. Update ``version`` in ``pyproject.toml``
-3. Commit, and land the above changes with a commit message like "chore: bump <version>"
-4. Draft a release in Github pointing to the above commit.
+3. Run ``uv lock``
+4. Commit, and land the above changes with a commit message like "chore: bump <version>"
+5. Draft a release in Github pointing to the above commit.
 
    a. Create a new tag of the form ``X.Y.Z``
    b. Ensure "Set as latest release" is checked
    c. Submit the release
 
-5. Wait for the ``pypi-publish`` Github workflow and ``push-image-decision`` task to finish.
-6. Verify that expected version has been published to `pypi
+6. Wait for the ``pypi-publish`` Github workflow and ``push-image-decision`` task to finish.
+7. Verify that expected version has been published to `pypi
    <https://pypi.org/project/taskcluster-taskgraph>`__ and pushed to `DockerHub`_.
 
 .. _DockerHub: https://hub.docker.com/r/mozillareleases/taskgraph/tags
@@ -176,7 +177,7 @@ Releasing pytest-taskgraph
 There's also a Pytest plugin packaged under ``packages/pytest-taskgraph``. The
 release process for this package is:
 
-1. Update ``version`` in ``packages/pytest-taskgraph/pyproject.toml``
+1. Update ``version`` in ``packages/pytest-taskgraph/pyproject.toml``, and run ``uv lock``
 2. Commit and land the changes with a commit message like "chore: bump pytest-taskgraph <version>"
 3. Draft a release in Github pointing to the above commit.
 
