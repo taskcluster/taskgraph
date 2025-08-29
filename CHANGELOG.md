@@ -1,23 +1,34 @@
 # Change Log
 
+## [15.1.0] - 2025-08-29
+
+### Added
+
+- New function `taskgraph.generator.load_tasks_for_kinds` to get multiple kinds in one pass
+- Allow the `os-groups` generic-worker feature on linux and mac
+
+### Fixed
+
+- taskgraph build-image regression introduced in 14.6.0
+
 ## [15.0.1] - 2025-08-14
 
-## Reverted
+### Reverted
 
 - multiprocess kind processing (#746)
 
 ## [15.0.0] - 2025-08-13
 
-## Added
+### Added
 
 - Process kinds in parallel with a pool of processes (#738)
 - use `uv` to check python version, when available(#733)
 
-## Changed
+### Changed
 
 - BREAKING CHANGE: Use `primary-dependency-label` attribute to find primary dependency of tasks (#736)
 
-## Fixed
+### Fixed
 
 - Fallback to guessing repo root in config.py (#742)
 
