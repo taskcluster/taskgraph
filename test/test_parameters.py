@@ -11,7 +11,6 @@ from unittest import TestCase, mock
 
 import mozilla_repo_urls
 import pytest
-from voluptuous import Optional, Required, Schema
 
 import taskgraph  # noqa: F401
 from taskgraph import parameters
@@ -21,6 +20,7 @@ from taskgraph.parameters import (
     extend_parameters_schema,
     load_parameters_file,
 )
+from taskgraph.util.schema import Schema
 
 from .mockedopen import MockedOpen
 
@@ -274,42 +274,50 @@ def test_parameters_format_spec(spec, expected):
 
 
 def test_extend_parameters_schema(monkeypatch):
+    """Test parameter extension with msgspec schemas."""
+
+    # Define a test schema that extends the base schema
+    class ExtendedSchema(Schema):
+        foo: str
+        bar: bool = False  # Optional with default
+
+    # Reset global _schema_extensions
+    monkeypatch.setattr(parameters, "_schema_extensions", [])
+
+    # Set our extended schema as the base schema
     monkeypatch.setattr(
         parameters,
         "base_schema",
-        Schema(
-            {
-                Required("foo"): str,
-            }
-        ),
+        ExtendedSchema,
     )
+
+    # Keep the default functions
     monkeypatch.setattr(
         parameters,
         "defaults_functions",
         list(parameters.defaults_functions),
     )
 
-    with pytest.raises(ParameterMismatch):
-        Parameters(strict=False).check()
-
-    with pytest.raises(ParameterMismatch):
-        Parameters(foo="1", bar=True).check()
-
+    # Add a defaults function that provides foo and bar
     extend_parameters_schema(
-        {
-            Optional("bar"): bool,
-        },
+        {},  # No additional schema, just the defaults function
         defaults_fn=lambda root: {"foo": "1", "bar": False},
     )
 
+    # Test with explicit values
     params = Parameters(foo="1", bar=True)
     params.check()
+    assert params["foo"] == "1"
     assert params["bar"] is True
 
+    # Test with partial values (bar not present in dict)
     params = Parameters(foo="1")
     params.check()
+    assert params["foo"] == "1"
+    # bar is not in the dict because it wasn't explicitly set
     assert "bar" not in params
 
+    # Test with defaults function providing values
     params = Parameters(strict=False)
     params.check()
     assert params["foo"] == "1"

@@ -9,9 +9,9 @@ import pathlib
 import shutil
 import time
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 import yaml
-from voluptuous import Optional
 
 from taskgraph.actions import render_actions_json
 from taskgraph.create import create_tasks
@@ -40,11 +40,12 @@ PER_PROJECT_PARAMETERS = {
 
 
 #: Schema for try_task_config.json version 2
-try_task_config_schema_v2 = Schema(
-    {
-        Optional("parameters"): {str: object},
-    }
-)
+class TryTaskConfigSchemaV2(Schema):
+    # All fields are optional
+    parameters: Optional[Dict[str, Any]] = None
+
+
+try_task_config_schema_v2 = TryTaskConfigSchemaV2
 
 
 def full_task_graph_to_runnable_tasks(full_task_json):

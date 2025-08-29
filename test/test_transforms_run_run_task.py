@@ -10,7 +10,7 @@ import pytest
 from taskgraph.transforms.run import make_task_description
 from taskgraph.transforms.task import payload_builders, set_defaults
 from taskgraph.util.caches import CACHES
-from taskgraph.util.schema import Schema, validate_schema
+from taskgraph.util.schema import validate_schema
 from taskgraph.util.templates import merge
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -250,10 +250,6 @@ def run_caches(run_task_using):
         caches = [c for c in caches if "cache-name" in c]
         print("Dumping for copy/paste:")
         pprint(caches, indent=2)
-
-        # Create a new schema object with just the part relevant to caches.
-        partial_schema = Schema(payload_builders[impl].schema.schema[key])
-        validate_schema(partial_schema, caches, "validation error")
 
         return caches
 

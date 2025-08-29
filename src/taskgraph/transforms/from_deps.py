@@ -13,108 +13,95 @@ after each build task, whatever builds may exist.
 
 from copy import deepcopy
 from textwrap import dedent
+from typing import Any, Dict, List, Optional, Union
 
-from voluptuous import ALLOW_EXTRA, Any, Optional, Required
+import msgspec
 
 from taskgraph.transforms.base import TransformSequence
-from taskgraph.transforms.run import fetches_schema
 from taskgraph.util.attributes import attrmatch
 from taskgraph.util.dependencies import GROUP_BY_MAP, get_dependencies
 from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.set_name import SET_NAME_MAP
 
-#: Schema for from_deps transforms
-FROM_DEPS_SCHEMA = Schema(
-    {
-        Required("from-deps"): {
-            Optional(
-                "kinds",
-                description=dedent(
-                    """
-                Limit dependencies to specified kinds (defaults to all kinds in
-                `kind-dependencies`).
 
-                The first kind in the list is the "primary" kind. The
-                dependency of this kind will be used to derive the label
-                and copy attributes (if `copy-attributes` is True).
-                """.lstrip()
-                ),
-            ): [str],
-            Optional(
-                "set-name",
-                description=dedent(
-                    """
-                UPDATE ME AND DOCS
-                """.lstrip()
-                ),
-            ): Any(
-                None,
-                False,
-                *SET_NAME_MAP,
-                {Any(*SET_NAME_MAP): object},
-            ),
-            Optional(
-                "with-attributes",
-                description=dedent(
-                    """
-                Limit dependencies to tasks whose attributes match
-                using :func:`~taskgraph.util.attributes.attrmatch`.
-                """.lstrip()
-                ),
-            ): {str: Any(list, str)},
-            Optional(
-                "group-by",
-                description=dedent(
-                    """
-                Group cross-kind dependencies using the given group-by
-                function. One task will be created for each group. If not
-                specified, the 'single' function will be used which creates
-                a new task for each individual dependency.
-                """.lstrip()
-                ),
-            ): Any(
-                None,
-                *GROUP_BY_MAP,
-                {Any(*GROUP_BY_MAP): object},
-            ),
-            Optional(
-                "copy-attributes",
-                description=dedent(
-                    """
-                If True, copy attributes from the dependency matching the
-                first kind in the `kinds` list (whether specified explicitly
-                or taken from `kind-dependencies`).
-                """.lstrip()
-                ),
-            ): bool,
-            Optional(
-                "unique-kinds",
-                description=dedent(
-                    """
-                If true (the default), there must be only a single unique task
-                for each kind in a dependency group. Setting this to false
-                disables that requirement.
-                """.lstrip()
-                ),
-            ): bool,
-            Optional(
-                "fetches",
-                description=dedent(
-                    """
-                If present, a `fetches` entry will be added for each task
-                dependency. Attributes of the upstream task may be used as
-                substitution values in the `artifact` or `dest` values of the
-                `fetches` entry.
-                """.lstrip()
-                ),
-            ): {str: [fetches_schema]},
-        },
-    },
-    extra=ALLOW_EXTRA,
-)
+class FetchEntry(Schema, rename=None):
+    """A fetch entry for an artifact."""
+
+    artifact: str
+    dest: Optional[str] = None
+
+
+class FromDepsConfig(Schema):
+    # Optional fields
+    # Limit dependencies to specified kinds (defaults to all kinds in
+    # `kind-dependencies`).
+    #
+    # The first kind in the list is the "primary" kind. The
+    # dependency of this kind will be used to derive the label
+    # and copy attributes (if `copy-attributes` is True).
+    kinds: Optional[List[str]] = None
+    # UPDATE ME AND DOCS
+    set_name: Optional[Union[str, bool, Dict[str, Any]]] = None
+    # Limit dependencies to tasks whose attributes match
+    # using :func:`~taskgraph.util.attributes.attrmatch`.
+    with_attributes: Optional[Dict[str, Union[List[Any], str]]] = None
+    # Group cross-kind dependencies using the given group-by
+    # function. One task will be created for each group. If not
+    # specified, the 'single' function will be used which creates
+    # a new task for each individual dependency.
+    group_by: Optional[Union[str, Dict[str, Any]]] = None
+    # If True, copy attributes from the dependency matching the
+    # first kind in the `kinds` list (whether specified explicitly
+    # or taken from `kind-dependencies`).
+    copy_attributes: Optional[bool] = None
+    # If true (the default), there must be only a single unique task
+    # for each kind in a dependency group. Setting this to false
+    # disables that requirement.
+    unique_kinds: Optional[bool] = None
+    # If present, a `fetches` entry will be added for each task
+    # dependency. Attributes of the upstream task may be used as
+    # substitution values in the `artifact` or `dest` values of the
+    # `fetches` entry.
+    fetches: Optional[Dict[str, List[Union[str, Dict[str, str]]]]] = None
+
+    def __post_init__(self):
+        # Validate set_name
+        if self.set_name is not None and self.set_name is not False:
+            if isinstance(self.set_name, str) and self.set_name not in SET_NAME_MAP:
+                raise msgspec.ValidationError(f"Invalid set-name: {self.set_name}")
+            elif isinstance(self.set_name, dict):
+                keys = list(self.set_name.keys())
+                if len(keys) != 1 or keys[0] not in SET_NAME_MAP:
+                    raise msgspec.ValidationError(
+                        f"Invalid set-name dict: {self.set_name}"
+                    )
+
+        # Validate group_by
+        if self.group_by is not None:
+            if isinstance(self.group_by, str) and self.group_by not in GROUP_BY_MAP:
+                raise msgspec.ValidationError(f"Invalid group-by: {self.group_by}")
+            elif isinstance(self.group_by, dict):
+                keys = list(self.group_by.keys())
+                if len(keys) != 1 or keys[0] not in GROUP_BY_MAP:
+                    raise msgspec.ValidationError(
+                        f"Invalid group-by dict: {self.group_by}"
+                    )
+
+
+#: Schema for from_deps transforms
+class FromDepsSchema(Schema):
+    """Schema for from_deps transforms."""
+
+    from_deps: FromDepsConfig
+    # Allow extra fields
+    _extra: Optional[Dict[str, Any]] = msgspec.field(default=None, name="")
+
+
+# Backward compatibility
+FROM_DEPS_SCHEMA = FromDepsSchema
 
 transforms = TransformSequence()
-transforms.add_validate(FROM_DEPS_SCHEMA)
+transforms.add_validate(FromDepsSchema)
 
 
 @transforms.add

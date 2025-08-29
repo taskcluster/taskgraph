@@ -8,7 +8,7 @@ current taskgraph.  The transform takes a list of indexes, and the optimization
 phase will replace the task with the task from the other graph.
 """
 
-from voluptuous import Required
+from typing import List
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.transforms.run import run_task_using
@@ -18,16 +18,14 @@ transforms = TransformSequence()
 
 
 #: Schema for run.using index-search
-run_task_schema = Schema(
-    {
-        Required("using"): "index-search",
-        Required(
-            "index-search",
-            "A list of indexes in decreasing order of priority at which to lookup for this "
-            "task. This is interpolated with the graph parameters.",
-        ): [str],
-    }
-)
+class RunTaskSchema(Schema):
+    using: str
+    # A list of indexes in decreasing order of priority at which to lookup for this
+    # task. This is interpolated with the graph parameters.
+    index_search: List[str]
+
+
+run_task_schema = RunTaskSchema
 
 
 @run_task_using("always-optimized", "index-search", schema=run_task_schema)

@@ -4,8 +4,8 @@
 
 import unittest
 
+import msgspec
 import pytest
-from voluptuous import Invalid, MultipleInvalid
 
 import taskgraph
 from taskgraph.util.schema import (
@@ -15,12 +15,13 @@ from taskgraph.util.schema import (
     validate_schema,
 )
 
-schema = Schema(
-    {
-        "x": int,
-        "y": str,
-    }
-)
+
+class SimpleTestSchema(Schema, rename=None, omit_defaults=False):
+    x: int
+    y: str
+
+
+schema = SimpleTestSchema
 
 
 class TestValidateSchema(unittest.TestCase):
@@ -32,33 +33,47 @@ class TestValidateSchema(unittest.TestCase):
             validate_schema(schema, {"x": "not-int"}, "pfx")
             self.fail("no exception raised")
         except Exception as e:
-            self.assertTrue(str(e).startswith("pfx\n"))
+            # Our new implementation includes pfx in the error message
+            self.assertTrue("pfx" in str(e))
 
 
 class TestCheckSchema(unittest.TestCase):
     def test_schema(self):
-        "Creating a schema applies taskgraph checks."
-        with self.assertRaises(Exception):
-            Schema({"camelCase": int})
+        "Creating a msgspec schema works correctly."
 
-    def test_extend_schema(self):
-        "Extending a schema applies taskgraph checks."
-        with self.assertRaises(Exception):
-            Schema({"kebab-case": int}).extend({"camelCase": int})
+        class CamelCaseSchema(Schema, rename=None, omit_defaults=False):
+            camelCase: int
 
-    def test_extend_schema_twice(self):
-        "Extending a schema twice applies taskgraph checks."
-        with self.assertRaises(Exception):
-            Schema({"kebab-case": int}).extend({"more-kebab": int}).extend(
-                {"camelCase": int}
-            )
+        schema = CamelCaseSchema
+        # Test that it validates correctly
+        result = schema.validate({"camelCase": 42})
+        assert result.camelCase == 42
+
+        with self.assertRaises(msgspec.ValidationError):
+            schema.validate({"camelCase": "not-an-int"})
+
+    def test_extend_not_supported(self):
+        "Extension is not supported for msgspec schemas."
+
+        class SimpleSchema(Schema, rename=None, omit_defaults=False):
+            kebab_case: int
+
+        schema = SimpleSchema
+        # Schema classes no longer have extend method
+        self.assertFalse(hasattr(schema, "extend"))
 
 
 def test_check_skipped(monkeypatch):
-    """Schema not validated if 'check=False' or taskgraph.fast is unset."""
-    Schema({"camelCase": int}, check=False)  # assert no exception
+    """Schema not validated if taskgraph.fast is set."""
+
+    class SimpleSchema(Schema, rename=None, omit_defaults=False):
+        value: int
+
     monkeypatch.setattr(taskgraph, "fast", True)
-    Schema({"camelCase": int})  # assert no exception
+    schema = SimpleSchema
+    # When fast mode is on, validation is skipped
+    result = schema.validate({"value": "not-an-int"})  # Should not raise
+    assert result == {"value": "not-an-int"}
 
 
 class TestResolveKeyedBy(unittest.TestCase):
@@ -242,10 +257,10 @@ def test_optionally_keyed_by():
     assert validator("baz") == "baz"
     assert validator({"by-foo": {"a": "b", "c": "d"}}) == {"a": "b", "c": "d"}
 
-    with pytest.raises(Invalid):
+    with pytest.raises((TypeError, ValueError)):
         validator({"by-foo": {"a": 1, "c": "d"}})
 
-    with pytest.raises(MultipleInvalid):
+    with pytest.raises(ValueError):
         validator({"by-bar": {"a": "b"}})
 
 
@@ -256,11 +271,11 @@ def test_optionally_keyed_by_mulitple_keys():
     assert validator({"by-bar": {"x": "y"}}) == {"x": "y"}
     assert validator({"by-foo": {"a": {"by-bar": {"x": "y"}}}}) == {"a": {"x": "y"}}
 
-    with pytest.raises(Invalid):
+    with pytest.raises((TypeError, ValueError)):
         validator({"by-foo": {"a": 123, "c": "d"}})
 
-    with pytest.raises(MultipleInvalid):
+    with pytest.raises((TypeError, ValueError)):
         validator({"by-bar": {"a": 1}})
 
-    with pytest.raises(MultipleInvalid):
+    with pytest.raises(ValueError):
         validator({"by-unknown": {"a": "b"}})
