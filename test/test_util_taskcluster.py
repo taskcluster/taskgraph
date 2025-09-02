@@ -109,19 +109,23 @@ def test_get_artifact(monkeypatch):
     monkeypatch.setattr(tc, "get_taskcluster_client", mock_client)
 
     mock_response_txt = mock.MagicMock()
-    mock_response_txt.read.return_value = b"foobar"
+    mock_response_txt.raw.read.return_value = b"foobar"
     mock_queue.getArtifact.return_value = mock_response_txt
 
     raw = tc.get_artifact(tid, "artifact.txt")
     assert raw.read() == b"foobar"
     mock_queue.getArtifact.assert_called_with(tid, "artifact.txt")
 
-    mock_queue.getArtifact.return_value = {"foo": "bar"}
+    mock_response_json = mock.MagicMock()
+    mock_response_json.json.return_value = {"foo": "bar"}
+    mock_queue.getArtifact.return_value = mock_response_json
     result = tc.get_artifact(tid, "artifact.json")
     assert result == {"foo": "bar"}
 
     expected_result = {"foo": b"\xe2\x81\x83".decode()}
-    mock_queue.getArtifact.return_value = expected_result
+    mock_response_yml = mock.MagicMock()
+    mock_response_yml.content = b'foo: "\xe2\x81\x83"'
+    mock_queue.getArtifact.return_value = mock_response_yml
     result = tc.get_artifact(tid, "artifact.yml")
     assert result == expected_result
 
@@ -208,7 +212,7 @@ def test_get_artifact_from_index(monkeypatch):
     monkeypatch.setattr(tc, "get_taskcluster_client", mock_client)
 
     mock_response = mock.MagicMock()
-    mock_response.read.return_value = b"foobar"
+    mock_response.raw.read.return_value = b"foobar"
     mock_index.findArtifactFromTask.return_value = mock_response
 
     result = tc.get_artifact_from_index(index, path)

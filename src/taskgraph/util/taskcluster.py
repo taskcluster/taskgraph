@@ -16,6 +16,7 @@ from requests.packages.urllib3.util.retry import Retry  # type: ignore
 
 import taskcluster
 from taskgraph.task import Task
+from taskgraph.util import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,18 @@ def get_taskcluster_client(service: str):
     else:
         options = taskcluster.optionsFromEnvironment()
 
-    return getattr(taskcluster, service.capitalize())(options)
+    return getattr(taskcluster, service[0].upper() + service[1:])(options)
+
+
+def _handle_artifact(path, response):
+    if path.endswith(".json"):
+        return response.json()
+
+    if path.endswith(".yml"):
+        return yaml.load_stream(response.content)
+
+    response.raw.read = functools.partial(response.raw.read, decode_content=True)
+    return response.raw
 
 
 def requests_retry_session(
@@ -143,7 +155,7 @@ def get_artifact(task_id, path):
     """
     queue = get_taskcluster_client("queue")
     response = queue.getArtifact(task_id, path)
-    return response
+    return _handle_artifact(path, response)
 
 
 def list_artifacts(task_id):
@@ -198,19 +210,18 @@ def find_task_id_batched(index_paths):
     if not response or "tasks" not in response:
         return {}
 
-    task_ids = {}
     tasks = response.get("tasks", [])
-    for task in tasks:
-        namespace = task.get("namespace")  # type: ignore
-        task_id = task.get("taskId")  # type: ignore
-        if namespace and task_id:
-            task_ids[namespace] = task_id
+    task_ids = {
+        t["namespace"]: t["taskId"] for t in tasks if "namespace" in t and "taskId" in t
+    }
+
     return task_ids
 
 
 def get_artifact_from_index(index_path, artifact_path):
     index = get_taskcluster_client("index")
-    return index.findArtifactFromTask(index_path, artifact_path)
+    response = index.findArtifactFromTask(index_path, artifact_path)
+    return _handle_artifact(index_path, response)
 
 
 def list_tasks(index_path):
@@ -224,23 +235,15 @@ def list_tasks(index_path):
     if not response or "tasks" not in response:
         return []
 
-    results = []
     tasks = response.get("tasks", [])
-    for task in tasks:
-        results.append(task)
 
     # We can sort on expires because in the general case
     # all of these tasks should be created with the same expires time so they end up in
     # order from earliest to latest action. If more correctness is needed, consider
     # fetching each task and sorting on the created date.
-    results.sort(key=lambda t: parse_time(t["expires"]))
+    tasks.sort(key=lambda t: parse_time(t["expires"]))
 
-    task_ids = []
-    for t in results:
-        if "taskId" in t:
-            task_id = t.get("taskId")
-            if task_id:
-                task_ids.append(task_id)
+    task_ids = [t["taskId"] for t in tasks if "taskId" in t]
 
     return task_ids
 
@@ -316,13 +319,12 @@ def status_task_batched(task_ids):
     if not response or "statuses" not in response:
         return {}
 
-    statuses = {}
     status_list = response.get("statuses", [])
-    for task_status in status_list:
-        task_id = task_status.get("taskId")  # type: ignore
-        status = task_status.get("status")  # type: ignore
-        if task_id and status:
-            statuses[task_id] = status
+    statuses = {
+        t["taskId"]: t["status"]
+        for t in status_list
+        if "namespace" in t and "taskId" in t
+    }
 
     return statuses
 
@@ -410,11 +412,12 @@ def list_task_group_incomplete_tasks(task_group_id):
 
     tasks = response.get("tasks", [])
     for task in tasks:
-        if "status" in task:  # type: ignore
-            status = task["status"]  # type: ignore
-            state = status.get("state")
-            task_id = status.get("taskId")
-            if state in ["running", "pending", "unscheduled"] and task_id:
+        if (status := task.get("status")) is not None:  # type: ignore
+            if (task_id := status.get("taskId")) and status.get("state") in [
+                "running",
+                "pending",
+                "unscheduled",
+            ]:
                 yield task_id
 
 
@@ -453,7 +456,11 @@ def get_ancestors(task_ids: Union[List[str], str]) -> Dict[str, str]:
         task_ids = [task_ids]
 
     for task_id in task_ids:
-        task_def = get_task_definition(task_id)
+        try:
+            task_def = get_task_definition(task_id)
+        except Exception as e:
+            raise e
+
         if not task_def:
             # Task has most likely expired, which means it's no longer a
             # dependency for the purposes of this function.
