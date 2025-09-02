@@ -253,29 +253,58 @@ class TestResolveKeyedBy(unittest.TestCase):
 
 
 def test_optionally_keyed_by():
-    validator = optionally_keyed_by("foo", str)
-    assert validator("baz") == "baz"
-    assert validator({"by-foo": {"a": "b", "c": "d"}}) == {"a": "b", "c": "d"}
+    # optionally_keyed_by now returns a type annotation for msgspec
+    type_annotation = optionally_keyed_by("foo", str)
 
-    with pytest.raises((TypeError, ValueError)):
-        validator({"by-foo": {"a": 1, "c": "d"}})
+    # Create a struct with this type annotation to test validation
+    class TestSchema(Schema):
+        value: type_annotation
 
-    with pytest.raises(ValueError):
-        validator({"by-bar": {"a": "b"}})
+    # Test that a simple string is accepted
+    result = msgspec.convert({"value": "baz"}, TestSchema)
+    assert result.value == "baz"
+
+    # Test that keyed-by structure is accepted and works
+    result = msgspec.convert({"value": {"by-foo": {"a": "b", "c": "d"}}}, TestSchema)
+    assert result.value == {"by-foo": {"a": "b", "c": "d"}}
+
+    # Test that invalid value types are rejected
+    with pytest.raises(msgspec.ValidationError):
+        msgspec.convert({"value": {"by-foo": {"a": 1, "c": "d"}}}, TestSchema)
+
+    # Test that unknown by-keys are rejected due to Literal constraint
+    with pytest.raises(msgspec.ValidationError):
+        msgspec.convert({"value": {"by-bar": {"a": "b"}}}, TestSchema)
 
 
 def test_optionally_keyed_by_mulitple_keys():
-    validator = optionally_keyed_by("foo", "bar", str)
-    assert validator("baz") == "baz"
-    assert validator({"by-foo": {"a": "b", "c": "d"}}) == {"a": "b", "c": "d"}
-    assert validator({"by-bar": {"x": "y"}}) == {"x": "y"}
-    assert validator({"by-foo": {"a": {"by-bar": {"x": "y"}}}}) == {"a": {"x": "y"}}
+    # optionally_keyed_by now returns a type annotation for msgspec
+    type_annotation = optionally_keyed_by("foo", "bar", str)
 
-    with pytest.raises((TypeError, ValueError)):
-        validator({"by-foo": {"a": 123, "c": "d"}})
+    # Create a struct with this type annotation to test validation
+    class TestSchema(Schema):
+        value: type_annotation
 
-    with pytest.raises((TypeError, ValueError)):
-        validator({"by-bar": {"a": 1}})
+    # Test that a simple string is accepted
+    result = msgspec.convert({"value": "baz"}, TestSchema)
+    assert result.value == "baz"
 
-    with pytest.raises(ValueError):
-        validator({"by-unknown": {"a": "b"}})
+    # Test that keyed-by with "foo" is accepted
+    result = msgspec.convert({"value": {"by-foo": {"a": "b", "c": "d"}}}, TestSchema)
+    assert result.value == {"by-foo": {"a": "b", "c": "d"}}
+
+    # Test that keyed-by with "bar" is accepted
+    result = msgspec.convert({"value": {"by-bar": {"x": "y"}}}, TestSchema)
+    assert result.value == {"by-bar": {"x": "y"}}
+
+    # Test that invalid value types in by-foo are rejected
+    with pytest.raises(msgspec.ValidationError):
+        msgspec.convert({"value": {"by-foo": {"a": 123, "c": "d"}}}, TestSchema)
+
+    # Test that invalid value types in by-bar are rejected
+    with pytest.raises(msgspec.ValidationError):
+        msgspec.convert({"value": {"by-bar": {"a": 1}}}, TestSchema)
+
+    # Test that unknown by-keys are rejected due to Literal constraint
+    with pytest.raises(msgspec.ValidationError):
+        msgspec.convert({"value": {"by-unknown": {"a": "b"}}}, TestSchema)
