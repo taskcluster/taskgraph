@@ -190,7 +190,6 @@ def find_task_id(index_path):
     task = index.findTask(index_path)
     return task["taskId"]  # type: ignore
 
-
 def find_task_id_batched(index_paths):
     """Gets the task id of multiple tasks given their respective index.
 
@@ -277,7 +276,7 @@ def cancel_task(task_id):
 def status_task(task_id):
     """Gets the status of a task given a task_id.
 
-    In testing mode, just logs that it would have retrieved status.
+    In testing mode, just logs that it would have retrieved status and return an empty dict.
 
     Args:
         task_id (str): A task id.
@@ -288,6 +287,7 @@ def status_task(task_id):
     """
     if testing:
         logger.info(f"Would have gotten status for {task_id}.")
+        return {}
     else:
         queue = get_taskcluster_client("queue")
         response = queue.status(task_id)
