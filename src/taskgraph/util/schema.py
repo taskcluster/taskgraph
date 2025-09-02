@@ -2,9 +2,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-
 import pprint
-from typing import List
+from functools import reduce
+from typing import Dict, List, Literal, Union
 
 import msgspec
 
@@ -37,72 +37,18 @@ def validate_schema(schema, obj, msg_prefix):
         raise Exception(f"{msg_prefix}\n{str(exc)}\n{pprint.pformat(obj)}")
 
 
+def UnionTypes(*types):
+    """Use `functools.reduce` to simulate `Union[*allowed_types]` on older
+    Python versions.
+    """
+    return reduce(lambda a, b: Union[a, b], types)
+
+
 def optionally_keyed_by(*arguments):
-    """
-    Mark a schema value as optionally keyed by any of a number of fields.  The
-    schema is the last argument, and the remaining fields are taken to be the
-    field names.  For example:
-
-        'some-value': optionally_keyed_by(
-            'test-platform', 'build-platform',
-            Any('a', 'b', 'c'))
-
-    The resulting schema will allow nesting of `by-test-platform` and
-    `by-build-platform` in either order.
-    """
-    schema = arguments[-1]
+    _type = arguments[-1]
     fields = arguments[:-1]
-
-    def validator(obj):
-        if isinstance(obj, dict) and len(obj) == 1:
-            k, v = list(obj.items())[0]
-            if k.startswith("by-") and k[len("by-") :] in fields:
-                res = {}
-                for kk, vv in v.items():
-                    try:
-                        res[kk] = validator(vv)
-                    except Exception as e:
-                        raise ValueError(f"Error in {k}.{kk}: {str(e)}") from e
-                return res
-            elif k.startswith("by-"):
-                # Unknown by-field
-                raise ValueError(f"Unknown key {k}")
-        # Validate against the schema
-        if isinstance(schema, type) and issubclass(schema, Schema):
-            return schema.validate(obj)
-        elif schema is str:
-            # String validation
-            if not isinstance(obj, str):
-                raise TypeError(f"Expected string, got {type(obj).__name__}")
-            return obj
-        elif schema is int:
-            # Int validation
-            if not isinstance(obj, int):
-                raise TypeError(f"Expected int, got {type(obj).__name__}")
-            return obj
-        elif isinstance(schema, type):
-            # Type validation for built-in types
-            if not isinstance(obj, schema):
-                raise TypeError(f"Expected {schema.__name__}, got {type(obj).__name__}")
-            return obj
-        elif callable(schema):
-            # Other callable validators
-            try:
-                return schema(obj)
-            except:
-                raise
-        else:
-            # Simple type validation
-            if not isinstance(obj, schema):
-                raise TypeError(
-                    f"Expected {getattr(schema, '__name__', str(schema))}, got {type(obj).__name__}"
-                )
-            return obj
-
-    # set to assist autodoc
-    setattr(validator, "schema", schema)
-    setattr(validator, "fields", fields)
-    return validator
+    bykeys = [Literal[f"by-{field}"] for field in fields]
+    return Union[_type, Dict[UnionTypes(*bykeys), Dict[str, _type]]]
 
 
 def resolve_keyed_by(

@@ -2,7 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-
 import logging
 import os
 import sys
@@ -26,25 +25,10 @@ TaskPriority = Literal[
 
 class WorkerAlias(Schema):
     """Worker alias configuration."""
-
-    provisioner: Union[str, dict]  # Can be keyed-by level
+    provisioner: optionally_keyed_by("level", str)  # type: ignore
     implementation: str
     os: str
-    worker_type: Union[str, dict]  # Can be keyed-by level, maps from "worker-type"
-
-    def __post_init__(self):
-        """Validate keyed-by fields."""
-        # Validate provisioner can be keyed-by level
-        if isinstance(self.provisioner, dict):
-            validator = optionally_keyed_by("level", str)
-            # Just validate - it will raise an error if invalid
-            validator(self.provisioner)
-
-        # Validate worker_type can be keyed-by level
-        if isinstance(self.worker_type, dict):
-            validator = optionally_keyed_by("level", str)
-            # Just validate - it will raise an error if invalid
-            validator(self.worker_type)
+    worker_type: optionally_keyed_by("level", str)  # type: ignore
 
 
 class Workers(Schema, rename=None):
@@ -96,47 +80,15 @@ class GraphConfigSchema(Schema, forbid_unknown_fields=False):
 
     # Required fields first
     trust_domain: str  # Maps from "trust-domain"
-    task_priority: Union[
-        TaskPriority, dict
-    ]  # Maps from "task-priority", can be keyed-by project or level
+    task_priority: optionally_keyed_by("project", "level", TaskPriority)  # type: ignore
     workers: Workers
     taskgraph: TaskGraphConfig
 
     # Optional fields
     docker_image_kind: Optional[str] = None  # Maps from "docker-image-kind"
-    task_deadline_after: Optional[Union[str, dict]] = (
-        None  # Maps from "task-deadline-after", can be keyed-by project
-    )
+    task_deadline_after: Optional[optionally_keyed_by("project", str)] = None  # type: ignore
     task_expires_after: Optional[str] = None  # Maps from "task-expires-after"
 
-    def __post_init__(self):
-        """Validate keyed-by fields."""
-        # Validate task_priority can be keyed-by project or level
-        if isinstance(self.task_priority, dict):
-            # Create a validator that accepts TaskPriority values
-            def validate_priority(x):
-                valid_priorities = [
-                    "highest",
-                    "very-high",
-                    "high",
-                    "medium",
-                    "low",
-                    "very-low",
-                    "lowest",
-                ]
-                if x not in valid_priorities:
-                    raise ValueError(f"Invalid task priority: {x}")
-                return x
-
-            validator = optionally_keyed_by("project", "level", validate_priority)
-            # Just validate - it will raise an error if invalid
-            validator(self.task_priority)
-
-        # Validate task_deadline_after can be keyed-by project
-        if self.task_deadline_after and isinstance(self.task_deadline_after, dict):
-            validator = optionally_keyed_by("project", str)
-            # Just validate - it will raise an error if invalid
-            validator(self.task_deadline_after)
 
 
 # Msgspec schema is now the main schema

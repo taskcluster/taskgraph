@@ -12,7 +12,10 @@ index:
     products:
         - taskgraph
 
-task-priority: low
+task-priority:
+    by-level:
+        "3": medium
+        default: low
 
 taskgraph:
     register: self_taskgraph:register
