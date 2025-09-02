@@ -7,18 +7,14 @@ Support for running tasks that are invoked via the `run-task` script.
 
 import dataclasses
 import os
-from textwrap import dedent
-
-from voluptuous import Any, Optional, Required
+from typing import Dict, List, Literal, Optional, Union
 
 from taskgraph.transforms.run import run_task_using
 from taskgraph.transforms.run.common import (
     support_caches,
     support_vcs_checkout,
 )
-from taskgraph.transforms.task import taskref_or_string
 from taskgraph.util import path, taskcluster
-from taskgraph.util.caches import CACHES
 from taskgraph.util.schema import Schema
 
 EXEC_COMMANDS = {
@@ -28,99 +24,54 @@ EXEC_COMMANDS = {
 
 
 #: Schema for run.using run_task
-run_task_schema = Schema(
-    {
-        Required(
-            "using",
-            description=dedent(
-                """
-                Specifies the task type. Must be 'run-task'.
-                """.lstrip()
-            ),
-        ): "run-task",
-        Optional(
-            "use-caches",
-            description=dedent(
-                """
-                Specifies which caches to use. May take a boolean in which case either all
-                (True) or no (False) caches will be used. Alternatively, it can accept a
-                list of caches to enable. Defaults to only the checkout cache enabled.
-                """.lstrip()
-            ),
-        ): Any(bool, list(CACHES.keys())),
-        Required(
-            "checkout",
-            description=dedent(
-                """
-                If true (the default), perform a checkout on the worker. Can also be a
-                dictionary specifying explicit checkouts.
-                """.lstrip()
-            ),
-        ): Any(bool, {str: dict}),
-        Optional(
-            "cwd",
-            description=dedent(
-                """
-                Path to run command in. If a checkout is present, the path to the checkout
-                will be interpolated with the key `checkout`.
-                """.lstrip()
-            ),
-        ): str,
-        Required(
-            "sparse-profile",
-            description=dedent(
-                """
-                The sparse checkout profile to use. Value is the filename relative to the
-                directory where sparse profiles are defined (build/sparse-profiles/).
-                """.lstrip()
-            ),
-        ): Any(str, None),
-        Required(
-            "command",
-            description=dedent(
-                """
-                The command arguments to pass to the `run-task` script, after the checkout
-                arguments. If a list, it will be passed directly; otherwise it will be
-                included in a single argument to the command specified by `exec-with`.
-                """.lstrip()
-            ),
-        ): Any([taskref_or_string], taskref_or_string),
-        Optional(
-            "exec-with",
-            description=dedent(
-                """
-                Specifies what to execute the command with in the event the command is a
-                string.
-                """.lstrip()
-            ),
-        ): Any(*list(EXEC_COMMANDS)),
-        Optional(
-            "run-task-command",
-            description=dedent(
-                """
-                Command used to invoke the `run-task` script. Can be used if the script
-                or Python installation is in a non-standard location on the workers.
-                """.lstrip()
-            ),
-        ): list,
-        Required(
-            "workdir",
-            description=dedent(
-                """
-                Base work directory used to set up the task.
-                """.lstrip()
-            ),
-        ): str,
-        Optional(
-            "run-as-root",
-            description=dedent(
-                """
-                Whether to run as root. Defaults to False.
-                """.lstrip()
-            ),
-        ): bool,
-    }
-)
+class RunTaskSchema(Schema):
+    """
+    Schema for run.using run_task.
+    """
+
+    # Required fields first
+    # Specifies the task type. Must be 'run-task'.
+    using: Literal["run-task"]
+
+    # The command arguments to pass to the `run-task` script, after the checkout
+    # arguments. If a list, it will be passed directly; otherwise it will be
+    # included in a single argument to the command specified by `exec-with`.
+    command: Union[List[Union[str, Dict[str, str]]], str, Dict[str, str]]
+
+    # Base work directory used to set up the task.
+    workdir: str
+
+    # Optional fields
+    # Specifies which caches to use. May take a boolean in which case either all
+    # (True) or no (False) caches will be used. Alternatively, it can accept a
+    # list of caches to enable. Defaults to only the checkout cache enabled.
+    use_caches: Optional[Union[bool, List[str]]] = None
+
+    # If true (the default), perform a checkout on the worker. Can also be a
+    # dictionary specifying explicit checkouts.
+    checkout: Union[bool, Dict[str, dict]] = True
+
+    # Path to run command in. If a checkout is present, the path to the checkout
+    # will be interpolated with the key `checkout`.
+    cwd: Optional[str] = None
+
+    # The sparse checkout profile to use. Value is the filename relative to the
+    # directory where sparse profiles are defined (build/sparse-profiles/).
+    sparse_profile: Optional[str] = None
+
+    # Specifies what to execute the command with in the event the command is a
+    # string.
+    exec_with: Optional[Literal["bash", "powershell"]] = None
+
+    # Command used to invoke the `run-task` script. Can be used if the script
+    # or Python installation is in a non-standard location on the workers.
+    run_task_command: Optional[List[str]] = None
+
+    # Whether to run as root. Defaults to False.
+    run_as_root: bool = False
+
+
+run_task_schema = RunTaskSchema
 
 
 def common_setup(config, task, taskdesc, command):

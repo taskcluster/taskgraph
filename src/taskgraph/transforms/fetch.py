@@ -9,77 +9,63 @@
 import os
 import re
 from dataclasses import dataclass
-from textwrap import dedent
-from typing import Callable
+from typing import Any, Callable, Dict, Optional
 
-from voluptuous import Extra, Optional, Required
+import msgspec
 
 import taskgraph
 
 from ..util import path
 from ..util.cached_tasks import add_optimization
-from ..util.schema import Schema, validate_schema
+from ..util.schema import Schema
 from ..util.treeherder import join_symbol
 from .base import TransformSequence
 
 CACHE_TYPE = "content.v1"
 
+
 #: Schema for fetch transforms
-FETCH_SCHEMA = Schema(
-    {
-        Required(
-            "name",
-            description=dedent(
-                """
-                Name of the task.
-                """.lstrip()
-            ),
-        ): str,
-        Optional(
-            "task-from",
-            description=dedent(
-                """
-                Relative path (from config.path) to the file the task was defined
-                in.
-                """.lstrip()
-            ),
-        ): str,
-        Required(
-            "description",
-            description=dedent(
-                """
-                Description of the task.
-                """.lstrip()
-            ),
-        ): str,
-        Optional("expires-after"): str,
-        Optional("docker-image"): object,
-        Optional(
-            "fetch-alias",
-            description=dedent(
-                """
-                An alias that can be used instead of the real fetch task name in
-                fetch stanzas for tasks.
-                """.lstrip()
-            ),
-        ): str,
-        Optional(
-            "artifact-prefix",
-            description=dedent(
-                """
-                The prefix of the taskcluster artifact being uploaded.
-                Defaults to `public/`; if it starts with something other than
-                `public/` the artifact will require scopes to access.
-                """.lstrip()
-            ),
-        ): str,
-        Optional("attributes"): {str: object},
-        Required("fetch"): {
-            Required("type"): str,
-            Extra: object,
-        },
-    }
-)
+class FetchConfig(Schema, rename=None, omit_defaults=False):
+    """Configuration for a fetch task type."""
+
+    type: str
+    # Additional fields handled dynamically by fetch builders
+
+
+class FetchSchema(Schema):
+    # Required fields
+    # Name of the task.
+    name: str
+    # Description of the task.
+    description: str
+    # Fetch configuration with type and additional fields.
+    fetch: Dict[str, Any]  # Must have 'type' key, other keys depend on type
+
+    # Optional fields
+    # Relative path (from config.path) to the file the task was defined in.
+    task_from: Optional[str] = None
+    # When the task expires.
+    expires_after: Optional[str] = None
+    # Docker image configuration.
+    docker_image: Optional[Any] = None
+    # An alias that can be used instead of the real fetch task name in
+    # fetch stanzas for tasks.
+    fetch_alias: Optional[str] = None
+    # The prefix of the taskcluster artifact being uploaded.
+    # Defaults to `public/`; if it starts with something other than
+    # `public/` the artifact will require scopes to access.
+    artifact_prefix: Optional[str] = None
+    # Task attributes.
+    attributes: Optional[Dict[str, Any]] = None
+
+    def __post_init__(self):
+        # Validate that fetch has a 'type' field
+        if not isinstance(self.fetch, dict) or "type" not in self.fetch:
+            raise msgspec.ValidationError("fetch must be a dict with a 'type' field")
+
+
+# Backward compatibility
+FETCH_SCHEMA = FetchSchema
 
 # define a collection of payload builders, depending on the worker implementation
 fetch_builders = {}
@@ -87,13 +73,12 @@ fetch_builders = {}
 
 @dataclass(frozen=True)
 class FetchBuilder:
-    schema: Schema
+    schema: Any  # Either msgspec.Struct type or validation function
     builder: Callable
 
 
 def fetch_builder(name, schema):
-    schema = Schema({Required("type"): name}).extend(schema)
-
+    # schema should be a msgspec.Struct type
     def wrap(func):
         fetch_builders[name] = FetchBuilder(schema, func)  # type: ignore
         return func
@@ -102,7 +87,7 @@ def fetch_builder(name, schema):
 
 
 transforms = TransformSequence()
-transforms.add_validate(FETCH_SCHEMA)
+transforms.add_validate(FetchSchema)
 
 
 @transforms.add
@@ -115,7 +100,11 @@ def process_fetch_task(config, tasks):
 
         if typ not in fetch_builders:
             raise Exception(f"Unknown fetch type {typ} in fetch {name}")
-        validate_schema(fetch_builders[typ].schema, fetch, f"In task.fetch {name!r}:")
+        # Validate fetch config using msgspec
+        try:
+            msgspec.convert(fetch, fetch_builders[typ].schema)
+        except msgspec.ValidationError as e:
+            raise Exception(f"In task.fetch {name!r}: {e}")
 
         task.update(configure_fetch(config, typ, name, fetch))
 
@@ -125,7 +114,11 @@ def process_fetch_task(config, tasks):
 def configure_fetch(config, typ, name, fetch):
     if typ not in fetch_builders:
         raise Exception(f"No fetch type {typ} in fetch {name}")
-    validate_schema(fetch_builders[typ].schema, fetch, f"In task.fetch {name!r}:")
+    # Validate fetch config using msgspec
+    try:
+        msgspec.convert(fetch, fetch_builders[typ].schema)
+    except msgspec.ValidationError as e:
+        raise Exception(f"In task.fetch {name!r}: {e}")
 
     return fetch_builders[typ].builder(config, name, fetch)
 
@@ -204,45 +197,46 @@ def make_task(config, tasks):
         yield task_desc
 
 
-@fetch_builder(
-    "static-url",
-    schema={
-        # The URL to download.
-        Required("url"): str,
-        # The SHA-256 of the downloaded content.
-        Required("sha256"): str,
-        # Size of the downloaded entity, in bytes.
-        Required("size"): int,
-        # GPG signature verification.
-        Optional("gpg-signature"): {
-            # URL where GPG signature document can be obtained. Can contain the
-            # value ``{url}``, which will be substituted with the value from
-            # ``url``.
-            Required("sig-url"): str,
-            # Path to file containing GPG public key(s) used to validate
-            # download.
-            Required("key-path"): str,
-        },
-        # The name to give to the generated artifact. Defaults to the file
-        # portion of the URL. Using a different extension converts the
-        # archive to the given type. Only conversion to .tar.zst is
-        # supported.
-        Optional("artifact-name"): str,
-        # Strip the given number of path components at the beginning of
-        # each file entry in the archive.
-        # Requires an artifact-name ending with .tar.zst.
-        Optional("strip-components"): int,
-        # Add the given prefix to each file entry in the archive.
-        # Requires an artifact-name ending with .tar.zst.
-        Optional("add-prefix"): str,
-        # Headers to pass alongside the request.
-        Optional("headers"): {
-            str: str,
-        },
-        # IMPORTANT: when adding anything that changes the behavior of the task,
-        # it is important to update the digest data used to compute cache hits.
-    },
-)
+class GPGSignatureConfig(Schema):
+    """GPG signature verification configuration."""
+
+    # URL where GPG signature document can be obtained. Can contain the
+    # value ``{url}``, which will be substituted with the value from ``url``.
+    sig_url: str
+    # Path to file containing GPG public key(s) used to validate download.
+    key_path: str
+
+
+class StaticUrlFetchConfig(Schema, rename="kebab"):
+    """Configuration for static-url fetch type."""
+
+    type: str
+    # The URL to download.
+    url: str
+    # The SHA-256 of the downloaded content.
+    sha256: str
+    # Size of the downloaded entity, in bytes.
+    size: int
+    # GPG signature verification.
+    gpg_signature: Optional[GPGSignatureConfig] = None
+    # The name to give to the generated artifact. Defaults to the file
+    # portion of the URL. Using a different extension converts the
+    # archive to the given type. Only conversion to .tar.zst is supported.
+    artifact_name: Optional[str] = None
+    # Strip the given number of path components at the beginning of
+    # each file entry in the archive.
+    # Requires an artifact-name ending with .tar.zst.
+    strip_components: Optional[int] = None
+    # Add the given prefix to each file entry in the archive.
+    # Requires an artifact-name ending with .tar.zst.
+    add_prefix: Optional[str] = None
+    # Headers to pass alongside the request.
+    headers: Optional[Dict[str, str]] = None
+    # IMPORTANT: when adding anything that changes the behavior of the task,
+    # it is important to update the digest data used to compute cache hits.
+
+
+@fetch_builder("static-url", StaticUrlFetchConfig)
 def create_fetch_url_task(config, name, fetch):
     artifact_name = fetch.get("artifact-name")
     if not artifact_name:
@@ -305,21 +299,23 @@ def create_fetch_url_task(config, name, fetch):
     }
 
 
-@fetch_builder(
-    "git",
-    schema={
-        Required("repo"): str,
-        Required("revision"): str,
-        Optional("include-dot-git"): bool,
-        Optional("artifact-name"): str,
-        Optional("path-prefix"): str,
-        # ssh-key is a taskcluster secret path (e.g. project/civet/github-deploy-key)
-        # In the secret dictionary, the key should be specified as
-        #  "ssh_privkey": "-----BEGIN OPENSSH PRIVATE KEY-----\nkfksnb3jc..."
-        # n.b. The OpenSSH private key file format requires a newline at the end of the file.
-        Optional("ssh-key"): str,
-    },
-)
+class GitFetchConfig(Schema):
+    """Configuration for git fetch type."""
+
+    type: str
+    repo: str
+    revision: str
+    include_dot_git: Optional[bool] = None
+    artifact_name: Optional[str] = None
+    path_prefix: Optional[str] = None
+    # ssh-key is a taskcluster secret path (e.g. project/civet/github-deploy-key)
+    # In the secret dictionary, the key should be specified as
+    #  "ssh_privkey": "-----BEGIN OPENSSH PRIVATE KEY-----\nkfksnb3jc..."
+    # n.b. The OpenSSH private key file format requires a newline at the end of the file.
+    ssh_key: Optional[str] = None
+
+
+@fetch_builder("git", GitFetchConfig)
 def create_git_fetch_task(config, name, fetch):
     path_prefix = fetch.get("path-prefix")
     if not path_prefix:

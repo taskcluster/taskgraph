@@ -4,10 +4,9 @@
 
 
 import pprint
-import re
-from collections.abc import Mapping
+from typing import List
 
-import voluptuous
+import msgspec
 
 import taskgraph
 from taskgraph.util.keyed_by import evaluate_keyed_by, iter_dot_path
@@ -17,16 +16,25 @@ def validate_schema(schema, obj, msg_prefix):
     """
     Validate that object satisfies schema.  If not, generate a useful exception
     beginning with msg_prefix.
+
+    Args:
+        schema: A msgspec.Struct type (including Schema subclasses)
+        obj: Object to validate
+        msg_prefix: Prefix for error messages
     """
     if taskgraph.fast:
         return
+
     try:
-        schema(obj)
-    except voluptuous.MultipleInvalid as exc:
-        msg = [msg_prefix]
-        for error in exc.errors:
-            msg.append(str(error))
-        raise Exception("\n".join(msg) + "\n" + pprint.pformat(obj))
+        if isinstance(schema, type) and issubclass(schema, Schema):
+            # Use the validate class method for Schema subclasses
+            schema.validate(obj)
+        elif isinstance(schema, type) and issubclass(schema, msgspec.Struct):
+            msgspec.convert(obj, schema)
+        else:
+            raise TypeError(f"Unsupported schema type: {type(schema)}")
+    except (msgspec.ValidationError, msgspec.DecodeError, Exception) as exc:
+        raise Exception(f"{msg_prefix}\n{str(exc)}\n{pprint.pformat(obj)}")
 
 
 def optionally_keyed_by(*arguments):
@@ -53,11 +61,43 @@ def optionally_keyed_by(*arguments):
                 for kk, vv in v.items():
                     try:
                         res[kk] = validator(vv)
-                    except voluptuous.Invalid as e:
-                        e.prepend([k, kk])
-                        raise
+                    except Exception as e:
+                        raise ValueError(f"Error in {k}.{kk}: {str(e)}") from e
                 return res
-        return Schema(schema)(obj)
+            elif k.startswith("by-"):
+                # Unknown by-field
+                raise ValueError(f"Unknown key {k}")
+        # Validate against the schema
+        if isinstance(schema, type) and issubclass(schema, Schema):
+            return schema.validate(obj)
+        elif schema is str:
+            # String validation
+            if not isinstance(obj, str):
+                raise TypeError(f"Expected string, got {type(obj).__name__}")
+            return obj
+        elif schema is int:
+            # Int validation
+            if not isinstance(obj, int):
+                raise TypeError(f"Expected int, got {type(obj).__name__}")
+            return obj
+        elif isinstance(schema, type):
+            # Type validation for built-in types
+            if not isinstance(obj, schema):
+                raise TypeError(f"Expected {schema.__name__}, got {type(obj).__name__}")
+            return obj
+        elif callable(schema):
+            # Other callable validators
+            try:
+                return schema(obj)
+            except:
+                raise
+        else:
+            # Simple type validation
+            if not isinstance(obj, schema):
+                raise TypeError(
+                    f"Expected {getattr(schema, '__name__', str(schema))}, got {type(obj).__name__}"
+                )
+            return obj
 
     # set to assist autodoc
     setattr(validator, "schema", schema)
@@ -150,99 +190,117 @@ EXCEPTED_SCHEMA_IDENTIFIERS = [
 ]
 
 
-def check_schema(schema):
-    identifier_re = re.compile(r"^\$?[a-z][a-z0-9-]*$")
-
-    def excepted(item):
-        for esi in EXCEPTED_SCHEMA_IDENTIFIERS:
-            if isinstance(esi, str):
-                if f"[{esi!r}]" in item:
-                    return True
-            elif esi(item):
-                return True
-        return False
-
-    def iter(path, sch):
-        def check_identifier(path, k):
-            if k in (str,) or k in (str, voluptuous.Extra):
-                pass
-            elif isinstance(k, voluptuous.NotIn):
-                pass
-            elif isinstance(k, str):
-                if not identifier_re.match(k) and not excepted(path):
-                    raise RuntimeError(
-                        "YAML schemas should use dashed lower-case identifiers, "
-                        f"not {k!r} @ {path}"
-                    )
-            elif isinstance(k, (voluptuous.Optional, voluptuous.Required)):
-                check_identifier(path, k.schema)
-            elif isinstance(k, (voluptuous.Any, voluptuous.All)):
-                for v in k.validators:
-                    check_identifier(path, v)
-            elif not excepted(path):
-                raise RuntimeError(
-                    f"Unexpected type in YAML schema: {type(k).__name__} @ {path}"
-                )
-
-        if isinstance(sch, Mapping):
-            for k, v in sch.items():
-                child = f"{path}[{k!r}]"
-                check_identifier(child, k)
-                iter(child, v)
-        elif isinstance(sch, (list, tuple)):
-            for i, v in enumerate(sch):
-                iter(f"{path}[{i}]", v)
-        elif isinstance(sch, voluptuous.Any):
-            for v in sch.validators:
-                iter(path, v)
-
-    iter("schema", schema.schema)
-
-
-class Schema(voluptuous.Schema):
+class Schema(msgspec.Struct, kw_only=True, omit_defaults=True, rename="kebab"):
     """
-    Operates identically to voluptuous.Schema, but applying some taskgraph-specific checks
-    in the process.
+    Base schema class that extends msgspec.Struct.
+
+    This allows schemas to be defined directly as:
+
+        class MySchema(Schema):
+            foo: str
+            bar: int = 10
+
+    Instead of wrapping msgspec.Struct types.
+    Most schemas use kebab-case renaming by default.
     """
 
-    def __init__(self, *args, check=True, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.check = check
-        if not taskgraph.fast and self.check:
-            check_schema(self)
-
-    def extend(self, *args, **kwargs):
-        schema = super().extend(*args, **kwargs)
-
-        if self.check:
-            check_schema(schema)
-        # We want twice extend schema to be checked too.
-        schema.__class__ = Schema
-        return schema
-
-    def _compile(self, schema):
+    @classmethod
+    def validate(cls, data):
+        """Validate data against this schema."""
         if taskgraph.fast:
-            return
-        return super()._compile(schema)
+            return data
 
-    def __getitem__(self, item):
-        return self.schema[item]  # type: ignore
+        try:
+            return msgspec.convert(data, cls)
+        except (msgspec.ValidationError, msgspec.DecodeError) as e:
+            raise msgspec.ValidationError(str(e))
 
 
-OptimizationSchema = voluptuous.Any(
-    # always run this task (default)
-    None,
-    # search the index for the given index namespaces, and replace this task if found
-    # the search occurs in order, with the first match winning
-    {"index-search": [str]},
-    # skip this task if none of the given file patterns match
-    {"skip-unless-changed": [str]},
-)
+# Optimization schema types using msgspec
+class IndexSearchOptimization(Schema):
+    """Search the index for the given index namespaces."""
 
-# shortcut for a string where task references are allowed
-taskref_or_string = voluptuous.Any(
-    str,
-    {voluptuous.Required("task-reference"): str},
-    {voluptuous.Required("artifact-reference"): str},
-)
+    index_search: List[str]
+
+
+class SkipUnlessChangedOptimization(Schema):
+    """Skip this task if none of the given file patterns match."""
+
+    skip_unless_changed: List[str]
+
+
+# Task reference types using msgspec
+class TaskReference(Schema):
+    """Reference to another task."""
+
+    task_reference: str
+
+
+class ArtifactReference(Schema):
+    """Reference to a task artifact."""
+
+    artifact_reference: str
+
+
+# Create a custom validator
+class OptimizationValidator:
+    """A validator that can validate optimization schemas."""
+
+    def __call__(self, value):
+        """Validate optimization value."""
+        if value is None:
+            return None
+        if isinstance(value, dict):
+            if "index-search" in value:
+                try:
+                    return msgspec.convert(value, IndexSearchOptimization)
+                except msgspec.ValidationError:
+                    pass
+            if "skip-unless-changed" in value:
+                try:
+                    return msgspec.convert(value, SkipUnlessChangedOptimization)
+                except msgspec.ValidationError:
+                    pass
+        # Simple validation for dict types
+        if isinstance(value, dict):
+            if "index-search" in value and isinstance(value["index-search"], list):
+                return value
+            if "skip-unless-changed" in value and isinstance(
+                value["skip-unless-changed"], list
+            ):
+                return value
+        raise ValueError(f"Invalid optimization value: {value}")
+
+
+class TaskRefValidator:
+    """A validator that can validate task references."""
+
+    def __call__(self, value):
+        """Validate task reference value."""
+        if isinstance(value, str):
+            return value
+        if isinstance(value, dict):
+            if "task-reference" in value:
+                try:
+                    return msgspec.convert(value, TaskReference)
+                except msgspec.ValidationError:
+                    pass
+            if "artifact-reference" in value:
+                try:
+                    return msgspec.convert(value, ArtifactReference)
+                except msgspec.ValidationError:
+                    pass
+        # Simple validation for dict types
+        if isinstance(value, dict):
+            if "task-reference" in value and isinstance(value["task-reference"], str):
+                return value
+            if "artifact-reference" in value and isinstance(
+                value["artifact-reference"], str
+            ):
+                return value
+        raise ValueError(f"Invalid task reference value: {value}")
+
+
+# Keep the same names for backward compatibility
+OptimizationSchema = OptimizationValidator()
+taskref_or_string = TaskRefValidator()
