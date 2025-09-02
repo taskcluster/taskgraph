@@ -1,7 +1,5 @@
 from typing import Any, Dict, List, Optional, Union
 
-import msgspec
-
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.schema import Schema
 from taskgraph.util.templates import deep_get, substitute_task_fields
@@ -53,13 +51,17 @@ class TaskContextConfig(Schema):
 
 
 #: Schema for the task_context transforms
-class TaskContextSchema(Schema):
+class TaskContextSchema(Schema, forbid_unknown_fields=False):
+    """Schema for task context transforms.
+
+    This schema allows extra fields to be passed through to the task.
+    """
+
     # Required field first
     task_context: TaskContextConfig
 
     # Optional fields
     name: Optional[str] = None
-    __extras__: Dict[str, Any] = msgspec.field(default_factory=dict)
 
 
 SCHEMA = TaskContextSchema

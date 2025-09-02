@@ -8,9 +8,7 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Union
-
-import msgspec
+from typing import Dict, List, Literal, Optional, Union
 
 from .util.python_path import find_object
 from .util.schema import Schema, optionally_keyed_by, validate_schema
@@ -55,8 +53,11 @@ class Workers(Schema, rename=None):
     aliases: Dict[str, WorkerAlias]
 
 
-class Repository(Schema):
-    """Repository configuration."""
+class Repository(Schema, forbid_unknown_fields=False):
+    """Repository configuration.
+
+    This schema allows extra fields for repository-specific configuration.
+    """
 
     # Required fields first
     name: str
@@ -64,8 +65,6 @@ class Repository(Schema):
     # Optional fields
     project_regex: Optional[str] = None  # Maps from "project-regex"
     ssh_secret_name: Optional[str] = None  # Maps from "ssh-secret-name"
-    # Allow extra fields for flexibility
-    __extras__: Dict[str, Any] = msgspec.field(default_factory=dict)
 
 
 class RunConfig(Schema):
@@ -89,8 +88,11 @@ class TaskGraphConfig(Schema):
     run: Optional[RunConfig] = None
 
 
-class GraphConfigSchema(Schema):
-    """Main graph configuration schema."""
+class GraphConfigSchema(Schema, forbid_unknown_fields=False):
+    """Main graph configuration schema.
+
+    This schema allows extra fields for flexibility in graph configuration.
+    """
 
     # Required fields first
     trust_domain: str  # Maps from "trust-domain"
@@ -106,8 +108,6 @@ class GraphConfigSchema(Schema):
         None  # Maps from "task-deadline-after", can be keyed-by project
     )
     task_expires_after: Optional[str] = None  # Maps from "task-expires-after"
-    # Allow extra fields for flexibility
-    __extras__: Dict[str, Any] = msgspec.field(default_factory=dict)
 
     def __post_init__(self):
         """Validate keyed-by fields."""

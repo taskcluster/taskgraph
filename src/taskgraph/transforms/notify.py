@@ -128,7 +128,7 @@ class LegacyNotificationsConfig(Schema, rename="kebab"):
 
 
 #: Schema for notify transforms
-class NotifySchema(Schema, tag_field="notify_type"):
+class NotifySchema(Schema, tag_field="notify_type", forbid_unknown_fields=False):
     """Schema for notify transforms.
 
     Note: This schema allows either 'notify' or 'notifications' field,
@@ -137,8 +137,6 @@ class NotifySchema(Schema, tag_field="notify_type"):
 
     notify: Optional[NotifyConfig] = None
     notifications: Optional[LegacyNotificationsConfig] = None
-    # Allow extra fields
-    _extra: Optional[Dict[str, Any]] = msgspec.field(default=None, name="")
 
     def __post_init__(self):
         # Ensure only one of notify or notifications is present

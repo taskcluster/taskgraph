@@ -70,12 +70,13 @@ class TaskDescriptionIndex(Schema, rename="kebab"):
     rank: Union[Literal["by-tier", "build_date"], int] = "by-tier"
 
 
-class TaskDescriptionWorker(Schema, rename=None):
-    """Worker configuration for a task."""
+class TaskDescriptionWorker(Schema, rename=None, forbid_unknown_fields=False):
+    """Worker configuration for a task.
+
+    This schema allows extra fields for worker-specific configuration.
+    """
 
     implementation: str
-    # Allow any extra fields for worker-specific configuration
-    __extras__: Dict[str, TAny] = msgspec.field(default_factory=dict)
 
 
 class TaskDescriptionSchema(Schema):

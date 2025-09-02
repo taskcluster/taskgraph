@@ -8,16 +8,14 @@ matrix defined in the definition.
 """
 
 from copy import deepcopy
-from typing import Any, Dict, List, Optional
-
-import msgspec
+from typing import Dict, List, Optional
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.schema import Schema
 from taskgraph.util.templates import substitute_task_fields
 
 
-class MatrixConfig(Schema):
+class MatrixConfig(Schema, forbid_unknown_fields=False):
     """
     Matrix configuration for generating multiple tasks.
     """
@@ -39,15 +37,17 @@ class MatrixConfig(Schema):
     # If not specified, all fields in the task definition will be
     # substituted.
     substitution_fields: Optional[List[str]] = None
-    # Allow extra fields for matrix dimensions
-    __extras__: Dict[str, List[str]] = msgspec.field(default_factory=dict)
 
 
 #: Schema for matrix transforms
-class MatrixSchema(Schema):
+class MatrixSchema(Schema, forbid_unknown_fields=False):
+    """Schema for matrix transforms.
+
+    This schema allows extra fields to be passed through to the task.
+    """
+
     name: str
     matrix: Optional[MatrixConfig] = None
-    __extras__: Dict[str, Any] = msgspec.field(default_factory=dict)
 
 
 MATRIX_SCHEMA = MatrixSchema

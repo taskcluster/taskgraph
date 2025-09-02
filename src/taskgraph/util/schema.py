@@ -190,7 +190,13 @@ EXCEPTED_SCHEMA_IDENTIFIERS = [
 ]
 
 
-class Schema(msgspec.Struct, kw_only=True, omit_defaults=True, rename="kebab"):
+class Schema(
+    msgspec.Struct,
+    kw_only=True,
+    omit_defaults=True,
+    rename="kebab",
+    forbid_unknown_fields=True,
+):
     """
     Base schema class that extends msgspec.Struct.
 
@@ -202,6 +208,13 @@ class Schema(msgspec.Struct, kw_only=True, omit_defaults=True, rename="kebab"):
 
     Instead of wrapping msgspec.Struct types.
     Most schemas use kebab-case renaming by default.
+
+    By default, forbid_unknown_fields is True, meaning extra fields
+    will cause validation errors. Child classes can override this by
+    setting forbid_unknown_fields=False in their class definition:
+
+        class MySchema(Schema, forbid_unknown_fields=False):
+            foo: str
     """
 
     @classmethod

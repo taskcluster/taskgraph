@@ -46,13 +46,14 @@ class WhenConfig(Schema):
 
 
 # Run configuration using msgspec
-class RunConfig(Schema, rename=None):
-    """Configuration for how to run a task."""
+class RunConfig(Schema, rename=None, forbid_unknown_fields=False):
+    """Configuration for how to run a task.
+
+    This schema allows extra fields for run implementation-specific configuration.
+    """
 
     using: str
     workdir: TOptional[str] = None
-    # Allow any extra fields for run implementation-specific config
-    __extras__: Dict[str, Any] = msgspec.field(default_factory=dict)
 
 
 # Run description schema using msgspec

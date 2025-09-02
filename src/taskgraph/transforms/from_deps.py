@@ -89,12 +89,10 @@ class FromDepsConfig(Schema):
 
 
 #: Schema for from_deps transforms
-class FromDepsSchema(Schema):
+class FromDepsSchema(Schema, forbid_unknown_fields=False):
     """Schema for from_deps transforms."""
 
     from_deps: FromDepsConfig
-    # Allow extra fields
-    _extra: Optional[Dict[str, Any]] = msgspec.field(default=None, name="")
 
 
 # Backward compatibility

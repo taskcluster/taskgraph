@@ -7,8 +7,6 @@ Support for running toolchain-building tasks via dedicated scripts
 
 from typing import Any, Dict, List, Literal, Optional, Union
 
-import msgspec
-
 import taskgraph
 from taskgraph.transforms.run import configure_taskdesc_for_run, run_task_using
 from taskgraph.transforms.run.common import (
@@ -25,7 +23,7 @@ CACHE_TYPE = "toolchains.v3"
 
 
 #: Schema for run.using toolchain
-class ToolchainRunSchema(Schema):
+class ToolchainRunSchema(Schema, forbid_unknown_fields=False):
     # Required fields first
 
     # Specifies the run type. Must be "toolchain-script".
@@ -62,12 +60,6 @@ class ToolchainRunSchema(Schema):
     # Additional env variables to add to the worker when using this
     # toolchain.
     toolchain_env: Optional[Dict[str, Any]] = None
-
-    # Allow extra fields
-    _extra: Optional[Dict[str, Any]] = msgspec.field(default=None, name="")
-
-
-toolchain_run_schema = ToolchainRunSchema
 
 
 def get_digest_data(config, run, taskdesc):

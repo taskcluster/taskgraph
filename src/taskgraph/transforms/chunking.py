@@ -2,9 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 import copy
-from typing import Any, Dict, List, Optional
-
-import msgspec
+from typing import List, Optional
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.schema import Schema
@@ -26,16 +24,13 @@ class ChunkConfig(Schema):
 
 
 #: Schema for chunking transforms
-class ChunkSchema(Schema):
+class ChunkSchema(Schema, forbid_unknown_fields=False):
     # Optional, so it can be used for a subset of tasks in a kind
     chunk: Optional[ChunkConfig] = None
-    __extras__: Dict[str, Any] = msgspec.field(default_factory=dict)
 
-
-CHUNK_SCHEMA = ChunkSchema
 
 transforms = TransformSequence()
-transforms.add_validate(CHUNK_SCHEMA)
+transforms.add_validate(ChunkSchema)
 
 
 @transforms.add
