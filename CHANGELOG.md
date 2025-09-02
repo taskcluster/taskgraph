@@ -1,5 +1,11 @@
 # Change Log
 
+## [15.1.1] - 2025-09-02
+
+### Fixed
+
+- `task-context` key no longer required for tasks using the `task_context` transforms
+
 ## [15.1.0] - 2025-08-29
 
 ### Added
