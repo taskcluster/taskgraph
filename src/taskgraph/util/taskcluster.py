@@ -190,6 +190,7 @@ def find_task_id(index_path):
     task = index.findTask(index_path)
     return task["taskId"]  # type: ignore
 
+
 def find_task_id_batched(index_paths):
     """Gets the task id of multiple tasks given their respective index.
 
