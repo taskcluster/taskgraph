@@ -138,10 +138,6 @@ class TaskDescriptionSchema(Schema):
     worker: TOptional[TaskDescriptionWorker] = None
 
 
-#: Schema for the task transforms - now using msgspec
-task_description_schema = TaskDescriptionSchema
-
-
 TC_TREEHERDER_SCHEMA_URL = (
     "https://github.com/taskcluster/taskcluster-treeherder/"
     "blob/master/schemas/task-treeherder-config.yml"
@@ -900,7 +896,7 @@ def task_name_from_label(config, tasks):
 def validate(config, tasks):
     for task in tasks:
         validate_schema(
-            task_description_schema,
+            TaskDescriptionSchema,
             task,
             "In task {!r}:".format(task.get("label", "?no-label?")),
         )

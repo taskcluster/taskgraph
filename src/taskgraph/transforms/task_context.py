@@ -64,10 +64,8 @@ class TaskContextSchema(Schema, forbid_unknown_fields=False):
     name: Optional[str] = None
 
 
-SCHEMA = TaskContextSchema
-
 transforms = TransformSequence()
-transforms.add_validate(SCHEMA)
+transforms.add_validate(TaskContextSchema)
 
 
 @transforms.add

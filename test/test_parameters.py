@@ -287,7 +287,7 @@ def test_extend_parameters_schema(monkeypatch):
     # Set our extended schema as the base schema
     monkeypatch.setattr(
         parameters,
-        "base_schema",
+        "BaseSchema",
         ExtendedSchema,
     )
 

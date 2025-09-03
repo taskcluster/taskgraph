@@ -25,6 +25,7 @@ TaskPriority = Literal[
 
 class WorkerAlias(Schema):
     """Worker alias configuration."""
+
     provisioner: optionally_keyed_by("level", str)  # type: ignore
     implementation: str
     os: str
@@ -88,11 +89,6 @@ class GraphConfigSchema(Schema, forbid_unknown_fields=False):
     docker_image_kind: Optional[str] = None  # Maps from "docker-image-kind"
     task_deadline_after: Optional[optionally_keyed_by("project", str)] = None  # type: ignore
     task_expires_after: Optional[str] = None  # Maps from "task-expires-after"
-
-
-
-# Msgspec schema is now the main schema
-graph_config_schema = GraphConfigSchema
 
 
 @dataclass(frozen=True, eq=False)

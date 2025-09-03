@@ -173,9 +173,6 @@ class NotifySchema(Schema, tag_field="notify_type", forbid_unknown_fields=False)
             self.notify.recipients = validated_recipients
 
 
-# Backward compatibility
-NOTIFY_SCHEMA = NotifySchema
-
 transforms = TransformSequence()
 transforms.add_validate(NotifySchema)
 

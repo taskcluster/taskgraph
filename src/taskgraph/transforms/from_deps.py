@@ -95,9 +95,6 @@ class FromDepsSchema(Schema, forbid_unknown_fields=False):
     from_deps: FromDepsConfig
 
 
-# Backward compatibility
-FROM_DEPS_SCHEMA = FromDepsSchema
-
 transforms = TransformSequence()
 transforms.add_validate(FromDepsSchema)
 

@@ -105,15 +105,8 @@ class RunDescriptionSchema(Schema):
     worker: Dict[str, Any] = msgspec.field(default_factory=dict)
 
 
-# Use the msgspec class directly for fetches
-fetches_schema = FetchesSchema
-
-#: Schema for a run transforms - now using msgspec
-run_description_schema = RunDescriptionSchema
-
-
 transforms = TransformSequence()
-transforms.add_validate(run_description_schema)
+transforms.add_validate(RunDescriptionSchema)
 
 
 @transforms.add

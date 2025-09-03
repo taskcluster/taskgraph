@@ -25,10 +25,7 @@ class RunTaskSchema(Schema):
     index_search: List[str]
 
 
-run_task_schema = RunTaskSchema
-
-
-@run_task_using("always-optimized", "index-search", schema=run_task_schema)
+@run_task_using("always-optimized", "index-search", schema=RunTaskSchema)
 def fill_template(config, task, taskdesc):
     run = task["run"]
     taskdesc["optimization"] = {

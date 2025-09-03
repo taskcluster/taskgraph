@@ -45,9 +45,6 @@ class TryTaskConfigSchemaV2(Schema):
     parameters: Optional[Dict[str, Any]] = None
 
 
-try_task_config_schema_v2 = TryTaskConfigSchemaV2
-
-
 def full_task_graph_to_runnable_tasks(full_task_json):
     runnable_tasks = {}
     for label, node in full_task_json.items():
@@ -355,7 +352,7 @@ def set_try_config(parameters, task_config_file):
         task_config_version = task_config.pop("version")
         if task_config_version == 2:
             validate_schema(
-                try_task_config_schema_v2,
+                TryTaskConfigSchemaV2,
                 task_config,
                 "Invalid v2 `try_task_config.json`.",
             )

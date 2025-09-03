@@ -71,9 +71,6 @@ class RunTaskSchema(Schema):
     run_as_root: bool = False
 
 
-run_task_schema = RunTaskSchema
-
-
 def common_setup(config, task, taskdesc, command):
     run = task["run"]
     if run["checkout"]:
@@ -142,7 +139,7 @@ def script_url(config, script):
 
 
 @run_task_using(
-    "docker-worker", "run-task", schema=run_task_schema, defaults=worker_defaults
+    "docker-worker", "run-task", schema=RunTaskSchema, defaults=worker_defaults
 )
 def docker_worker_run_task(config, task, taskdesc):
     run = task["run"]
@@ -164,7 +161,7 @@ def docker_worker_run_task(config, task, taskdesc):
 
 
 @run_task_using(
-    "generic-worker", "run-task", schema=run_task_schema, defaults=worker_defaults
+    "generic-worker", "run-task", schema=RunTaskSchema, defaults=worker_defaults
 )
 def generic_worker_run_task(config, task, taskdesc):
     run = task["run"]

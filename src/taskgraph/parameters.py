@@ -79,10 +79,6 @@ class BaseSchema(Schema):
     code_review: Optional[CodeReviewConfig] = None
 
 
-# Keep backward compatibility
-base_schema = BaseSchema
-
-
 def get_contents(path):
     with open(path) as fh:
         contents = fh.readline().rstrip()
@@ -168,7 +164,7 @@ def extend_parameters_schema(schema, defaults_fn=None):
             dict mapping parameter name to default value in the
             event strict=False (optional).
     """
-    global base_schema
+    global BaseSchema
     global defaults_functions
     global _schema_extensions
 
@@ -249,7 +245,7 @@ class Parameters(ReadOnlyDict):
                 # Strict mode: validate against schema and check for extra fields
                 # Get all valid field names from the base schema
                 schema_fields = {
-                    f.encode_name for f in msgspec.structs.fields(base_schema)
+                    f.encode_name for f in msgspec.structs.fields(BaseSchema)
                 }
 
                 # Check for extra fields
@@ -260,17 +256,17 @@ class Parameters(ReadOnlyDict):
                     )
 
                 # Validate all parameters against the schema
-                msgspec.convert(kebab_params, base_schema)
+                msgspec.convert(kebab_params, BaseSchema)
             else:
                 # Non-strict mode: only validate fields that exist in the schema
                 # Filter to only include fields defined in the schema
                 schema_fields = {
-                    f.encode_name for f in msgspec.structs.fields(base_schema)
+                    f.encode_name for f in msgspec.structs.fields(BaseSchema)
                 }
                 filtered_params = {
                     k: v for k, v in kebab_params.items() if k in schema_fields
                 }
-                msgspec.convert(filtered_params, base_schema)
+                msgspec.convert(filtered_params, BaseSchema)
         except (msgspec.ValidationError, msgspec.DecodeError) as e:
             raise ParameterMismatch(f"Invalid parameters: {e}")
 

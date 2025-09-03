@@ -50,10 +50,8 @@ class MatrixSchema(Schema, forbid_unknown_fields=False):
     matrix: Optional[MatrixConfig] = None
 
 
-MATRIX_SCHEMA = MatrixSchema
-
 transforms = TransformSequence()
-transforms.add_validate(MATRIX_SCHEMA)
+transforms.add_validate(MatrixSchema)
 
 
 def _resolve_matrix(tasks, key, values, exclude):

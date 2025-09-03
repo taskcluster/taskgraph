@@ -64,9 +64,6 @@ class FetchSchema(Schema):
             raise msgspec.ValidationError("fetch must be a dict with a 'type' field")
 
 
-# Backward compatibility
-FETCH_SCHEMA = FetchSchema
-
 # define a collection of payload builders, depending on the worker implementation
 fetch_builders = {}
 

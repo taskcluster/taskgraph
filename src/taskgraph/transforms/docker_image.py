@@ -54,10 +54,6 @@ class DockerImageSchema(Schema):
     cache: Optional[bool] = None
 
 
-# Backward compatibility
-docker_image_schema = DockerImageSchema
-
-
 transforms.add_validate(DockerImageSchema)
 
 
