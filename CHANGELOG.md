@@ -1,5 +1,12 @@
 # Change Log
 
+## [15.1.2] - 2025-09-04
+
+### Fixed
+
+- make `task_context` transforms really work without a `task-context` (#761)
+- set continuation token correctly in `find_task_id_batched` (#760)
+
 ## [15.1.1] - 2025-09-02
 
 ### Fixed
