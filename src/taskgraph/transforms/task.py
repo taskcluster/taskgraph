@@ -15,9 +15,7 @@ import re
 import time
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any as TAny
-from typing import Callable, Dict, List, Literal, Union
-from typing import Optional as TOptional
+from typing import Any, Callable, Dict, List, Literal, Optional, Union
 
 import msgspec
 
@@ -48,16 +46,16 @@ def _run_task_suffix():
 
 
 # Task Description schema using msgspec
-class TaskDescriptionTreeherder(Schema, rename=None):
+class TaskDescriptionTreeherderSchema(Schema, rename=None):
     """Treeherder-related information for a task."""
 
-    symbol: TOptional[str] = None
-    kind: TOptional[Literal["build", "test", "other"]] = None
-    tier: TOptional[int] = None
-    platform: TOptional[str] = None
+    symbol: Optional[str] = None
+    kind: Optional[Literal["build", "test", "other"]] = None
+    tier: Optional[int] = None
+    platform: Optional[str] = None
 
 
-class TaskDescriptionIndex(Schema, rename="kebab"):
+class TaskDescriptionIndexSchema(Schema, rename="kebab"):
     """Index information for a task."""
 
     # the name of the product this build produces
@@ -70,7 +68,7 @@ class TaskDescriptionIndex(Schema, rename="kebab"):
     rank: Union[Literal["by-tier", "build_date"], int] = "by-tier"
 
 
-class TaskDescriptionWorker(Schema, rename=None, forbid_unknown_fields=False):
+class TaskDescriptionWorkerSchema(Schema, rename=None, forbid_unknown_fields=False):
     """Worker configuration for a task.
 
     This schema allows extra fields for worker-specific configuration.
@@ -89,13 +87,13 @@ class TaskDescriptionSchema(Schema):
     # The provisioner-id/worker-type for the task
     worker_type: str
     # Attributes for this task
-    attributes: Dict[str, TAny] = msgspec.field(default_factory=dict)
+    attributes: Dict[str, Any] = msgspec.field(default_factory=dict)
     # Relative path (from config.path) to the file task was defined in
-    task_from: TOptional[str] = None
+    task_from: Optional[str] = None
     # Dependencies of this task, keyed by name
-    dependencies: Dict[str, TAny] = msgspec.field(default_factory=dict)
+    dependencies: Dict[str, Any] = msgspec.field(default_factory=dict)
     # Priority of the task
-    priority: TOptional[
+    priority: Optional[
         Literal["highest", "very-high", "high", "medium", "low", "very-low", "lowest"]
     ] = None
     # Soft dependencies of this task, as a list of task labels
@@ -105,9 +103,9 @@ class TaskDescriptionSchema(Schema):
     # Specifies the condition for task execution
     requires: Literal["all-completed", "all-resolved"] = "all-completed"
     # Expiration time relative to task creation
-    expires_after: TOptional[str] = None
+    expires_after: Optional[str] = None
     # Deadline time relative to task creation
-    deadline_after: TOptional[str] = None
+    deadline_after: Optional[str] = None
     # Custom routes for this task
     routes: List[str] = msgspec.field(default_factory=list)
     # Custom scopes for this task
@@ -115,27 +113,27 @@ class TaskDescriptionSchema(Schema):
     # Tags for this task
     tags: Dict[str, str] = msgspec.field(default_factory=dict)
     # Custom 'task.extra' content
-    extra: Dict[str, TAny] = msgspec.field(default_factory=dict)
+    extra: Dict[str, Any] = msgspec.field(default_factory=dict)
     # Treeherder-related information
-    treeherder: Union[bool, TaskDescriptionTreeherder, None] = None
+    treeherder: Union[bool, TaskDescriptionTreeherderSchema, None] = None
     # Information for indexing this build
-    index: TOptional[TaskDescriptionIndex] = None
+    index: Optional[TaskDescriptionIndexSchema] = None
     # The `run_on_projects` attribute
-    run_on_projects: TAny = None  # This uses optionally_keyed_by, so we need Any
+    run_on_projects: Any = None  # This uses optionally_keyed_by, so we need Any
     # Specifies tasks for which this task should run
     run_on_tasks_for: List[str] = msgspec.field(default_factory=list)
     # Specifies git branches for which this task should run
     run_on_git_branches: List[str] = msgspec.field(default_factory=list)
     # The `shipping_phase` attribute
-    shipping_phase: TOptional[Literal["build", "promote", "push", "ship"]] = None
+    shipping_phase: Optional[Literal["build", "promote", "push", "ship"]] = None
     # The `always-target` attribute
     always_target: bool = False
     # Optimization to perform on this task
-    optimization: TAny = None  # Uses OptimizationSchema which has custom validation
+    optimization: Any = None  # Uses OptimizationSchema which has custom validation
     # Whether the task should use sccache compiler caching
     needs_sccache: bool = False
     # Information specific to the worker implementation
-    worker: TOptional[TaskDescriptionWorker] = None
+    worker: Optional[TaskDescriptionWorkerSchema] = None
 
 
 TC_TREEHERDER_SCHEMA_URL = (
@@ -239,7 +237,7 @@ def verify_index(config, index):
 
 
 # Docker Worker schema using msgspec
-class DockerWorkerCacheConfig(Schema, rename="kebab"):
+class DockerWorkerCacheSchema(Schema, rename="kebab"):
     """Cache configuration for docker-worker."""
 
     # name of the cache, allowing reuse by subsequent tasks naming the same cache
@@ -252,7 +250,7 @@ class DockerWorkerCacheConfig(Schema, rename="kebab"):
     skip_untrusted: bool = False
 
 
-class DockerWorkerArtifactConfig(Schema, rename=None):
+class DockerWorkerArtifactSchema(Schema, rename=None):
     """Artifact configuration for docker-worker."""
 
     # type of artifact -- simple file, or recursive directory, or a volume mounted directory.
@@ -288,18 +286,18 @@ class DockerWorkerPayloadSchema(Schema):
     # Paths to Docker volumes.
     volumes: List[str] = msgspec.field(default_factory=list)
     # caches to set up for the task
-    caches: TOptional[List[DockerWorkerCacheConfig]] = None
+    caches: Optional[List[DockerWorkerCacheSchema]] = None
     # artifacts to extract from the task image after completion
-    artifacts: TOptional[List[DockerWorkerArtifactConfig]] = None
+    artifacts: Optional[List[DockerWorkerArtifactSchema]] = None
     # environment variables
     env: Dict[str, Union[str, Dict[str, str]]] = msgspec.field(default_factory=dict)
     # the command to run; if not given, docker-worker will default to the
     # command in the docker image
-    command: TOptional[List[Union[str, Dict[str, str]]]] = None
+    command: Optional[List[Union[str, Dict[str, str]]]] = None
     # the exit status code(s) that indicates the task should be retried
-    retry_exit_status: TOptional[List[int]] = None
+    retry_exit_status: Optional[List[int]] = None
     # the exit status code(s) that indicates the caches used by the task should be purged
-    purge_caches_exit_status: TOptional[List[int]] = None
+    purge_caches_exit_status: Optional[List[int]] = None
     # Whether any artifacts are assigned to this worker
     skip_artifacts: bool = False
 
@@ -518,7 +516,7 @@ def build_docker_worker_payload(config, task, task_def):
 
 
 # Generic Worker schema using msgspec
-class GenericWorkerArtifactConfig(Schema, rename=None):
+class GenericWorkerArtifactSchema(Schema, rename=None):
     """Artifact configuration for generic-worker."""
 
     # type of artifact -- simple file, or recursive directory
@@ -526,33 +524,33 @@ class GenericWorkerArtifactConfig(Schema, rename=None):
     # filesystem path from which to read artifact
     path: str
     # if not specified, path is used for artifact name
-    name: TOptional[str] = None
+    name: Optional[str] = None
 
 
-class GenericWorkerMountContent(Schema, rename="kebab"):
+class GenericWorkerMountContentSchema(Schema, rename="kebab"):
     """Mount content configuration for generic-worker."""
 
     # Artifact name that contains the content.
-    artifact: TOptional[str] = None
+    artifact: Optional[str] = None
     # Task ID that has the artifact that contains the content.
-    task_id: TOptional[Union[str, Dict[str, str]]] = None
+    task_id: Optional[Union[str, Dict[str, str]]] = None
     # URL that supplies the content in response to an unauthenticated GET request.
-    url: TOptional[str] = None
+    url: Optional[str] = None
 
 
-class GenericWorkerMountConfig(Schema, rename="kebab"):
+class GenericWorkerMountSchema(Schema, rename="kebab"):
     """Mount configuration for generic-worker."""
 
     # A unique name for the cache volume, implies writable cache directory
-    cache_name: TOptional[str] = None
+    cache_name: Optional[str] = None
     # Optional content for pre-loading cache, or mandatory content for read-only file or directory
-    content: TOptional[GenericWorkerMountContent] = None
+    content: Optional[GenericWorkerMountContentSchema] = None
     # If mounting a cache or read-only directory, the filesystem location
-    directory: TOptional[str] = None
+    directory: Optional[str] = None
     # If mounting a file, specify the relative path within the task directory
-    file: TOptional[str] = None
+    file: Optional[str] = None
     # Archive format of the content
-    format: TOptional[Literal["rar", "tar.bz2", "tar.gz", "zip"]] = None
+    format: Optional[Literal["rar", "tar.bz2", "tar.gz", "zip"]] = None
 
 
 class GenericWorkerPayloadSchema(Schema):
@@ -564,21 +562,21 @@ class GenericWorkerPayloadSchema(Schema):
     # command is a list of commands to run, sequentially
     # on Windows, each command is a string, on OS X and Linux, each command is a string array
     # Using Any here because msgspec doesn't support union of multiple list types
-    command: TAny
+    command: Any
     # the maximum time to run, in seconds
     max_run_time: int
 
     # Optional fields
     # artifacts to extract from the task image after completion
-    artifacts: TOptional[List[GenericWorkerArtifactConfig]] = None
+    artifacts: Optional[List[GenericWorkerArtifactSchema]] = None
     # Directories and/or files to be mounted
-    mounts: TOptional[List[GenericWorkerMountConfig]] = None
+    mounts: Optional[List[GenericWorkerMountSchema]] = None
     # environment variables
     env: Dict[str, Union[str, Dict[str, str]]] = msgspec.field(default_factory=dict)
     # the exit status code(s) that indicates the task should be retried
-    retry_exit_status: TOptional[List[int]] = None
+    retry_exit_status: Optional[List[int]] = None
     # the exit status code(s) that indicates the caches used by the task should be purged
-    purge_caches_exit_status: TOptional[List[int]] = None
+    purge_caches_exit_status: Optional[List[int]] = None
     # os user groups for test task workers
     os_groups: List[str] = msgspec.field(default_factory=list)
     # feature for test task to run as administrator
@@ -705,7 +703,7 @@ def build_generic_worker_payload(config, task, task_def):
 
 
 # Beetmover schema using msgspec
-class BeetmoverReleaseProperties(Schema):
+class BeetmoverReleasePropertiesSchema(Schema):
     """Release properties for beetmover tasks."""
 
     app_name: str
@@ -716,7 +714,7 @@ class BeetmoverReleaseProperties(Schema):
     platform: str
 
 
-class BeetmoverUpstreamArtifact(Schema, rename=None, omit_defaults=False):
+class BeetmoverUpstreamArtifactSchema(Schema, rename=None, omit_defaults=False):
     """Upstream artifact definition for beetmover."""
 
     # taskId of the task with the artifact
@@ -736,17 +734,17 @@ class BeetmoverPayloadSchema(Schema):
     implementation: str
     # the maximum time to run, in seconds
     max_run_time: int
-    release_properties: BeetmoverReleaseProperties
+    release_properties: BeetmoverReleasePropertiesSchema
     # list of artifact URLs for the artifacts that should be beetmoved
-    upstream_artifacts: List[BeetmoverUpstreamArtifact]
+    upstream_artifacts: List[BeetmoverUpstreamArtifactSchema]
 
     # Optional fields
     os: str = ""
     # locale key, if this is a locale beetmover task
-    locale: TOptional[str] = None
-    partner_public: TOptional[bool] = None
+    locale: Optional[str] = None
+    partner_public: Optional[bool] = None
     # Artifact map can be any object
-    artifact_map: TOptional[dict] = None
+    artifact_map: Optional[dict] = None
 
 
 @payload_builder("beetmover", BeetmoverPayloadSchema)

@@ -13,9 +13,7 @@ after each build task, whatever builds may exist.
 
 from copy import deepcopy
 from textwrap import dedent
-from typing import Any, Dict, List, Optional, Union
-
-import msgspec
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.attributes import attrmatch
@@ -23,15 +21,11 @@ from taskgraph.util.dependencies import GROUP_BY_MAP, get_dependencies
 from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.set_name import SET_NAME_MAP
 
-
-class FetchEntry(Schema, rename=None):
-    """A fetch entry for an artifact."""
-
-    artifact: str
-    dest: Optional[str] = None
+SetNameType = Literal["strip-kind", "retain-kind"]
+GroupByType = Literal["single", "all", "attribute"]
 
 
-class FromDepsConfig(Schema):
+class FromDepsChildSchema(Schema):
     # Optional fields
     # Limit dependencies to specified kinds (defaults to all kinds in
     # `kind-dependencies`).
@@ -40,8 +34,9 @@ class FromDepsConfig(Schema):
     # dependency of this kind will be used to derive the label
     # and copy attributes (if `copy-attributes` is True).
     kinds: Optional[List[str]] = None
-    # UPDATE ME AND DOCS
-    set_name: Optional[Union[str, bool, Dict[str, Any]]] = None
+    # Set the task name using the specified function. Can be False to
+    # disable name setting, or a string/dict specifying the function to use.
+    set_name: Optional[Union[SetNameType, bool, Dict[SetNameType, Any]]] = None
     # Limit dependencies to tasks whose attributes match
     # using :func:`~taskgraph.util.attributes.attrmatch`.
     with_attributes: Optional[Dict[str, Union[List[Any], str]]] = None
@@ -49,7 +44,7 @@ class FromDepsConfig(Schema):
     # function. One task will be created for each group. If not
     # specified, the 'single' function will be used which creates
     # a new task for each individual dependency.
-    group_by: Optional[Union[str, Dict[str, Any]]] = None
+    group_by: Optional[Union[GroupByType, Dict[GroupByType, Any]]] = None
     # If True, copy attributes from the dependency matching the
     # first kind in the `kinds` list (whether specified explicitly
     # or taken from `kind-dependencies`).
@@ -64,35 +59,12 @@ class FromDepsConfig(Schema):
     # `fetches` entry.
     fetches: Optional[Dict[str, List[Union[str, Dict[str, str]]]]] = None
 
-    def __post_init__(self):
-        # Validate set_name
-        if self.set_name is not None and self.set_name is not False:
-            if isinstance(self.set_name, str) and self.set_name not in SET_NAME_MAP:
-                raise msgspec.ValidationError(f"Invalid set-name: {self.set_name}")
-            elif isinstance(self.set_name, dict):
-                keys = list(self.set_name.keys())
-                if len(keys) != 1 or keys[0] not in SET_NAME_MAP:
-                    raise msgspec.ValidationError(
-                        f"Invalid set-name dict: {self.set_name}"
-                    )
 
-        # Validate group_by
-        if self.group_by is not None:
-            if isinstance(self.group_by, str) and self.group_by not in GROUP_BY_MAP:
-                raise msgspec.ValidationError(f"Invalid group-by: {self.group_by}")
-            elif isinstance(self.group_by, dict):
-                keys = list(self.group_by.keys())
-                if len(keys) != 1 or keys[0] not in GROUP_BY_MAP:
-                    raise msgspec.ValidationError(
-                        f"Invalid group-by dict: {self.group_by}"
-                    )
-
-
-#: Schema for from_deps transforms
+# Schema for from_deps transforms
 class FromDepsSchema(Schema, forbid_unknown_fields=False):
     """Schema for from_deps transforms."""
 
-    from_deps: FromDepsConfig
+    from_deps: FromDepsChildSchema
 
 
 transforms = TransformSequence()

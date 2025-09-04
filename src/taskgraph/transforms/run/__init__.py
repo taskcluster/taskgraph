@@ -11,8 +11,7 @@ run-using handlers in `taskcluster/taskgraph/transforms/run`.
 
 import copy
 import logging
-from typing import Any, Dict, List, Union
-from typing import Optional as TOptional
+from typing import Any, Dict, List, Optional, Union
 
 import msgspec
 
@@ -33,27 +32,27 @@ class FetchesSchema(Schema):
     """Schema for fetch configuration."""
 
     artifact: str
-    dest: TOptional[str] = None
+    dest: Optional[str] = None
     extract: bool = False
     verify_hash: bool = False
 
 
 # When configuration using msgspec
-class WhenConfig(Schema):
+class WhenSchema(Schema):
     """Configuration for when a task should be included."""
 
     files_changed: List[str] = msgspec.field(default_factory=list)
 
 
 # Run configuration using msgspec
-class RunConfig(Schema, rename=None, forbid_unknown_fields=False):
+class RunSchema(Schema, rename=None, forbid_unknown_fields=False):
     """Configuration for how to run a task.
 
     This schema allows extra fields for run implementation-specific configuration.
     """
 
     using: str
-    workdir: TOptional[str] = None
+    workdir: Optional[str] = None
 
 
 # Run description schema using msgspec
@@ -62,29 +61,29 @@ class RunDescriptionSchema(Schema):
 
     # Required fields first
     description: str
-    run: RunConfig
+    run: RunSchema
     worker_type: str
 
     # Optional fields
     # The name of the task. At least one of 'name' or 'label' must be
     # specified. If 'label' is not provided, it will be generated from
     # the 'name' by prepending the kind.
-    name: TOptional[str] = None
+    name: Optional[str] = None
     # The label of the task. At least one of 'name' or 'label' must be
     # specified. If 'label' is not provided, it will be generated from
     # the 'name' by prepending the kind.
-    label: TOptional[str] = None
+    label: Optional[str] = None
 
     # Optional fields from task description
-    priority: TOptional[str] = None
+    priority: Optional[str] = None
     attributes: Dict[str, Any] = msgspec.field(default_factory=dict)
-    task_from: TOptional[str] = None
+    task_from: Optional[str] = None
     dependencies: Dict[str, Any] = msgspec.field(default_factory=dict)
     soft_dependencies: List[str] = msgspec.field(default_factory=list)
     if_dependencies: List[str] = msgspec.field(default_factory=list)
     requires: str = "all-completed"
-    deadline_after: TOptional[str] = None
-    expires_after: TOptional[str] = None
+    deadline_after: Optional[str] = None
+    expires_after: Optional[str] = None
     routes: List[str] = msgspec.field(default_factory=list)
     scopes: List[str] = msgspec.field(default_factory=list)
     tags: Dict[str, str] = msgspec.field(default_factory=dict)
@@ -94,11 +93,11 @@ class RunDescriptionSchema(Schema):
     run_on_projects: Any = None
     run_on_tasks_for: List[str] = msgspec.field(default_factory=list)
     run_on_git_branches: List[str] = msgspec.field(default_factory=list)
-    shipping_phase: TOptional[str] = None
+    shipping_phase: Optional[str] = None
     always_target: bool = False
     optimization: Any = None
     needs_sccache: bool = False
-    when: TOptional[WhenConfig] = None
+    when: Optional[WhenSchema] = None
     fetches: Dict[str, List[Union[str, FetchesSchema]]] = msgspec.field(
         default_factory=dict
     )

@@ -15,7 +15,7 @@ from taskgraph.util.schema import Schema
 from taskgraph.util.templates import substitute_task_fields
 
 
-class MatrixConfig(Schema, forbid_unknown_fields=False):
+class MatrixChildSchema(Schema, forbid_unknown_fields=False):
     """
     Matrix configuration for generating multiple tasks.
     """
@@ -47,7 +47,7 @@ class MatrixSchema(Schema, forbid_unknown_fields=False):
     """
 
     name: str
-    matrix: Optional[MatrixConfig] = None
+    matrix: Optional[MatrixChildSchema] = None
 
 
 transforms = TransformSequence()

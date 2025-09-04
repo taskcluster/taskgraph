@@ -6,10 +6,8 @@ class HelloSchema(Schema):
     noun: str  # Required field
 
 
-HELLO_SCHEMA = HelloSchema
-
 transforms = TransformSequence()
-transforms.add_validate(HELLO_SCHEMA)
+transforms.add_validate(HelloSchema)
 
 
 @transforms.add

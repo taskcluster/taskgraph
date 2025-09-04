@@ -110,7 +110,7 @@ about the state of the tasks at given points. Here is an example:
    from taskgraph.util.schema import Schema
 
    class MySchema(Schema):
-       foo: str                   # Required field
+       foo: str  # Required field
        bar: Optional[bool] = None # Optional field
 
    transforms = TransformSequence()

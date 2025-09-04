@@ -276,20 +276,13 @@ def test_parameters_format_spec(spec, expected):
 def test_extend_parameters_schema(monkeypatch):
     """Test parameter extension with msgspec schemas."""
 
-    # Define a test schema that extends the base schema
-    class ExtendedSchema(Schema):
-        foo: str
-        bar: bool = False  # Optional with default
+    # Define a test extension schema that adds new fields
+    class ExtensionSchema(Schema):
+        custom_field: str
+        optional_field: bool = False  # Optional with default
 
     # Reset global _schema_extensions
     monkeypatch.setattr(parameters, "_schema_extensions", [])
-
-    # Set our extended schema as the base schema
-    monkeypatch.setattr(
-        parameters,
-        "BaseSchema",
-        ExtendedSchema,
-    )
 
     # Keep the default functions
     monkeypatch.setattr(
@@ -298,30 +291,57 @@ def test_extend_parameters_schema(monkeypatch):
         list(parameters.defaults_functions),
     )
 
-    # Add a defaults function that provides foo and bar
+    # Extend the parameters schema with our custom schema
     extend_parameters_schema(
-        {},  # No additional schema, just the defaults function
-        defaults_fn=lambda root: {"foo": "1", "bar": False},
+        ExtensionSchema,
+        defaults_fn=lambda root: {
+            "custom_field": "default_value",
+            "optional_field": True,
+        },
     )
 
-    # Test with explicit values
-    params = Parameters(foo="1", bar=True)
-    params.check()
-    assert params["foo"] == "1"
-    assert params["bar"] is True
+    # Verify the extension was added
+    assert ExtensionSchema in parameters._schema_extensions
 
-    # Test with partial values (bar not present in dict)
-    params = Parameters(foo="1")
+    # Test with extended fields in strict mode
+    # Need to include all required base fields too
+    params = Parameters(
+        base_repository="https://example.com/repo",
+        base_ref="main",
+        base_rev="abc123",
+        build_date=1234567890,
+        build_number=1,
+        do_not_optimize=[],
+        enable_always_target=True,
+        existing_tasks={},
+        files_changed=[],
+        filters=["target_tasks_method"],
+        head_ref="main",
+        head_repository="https://example.com/repo",
+        head_rev="abc123",
+        head_tag="",
+        level="3",
+        moz_build_date="20240101120000",
+        optimize_target_tasks=True,
+        owner="test@example.com",
+        project="test",
+        pushdate=1234567890,
+        pushlog_id="0",
+        repository_type="git",
+        target_tasks_method="default",
+        tasks_for="testing",
+        custom_field="my_value",  # Extension field
+        optional_field=False,  # Extension field
+    )
     params.check()
-    assert params["foo"] == "1"
-    # bar is not in the dict because it wasn't explicitly set
-    assert "bar" not in params
+    assert params["custom_field"] == "my_value"
+    assert params["optional_field"] is False
 
-    # Test with defaults function providing values
+    # Test with defaults in non-strict mode
     params = Parameters(strict=False)
     params.check()
-    assert params["foo"] == "1"
-    assert params["bar"] is False
+    assert params["custom_field"] == "default_value"
+    assert params["optional_field"] is True
 
 
 @pytest.mark.parametrize(

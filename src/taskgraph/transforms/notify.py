@@ -26,7 +26,7 @@ StatusType = Literal[
 ]
 
 
-class EmailRecipient(Schema):
+class EmailRecipientSchema(Schema):
     """Email notification recipient."""
 
     type: Literal["email"]
@@ -34,7 +34,7 @@ class EmailRecipient(Schema):
     status_type: Optional[StatusType] = None
 
 
-class MatrixRoomRecipient(Schema):
+class MatrixRoomRecipientSchema(Schema):
     """Matrix room notification recipient."""
 
     type: Literal["matrix-room"]
@@ -42,7 +42,7 @@ class MatrixRoomRecipient(Schema):
     status_type: Optional[StatusType] = None
 
 
-class PulseRecipient(Schema):
+class PulseRecipientSchema(Schema):
     """Pulse notification recipient."""
 
     type: Literal["pulse"]
@@ -50,7 +50,7 @@ class PulseRecipient(Schema):
     status_type: Optional[StatusType] = None
 
 
-class SlackChannelRecipient(Schema):
+class SlackChannelRecipientSchema(Schema):
     """Slack channel notification recipient."""
 
     type: Literal["slack-channel"]
@@ -59,7 +59,10 @@ class SlackChannelRecipient(Schema):
 
 
 Recipient = Union[
-    EmailRecipient, MatrixRoomRecipient, PulseRecipient, SlackChannelRecipient
+    EmailRecipientSchema,
+    MatrixRoomRecipientSchema,
+    PulseRecipientSchema,
+    SlackChannelRecipientSchema,
 ]
 
 _route_keys = {
@@ -71,22 +74,22 @@ _route_keys = {
 """Map each type to its primary key that will be used in the route."""
 
 
-class EmailLink(Schema, rename=None, omit_defaults=False):
+class EmailLinkSchema(Schema, rename=None, omit_defaults=False):
     """Email link configuration."""
 
     text: str
     href: str
 
 
-class EmailContent(Schema, rename=None):
+class EmailContentSchema(Schema, rename=None):
     """Email notification content."""
 
     subject: Optional[str] = None
     content: Optional[str] = None
-    link: Optional[EmailLink] = None
+    link: Optional[EmailLinkSchema] = None
 
 
-class MatrixContent(Schema):
+class MatrixContentSchema(Schema):
     """Matrix notification content."""
 
     body: Optional[str] = None
@@ -95,7 +98,7 @@ class MatrixContent(Schema):
     msg_type: Optional[str] = None
 
 
-class SlackContent(Schema, rename=None):
+class SlackContentSchema(Schema, rename=None):
     """Slack notification content."""
 
     text: Optional[str] = None
@@ -103,22 +106,22 @@ class SlackContent(Schema, rename=None):
     attachments: Optional[List[Any]] = None
 
 
-class NotifyContent(Schema, rename=None):
+class NotifyContentSchema(Schema, rename=None):
     """Notification content configuration."""
 
-    email: Optional[EmailContent] = None
-    matrix: Optional[MatrixContent] = None
-    slack: Optional[SlackContent] = None
+    email: Optional[EmailContentSchema] = None
+    matrix: Optional[MatrixContentSchema] = None
+    slack: Optional[SlackContentSchema] = None
 
 
-class NotifyConfig(Schema, rename=None):
+class NotifyConfigSchema(Schema, rename=None):
     """Modern notification configuration."""
 
     recipients: List[Dict[str, Any]]  # Will be validated as Recipient union
-    content: Optional[NotifyContent] = None
+    content: Optional[NotifyContentSchema] = None
 
 
-class LegacyNotificationsConfig(Schema, rename="kebab"):
+class LegacyNotificationsConfigSchema(Schema, rename="kebab"):
     """Legacy notification configuration for backwards compatibility."""
 
     emails: Union[List[str], Dict[str, Any]]  # Can be keyed-by
@@ -135,8 +138,8 @@ class NotifySchema(Schema, tag_field="notify_type", forbid_unknown_fields=False)
     but not both. The validation will be done in __post_init__.
     """
 
-    notify: Optional[NotifyConfig] = None
-    notifications: Optional[LegacyNotificationsConfig] = None
+    notify: Optional[NotifyConfigSchema] = None
+    notifications: Optional[LegacyNotificationsConfigSchema] = None
 
     def __post_init__(self):
         # Ensure only one of notify or notifications is present
@@ -152,16 +155,20 @@ class NotifySchema(Schema, tag_field="notify_type", forbid_unknown_fields=False)
                 try:
                     # Try to convert to one of the recipient types
                     if r.get("type") == "email":
-                        validated_recipients.append(msgspec.convert(r, EmailRecipient))
+                        validated_recipients.append(
+                            msgspec.convert(r, EmailRecipientSchema)
+                        )
                     elif r.get("type") == "matrix-room":
                         validated_recipients.append(
-                            msgspec.convert(r, MatrixRoomRecipient)
+                            msgspec.convert(r, MatrixRoomRecipientSchema)
                         )
                     elif r.get("type") == "pulse":
-                        validated_recipients.append(msgspec.convert(r, PulseRecipient))
+                        validated_recipients.append(
+                            msgspec.convert(r, PulseRecipientSchema)
+                        )
                     elif r.get("type") == "slack-channel":
                         validated_recipients.append(
-                            msgspec.convert(r, SlackChannelRecipient)
+                            msgspec.convert(r, SlackChannelRecipientSchema)
                         )
                     else:
                         raise msgspec.ValidationError(

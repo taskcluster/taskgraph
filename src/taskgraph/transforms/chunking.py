@@ -9,7 +9,7 @@ from taskgraph.util.schema import Schema
 from taskgraph.util.templates import substitute
 
 
-class ChunkConfig(Schema):
+class ChunkSchema(Schema):
     """
     `chunk` can be used to split one task into `total-chunks`
     tasks, substituting `this_chunk` and `total_chunks` into any
@@ -24,13 +24,13 @@ class ChunkConfig(Schema):
 
 
 #: Schema for chunking transforms
-class ChunkSchema(Schema, forbid_unknown_fields=False):
+class ChunksSchema(Schema, forbid_unknown_fields=False):
     # Optional, so it can be used for a subset of tasks in a kind
-    chunk: Optional[ChunkConfig] = None
+    chunk: Optional[ChunkSchema] = None
 
 
 transforms = TransformSequence()
-transforms.add_validate(ChunkSchema)
+transforms.add_validate(ChunksSchema)
 
 
 @transforms.add

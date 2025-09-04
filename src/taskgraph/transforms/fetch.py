@@ -9,7 +9,7 @@
 import os
 import re
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Union
 
 import msgspec
 
@@ -22,14 +22,6 @@ from ..util.treeherder import join_symbol
 from .base import TransformSequence
 
 CACHE_TYPE = "content.v1"
-
-
-#: Schema for fetch transforms
-class FetchConfig(Schema, rename=None, omit_defaults=False):
-    """Configuration for a fetch task type."""
-
-    type: str
-    # Additional fields handled dynamically by fetch builders
 
 
 class FetchSchema(Schema):
@@ -70,7 +62,7 @@ fetch_builders = {}
 
 @dataclass(frozen=True)
 class FetchBuilder:
-    schema: Any  # Either msgspec.Struct type or validation function
+    schema: Union[Schema, Callable]
     builder: Callable
 
 
@@ -194,7 +186,7 @@ def make_task(config, tasks):
         yield task_desc
 
 
-class GPGSignatureConfig(Schema):
+class GPGSignatureSchema(Schema):
     """GPG signature verification configuration."""
 
     # URL where GPG signature document can be obtained. Can contain the
@@ -204,7 +196,7 @@ class GPGSignatureConfig(Schema):
     key_path: str
 
 
-class StaticUrlFetchConfig(Schema, rename="kebab"):
+class StaticUrlFetchSchema(Schema):
     """Configuration for static-url fetch type."""
 
     type: str
@@ -215,7 +207,7 @@ class StaticUrlFetchConfig(Schema, rename="kebab"):
     # Size of the downloaded entity, in bytes.
     size: int
     # GPG signature verification.
-    gpg_signature: Optional[GPGSignatureConfig] = None
+    gpg_signature: Optional[GPGSignatureSchema] = None
     # The name to give to the generated artifact. Defaults to the file
     # portion of the URL. Using a different extension converts the
     # archive to the given type. Only conversion to .tar.zst is supported.
@@ -233,7 +225,7 @@ class StaticUrlFetchConfig(Schema, rename="kebab"):
     # it is important to update the digest data used to compute cache hits.
 
 
-@fetch_builder("static-url", StaticUrlFetchConfig)
+@fetch_builder("static-url", StaticUrlFetchSchema)
 def create_fetch_url_task(config, name, fetch):
     artifact_name = fetch.get("artifact-name")
     if not artifact_name:
@@ -296,7 +288,7 @@ def create_fetch_url_task(config, name, fetch):
     }
 
 
-class GitFetchConfig(Schema):
+class GitFetchSchema(Schema):
     """Configuration for git fetch type."""
 
     type: str
@@ -312,7 +304,7 @@ class GitFetchConfig(Schema):
     ssh_key: Optional[str] = None
 
 
-@fetch_builder("git", GitFetchConfig)
+@fetch_builder("git", GitFetchSchema)
 def create_git_fetch_task(config, name, fetch):
     path_prefix = fetch.get("path-prefix")
     if not path_prefix:

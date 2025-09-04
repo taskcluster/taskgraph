@@ -29,7 +29,7 @@ class ParameterMismatch(Exception):
     """Raised when a parameters.yml has extra or missing parameters."""
 
 
-class CodeReviewConfig(Schema):
+class CodeReviewSchema(Schema):
     """Code review configuration."""
 
     # Required field
@@ -73,10 +73,10 @@ class BaseSchema(Schema):
     tasks_for: str
 
     # Optional fields
-    next_version: Optional[str]
-    optimize_strategies: Optional[str]
-    version: Optional[str]
-    code_review: Optional[CodeReviewConfig] = None
+    next_version: Optional[str] = None
+    optimize_strategies: Optional[str] = None
+    version: Optional[str] = None
+    code_review: Optional[CodeReviewSchema] = None
 
 
 def get_contents(path):
@@ -243,10 +243,19 @@ class Parameters(ReadOnlyDict):
 
             if self.strict:
                 # Strict mode: validate against schema and check for extra fields
-                # Get all valid field names from the base schema
+                # Get all valid field names from the base schema and extensions
                 schema_fields = {
                     f.encode_name for f in msgspec.structs.fields(BaseSchema)
                 }
+
+                # Add fields from extension schemas
+                for ext_schema in _schema_extensions:
+                    if isinstance(ext_schema, type) and issubclass(
+                        ext_schema, msgspec.Struct
+                    ):
+                        schema_fields.update(
+                            {f.encode_name for f in msgspec.structs.fields(ext_schema)}
+                        )
 
                 # Check for extra fields
                 extra_fields = set(kebab_params.keys()) - schema_fields
@@ -255,11 +264,32 @@ class Parameters(ReadOnlyDict):
                         f"Invalid parameters: Extra fields not allowed: {extra_fields}"
                     )
 
-                # Validate all parameters against the schema
-                msgspec.convert(kebab_params, BaseSchema)
+                # Validate base schema fields only (filter out extension fields)
+                base_fields = {
+                    f.encode_name for f in msgspec.structs.fields(BaseSchema)
+                }
+                base_params = {
+                    k: v for k, v in kebab_params.items() if k in base_fields
+                }
+                msgspec.convert(base_params, BaseSchema)
+
+                # Also validate against extension schemas
+                for ext_schema in _schema_extensions:
+                    if isinstance(ext_schema, type) and issubclass(
+                        ext_schema, msgspec.Struct
+                    ):
+                        # Only validate fields that belong to this extension
+                        ext_fields = {
+                            f.encode_name for f in msgspec.structs.fields(ext_schema)
+                        }
+                        ext_params = {
+                            k: v for k, v in kebab_params.items() if k in ext_fields
+                        }
+                        if ext_params:
+                            msgspec.convert(ext_params, ext_schema)
             else:
-                # Non-strict mode: only validate fields that exist in the schema
-                # Filter to only include fields defined in the schema
+                # Non-strict mode: only validate fields that exist in the schemas
+                # Filter to only include fields defined in the base schema
                 schema_fields = {
                     f.encode_name for f in msgspec.structs.fields(BaseSchema)
                 }
@@ -267,6 +297,20 @@ class Parameters(ReadOnlyDict):
                     k: v for k, v in kebab_params.items() if k in schema_fields
                 }
                 msgspec.convert(filtered_params, BaseSchema)
+
+                # Also validate extension schemas in non-strict mode
+                for ext_schema in _schema_extensions:
+                    if isinstance(ext_schema, type) and issubclass(
+                        ext_schema, msgspec.Struct
+                    ):
+                        ext_fields = {
+                            f.encode_name for f in msgspec.structs.fields(ext_schema)
+                        }
+                        ext_params = {
+                            k: v for k, v in kebab_params.items() if k in ext_fields
+                        }
+                        if ext_params:
+                            msgspec.convert(ext_params, ext_schema)
         except (msgspec.ValidationError, msgspec.DecodeError) as e:
             raise ParameterMismatch(f"Invalid parameters: {e}")
 

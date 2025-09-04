@@ -23,7 +23,7 @@ TaskPriority = Literal[
 ]
 
 
-class WorkerAlias(Schema):
+class WorkerAliasSchema(Schema):
     """Worker alias configuration."""
 
     provisioner: optionally_keyed_by("level", str)  # type: ignore
@@ -32,10 +32,10 @@ class WorkerAlias(Schema):
     worker_type: optionally_keyed_by("level", str)  # type: ignore
 
 
-class Workers(Schema, rename=None):
+class WorkersSchema(Schema, rename=None):
     """Workers configuration."""
 
-    aliases: Dict[str, WorkerAlias]
+    aliases: Dict[str, WorkerAliasSchema]
 
 
 class Repository(Schema, forbid_unknown_fields=False):
@@ -58,7 +58,7 @@ class RunConfig(Schema):
     use_caches: Optional[Union[bool, List[str]]] = None  # Maps from "use-caches"
 
 
-class TaskGraphConfig(Schema):
+class TaskGraphSchema(Schema):
     """Taskgraph specific configuration."""
 
     # Required fields first
@@ -82,8 +82,8 @@ class GraphConfigSchema(Schema, forbid_unknown_fields=False):
     # Required fields first
     trust_domain: str  # Maps from "trust-domain"
     task_priority: optionally_keyed_by("project", "level", TaskPriority)  # type: ignore
-    workers: Workers
-    taskgraph: TaskGraphConfig
+    workers: WorkersSchema
+    taskgraph: TaskGraphSchema
 
     # Optional fields
     docker_image_kind: Optional[str] = None  # Maps from "docker-image-kind"
@@ -158,7 +158,6 @@ class GraphConfig:
 
 def validate_graph_config(config):
     """Validate graph configuration using msgspec."""
-    # With rename="kebab", msgspec handles the conversion automatically
     validate_schema(GraphConfigSchema, config, "Invalid graph configuration:")
 
 

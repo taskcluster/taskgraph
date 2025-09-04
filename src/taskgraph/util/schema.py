@@ -27,10 +27,7 @@ def validate_schema(schema, obj, msg_prefix):
 
     try:
         if isinstance(schema, type) and issubclass(schema, Schema):
-            # Use the validate class method for Schema subclasses
             schema.validate(obj)
-        elif isinstance(schema, type) and issubclass(schema, msgspec.Struct):
-            msgspec.convert(obj, schema)
         else:
             raise TypeError(f"Unsupported schema type: {type(schema)}")
     except (msgspec.ValidationError, msgspec.DecodeError, Exception) as exc:
@@ -175,91 +172,78 @@ class Schema(
             raise msgspec.ValidationError(str(e))
 
 
-# Optimization schema types using msgspec
-class IndexSearchOptimization(Schema):
+class IndexSearchOptimizationSchema(Schema):
     """Search the index for the given index namespaces."""
 
     index_search: List[str]
 
 
-class SkipUnlessChangedOptimization(Schema):
+class SkipUnlessChangedOptimizationSchema(Schema):
     """Skip this task if none of the given file patterns match."""
 
     skip_unless_changed: List[str]
 
 
 # Task reference types using msgspec
-class TaskReference(Schema):
+class TaskReferenceSchema(Schema):
     """Reference to another task."""
 
     task_reference: str
 
 
-class ArtifactReference(Schema):
+class ArtifactReferenceSchema(Schema):
     """Reference to a task artifact."""
 
     artifact_reference: str
 
 
-# Create a custom validator
-class OptimizationValidator:
-    """A validator that can validate optimization schemas."""
-
-    def __call__(self, value):
-        """Validate optimization value."""
-        if value is None:
-            return None
-        if isinstance(value, dict):
-            if "index-search" in value:
-                try:
-                    return msgspec.convert(value, IndexSearchOptimization)
-                except msgspec.ValidationError:
-                    pass
-            if "skip-unless-changed" in value:
-                try:
-                    return msgspec.convert(value, SkipUnlessChangedOptimization)
-                except msgspec.ValidationError:
-                    pass
-        # Simple validation for dict types
-        if isinstance(value, dict):
-            if "index-search" in value and isinstance(value["index-search"], list):
-                return value
-            if "skip-unless-changed" in value and isinstance(
-                value["skip-unless-changed"], list
-            ):
-                return value
-        raise ValueError(f"Invalid optimization value: {value}")
-
-
-class TaskRefValidator:
-    """A validator that can validate task references."""
-
-    def __call__(self, value):
-        """Validate task reference value."""
-        if isinstance(value, str):
+def validate_optimization(value):
+    """Validate optimization value."""
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        if "index-search" in value:
+            try:
+                return msgspec.convert(value, IndexSearchOptimizationSchema)
+            except msgspec.ValidationError:
+                pass
+        if "skip-unless-changed" in value:
+            try:
+                return msgspec.convert(value, SkipUnlessChangedOptimizationSchema)
+            except msgspec.ValidationError:
+                pass
+    # Simple validation for dict types
+    if isinstance(value, dict):
+        if "index-search" in value and isinstance(value["index-search"], list):
             return value
-        if isinstance(value, dict):
-            if "task-reference" in value:
-                try:
-                    return msgspec.convert(value, TaskReference)
-                except msgspec.ValidationError:
-                    pass
-            if "artifact-reference" in value:
-                try:
-                    return msgspec.convert(value, ArtifactReference)
-                except msgspec.ValidationError:
-                    pass
-        # Simple validation for dict types
-        if isinstance(value, dict):
-            if "task-reference" in value and isinstance(value["task-reference"], str):
-                return value
-            if "artifact-reference" in value and isinstance(
-                value["artifact-reference"], str
-            ):
-                return value
-        raise ValueError(f"Invalid task reference value: {value}")
+        if "skip-unless-changed" in value and isinstance(
+            value["skip-unless-changed"], list
+        ):
+            return value
+    raise ValueError(f"Invalid optimization value: {value}")
 
 
-# Keep the same names for backward compatibility
-OptimizationSchema = OptimizationValidator()
-taskref_or_string = TaskRefValidator()
+def validate_task_ref(value):
+    """Validate task reference value."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        if "task-reference" in value:
+            try:
+                return msgspec.convert(value, TaskReferenceSchema)
+            except msgspec.ValidationError:
+                pass
+        if "artifact-reference" in value:
+            try:
+                return msgspec.convert(value, ArtifactReferenceSchema)
+            except msgspec.ValidationError:
+                pass
+    # Simple validation for dict types
+    if isinstance(value, dict):
+        if "task-reference" in value and isinstance(value["task-reference"], str):
+            return value
+        if "artifact-reference" in value and isinstance(
+            value["artifact-reference"], str
+        ):
+            return value
+    raise ValueError(f"Invalid task reference value: {value}")

@@ -6,7 +6,7 @@ from taskgraph.util.templates import deep_get, substitute_task_fields
 from taskgraph.util.yaml import load_yaml
 
 
-class TaskContextConfig(Schema):
+class TaskContextChildSchema(Schema):
     """
     `task-context` can be used to substitute values into any field in a
     task with data that is not known until `taskgraph` runs.
@@ -58,7 +58,7 @@ class TaskContextSchema(Schema, forbid_unknown_fields=False):
     """
 
     # Required field first
-    task_context: TaskContextConfig
+    task_context: TaskContextChildSchema
 
     # Optional fields
     name: Optional[str] = None
