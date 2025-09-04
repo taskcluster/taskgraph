@@ -14,6 +14,7 @@ import requests
 import taskcluster_urls as liburls
 from requests.packages.urllib3.util.retry import Retry  # type: ignore
 
+import taskcluster
 from taskgraph.task import Task
 from taskgraph.util import yaml
 
@@ -75,6 +76,27 @@ def get_root_url(use_proxy):
     return liburls.normalize_root_url(PRODUCTION_TASKCLUSTER_ROOT_URL)
 
 
+@functools.lru_cache(maxsize=None)
+def get_taskcluster_client(service: str):
+    if "TASKCLUSTER_PROXY_URL" in os.environ:
+        options = {"rootUrl": os.environ["TASKCLUSTER_PROXY_URL"]}
+    else:
+        options = taskcluster.optionsFromEnvironment()
+
+    return getattr(taskcluster, service[0].upper() + service[1:])(options)
+
+
+def _handle_artifact(path, response):
+    if path.endswith(".json"):
+        return response.json()
+
+    if path.endswith(".yml"):
+        return yaml.load_stream(response.content)
+
+    response.raw.read = functools.partial(response.raw.read, decode_content=True)
+    return response.raw
+
+
 def requests_retry_session(
     retries,
     backoff_factor=0.1,
@@ -115,39 +137,6 @@ def get_session():
     return requests_retry_session(retries=5)
 
 
-@functools.lru_cache(maxsize=None)
-def get_retry_post_session():
-    allowed_methods = set(("POST",)) | Retry.DEFAULT_ALLOWED_METHODS
-    return requests_retry_session(retries=5, allowed_methods=allowed_methods)
-
-
-def _do_request(url, method=None, session=None, **kwargs):
-    if method is None:
-        method = "post" if kwargs else "get"
-    if session is None:
-        session = get_session()
-    if method == "get":
-        kwargs["stream"] = True
-
-    response = getattr(session, method)(url, **kwargs)
-
-    if response.status_code >= 400:
-        # Consume content before raise_for_status, so that the connection can be
-        # reused.
-        response.content
-    response.raise_for_status()
-    return response
-
-
-def _handle_artifact(path, response):
-    if path.endswith(".json"):
-        return response.json()
-    if path.endswith(".yml"):
-        return yaml.load_stream(response.content)
-    response.raw.read = functools.partial(response.raw.read, decode_content=True)
-    return response.raw
-
-
 def get_artifact_url(task_id, path, use_proxy=False):
     artifact_tmpl = liburls.api(
         get_root_url(use_proxy), "queue", "v1", "task/{}/artifacts/{}"
@@ -155,7 +144,7 @@ def get_artifact_url(task_id, path, use_proxy=False):
     return artifact_tmpl.format(task_id, path)
 
 
-def get_artifact(task_id, path, use_proxy=False):
+def get_artifact(task_id, path):
     """
     Returns the artifact with the given path for the given task id.
 
@@ -164,13 +153,16 @@ def get_artifact(task_id, path, use_proxy=False):
     dict) is returned.
     For other types of content, a file-like object is returned.
     """
-    response = _do_request(get_artifact_url(task_id, path, use_proxy))
+    queue = get_taskcluster_client("queue")
+    response = queue.getArtifact(task_id, path)
     return _handle_artifact(path, response)
 
 
-def list_artifacts(task_id, use_proxy=False):
-    response = _do_request(get_artifact_url(task_id, "", use_proxy).rstrip("/"))
-    return response.json()["artifacts"]
+def list_artifacts(task_id):
+    queue = get_taskcluster_client("queue")
+    task = queue.task(task_id)
+    if task:
+        return task["artifacts"]
 
 
 def get_artifact_prefix(task):
@@ -193,22 +185,17 @@ def get_index_url(index_path, use_proxy=False, multiple=False):
     return index_tmpl.format("s" if multiple else "", index_path)
 
 
-def find_task_id(index_path, use_proxy=False):
-    try:
-        response = _do_request(get_index_url(index_path, use_proxy))
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 404:
-            raise KeyError(f"index path {index_path} not found")
-        raise
-    return response.json()["taskId"]
+def find_task_id(index_path):
+    index = get_taskcluster_client("index")
+    task = index.findTask(index_path)
+    return task["taskId"]  # type: ignore
 
 
-def find_task_id_batched(index_paths, use_proxy=False):
+def find_task_id_batched(index_paths):
     """Gets the task id of multiple tasks given their respective index.
 
     Args:
         index_paths (List[str]): A list of task indexes.
-        use_proxy (bool): Whether to use taskcluster-proxy (default: False)
 
     Returns:
         Dict[str, str]: A dictionary object mapping each valid index path
@@ -217,65 +204,48 @@ def find_task_id_batched(index_paths, use_proxy=False):
     See the endpoint here:
         https://docs.taskcluster.net/docs/reference/core/index/api#findTasksAtIndex
     """
-    endpoint = liburls.api(get_root_url(use_proxy), "index", "v1", "tasks/indexes")
-    task_ids = {}
-    continuation_token = None
+    index = get_taskcluster_client("index")
+    response = index.findTasksAtIndex({"indexes": index_paths})
 
-    while True:
-        response = _do_request(
-            endpoint,
-            session=get_retry_post_session(),
-            json={
-                "indexes": index_paths,
-            },
-            params={"continuationToken": continuation_token},
-        )
+    if not response or "tasks" not in response:
+        return {}
 
-        response_data = response.json()
-        if not response_data["tasks"]:
-            break
-        response_tasks = response_data["tasks"]
-        if (len(task_ids) + len(response_tasks)) > len(index_paths):
-            # Sanity check
-            raise ValueError("more task ids were returned than were asked for")
-        task_ids.update((t["namespace"], t["taskId"]) for t in response_tasks)
+    tasks = response.get("tasks", [])
+    task_ids = {
+        t["namespace"]: t["taskId"] for t in tasks if "namespace" in t and "taskId" in t
+    }
 
-        continuation_token = response_data.get("continuationToken")
-        if continuation_token is None:
-            break
     return task_ids
 
 
-def get_artifact_from_index(index_path, artifact_path, use_proxy=False):
-    full_path = index_path + "/artifacts/" + artifact_path
-    response = _do_request(get_index_url(full_path, use_proxy))
-    return _handle_artifact(full_path, response)
+def get_artifact_from_index(index_path, artifact_path):
+    index = get_taskcluster_client("index")
+    response = index.findArtifactFromTask(index_path, artifact_path)
+    return _handle_artifact(index_path, response)
 
 
-def list_tasks(index_path, use_proxy=False):
+def list_tasks(index_path):
     """
     Returns a list of task_ids where each task_id is indexed under a path
     in the index. Results are sorted by expiration date from oldest to newest.
     """
-    results = []
-    data = {}
-    while True:
-        response = _do_request(
-            get_index_url(index_path, use_proxy, multiple=True), json=data
-        )
-        response = response.json()
-        results += response["tasks"]
-        if response.get("continuationToken"):
-            data = {"continuationToken": response.get("continuationToken")}
-        else:
-            break
+    index = get_taskcluster_client("index")
+    response = index.listTasks(index_path, {})
+
+    if not response or "tasks" not in response:
+        return []
+
+    tasks = response.get("tasks", [])
 
     # We can sort on expires because in the general case
     # all of these tasks should be created with the same expires time so they end up in
     # order from earliest to latest action. If more correctness is needed, consider
     # fetching each task and sorting on the created date.
-    results.sort(key=lambda t: parse_time(t["expires"]))
-    return [t["taskId"] for t in results]
+    tasks.sort(key=lambda t: parse_time(t["expires"]))
+
+    task_ids = [t["taskId"] for t in tasks if "taskId" in t]
+
+    return task_ids
 
 
 def parse_time(timestamp):
@@ -289,28 +259,28 @@ def get_task_url(task_id, use_proxy=False):
 
 
 @functools.lru_cache(maxsize=None)
-def get_task_definition(task_id, use_proxy=False):
-    response = _do_request(get_task_url(task_id, use_proxy))
-    return response.json()
+def get_task_definition(task_id):
+    queue = get_taskcluster_client("queue")
+    return queue.task(task_id)
 
 
-def cancel_task(task_id, use_proxy=False):
+def cancel_task(task_id):
     """Cancels a task given a task_id. In testing mode, just logs that it would
     have cancelled."""
     if testing:
         logger.info(f"Would have cancelled {task_id}.")
     else:
-        _do_request(get_task_url(task_id, use_proxy) + "/cancel", json={})
+        queue = get_taskcluster_client("queue")
+        queue.cancelTask(task_id)
 
 
-def status_task(task_id, use_proxy=False):
+def status_task(task_id):
     """Gets the status of a task given a task_id.
 
     In testing mode, just logs that it would have retrieved status and return an empty dict.
 
     Args:
         task_id (str): A task id.
-        use_proxy (bool): Whether to use taskcluster-proxy (default: False)
 
     Returns:
         dict: A dictionary object as defined here:
@@ -320,19 +290,21 @@ def status_task(task_id, use_proxy=False):
         logger.info(f"Would have gotten status for {task_id}.")
         return {}
     else:
-        resp = _do_request(get_task_url(task_id, use_proxy) + "/status")
-        status = resp.json().get("status", {})
-        return status
+        queue = get_taskcluster_client("queue")
+        response = queue.status(task_id)
+        if response:
+            return response.get("status", {})
+        else:
+            return {}
 
 
-def status_task_batched(task_ids, use_proxy=False):
+def status_task_batched(task_ids):
     """Gets the status of multiple tasks given task_ids.
 
     In testing mode, just logs that it would have retrieved statuses.
 
     Args:
         task_id (List[str]): A list of task ids.
-        use_proxy (bool): Whether to use taskcluster-proxy (default: False)
 
     Returns:
         dict: A dictionary object as defined here:
@@ -341,35 +313,24 @@ def status_task_batched(task_ids, use_proxy=False):
     if testing:
         logger.info(f"Would have gotten status for {len(task_ids)} tasks.")
         return {}
-    endpoint = liburls.api(get_root_url(use_proxy), "queue", "v1", "tasks/status")
-    statuses = {}
-    continuation_token = None
 
-    while True:
-        response = _do_request(
-            endpoint,
-            session=get_retry_post_session(),
-            json={
-                "taskIds": task_ids,
-            },
-            params={
-                "continuationToken": continuation_token,
-            },
-        )
-        response_data = response.json()
-        if not response_data["statuses"]:
-            break
-        response_tasks = response_data["statuses"]
-        if (len(statuses) + len(response_tasks)) > len(task_ids):
-            raise ValueError("more task statuses were returned than were asked for")
-        statuses.update((t["taskId"], t["status"]) for t in response_tasks)
-        continuationToken = response_data.get("continuationToken")
-        if continuationToken is None:
-            break
+    queue = get_taskcluster_client("queue")
+    response = queue.statuses({"taskIds": task_ids})
+
+    if not response or "statuses" not in response:
+        return {}
+
+    status_list = response.get("statuses", [])
+    statuses = {
+        t["taskId"]: t["status"]
+        for t in status_list
+        if "namespace" in t and "taskId" in t
+    }
+
     return statuses
 
 
-def state_task(task_id, use_proxy=False):
+def state_task(task_id):
     """Gets the state of a task given a task_id.
 
     In testing mode, just logs that it would have retrieved state. This is a subset of the
@@ -377,7 +338,6 @@ def state_task(task_id, use_proxy=False):
 
     Args:
         task_id (str): A task id.
-        use_proxy (bool): Whether to use taskcluster-proxy (default: False)
 
     Returns:
         str: The state of the task, one of
@@ -386,7 +346,7 @@ def state_task(task_id, use_proxy=False):
     if testing:
         logger.info(f"Would have gotten state for {task_id}.")
     else:
-        status = status_task(task_id, use_proxy=use_proxy).get("state") or "unknown"
+        status = status_task(task_id).get("state") or "unknown"  # type: ignore
         return status
 
 
@@ -396,15 +356,18 @@ def rerun_task(task_id):
     if testing:
         logger.info(f"Would have rerun {task_id}.")
     else:
-        _do_request(get_task_url(task_id, use_proxy=True) + "/rerun", json={})
+        queue = get_taskcluster_client("queue")
+        queue.rerunTask(task_id)
 
 
 def get_current_scopes():
     """Get the current scopes.  This only makes sense in a task with the Taskcluster
     proxy enabled, where it returns the actual scopes accorded to the task."""
-    auth_url = liburls.api(get_root_url(True), "auth", "v1", "scopes/current")
-    resp = _do_request(auth_url)
-    return resp.json().get("scopes", [])
+    auth = get_taskcluster_client("auth")
+    resp = auth.currentScopes()
+    if resp:
+        return resp.get("scopes")  # type: ignore
+    return []
 
 
 def get_purge_cache_url(provisioner_id, worker_type, use_proxy=False):
@@ -414,77 +377,76 @@ def get_purge_cache_url(provisioner_id, worker_type, use_proxy=False):
     return url_tmpl.format(provisioner_id, worker_type)
 
 
-def purge_cache(provisioner_id, worker_type, cache_name, use_proxy=False):
+def purge_cache(provisioner_id, worker_type, cache_name):
     """Requests a cache purge from the purge-caches service."""
     if testing:
         logger.info(f"Would have purged {provisioner_id}/{worker_type}/{cache_name}.")
     else:
         logger.info(f"Purging {provisioner_id}/{worker_type}/{cache_name}.")
-        purge_cache_url = get_purge_cache_url(provisioner_id, worker_type, use_proxy)
-        _do_request(purge_cache_url, json={"cacheName": cache_name})
+        purge_cache_client = get_taskcluster_client("purgeCache")
+        purge_cache_client.purgeCache(
+            provisioner_id, worker_type, {"cacheName": cache_name}
+        )
 
 
-def send_email(address, subject, content, link, use_proxy=False):
+def send_email(address, subject, content, link):
     """Sends an email using the notify service"""
     logger.info(f"Sending email to {address}.")
-    url = liburls.api(get_root_url(use_proxy), "notify", "v1", "email")
-    _do_request(
-        url,
-        json={
+    notify = get_taskcluster_client("notify")
+    notify.email(
+        {
             "address": address,
             "subject": subject,
             "content": content,
             "link": link,
-        },
+        }
     )
 
 
 def list_task_group_incomplete_tasks(task_group_id):
     """Generate the incomplete tasks in a task group"""
-    params = {}
-    while True:
-        url = liburls.api(
-            get_root_url(False),
-            "queue",
-            "v1",
-            f"task-group/{task_group_id}/list",
-        )
-        resp = _do_request(url, method="get", params=params).json()
-        for task in [t["status"] for t in resp["tasks"]]:
-            if task["state"] in ["running", "pending", "unscheduled"]:
-                yield task["taskId"]
-        if resp.get("continuationToken"):
-            params = {"continuationToken": resp.get("continuationToken")}
-        else:
-            break
+    queue = get_taskcluster_client("queue")
+    response = queue.listTaskGroup(task_group_id)
+
+    if not response or "tasks" not in response:
+        return
+
+    tasks = response.get("tasks", [])
+    for task in tasks:
+        if (status := task.get("status")) is not None:  # type: ignore
+            if (task_id := status.get("taskId")) and status.get("state") in [
+                "running",
+                "pending",
+                "unscheduled",
+            ]:
+                yield task_id
 
 
 @functools.lru_cache(maxsize=None)
-def _get_deps(task_ids, use_proxy):
+def _get_deps(task_ids):
     upstream_tasks = {}
     for task_id in task_ids:
-        try:
-            task_def = get_task_definition(task_id, use_proxy)
-        except requests.HTTPError as e:
-            if e.response.status_code == 404:
-                continue
-            raise e
+        task_def = get_task_definition(task_id)
+        if not task_def:
+            continue
 
-        upstream_tasks[task_id] = task_def["metadata"]["name"]
+        metadata = task_def.get("metadata", {})  # type: ignore
+        name = metadata.get("name")  # type: ignore
+        if name:
+            upstream_tasks[task_id] = name
 
-        upstream_tasks.update(_get_deps(tuple(task_def["dependencies"]), use_proxy))
+        dependencies = task_def.get("dependencies", [])
+        if dependencies:
+            upstream_tasks.update(_get_deps(tuple(dependencies)))
 
     return upstream_tasks
 
 
-def get_ancestors(
-    task_ids: Union[List[str], str], use_proxy: bool = False
-) -> Dict[str, str]:
+def get_ancestors(task_ids: Union[List[str], str]) -> Dict[str, str]:
     """Gets the ancestor tasks of the given task_ids as a dictionary of taskid -> label.
 
     Args:
         task_ids (str or [str]): A single task id or a list of task ids to find the ancestors of.
-        use_proxy (bool): See get_root_url.
 
     Returns:
         dict: A dict whose keys are task ids and values are task labels.
@@ -496,15 +458,17 @@ def get_ancestors(
 
     for task_id in task_ids:
         try:
-            task_def = get_task_definition(task_id, use_proxy)
-        except requests.HTTPError as e:
-            # Task has most likely expired, which means it's no longer a
-            # dependency for the purposes of this function.
-            if e.response.status_code == 404:
-                continue
-
+            task_def = get_task_definition(task_id)
+        except Exception as e:
             raise e
 
-        upstream_tasks.update(_get_deps(tuple(task_def["dependencies"]), use_proxy))
+        if not task_def:
+            # Task has most likely expired, which means it's no longer a
+            # dependency for the purposes of this function.
+            continue
+
+        dependencies = task_def.get("dependencies", [])
+        if dependencies:
+            upstream_tasks.update(_get_deps(tuple(dependencies)))
 
     return copy.deepcopy(upstream_tasks)
