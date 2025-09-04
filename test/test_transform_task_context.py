@@ -6,6 +6,7 @@ import os.path
 from copy import deepcopy
 from pprint import pprint
 
+import pytest
 from pytest_taskgraph import FakeParameters
 
 from taskgraph.transforms import task_context
@@ -14,7 +15,7 @@ from taskgraph.transforms.base import TransformConfig
 here = os.path.abspath(os.path.dirname(__file__))
 
 TASK_DEFAULTS = {
-    "description": "fake description {object} {file} {param} {object_and_file}"
+    "description": "fake description {object} {file} {param} {object_and_file} "
     "{object_and_param} {file_and_param} {object_file_and_param} {param_fallback} {name}",
     "name": "fake-task-name",
     "task-context": {
@@ -37,11 +38,24 @@ TASK_DEFAULTS = {
         ],
     },
 }
+EXPECTED_DESCRIPTION = (
+    "fake description object file param object-overrides-file "
+    "param-overrides-object param-overrides-file param-overrides-all default fake-task-name"
+)
+NO_CONTEXT = deepcopy(TASK_DEFAULTS)
+del NO_CONTEXT["task-context"]
 
 
-def test_transforms(request, run_transform, graph_config):
-    task = deepcopy(TASK_DEFAULTS)
-
+@pytest.mark.parametrize(
+    "task,description",
+    (
+        pytest.param(deepcopy(TASK_DEFAULTS), EXPECTED_DESCRIPTION, id="with-context"),
+        pytest.param(
+            deepcopy(NO_CONTEXT), TASK_DEFAULTS["description"], id="no-context"
+        ),
+    ),
+)
+def test_transforms(request, run_transform, graph_config, task, description):
     params = FakeParameters(
         {
             "param": "param",
@@ -77,8 +91,4 @@ def test_transforms(request, run_transform, graph_config):
     print("Dumping task:")
     pprint(task, indent=2)
 
-    assert (
-        task["description"]
-        == "fake description object file param object-overrides-file"
-        "param-overrides-object param-overrides-file param-overrides-all default fake-task-name"
-    )
+    assert task["description"] == description
