@@ -327,6 +327,11 @@ def load_task(task_id, remove=True, user=None):
     # Add the task's environment variables.
     env.update(task_def["payload"].get("env", {}))
 
+    # run-task expects the worker to mount a volume for each path defined in
+    # TASKCLUSTER_CACHES, delete them to avoid needing to do the same.
+    if "TASKCLUSTER_CACHES" in env:
+        del env["TASKCLUSTER_CACHES"]
+
     envfile = None
     initfile = None
     try:

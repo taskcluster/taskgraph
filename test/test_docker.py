@@ -166,7 +166,6 @@ def test_load_task(run_load_task):
             ],
             "image": {"taskId": image_task_id, "type": "task-image"},
         },
-        "tags": {"worker-implementation": "docker-worker"},
     }
     ret, mocks = run_load_task(task)
     assert ret == 0
@@ -202,7 +201,33 @@ def test_load_task(run_load_task):
             assert exp == actual[i]
 
 
-def test_load_task_env_and_remove(run_load_task):
+def test_load_task_env_init_and_remove(mocker, run_load_task):
+    # Mock NamedTemporaryFile to capture what's written to it
+    mock_envfile = mocker.MagicMock()
+    mock_envfile.name = "/tmp/test_envfile"
+    mock_envfile.fileno.return_value = 123  # Mock file descriptor
+
+    written_env_content = []
+    mock_envfile.write = lambda content: written_env_content.append(content)
+    mock_envfile.close = mocker.MagicMock()
+
+    mock_initfile = mocker.MagicMock()
+    mock_initfile.name = "/tmp/test_initfile"
+    mock_initfile.fileno.return_value = 456  # Mock file descriptor
+    written_init_content = []
+    mock_initfile.write = lambda content: written_init_content.append(content)
+    mock_initfile.close = mocker.MagicMock()
+
+    # Return different mocks for each call to NamedTemporaryFile
+    mock_tempfile = mocker.patch.object(docker.tempfile, "NamedTemporaryFile")
+    mock_tempfile.side_effect = [mock_envfile, mock_initfile]
+
+    # Mock os.remove to prevent file deletion errors
+    mock_os_remove = mocker.patch.object(docker.os, "remove")
+
+    # Mock os.fchmod
+    mocker.patch.object(docker.os, "fchmod")
+
     image_task_id = "def"
     task = {
         "payload": {
@@ -213,16 +238,43 @@ def test_load_task_env_and_remove(run_load_task):
                 "--",
                 "echo foo",
             ],
-            "env": {"FOO": "BAR", "BAZ": 1},
+            "env": {"FOO": "BAR", "BAZ": "1", "TASKCLUSTER_CACHES": "path"},
             "image": {"taskId": image_task_id, "type": "task-image"},
         },
     }
     ret, mocks = run_load_task(task, remove=True)
     assert ret == 0
 
+    # NamedTemporaryFile was called twice (once for env, once for init)
+    assert mock_tempfile.call_count == 2
+
+    # Verify the environment content written to the file
+    assert len(written_env_content) == 1
+    env_lines = written_env_content[0].split("\n")
+
+    # Verify written env is expected
+    assert "TASKCLUSTER_CACHES=path" not in env_lines
+    assert "FOO=BAR" in env_lines
+    assert "BAZ=1" in env_lines
+
+    # Check that the default env vars were included
+    assert any("RUN_ID=0" in line for line in env_lines)
+    assert any("TASK_ID=abc" in line for line in env_lines)
+    assert any("TASK_GROUP_ID=" in line for line in env_lines)
+    assert any("TASKCLUSTER_ROOT_URL=" in line for line in env_lines)
+
+    # Both files were closed and removed
+    mock_envfile.close.assert_called_once()
+    mock_initfile.close.assert_called_once()
+    assert mock_os_remove.call_count == 2
+    assert mock_os_remove.call_args_list[0] == mocker.call("/tmp/test_envfile")
+    assert mock_os_remove.call_args_list[1] == mocker.call("/tmp/test_initfile")
+
+    # Verify subprocess was called with the correct env file and init file
     mocks["subprocess_run"].assert_called_once()
     actual = mocks["subprocess_run"].call_args[0][0]
-    assert re.match(r"--env-file=/tmp/tmp.*", actual[4])
+    assert actual[3] == "/tmp/test_initfile:/builds/worker/.bashrc"
+    assert actual[4] == "--env-file=/tmp/test_envfile"
     assert actual[5] == "--rm"
 
 
@@ -254,7 +306,6 @@ def test_load_task_with_different_image_types(
             ],
             "image": image,
         },
-        "tags": {"worker-implementation": "docker-worker"},
     }
 
     mocker.patch.object(docker, "find_task_id", return_value=image_task_id)
@@ -277,7 +328,6 @@ def test_load_task_with_unsupported_image_type(capsys, run_load_task):
             ],
             "image": {"type": "unsupported-type", "path": "/some/path"},
         },
-        "tags": {"worker-implementation": "docker-worker"},
     }
 
     ret, mocks = run_load_task(task)
