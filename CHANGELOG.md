@@ -1,5 +1,11 @@
 # Change Log
 
+## [15.1.3] - 2025-09-05
+
+### Fixed
+
+- set continuation token correctly in `status_task_batched` (#763)
+
 ## [15.1.2] - 2025-09-04
 
 ### Fixed
