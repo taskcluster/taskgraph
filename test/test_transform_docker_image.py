@@ -43,6 +43,22 @@ TASK_DEFAULTS = {
             },
             id="symbol",
         ),
+        pytest.param(
+            {},
+            {"pull_request_number": "123"},
+            {
+                "routes": [
+                    "index.test-domain.v2.some-project-pr.123.latest.docker-image.fake-name"
+                ]
+            },
+            id="pr_route",
+        ),
+        pytest.param(
+            {},
+            {},
+            {},
+            id="no_pr_route_without_pr_number",
+        ),
     ),
 )
 @unittest.mock.patch(
