@@ -139,14 +139,17 @@ def test_load_task_invalid_task(run_load_task):
     task = {}
     assert run_load_task(task)[0] == 1
 
-    task["tags"] = {"worker-implementation": "generic-worker"}
+    task["payload"] = {}
     assert run_load_task(task)[0] == 1
 
-    task["tags"]["worker-implementation"] = "docker-worker"
-    task["payload"] = {"command": []}
+    task["payload"] = {"command": [], "image": {"type": "task-image"}}
     assert run_load_task(task)[0] == 1
 
     task["payload"]["command"] = ["echo", "foo"]
+    assert run_load_task(task)[0] == 1
+
+    task["payload"]["image"]["type"] = "foobar"
+    task["payload"]["command"] = ["run-task", "--", "bash", "-c", "echo foo"]
     assert run_load_task(task)[0] == 1
 
 
@@ -161,7 +164,7 @@ def test_load_task(run_load_task):
                 "--",
                 "echo foo",
             ],
-            "image": {"taskId": image_task_id},
+            "image": {"taskId": image_task_id, "type": "task-image"},
         },
         "tags": {"worker-implementation": "docker-worker"},
     }
@@ -211,9 +214,8 @@ def test_load_task_env_and_remove(run_load_task):
                 "echo foo",
             ],
             "env": {"FOO": "BAR", "BAZ": 1},
-            "image": {"taskId": image_task_id},
+            "image": {"taskId": image_task_id, "type": "task-image"},
         },
-        "tags": {"worker-implementation": "docker-worker"},
     }
     ret, mocks = run_load_task(task, remove=True)
     assert ret == 0
@@ -222,3 +224,64 @@ def test_load_task_env_and_remove(run_load_task):
     actual = mocks["subprocess_run"].call_args[0][0]
     assert re.match(r"--env-file=/tmp/tmp.*", actual[4])
     assert actual[5] == "--rm"
+
+
+@pytest.mark.parametrize(
+    "image",
+    [
+        pytest.param({"type": "task-image", "taskId": "xyz"}, id="task_image"),
+        pytest.param(
+            {"type": "indexed-image", "namespace": "project.some-namespace.latest"},
+            id="indexed_image",
+        ),
+    ],
+)
+def test_load_task_with_different_image_types(
+    mocker,
+    run_load_task,
+    image,
+):
+    task_id = "abc"
+    image_task_id = "xyz"
+    task = {
+        "payload": {
+            "command": [
+                "/usr/bin/run-task",
+                "--task-cwd=/builds/worker",
+                "--",
+                "echo",
+                "test",
+            ],
+            "image": image,
+        },
+        "tags": {"worker-implementation": "docker-worker"},
+    }
+
+    mocker.patch.object(docker, "find_task_id", return_value=image_task_id)
+
+    ret, mocks = run_load_task(task)
+    assert ret == 0
+
+    mocks["get_task_definition"].assert_called_once_with(task_id)
+    mocks["load_image_by_task_id"].assert_called_once_with(image_task_id)
+
+
+def test_load_task_with_unsupported_image_type(capsys, run_load_task):
+    task = {
+        "payload": {
+            "command": [
+                "/usr/bin/run-task",
+                "--task-cwd=/builds/worker",
+                "--",
+                "echo foo",
+            ],
+            "image": {"type": "unsupported-type", "path": "/some/path"},
+        },
+        "tags": {"worker-implementation": "docker-worker"},
+    }
+
+    ret, mocks = run_load_task(task)
+    assert ret == 1
+
+    out, _ = capsys.readouterr()
+    assert "Tasks with unsupported-type images are not supported!" in out

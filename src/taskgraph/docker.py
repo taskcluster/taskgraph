@@ -19,6 +19,7 @@ except ImportError as e:
 
 from taskgraph.util import docker, json
 from taskgraph.util.taskcluster import (
+    find_task_id,
     get_artifact_url,
     get_root_url,
     get_session,
@@ -306,7 +307,14 @@ def load_task(task_id, remove=True, user=None):
         else:
             task_cwd = "$TASK_WORKDIR"
 
-    image_task_id = image["taskId"]
+    if image["type"] == "task-image":
+        image_task_id = image["taskId"]
+    elif image["type"] == "indexed-image":
+        image_task_id = find_task_id(image["namespace"])
+    else:
+        print(f"Tasks with {image['type']} images are not supported!")
+        return 1
+
     image_tag = load_image_by_task_id(image_task_id)
 
     # Set some env vars the worker would normally set.
