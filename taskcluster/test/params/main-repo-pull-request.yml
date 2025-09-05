@@ -17,6 +17,7 @@ moz_build_date: '20220421203159'
 optimize_target_tasks: true
 owner: user@example.com
 project: taskgraph
+pull_request_number: 123
 pushdate: 0
 pushlog_id: '0'
 repository_type: git
