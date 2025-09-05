@@ -269,10 +269,8 @@ def load_task(task_id, remove=True, user=None):
     user = user or "worker"
     task_def = get_task_definition(task_id)
 
-    if (
-        impl := task_def.get("tags", {}).get("worker-implementation")
-    ) != "docker-worker":
-        print(f"Tasks with worker-implementation '{impl}' are not supported!")
+    if "payload" not in task_def or not (image := task_def["payload"].get("image")):
+        print("Tasks without a `payload.image` are not supported!")
         return 1
 
     command = task_def["payload"].get("command")
@@ -308,7 +306,7 @@ def load_task(task_id, remove=True, user=None):
         else:
             task_cwd = "$TASK_WORKDIR"
 
-    image_task_id = task_def["payload"]["image"]["taskId"]
+    image_task_id = image["taskId"]
     image_tag = load_image_by_task_id(image_task_id)
 
     # Set some env vars the worker would normally set.
