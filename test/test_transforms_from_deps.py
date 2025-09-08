@@ -187,6 +187,11 @@ def assert_group_by_all_with_fetch(deps, tasks):
     }
 
 
+def assert_unique_kinds_with_fetch(deps, tasks):
+    handle_exception(tasks)
+    assert tasks[0]["fetches"] == {"foo": [{"artifact": "foo.txt"}]}
+
+
 @pytest.mark.parametrize(
     "task, kind_config, deps",
     (
@@ -422,6 +427,25 @@ def assert_group_by_all_with_fetch(deps, tasks):
                 "bar": make_task("bar", kind="bar", attributes={"kind": "bar"}),
             },
             id="group_by_all_with_fetch",
+        ),
+        pytest.param(
+            # task
+            {
+                "from-deps": {
+                    "kinds": ["foo"],
+                    "unique-kinds": True,
+                    "fetches": {
+                        "foo": [
+                            {"artifact": "foo.txt"},
+                        ],
+                    },
+                },
+            },
+            # kind config
+            None,
+            # deps
+            None,
+            id="unique_kinds_with_fetch",
         ),
     ),
 )
