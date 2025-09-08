@@ -316,7 +316,7 @@ def load_task(task_id, remove=True, user=None):
         "RUN_ID": "0",
         "TASK_GROUP_ID": task_def.get("taskGroupId", ""),  # type: ignore
         "TASK_ID": task_id,
-        "TASKCLUSTER_ROOT_URL": get_root_url(False),
+        "TASKCLUSTER_ROOT_URL": get_root_url(),
     }
     # Add the task's environment variables.
     env.update(task_def["payload"].get("env", {}))  # type: ignore

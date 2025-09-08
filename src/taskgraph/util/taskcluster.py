@@ -32,48 +32,31 @@ CONCURRENCY = 50
 
 
 @functools.lru_cache(maxsize=None)
-def get_root_url(use_proxy):
-    """Get the current TASKCLUSTER_ROOT_URL.
-
-    When running in a task, this must come from $TASKCLUSTER_ROOT_URL; when run
-    on the command line, a default may be provided that points to the
-    production deployment of Taskcluster. If use_proxy is set, this attempts to
-    get TASKCLUSTER_PROXY_URL instead, failing if it is not set.
-    """
-    if use_proxy:
-        try:
-            return liburls.normalize_root_url(os.environ["TASKCLUSTER_PROXY_URL"])
-        except KeyError:
-            if "TASK_ID" not in os.environ:
-                raise RuntimeError(
-                    "taskcluster-proxy is not available when not executing in a task"
-                )
-            else:
-                raise RuntimeError("taskcluster-proxy is not enabled for this task")
+def get_root_url():
+    if "TASKCLUSTER_PROXY_URL" in os.environ:
+        logger.debug(
+            "Using taskcluster-proxy at {}".format(os.environ["TASKCLUSTER_PROXY_URL"])
+        )
+        return liburls.normalize_root_url(os.environ["TASKCLUSTER_PROXY_URL"])
 
     if "TASKCLUSTER_ROOT_URL" in os.environ:
         logger.debug(
-            "Running in Taskcluster instance {}{}".format(
-                os.environ["TASKCLUSTER_ROOT_URL"],
-                (
-                    " with taskcluster-proxy"
-                    if "TASKCLUSTER_PROXY_URL" in os.environ
-                    else ""
-                ),
+            "Running in Taskcluster instance {}".format(
+                os.environ["TASKCLUSTER_ROOT_URL"]
             )
         )
         return liburls.normalize_root_url(os.environ["TASKCLUSTER_ROOT_URL"])
 
+    if PRODUCTION_TASKCLUSTER_ROOT_URL is not None:
+        logger.debug("Using default TASKCLUSTER_ROOT_URL")
+        return liburls.normalize_root_url(PRODUCTION_TASKCLUSTER_ROOT_URL)
+
     if "TASK_ID" in os.environ:
         raise RuntimeError("$TASKCLUSTER_ROOT_URL must be set when running in a task")
-
-    if PRODUCTION_TASKCLUSTER_ROOT_URL is None:
+    else:
         raise RuntimeError(
             "Could not detect Taskcluster instance, set $TASKCLUSTER_ROOT_URL"
         )
-
-    logger.debug("Using default TASKCLUSTER_ROOT_URL")
-    return liburls.normalize_root_url(PRODUCTION_TASKCLUSTER_ROOT_URL)
 
 
 @functools.lru_cache(maxsize=None)
@@ -137,10 +120,8 @@ def get_session():
     return requests_retry_session(retries=5)
 
 
-def get_artifact_url(task_id, path, use_proxy=False):
-    artifact_tmpl = liburls.api(
-        get_root_url(use_proxy), "queue", "v1", "task/{}/artifacts/{}"
-    )
+def get_artifact_url(task_id, path):
+    artifact_tmpl = liburls.api(get_root_url(), "queue", "v1", "task/{}/artifacts/{}")
     return artifact_tmpl.format(task_id, path)
 
 
@@ -154,7 +135,7 @@ def get_artifact(task_id, path):
     For other types of content, a file-like object is returned.
     """
     queue = get_taskcluster_client("queue")
-    response = queue.getArtifact(task_id, path)
+    response = queue.getLatestArtifact(task_id, path)
     return _handle_artifact(path, response)
 
 
@@ -180,8 +161,8 @@ def get_artifact_path(task, path):
     return f"{get_artifact_prefix(task)}/{path}"
 
 
-def get_index_url(index_path, use_proxy=False, multiple=False):
-    index_tmpl = liburls.api(get_root_url(use_proxy), "index", "v1", "task{}/{}")
+def get_index_url(index_path, multiple=False):
+    index_tmpl = liburls.api(get_root_url(), "index", "v1", "task{}/{}")
     return index_tmpl.format("s" if multiple else "", index_path)
 
 
@@ -253,8 +234,8 @@ def parse_time(timestamp):
     return datetime.datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%fZ")
 
 
-def get_task_url(task_id, use_proxy=False):
-    task_tmpl = liburls.api(get_root_url(use_proxy), "queue", "v1", "task/{}")
+def get_task_url(task_id):
+    task_tmpl = liburls.api(get_root_url(), "queue", "v1", "task/{}")
     return task_tmpl.format(task_id)
 
 
@@ -370,10 +351,8 @@ def get_current_scopes():
     return []
 
 
-def get_purge_cache_url(provisioner_id, worker_type, use_proxy=False):
-    url_tmpl = liburls.api(
-        get_root_url(use_proxy), "purge-cache", "v1", "purge-cache/{}/{}"
-    )
+def get_purge_cache_url(provisioner_id, worker_type):
+    url_tmpl = liburls.api(get_root_url(), "purge-cache", "v1", "purge-cache/{}/{}")
     return url_tmpl.format(provisioner_id, worker_type)
 
 
@@ -459,13 +438,12 @@ def get_ancestors(task_ids: Union[List[str], str]) -> Dict[str, str]:
     for task_id in task_ids:
         try:
             task_def = get_task_definition(task_id)
-        except Exception as e:
-            raise e
-
-        if not task_def:
+        except requests.HTTPError as e:
             # Task has most likely expired, which means it's no longer a
             # dependency for the purposes of this function.
-            continue
+            if e.response.status_code == 404:
+                continue
+            raise e
 
         dependencies = task_def.get("dependencies", [])
         if dependencies:

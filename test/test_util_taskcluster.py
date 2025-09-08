@@ -26,7 +26,7 @@ def mock_production_taskcluster_root_url(monkeypatch):
 @pytest.fixture
 def root_url(mock_environ):
     tc.get_root_url.cache_clear()
-    return tc.get_root_url(False)
+    return tc.get_root_url()
 
 
 @pytest.fixture
@@ -34,66 +34,58 @@ def proxy_root_url(monkeypatch, mock_environ):
     monkeypatch.setenv("TASK_ID", "123")
     monkeypatch.setenv("TASKCLUSTER_PROXY_URL", "https://taskcluster-proxy.net")
     tc.get_root_url.cache_clear()
-    return tc.get_root_url(True)
+    return tc.get_root_url()
 
 
 def test_get_root_url(monkeypatch):
     tc.get_root_url.cache_clear()
-    assert tc.get_root_url(False) == tc.PRODUCTION_TASKCLUSTER_ROOT_URL
+    assert tc.get_root_url() == tc.PRODUCTION_TASKCLUSTER_ROOT_URL
 
     custom_url = "https://taskcluster-root.net"
     monkeypatch.setenv("TASKCLUSTER_ROOT_URL", custom_url)
     tc.get_root_url.cache_clear()
-    assert tc.get_root_url(False) == custom_url
+    assert tc.get_root_url() == custom_url
 
     # trailing slash is normalized
     monkeypatch.setenv("TASKCLUSTER_ROOT_URL", custom_url + "/")
     tc.get_root_url.cache_clear()
-    assert tc.get_root_url(False) == custom_url
+    assert tc.get_root_url() == custom_url
 
-    with pytest.raises(RuntimeError):
-        tc.get_root_url(True)
-
-    task_id = "123"
-    monkeypatch.setenv("TASK_ID", task_id)
-
-    with pytest.raises(RuntimeError):
-        tc.get_root_url(True)
-
+    # TASKCLUSTER_PROXY_URL takes priority
     proxy_url = "https://taskcluster-proxy.net"
     monkeypatch.setenv("TASKCLUSTER_PROXY_URL", proxy_url)
-    assert tc.get_root_url(True) == proxy_url
     tc.get_root_url.cache_clear()
+    assert tc.get_root_url() == proxy_url
 
-    # no default set
+    # Clean up proxy URL to test fallback
+    monkeypatch.delenv("TASKCLUSTER_PROXY_URL")
+    tc.get_root_url.cache_clear()
+    assert tc.get_root_url() == custom_url
+
+    # no default set, should raise error
     monkeypatch.setattr(tc, "PRODUCTION_TASKCLUSTER_ROOT_URL", None)
     monkeypatch.delenv("TASKCLUSTER_ROOT_URL")
+    tc.get_root_url.cache_clear()
     with pytest.raises(RuntimeError):
-        tc.get_root_url(False)
+        tc.get_root_url()
 
 
-@pytest.mark.parametrize(
-    "use_proxy,expected",
-    (
-        pytest.param(
-            False,
-            "https://tc.example.com/api/queue/v1/task/abc/artifacts/public/log.txt",
-            id="use_proxy=False",
-        ),
-        pytest.param(
-            True,
-            "https://taskcluster-proxy.net/api/queue/v1/task/abc/artifacts/public/log.txt",
-            id="use_proxy=True",
-        ),
-    ),
-)
-def test_get_artifact_url(monkeypatch, use_proxy, expected):
-    if use_proxy:
-        monkeypatch.setenv("TASKCLUSTER_PROXY_URL", "https://taskcluster-proxy.net")
-
+def test_get_artifact_url(monkeypatch):
     task_id = "abc"
     path = "public/log.txt"
-    assert tc.get_artifact_url(task_id, path, use_proxy) == expected
+
+    # Test with default root URL
+    tc.get_root_url.cache_clear()
+    expected = "https://tc.example.com/api/queue/v1/task/abc/artifacts/public/log.txt"
+    assert tc.get_artifact_url(task_id, path) == expected
+
+    # Test with proxy URL (takes priority)
+    monkeypatch.setenv("TASKCLUSTER_PROXY_URL", "https://taskcluster-proxy.net")
+    tc.get_root_url.cache_clear()
+    expected_proxy = (
+        "https://taskcluster-proxy.net/api/queue/v1/task/abc/artifacts/public/log.txt"
+    )
+    assert tc.get_artifact_url(task_id, path) == expected_proxy
 
 
 def test_get_artifact(monkeypatch):
@@ -110,22 +102,22 @@ def test_get_artifact(monkeypatch):
 
     mock_response_txt = mock.MagicMock()
     mock_response_txt.raw.read.return_value = b"foobar"
-    mock_queue.getArtifact.return_value = mock_response_txt
+    mock_queue.getLatestArtifact.return_value = mock_response_txt
 
     raw = tc.get_artifact(tid, "artifact.txt")
     assert raw.read() == b"foobar"
-    mock_queue.getArtifact.assert_called_with(tid, "artifact.txt")
+    mock_queue.getLatestArtifact.assert_called_with(tid, "artifact.txt")
 
     mock_response_json = mock.MagicMock()
     mock_response_json.json.return_value = {"foo": "bar"}
-    mock_queue.getArtifact.return_value = mock_response_json
+    mock_queue.getLatestArtifact.return_value = mock_response_json
     result = tc.get_artifact(tid, "artifact.json")
     assert result == {"foo": "bar"}
 
     expected_result = {"foo": b"\xe2\x81\x83".decode()}
     mock_response_yml = mock.MagicMock()
     mock_response_yml.content = b'foo: "\xe2\x81\x83"'
-    mock_queue.getArtifact.return_value = mock_response_yml
+    mock_queue.getLatestArtifact.return_value = mock_response_yml
     result = tc.get_artifact(tid, "artifact.yml")
     assert result == expected_result
 
