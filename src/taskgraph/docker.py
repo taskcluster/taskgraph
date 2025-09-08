@@ -6,11 +6,13 @@
 import os
 import shlex
 import subprocess
+import sys
 import tarfile
 import tempfile
 from io import BytesIO
+from pathlib import Path
 from textwrap import dedent
-from typing import Dict, Generator, List, Mapping, Optional
+from typing import Dict, Generator, List, Mapping, Optional, Union
 
 try:
     import zstandard as zstd
@@ -354,7 +356,48 @@ def _index(l: List, s: str) -> Optional[int]:
         pass
 
 
-def load_task(task_id: str, remove: bool = True, user: Optional[str] = None) -> int:
+def _resolve_image(image: Union[str, Dict[str, str]], graph_config: GraphConfig) -> str:
+    image_task_id = None
+
+    # Standard case, image comes from the task definition.
+    if isinstance(image, dict):
+        assert "type" in image
+
+        if image["type"] == "task-image":
+            image_task_id = image["taskId"]
+        elif image["type"] == "indexed-image":
+            image_task_id = find_task_id(image["namespace"])
+        else:
+            raise Exception(f"Tasks with {image['type']} images are not supported!")
+    else:
+        # Check if image refers to an in-tree image under taskcluster/docker,
+        # if so build it.
+        image_dir = docker.image_path(image, graph_config)
+        if Path(image_dir).is_dir():
+            tag = f"taskcluster/{image}:latest"
+            build_image(image, tag, graph_config, os.environ)
+            return tag
+
+        # Check if we're referencing a task or index.
+        if image.startswith("task-id="):
+            image_task_id = image.split("=", 1)[1]
+        elif image.startswith("index="):
+            index = image.split("=", 1)[1]
+            image_task_id = find_task_id(index)
+        else:
+            # Assume the string references an image from a registry.
+            return image
+
+    return load_image_by_task_id(image_task_id)
+
+
+def load_task(
+    graph_config: GraphConfig,
+    task_id: str,
+    remove: bool = True,
+    user: Optional[str] = None,
+    custom_image: Optional[str] = None,
+) -> int:
     """Load and run a task interactively in a Docker container.
 
     Downloads the docker image from a task's definition and runs it in an
@@ -363,9 +406,11 @@ def load_task(task_id: str, remove: bool = True, user: Optional[str] = None) -> 
     the 'exec-task' function provided in the shell.
 
     Args:
+        graph_config: The graph configuration object.
         task_id: The ID of the task to load.
         remove: Whether to remove the container after exit (default True).
         user: The user to switch to in the container (default 'worker').
+        custom_image: A custom image to use instead of the task's image.
 
     Returns:
         int: The exit code from the Docker container.
@@ -385,6 +430,13 @@ def load_task(task_id: str, remove: bool = True, user: Optional[str] = None) -> 
     command = task_def["payload"].get("command")
     if not command or not command[0].endswith("run-task"):
         print("Only tasks using `run-task` are supported!")
+        return 1
+
+    try:
+        image = custom_image or image
+        image_tag = _resolve_image(image, graph_config)
+    except Exception as e:
+        print(e, file=sys.stderr)
         return 1
 
     # Remove the payload section of the task's command. This way run-task will
@@ -414,16 +466,6 @@ def load_task(task_id: str, remove: bool = True, user: Optional[str] = None) -> 
                 break
         else:
             task_cwd = "$TASK_WORKDIR"
-
-    if image["type"] == "task-image":
-        image_task_id = image["taskId"]
-    elif image["type"] == "indexed-image":
-        image_task_id = find_task_id(image["namespace"])
-    else:
-        print(f"Tasks with {image['type']} images are not supported!")
-        return 1
-
-    image_tag = load_image_by_task_id(image_task_id)
 
     # Set some env vars the worker would normally set.
     env = {
