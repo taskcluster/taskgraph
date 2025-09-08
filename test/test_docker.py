@@ -113,11 +113,22 @@ def test_build_image_error(capsys, mock_docker_build):
 def run_load_task(mocker):
     task_id = "abc"
 
-    def inner(task, remove=False):
+    def inner(task, remove=False, custom_image=None):
         proc = mocker.MagicMock()
         proc.returncode = 0
 
+        graph_config = GraphConfig(
+            {
+                "trust-domain": "test-domain",
+                "docker-image-kind": "docker-image",
+            },
+            "test/data/taskcluster",
+        )
+
         mocks = {
+            "build_image": mocker.patch.object(
+                docker, "build_image", return_value=None
+            ),
             "get_task_definition": mocker.patch.object(
                 docker, "get_task_definition", return_value=task
             ),
@@ -129,7 +140,9 @@ def run_load_task(mocker):
             ),
         }
 
-        ret = docker.load_task(task_id, remove=remove)
+        ret = docker.load_task(
+            graph_config, task_id, remove=remove, custom_image=custom_image
+        )
         return ret, mocks
 
     return inner
@@ -330,8 +343,58 @@ def test_load_task_with_unsupported_image_type(capsys, run_load_task):
         },
     }
 
-    ret, mocks = run_load_task(task)
+    ret, _ = run_load_task(task)
     assert ret == 1
 
-    out, _ = capsys.readouterr()
-    assert "Tasks with unsupported-type images are not supported!" in out
+    _, err = capsys.readouterr()
+    assert "Tasks with unsupported-type images are not supported!" in err
+
+
+@pytest.fixture
+def task():
+    return {
+        "payload": {
+            "command": [
+                "/usr/bin/run-task",
+                "--task-cwd=/builds/worker",
+                "--",
+                "echo",
+                "test",
+            ],
+            "image": {"type": "task-image", "taskId": "abc"},
+        },
+    }
+
+
+def test_load_task_with_custom_image_in_tree(run_load_task, task):
+    image = "hello-world"
+    ret, mocks = run_load_task(task, custom_image=image)
+    assert ret == 0
+
+    mocks["build_image"].assert_called_once()
+    args = mocks["subprocess_run"].call_args[0][0]
+    tag = args[args.index("-it") + 1]
+    assert tag == f"taskcluster/{image}:latest"
+
+
+def test_load_task_with_custom_image_task_id(run_load_task, task):
+    image = "task-id=abc"
+    ret, mocks = run_load_task(task, custom_image=image)
+    assert ret == 0
+    mocks["load_image_by_task_id"].assert_called_once_with("abc")
+
+
+def test_load_task_with_custom_image_index(mocker, run_load_task, task):
+    image = "index=abc"
+    mocker.patch.object(docker, "find_task_id", return_value="abc")
+    ret, mocks = run_load_task(task, custom_image=image)
+    assert ret == 0
+    mocks["load_image_by_task_id"].assert_called_once_with("abc")
+
+
+def test_load_task_with_custom_image_registry(mocker, run_load_task, task):
+    image = "ubuntu:latest"
+    ret, mocks = run_load_task(task, custom_image=image)
+    assert ret == 0
+    assert not mocks["load_image_by_task_id"].called
+    assert not mocks["build_image"].called
