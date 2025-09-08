@@ -10,13 +10,14 @@ import tarfile
 import tempfile
 from io import BytesIO
 from textwrap import dedent
-from typing import List, Optional
+from typing import Dict, Generator, List, Mapping, Optional, Union
 
 try:
     import zstandard as zstd
 except ImportError as e:
     zstd = e
 
+from taskgraph.config import GraphConfig
 from taskgraph.util import docker, json
 from taskgraph.util.taskcluster import (
     find_task_id,
@@ -43,7 +44,15 @@ The VERSION file contains the version of the image.
 """
 
 
-def get_image_digest(image_name):
+def get_image_digest(image_name: str) -> str:
+    """Get the digest of a docker image by its name.
+
+    Args:
+        image_name: The name of the docker image to get the digest for.
+
+    Returns:
+        str: The digest string of the cached docker image task.
+    """
     from taskgraph.generator import load_tasks_for_kind  # noqa: PLC0415
     from taskgraph.parameters import Parameters  # noqa: PLC0415
 
@@ -56,7 +65,21 @@ def get_image_digest(image_name):
     return task.attributes["cached_task"]["digest"]
 
 
-def load_image_by_name(image_name, tag=None):
+def load_image_by_name(image_name: str, tag: Optional[str] = None) -> Union[str, bool]:
+    """Load a docker image by its name.
+
+    Finds the appropriate docker image task by name and loads it from
+    the indexed artifacts.
+
+    Args:
+        image_name: The name of the docker image to load.
+        tag: Optional tag to apply to the loaded image. If not provided,
+            uses the tag from the image artifact.
+
+    Returns:
+        str or bool: The full image tag (name:tag) if successful, False if
+            the image artifacts could not be found.
+    """
     from taskgraph.generator import load_tasks_for_kind  # noqa: PLC0415
     from taskgraph.optimize.strategies import IndexSearch  # noqa: PLC0415
     from taskgraph.parameters import Parameters  # noqa: PLC0415
@@ -86,7 +109,20 @@ def load_image_by_name(image_name, tag=None):
     return load_image_by_task_id(task_id, tag)
 
 
-def load_image_by_task_id(task_id, tag=None):
+def load_image_by_task_id(task_id: str, tag: Optional[str] = None) -> str:
+    """Load a docker image from a task's artifacts.
+
+    Downloads and loads a docker image from the specified task's
+    public/image.tar.zst artifact.
+
+    Args:
+        task_id: The task ID containing the docker image artifact.
+        tag: Optional tag to apply to the loaded image. If not provided,
+            uses the tag from the image artifact.
+
+    Returns:
+        str: The full image tag (name:tag) that was loaded.
+    """
     artifact_url = get_artifact_url(task_id, "public/image.tar.zst")
     result = load_image(artifact_url, tag)
     print("Found docker image: {}:{}".format(result["image"], result["tag"]))
@@ -98,8 +134,27 @@ def load_image_by_task_id(task_id, tag=None):
     return tag
 
 
-def build_context(name, outputFile, graph_config, args=None):
-    """Build a context.tar for image with specified name."""
+def build_context(
+    name: str,
+    outputFile: str,
+    graph_config: GraphConfig,
+    args: Optional[Mapping[str, str]] = None,
+) -> None:
+    """Build a context.tar for image with specified name.
+
+    Creates a Docker build context tar file for the specified image,
+    which can be used to build the Docker image.
+
+    Args:
+        name: The name of the Docker image to build context for.
+        outputFile: Path to the output tar file to create.
+        graph_config: The graph configuration object.
+        args: Optional mapping of arguments to pass to context creation.
+
+    Raises:
+        ValueError: If name or outputFile is not provided.
+        Exception: If the image directory does not exist.
+    """
     if not name:
         raise ValueError("must provide a Docker image name")
     if not outputFile:
@@ -112,10 +167,27 @@ def build_context(name, outputFile, graph_config, args=None):
     docker.create_context_tar(".", image_dir, outputFile, args)
 
 
-def build_image(name, tag, graph_config, args=None):
+def build_image(
+    name: str,
+    tag: Optional[str],
+    graph_config: GraphConfig,
+    args: Optional[Mapping[str, str]] = None,
+) -> None:
     """Build a Docker image of specified name.
 
-    Output from image building process will be printed to stdout.
+    Builds a Docker image from the specified image directory and optionally
+    tags it. Output from image building process will be printed to stdout.
+
+    Args:
+        name: The name of the Docker image to build.
+        tag: Optional tag for the built image. If not provided, uses
+            the default tag from docker_image().
+        graph_config: The graph configuration.
+        args: Optional mapping of arguments to pass to the build process.
+
+    Raises:
+        ValueError: If name is not provided.
+        Exception: If the image directory does not exist.
     """
     if not name:
         raise ValueError("must provide a Docker image name")
@@ -142,12 +214,28 @@ def build_image(name, tag, graph_config, args=None):
         print(DEPLOY_WARNING.format(image_dir=os.path.relpath(image_dir), image=name))
 
 
-def load_image(url, imageName=None, imageTag=None):
-    """
-    Load docker image from URL as imageName:tag, if no imageName or tag is given
-    it will use whatever is inside the zstd compressed tarball.
+def load_image(
+    url: str, imageName: Optional[str] = None, imageTag: Optional[str] = None
+) -> Dict[str, str]:
+    """Load docker image from URL as imageName:tag.
 
-    Returns an object with properties 'image', 'tag' and 'layer'.
+    Downloads a zstd-compressed docker image tarball from the given URL and
+    loads it into the local Docker daemon. If no imageName or tag is given,
+    it will use whatever is inside the compressed tarball.
+
+    Args:
+        url: URL to download the zstd-compressed docker image from.
+        imageName: Optional name to give the loaded image. If provided
+            without imageTag, will parse tag from name or default to 'latest'.
+        imageTag: Optional tag to give the loaded image.
+
+    Returns:
+        dict: An object with properties 'image', 'tag' and 'layer' containing
+            information about the loaded image.
+
+    Raises:
+        ImportError: If zstandard package is not installed.
+        Exception: If the tar contains multiple images/tags or no repositories file.
     """
     if isinstance(zstd, ImportError):
         raise ImportError(
@@ -168,9 +256,9 @@ def load_image(url, imageName=None, imageTag=None):
         else:
             imageTag = "latest"
 
-    info = {}
+    info: Dict[str, str] = {}
 
-    def download_and_modify_image():
+    def download_and_modify_image() -> Generator[bytes, None, None]:
         # This function downloads and edits the downloaded tar file on the fly.
         # It emits chunked buffers of the edited tar file, as a generator.
         print(f"Downloading from {url}")
@@ -266,7 +354,27 @@ def _index(l: List, s: str) -> Optional[int]:
         pass
 
 
-def load_task(task_id, remove=True, user=None):
+def load_task(task_id: str, remove: bool = True, user: Optional[str] = None) -> int:
+    """Load and run a task interactively in a Docker container.
+
+    Downloads the docker image from a task's definition and runs it in an
+    interactive shell, setting up the task environment but not executing
+    the actual task command. The task command can be executed later using
+    the 'exec-task' function provided in the shell.
+
+    Args:
+        task_id: The ID of the task to load.
+        remove: Whether to remove the container after exit (default True).
+        user: The user to switch to in the container (default 'worker').
+
+    Returns:
+        int: The exit code from the Docker container.
+
+    Note:
+        Only supports tasks that use 'run-task' and have a payload.image.
+        The task's actual command is made available via an 'exec-task' function
+        in the interactive shell.
+    """
     user = user or "worker"
     task_def = get_task_definition(task_id)
 
