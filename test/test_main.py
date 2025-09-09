@@ -405,3 +405,94 @@ def test_dump_actions_json(
         action = actions[0]
         for field_name in ("name", "title", "description"):
             assert action[field_name] == expected_fields[field_name]
+
+
+@pytest.fixture
+def run_load_task(mocker, monkeypatch):
+    def inner(args, stdin_data=None):
+        # Mock the docker module functions
+        m_validate_docker = mocker.patch("taskgraph.main.validate_docker")
+        m_load_graph_config = mocker.patch("taskgraph.config.load_graph_config")
+        m_docker_load_task = mocker.patch("taskgraph.docker.load_task")
+
+        # Mock graph config
+        graph_config = mocker.MagicMock()
+        m_load_graph_config.return_value = graph_config
+
+        # Mock stdin if data provided
+        if stdin_data is not None:
+            mock_stdin = mocker.MagicMock()
+            mock_stdin.read.return_value = stdin_data
+            monkeypatch.setattr(sys, "stdin", mock_stdin)
+
+        # Set default return value for docker.load_task
+        m_docker_load_task.return_value = 0
+
+        mocks = {
+            "validate_docker": m_validate_docker,
+            "load_graph_config": m_load_graph_config,
+            "docker_load_task": m_docker_load_task,
+            "graph_config": graph_config,
+        }
+
+        # Run the command
+        result = taskgraph_main(args)
+
+        return result, mocks
+
+    return inner
+
+
+def test_load_task_command(run_load_task):
+    # Test normal task ID
+    result, mocks = run_load_task(["load-task", "task-id-123"])
+
+    assert result == 0
+    mocks["validate_docker"].assert_called_once()
+    mocks["load_graph_config"].assert_called_once_with("taskcluster")
+    mocks["docker_load_task"].assert_called_once_with(
+        mocks["graph_config"],
+        "task-id-123",
+        remove=True,
+        user=None,
+        custom_image=None,
+    )
+
+
+def test_load_task_command_with_stdin(run_load_task):
+    # Test with JSON task definition from stdin
+    task_def = {
+        "metadata": {"name": "test-task"},
+        "payload": {
+            "image": {"type": "task-image", "taskId": "image-task-id"},
+            "command": ["echo", "hello"],
+        },
+    }
+    stdin_data = json.dumps(task_def)
+
+    result, mocks = run_load_task(["load-task", "-"], stdin_data=stdin_data)
+
+    assert result == 0
+    mocks["docker_load_task"].assert_called_once_with(
+        mocks["graph_config"],
+        task_def,
+        remove=True,
+        user=None,
+        custom_image=None,
+    )
+
+
+def test_load_task_command_with_task_id(run_load_task):
+    # Test with task ID from stdin (non-JSON)
+    stdin_data = "task-id-from-stdin"
+
+    result, mocks = run_load_task(["load-task", "-"], stdin_data=stdin_data)
+
+    assert result == 0
+    mocks["docker_load_task"].assert_called_once_with(
+        mocks["graph_config"],
+        "task-id-from-stdin",
+        remove=True,
+        user=None,
+        custom_image=None,
+    )

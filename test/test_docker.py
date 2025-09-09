@@ -110,9 +110,7 @@ def test_build_image_error(caplog, mock_docker_build):
 
 @pytest.fixture
 def run_load_task(mocker):
-    task_id = "abc"
-
-    def inner(task, remove=False, custom_image=None):
+    def inner(task, remove=False, custom_image=None, pass_task_def=False):
         proc = mocker.MagicMock()
         proc.returncode = 0
 
@@ -128,9 +126,6 @@ def run_load_task(mocker):
             "build_image": mocker.patch.object(
                 docker, "build_image", return_value=None
             ),
-            "get_task_definition": mocker.patch.object(
-                docker, "get_task_definition", return_value=task
-            ),
             "load_image_by_task_id": mocker.patch.object(
                 docker, "load_image_by_task_id", return_value="image/tag"
             ),
@@ -139,8 +134,19 @@ def run_load_task(mocker):
             ),
         }
 
+        # If testing with task ID, mock get_task_definition
+        if not pass_task_def:
+            task_id = "abc"
+            mocks["get_task_definition"] = mocker.patch.object(
+                docker, "get_task_definition", return_value=task
+            )
+            input_arg = task_id
+        else:
+            # Testing with task definition directly
+            input_arg = task
+
         ret = docker.load_task(
-            graph_config, task_id, remove=remove, custom_image=custom_image
+            graph_config, input_arg, remove=remove, custom_image=custom_image
         )
         return ret, mocks
 
@@ -183,7 +189,8 @@ def test_load_task(run_load_task):
     ret, mocks = run_load_task(task)
     assert ret == 0
 
-    mocks["get_task_definition"].assert_called_once_with("abc")
+    if "get_task_definition" in mocks:
+        mocks["get_task_definition"].assert_called_once_with("abc")
     mocks["load_image_by_task_id"].assert_called_once_with(image_task_id)
 
     expected = [
@@ -351,6 +358,35 @@ def test_load_task_with_unsupported_image_type(caplog, run_load_task):
     assert ret == 1
 
     assert "Tasks with unsupported-type images are not supported!" in caplog.text
+
+
+def test_load_task_with_task_definition(run_load_task, caplog):
+    # Test passing a task definition directly instead of a task ID
+    caplog.set_level(logging.INFO)
+    image_task_id = "def"
+    task = {
+        "metadata": {"name": "test-task-direct"},
+        "payload": {
+            "command": [
+                "/usr/bin/run-task",
+                "--repo-checkout=/builds/worker/vcs/repo",
+                "--task-cwd=/builds/worker/vcs/repo",
+                "--",
+                "echo foo",
+            ],
+            "image": {"taskId": image_task_id, "type": "task-image"},
+        },
+    }
+
+    ret, mocks = run_load_task(task, pass_task_def=True)
+    assert ret == 0
+
+    # Should not call get_task_definition when passing a definition directly
+    assert "get_task_definition" not in mocks
+    mocks["load_image_by_task_id"].assert_called_once_with(image_task_id)
+
+    # Check logging output shows it's from provided definition
+    assert "Loading 'test-task-direct' from provided definition" in caplog.text
 
 
 @pytest.fixture
