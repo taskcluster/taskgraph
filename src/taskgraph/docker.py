@@ -4,7 +4,9 @@
 
 import logging
 import os
+import re
 import shlex
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -12,7 +14,11 @@ import tempfile
 from io import BytesIO
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, Dict, Generator, List, Mapping, Optional, Union
+from typing import Any, Dict, Generator, List, Optional, Union
+
+from requests import HTTPError
+
+from taskgraph.generator import load_tasks_for_kind
 
 try:
     import zstandard as zstd
@@ -20,6 +26,7 @@ except ImportError as e:
     zstd = e
 
 from taskgraph.config import GraphConfig
+from taskgraph.transforms.docker_image import IMAGE_BUILDER_IMAGE
 from taskgraph.util import docker, json
 from taskgraph.util.taskcluster import (
     find_task_id,
@@ -27,6 +34,7 @@ from taskgraph.util.taskcluster import (
     get_root_url,
     get_session,
     get_task_definition,
+    status_task,
 )
 
 logger = logging.getLogger(__name__)
@@ -120,56 +128,27 @@ def load_image_by_task_id(task_id: str, tag: Optional[str] = None) -> str:
     return tag
 
 
-def build_context(
-    name: str,
-    outputFile: str,
-    graph_config: GraphConfig,
-    args: Optional[Mapping[str, str]] = None,
-) -> None:
-    """Build a context.tar for image with specified name.
-
-    Creates a Docker build context tar file for the specified image,
-    which can be used to build the Docker image.
-
-    Args:
-        name: The name of the Docker image to build context for.
-        outputFile: Path to the output tar file to create.
-        graph_config: The graph configuration object.
-        args: Optional mapping of arguments to pass to context creation.
-
-    Raises:
-        ValueError: If name or outputFile is not provided.
-        Exception: If the image directory does not exist.
-    """
-    if not name:
-        raise ValueError("must provide a Docker image name")
-    if not outputFile:
-        raise ValueError("must provide a outputFile")
-
-    image_dir = docker.image_path(name, graph_config)
-    if not os.path.isdir(image_dir):
-        raise Exception(f"image directory does not exist: {image_dir}")
-
-    docker.create_context_tar(".", image_dir, outputFile, args)
-
-
 def build_image(
-    name: str,
-    tag: Optional[str],
     graph_config: GraphConfig,
-    args: Optional[Mapping[str, str]] = None,
-) -> None:
+    name: str,
+    context_file: Optional[str] = None,
+    save_image: Optional[str] = None,
+) -> str:
     """Build a Docker image of specified name.
 
-    Builds a Docker image from the specified image directory and optionally
-    tags it. Output from image building process will be printed to stdout.
+    Builds a Docker image from the specified image directory.
 
     Args:
-        name: The name of the Docker image to build.
-        tag: Optional tag for the built image. If not provided, uses
-            the default tag from docker_image().
         graph_config: The graph configuration.
-        args: Optional mapping of arguments to pass to the build process.
+        name: The name of the Docker image to build.
+        context_file: Path to save the docker context to. If specified,
+            only the context is generated and the image isn't built.
+        save_image: If specified, the resulting `image.tar` will be saved to
+            the specified path. Otherwise, the image is loaded into docker.
+
+    Returns:
+        str: The tag of the loaded image, or absolute path to the image
+            if save_image is specified.
 
     Raises:
         ValueError: If name is not provided.
@@ -183,19 +162,78 @@ def build_image(
     if not os.path.isdir(image_dir):
         raise Exception(f"image directory does not exist: {image_dir}")
 
-    tag = tag or docker.docker_image(name, by_tag=True)
+    label = f"docker-image-{name}"
+    image_tasks = load_tasks_for_kind(
+        {"do_not_optimize": [label]},
+        "docker-image",
+        graph_attr="morphed_task_graph",
+        write_artifacts=True,
+    )
 
-    buf = BytesIO()
-    docker.stream_context_tar(".", image_dir, buf, args)
-    cmdargs = ["docker", "image", "build", "--no-cache", "-"]
-    if tag:
-        cmdargs.insert(-1, f"-t={tag}")
-    subprocess.run(cmdargs, input=buf.getvalue(), check=True)
+    image_context = Path(f"docker-contexts/{name}.tar.gz").resolve()
+    if context_file:
+        shutil.move(image_context, context_file)
+        return ""
 
-    msg = f"Successfully built {name}"
-    if tag:
-        msg += f" and tagged with {tag}"
-    logger.info(msg)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_dir = Path(temp_dir)
+        output_dir = temp_dir / "artifacts"
+        output_dir.mkdir()
+        volumes = {
+            # TODO write artifacts to tmpdir
+            str(output_dir): "/workspace/out",
+            str(image_context): "/workspace/context.tar.gz",
+        }
+
+        assert label in image_tasks
+        task = image_tasks[label]
+        task_def = task.task
+
+        # If the image we're building has a parent image, it may need to be
+        # rebuilt as well if it's cached_task hash changed.
+        if parent_id := task_def["payload"].get("env", {}).get("PARENT_TASK_ID"):
+            try:
+                status_task(parent_id)
+            except HTTPError as e:
+                if e.response.status_code != 404:
+                    raise
+
+                # Parent id doesn't exist, needs to be re-built as well.
+                parent = task.dependencies["parent"][len("docker-image-") :]
+                parent_tar = temp_dir / "parent.tar"
+                build_image(graph_config, parent, save_image=str(parent_tar))
+                volumes[str(parent_tar)] = "/workspace/parent.tar"
+
+        task_def["payload"]["env"]["CHOWN_OUTPUT"] = f"{os.getuid()}:{os.getgid()}"
+        load_task(
+            graph_config,
+            task_def,
+            custom_image=IMAGE_BUILDER_IMAGE,
+            interactive=False,
+            volumes=volumes,
+        )
+        logger.info(f"Successfully built {name} image")
+
+        image_tar = output_dir / "image.tar"
+        if save_image:
+            result = Path(save_image).resolve()
+            shutil.copy(image_tar, result)
+        else:
+            proc = subprocess.run(
+                ["docker", "load", "-i", str(image_tar)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            logger.info(proc.stdout)
+
+            m = re.match(r"^Loaded image: (\S+)$", proc.stdout)
+            if m:
+                result = m.group(1)
+            else:
+                result = f"{name}:latest"
+
+    return str(result)
 
 
 def load_image(
@@ -356,9 +394,7 @@ def _resolve_image(image: Union[str, Dict[str, str]], graph_config: GraphConfig)
         # if so build it.
         image_dir = docker.image_path(image, graph_config)
         if Path(image_dir).is_dir():
-            tag = f"taskcluster/{image}:latest"
-            build_image(image, tag, graph_config, os.environ)
-            return tag
+            return build_image(graph_config, image)
 
         # Check if we're referencing a task or index.
         if image.startswith("task-id="):

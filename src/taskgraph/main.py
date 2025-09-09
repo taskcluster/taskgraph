@@ -572,9 +572,6 @@ def show_taskgraph(options):
     help="Relative path to the root of the Taskgraph definition.",
 )
 @argument(
-    "-t", "--tag", help="tag that the image should be built as.", metavar="name:tag"
-)
-@argument(
     "--context-only",
     help="File name the context tarball should be written to."
     "with this option it will only build the context.tar.",
@@ -582,19 +579,16 @@ def show_taskgraph(options):
 )
 def build_image(args):
     from taskgraph.config import load_graph_config  # noqa: PLC0415
-    from taskgraph.docker import build_context, build_image  # noqa: PLC0415
+    from taskgraph.docker import build_image  # noqa: PLC0415
 
     validate_docker()
+    graph_config = load_graph_config(args["root"])
 
-    root = args["root"]
-    graph_config = load_graph_config(root)
-
-    if args["context_only"] is None:
-        build_image(args["image_name"], args["tag"], graph_config, os.environ)
-    else:
-        build_context(
-            args["image_name"], args["context_only"], graph_config, os.environ
-        )
+    return build_image(
+        graph_config,
+        args["image_name"],
+        args["context_only"],
+    )
 
 
 @command(
