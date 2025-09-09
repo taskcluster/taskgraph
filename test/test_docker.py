@@ -111,7 +111,12 @@ def test_build_image_error(caplog, mock_docker_build):
 @pytest.fixture
 def run_load_task(mocker):
     def inner(
-        task, remove=False, custom_image=None, pass_task_def=False, interactive=True
+        task,
+        remove=False,
+        custom_image=None,
+        pass_task_def=False,
+        interactive=True,
+        volumes=None,
     ):
         proc = mocker.MagicMock()
         proc.returncode = 0
@@ -159,6 +164,7 @@ def run_load_task(mocker):
             remove=remove,
             custom_image=custom_image,
             interactive=interactive,
+            volumes=volumes,
         )
         return ret, mocks
 
@@ -198,7 +204,9 @@ def test_load_task(run_load_task):
             "image": {"taskId": image_task_id, "type": "task-image"},
         },
     }
-    ret, mocks = run_load_task(task)
+    # Test with custom volumes
+    volumes = {"/host/path": "/container/path", "/another/host": "/another/container"}
+    ret, mocks = run_load_task(task, volumes=volumes)
     assert ret == 0
 
     if "get_task_definition" in mocks:
@@ -211,6 +219,10 @@ def test_load_task(run_load_task):
         "-v",
         re.compile(f"{tempfile.gettempdir()}/tmp.*:/builds/worker/.bashrc"),
         re.compile(f"--env-file={tempfile.gettempdir()}/tmp.*"),
+        "-v",
+        "/another/host:/another/container",
+        "-v",
+        "/host/path:/container/path",
         "-i",
         "-t",
         "image/tag",
