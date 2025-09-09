@@ -29,22 +29,6 @@ from taskgraph.util.taskcluster import (
     get_task_definition,
 )
 
-DEPLOY_WARNING = """
-*****************************************************************
-WARNING: Image is not suitable for deploying/pushing.
-
-To automatically tag the image the following files are required:
-- {image_dir}/REGISTRY
-- {image_dir}/VERSION
-
-The REGISTRY file contains the Docker registry hosting the image.
-A default REGISTRY file may also be defined in the parent docker
-directory.
-
-The VERSION file contains the version of the image.
-*****************************************************************
-"""
-
 
 def get_image_digest(image_name: str) -> str:
     """Get the digest of a docker image by its name.
@@ -211,9 +195,6 @@ def build_image(
     if tag:
         msg += f" and tagged with {tag}"
     print(msg)
-
-    if not tag or tag.endswith(":latest"):
-        print(DEPLOY_WARNING.format(image_dir=os.path.relpath(image_dir), image=name))
 
 
 def load_image(
