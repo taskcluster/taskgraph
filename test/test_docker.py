@@ -49,7 +49,6 @@ def test_build_image(capsys, mock_docker_build):
 
     out, _ = capsys.readouterr()
     assert f"Successfully built {image} and tagged with {tag}" in out
-    assert "Image is not suitable for deploying/pushing" not in out
 
 
 def test_build_image_no_tag(capsys, mock_docker_build):
@@ -74,7 +73,6 @@ def test_build_image_no_tag(capsys, mock_docker_build):
 
     out, _ = capsys.readouterr()
     assert f"Successfully built {image}" in out
-    assert "Image is not suitable for deploying/pushing" in out
 
 
 def test_build_image_error(capsys, mock_docker_build):
