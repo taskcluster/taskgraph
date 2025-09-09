@@ -215,6 +215,26 @@ def test_load_tasks_for_kind(monkeypatch):
         and tasks["_example-kind-t-1"].label == "_example-kind-t-1"
     )
 
+    # Test that **kwargs are forwarded to TaskGraphGenerator
+    tasks_with_kwargs = load_tasks_for_kind(
+        {"_kinds": [("_example-kind", []), ("docker-image", [])]},
+        "_example-kind",
+        "/root/taskcluster",
+        write_artifacts=True,  # This should be forwarded to TaskGraphGenerator
+    )
+    assert isinstance(tasks_with_kwargs, dict)
+    assert "_example-kind-t-1" in tasks_with_kwargs
+
+    # Test graph_attr parameter
+    tasks_with_graph_attr = load_tasks_for_kinds(
+        {"_kinds": [("_example-kind", []), ("docker-image", [])]},
+        ["_example-kind"],
+        "/root/taskcluster",
+        graph_attr="full_task_set",
+    )
+    assert isinstance(tasks_with_graph_attr, dict)
+    assert "_example-kind-t-1" in tasks_with_graph_attr
+
 
 def test_loader_backwards_compat_interface(graph_config):
     """Ensure loaders can be called even if they don't support a
