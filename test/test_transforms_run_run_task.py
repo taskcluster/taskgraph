@@ -11,6 +11,7 @@ from taskgraph.transforms.run import make_task_description
 from taskgraph.transforms.task import payload_builders, set_defaults
 from taskgraph.util.caches import CACHES
 from taskgraph.util.schema import Schema, validate_schema
+from taskgraph.util.taskcluster import get_root_url
 from taskgraph.util.templates import merge
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -221,6 +222,11 @@ def assert_run_task_command_generic_worker(task):
 )
 def test_run_task(monkeypatch, request, run_task_using, task):
     monkeypatch.setenv("TASK_ID", "<TASK_ID>")
+    # Clear TASKCLUSTER_PROXY_URL if it's set (CI environment may have it)
+    monkeypatch.delenv("TASKCLUSTER_PROXY_URL", raising=False)
+    monkeypatch.setenv("TASKCLUSTER_ROOT_URL", "https://tc-tests.localhost")
+    # Clear the cache to ensure our environment settings take effect
+    get_root_url.cache_clear()
     taskdesc = run_task_using(task)
     print("Task Description:")
     pprint(taskdesc)

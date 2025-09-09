@@ -486,7 +486,7 @@ def test_get_ancestors_string(monkeypatch):
         },
     }
 
-    def mock_get_task_definition(task_id, use_proxy=False):
+    def mock_get_task_definition(task_id):
         return task_definitions.get(task_id)
 
     monkeypatch.setattr(tc, "get_task_definition", mock_get_task_definition)
