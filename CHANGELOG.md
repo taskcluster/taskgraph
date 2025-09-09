@@ -1,5 +1,12 @@
 # Change Log
 
+## [15.1.4] - 2025-09-09
+
+### Fixed
+
+- various changes to `taskgraph load-task` to support more types of tasks
+- issue in the `GraphConfig.vcs_root` detection logic
+
 ## [15.1.3] - 2025-09-05
 
 ### Fixed
