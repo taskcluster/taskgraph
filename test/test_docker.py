@@ -110,7 +110,9 @@ def test_build_image_error(caplog, mock_docker_build):
 
 @pytest.fixture
 def run_load_task(mocker):
-    def inner(task, remove=False, custom_image=None, pass_task_def=False):
+    def inner(
+        task, remove=False, custom_image=None, pass_task_def=False, interactive=True
+    ):
         proc = mocker.MagicMock()
         proc.returncode = 0
 
@@ -134,6 +136,12 @@ def run_load_task(mocker):
             ),
         }
 
+        # Mock sys.stdin.fileno() to avoid issues in pytest
+        mock_stdin = mocker.MagicMock()
+        mock_stdin.fileno.return_value = 0
+        mocker.patch.object(docker.sys, "stdin", mock_stdin)
+        mocker.patch.object(docker.os, "isatty", return_value=True)
+
         # If testing with task ID, mock get_task_definition
         if not pass_task_def:
             task_id = "abc"
@@ -146,7 +154,11 @@ def run_load_task(mocker):
             input_arg = task
 
         ret = docker.load_task(
-            graph_config, input_arg, remove=remove, custom_image=custom_image
+            graph_config,
+            input_arg,
+            remove=remove,
+            custom_image=custom_image,
+            interactive=interactive,
         )
         return ret, mocks
 
@@ -199,7 +211,8 @@ def test_load_task(run_load_task):
         "-v",
         re.compile(f"{tempfile.gettempdir()}/tmp.*:/builds/worker/.bashrc"),
         re.compile(f"--env-file={tempfile.gettempdir()}/tmp.*"),
-        "-it",
+        "-i",
+        "-t",
         "image/tag",
         "bash",
         "-c",
@@ -389,6 +402,43 @@ def test_load_task_with_task_definition(run_load_task, caplog):
     assert "Loading 'test-task-direct' from provided definition" in caplog.text
 
 
+def test_load_task_with_interactive_false(run_load_task):
+    # Test non-interactive mode that doesn't require run-task
+    # Task that doesn't use run-task (would fail in interactive mode)
+    task = {
+        "metadata": {"name": "test-task-non-interactive"},
+        "payload": {
+            "command": ["echo", "hello world"],
+            "image": {"taskId": "def", "type": "task-image"},
+        },
+    }
+
+    # Test with interactive=False - should succeed
+    ret, mocks = run_load_task(task, pass_task_def=True, interactive=False)
+    assert ret == 0
+
+    # Verify subprocess was called
+    mocks["subprocess_run"].assert_called_once()
+    command = mocks["subprocess_run"].call_args[0][0]
+
+    # Should run the task command directly
+    # Find and remove --env-file arg as it contains a tempdir
+    for i, arg in enumerate(command):
+        if arg.startswith("--env-file="):
+            del command[i]
+            break
+
+    assert command == [
+        "docker",
+        "run",
+        "-i",
+        "-t",
+        "image/tag",
+        "echo",
+        "hello world",
+    ]
+
+
 @pytest.fixture
 def task():
     return {
@@ -413,7 +463,22 @@ def test_load_task_with_custom_image_in_tree(run_load_task, task):
 
     mocks["build_image"].assert_called_once()
     args = mocks["subprocess_run"].call_args[0][0]
-    tag = args[args.index("-it") + 1]
+    # Find the image tag - it should be after all docker options and before the command
+    # Structure: ['docker', 'run', ...options..., 'image:tag', ...command...]
+    image_index = None
+    for i, arg in enumerate(args):
+        if (
+            not arg.startswith("-")
+            and not arg.startswith("/")
+            and arg != "docker"
+            and arg != "run"
+            and ":" in arg
+            and not arg.startswith("/tmp")
+        ):
+            image_index = i
+            break
+    assert image_index is not None, f"Could not find image tag in {args}"
+    tag = args[image_index]
     assert tag == f"taskcluster/{image}:latest"
 
 

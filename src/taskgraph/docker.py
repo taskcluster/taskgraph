@@ -6,6 +6,7 @@ import logging
 import os
 import shlex
 import subprocess
+import sys
 import tarfile
 import tempfile
 from io import BytesIO
@@ -378,6 +379,7 @@ def load_task(
     remove: bool = True,
     user: Optional[str] = None,
     custom_image: Optional[str] = None,
+    interactive: Optional[bool] = True,
 ) -> int:
     """Load and run a task interactively in a Docker container.
 
@@ -392,14 +394,12 @@ def load_task(
         remove: Whether to remove the container after exit (default True).
         user: The user to switch to in the container (default 'worker').
         custom_image: A custom image to use instead of the task's image.
+        interactive: If True, execution of the task will be paused and user
+          will be dropped into a shell. They can run `exec-task` to resume
+          it (default: True).
 
     Returns:
         int: The exit code from the Docker container.
-
-    Note:
-        Only supports tasks that use 'run-task' and have a payload.image.
-        The task's actual command is made available via an 'exec-task' function
-        in the interactive shell.
     """
     user = user or "worker"
     if isinstance(task, str):
@@ -419,9 +419,9 @@ def load_task(
 
         return 1
 
-    command = task_def["payload"].get("command")  # type: ignore
-    if not command or not command[0].endswith("run-task"):
-        logger.error("Only tasks using `run-task` are supported!")
+    task_command = task_def["payload"].get("command")  # type: ignore
+    if interactive and (not task_command or not task_command[0].endswith("run-task")):
+        logger.error("Only tasks using `run-task` are supported with interactive!")
         return 1
 
     try:
@@ -431,33 +431,40 @@ def load_task(
         logger.exception(e)
         return 1
 
-    # Remove the payload section of the task's command. This way run-task will
-    # set up the task (clone repos, download fetches, etc) but won't actually
-    # start the core of the task. Instead we'll drop the user into an interactive
-    # shell and provide the ability to resume the task command.
-    task_command = None
-    if index := _index(command, "--"):
-        task_command = shlex.join(command[index + 1 :])
-        # I attempted to run the interactive bash shell here, but for some
-        # reason when executed through `run-task`, the interactive shell
-        # doesn't work well. There's no shell prompt on newlines and tab
-        # completion doesn't work. That's why it is executed outside of
-        # `run-task` below, and why we need to parse `--task-cwd`.
-        command[index + 1 :] = [
-            "echo",
-            "Task setup complete!\nRun `exec-task` to execute the task's command.",
-        ]
+    exec_command = task_cwd = None
+    if interactive:
+        # Remove the payload section of the task's command. This way run-task will
+        # set up the task (clone repos, download fetches, etc) but won't actually
+        # start the core of the task. Instead we'll drop the user into an interactive
+        # shell and provide the ability to resume the task command.
+        if index := _index(task_command, "--"):
+            exec_command = shlex.join(task_command[index + 1 :])
+            # I attempted to run the interactive bash shell here, but for some
+            # reason when executed through `run-task`, the interactive shell
+            # doesn't work well. There's no shell prompt on newlines and tab
+            # completion doesn't work. That's why it is executed outside of
+            # `run-task` below, and why we need to parse `--task-cwd`.
+            task_command[index + 1 :] = [
+                "echo",
+                "Task setup complete!\nRun `exec-task` to execute the task's command.",
+            ]
 
-    # Parse `--task-cwd` so we know where to execute the task's command later.
-    if index := _index(command, "--task-cwd"):
-        task_cwd = command[index + 1]
-    else:
-        for arg in command:
-            if arg.startswith("--task-cwd="):
-                task_cwd = arg.split("=", 1)[1]
-                break
+        # Parse `--task-cwd` so we know where to execute the task's command later.
+        if index := _index(task_command, "--task-cwd"):
+            task_cwd = task_command[index + 1]
         else:
-            task_cwd = "$TASK_WORKDIR"
+            for arg in task_command:
+                if arg.startswith("--task-cwd="):
+                    task_cwd = arg.split("=", 1)[1]
+                    break
+            else:
+                task_cwd = "$TASK_WORKDIR"
+
+        task_command = [
+            "bash",
+            "-c",
+            f"{shlex.join(task_command)} && cd $TASK_WORKDIR && su -p {user}",
+        ]
 
     # Set some env vars the worker would normally set.
     env = {
@@ -476,17 +483,21 @@ def load_task(
 
     envfile = None
     initfile = None
+    isatty = os.isatty(sys.stdin.fileno())
     try:
         command = [
             "docker",
             "run",
-            "-it",
-            image_tag,
-            "bash",
-            "-c",
-            f"{shlex.join(command)} && cd $TASK_WORKDIR && su -p {user}",
+            "-i",
         ]
 
+        if isatty:
+            command.append("-t")
+
+        command.append(image_tag)
+
+        if task_command:
+            command.extend(task_command)
         if remove:
             command.insert(2, "--rm")
 
@@ -497,16 +508,16 @@ def load_task(
 
             command.insert(2, f"--env-file={envfile.name}")
 
-        if task_command:
+        if exec_command:
             initfile = tempfile.NamedTemporaryFile("w+", delete=False)
             os.fchmod(initfile.fileno(), 0o644)
             initfile.write(
                 dedent(
                     f"""
             function exec-task() {{
-                echo Starting task: {shlex.quote(task_command)}
+                echo Starting task: {shlex.quote(exec_command)}
                 pushd {task_cwd}
-                {task_command}
+                {exec_command}
                 popd
             }}
             """
@@ -516,6 +527,7 @@ def load_task(
 
             command[2:2] = ["-v", f"{initfile.name}:/builds/worker/.bashrc"]
 
+        logger.info(f"Running: {' '.join(command)}")
         proc = subprocess.run(command)
     finally:
         if envfile:
