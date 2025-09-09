@@ -182,7 +182,7 @@ def test_load_tasks_for_kind(monkeypatch):
     tasks = load_tasks_for_kind(
         {"_kinds": [("_example-kind", []), ("docker-image", [])]},
         "_example-kind",
-        "/root",
+        "/root/taskcluster",
     )
     assert "docker-image-t-1" not in tasks
     assert (
@@ -193,7 +193,7 @@ def test_load_tasks_for_kind(monkeypatch):
     tasks = load_tasks_for_kinds(
         {"_kinds": [("_example-kind", []), ("docker-image", [])]},
         ["_example-kind", "docker-image"],
-        "/root",
+        "/root/taskcluster",
     )
     assert (
         "docker-image-t-1" in tasks
