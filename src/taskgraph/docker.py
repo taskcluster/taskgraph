@@ -2,11 +2,10 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-
+import logging
 import os
 import shlex
 import subprocess
-import sys
 import tarfile
 import tempfile
 from io import BytesIO
@@ -28,6 +27,8 @@ from taskgraph.util.taskcluster import (
     get_session,
     get_task_definition,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def get_image_digest(image_name: str) -> str:
@@ -81,14 +82,12 @@ def load_image_by_name(image_name: str, tag: Optional[str] = None) -> Optional[s
     task_id = IndexSearch().should_replace_task(task, {}, None, indexes)
 
     if task_id in (True, False):
-        print(
+        logger.error(
             "Could not find artifacts for a docker image "
-            "named `{image_name}`. Local commits and other changes "
+            f"named `{image_name}`. Local commits and other changes "
             "in your checkout may cause this error. Try "
-            "updating to a fresh checkout of {project} "
-            "to download image.".format(
-                image_name=image_name, project=params["project"]
-            )
+            f"updating to a fresh checkout of {params['project']} "
+            "to download image."
         )
         return None
 
@@ -111,12 +110,12 @@ def load_image_by_task_id(task_id: str, tag: Optional[str] = None) -> str:
     """
     artifact_url = get_artifact_url(task_id, "public/image.tar.zst")
     result = load_image(artifact_url, tag)
-    print("Found docker image: {}:{}".format(result["image"], result["tag"]))
+    logger.info(f"Found docker image: {result['image']}:{result['tag']}")
     if tag:
-        print(f"Re-tagged as: {tag}")
+        logger.info(f"Re-tagged as: {tag}")
     else:
-        tag = "{}:{}".format(result["image"], result["tag"])
-    print(f"Try: docker run -ti --rm {tag} bash")
+        tag = f"{result['image']}:{result['tag']}"
+    logger.info(f"Try: docker run -ti --rm {tag} bash")
     return tag
 
 
@@ -175,6 +174,7 @@ def build_image(
         ValueError: If name is not provided.
         Exception: If the image directory does not exist.
     """
+    logger.info(f"Building {name} image")
     if not name:
         raise ValueError("must provide a Docker image name")
 
@@ -194,7 +194,7 @@ def build_image(
     msg = f"Successfully built {name}"
     if tag:
         msg += f" and tagged with {tag}"
-    print(msg)
+    logger.info(msg)
 
 
 def load_image(
@@ -244,7 +244,7 @@ def load_image(
     def download_and_modify_image() -> Generator[bytes, None, None]:
         # This function downloads and edits the downloaded tar file on the fly.
         # It emits chunked buffers of the edited tar file, as a generator.
-        print(f"Downloading from {url}")
+        logger.info(f"Downloading from {url}")
         # get_session() gets us a requests.Session set to retry several times.
         req = get_session().get(url, stream=True)
         req.raise_for_status()
@@ -404,21 +404,23 @@ def load_task(
     user = user or "worker"
     task_def = get_task_definition(task_id)
 
+    logger.info(f"Loading '{task_def['metadata']['name']}' from {task_id}")
+
     if "payload" not in task_def or not (image := task_def["payload"].get("image")):
-        print("Tasks without a `payload.image` are not supported!")
+        logger.error("Tasks without a `payload.image` are not supported!")
 
         return 1
 
     command = task_def["payload"].get("command")  # type: ignore
     if not command or not command[0].endswith("run-task"):
-        print("Only tasks using `run-task` are supported!")
+        logger.error("Only tasks using `run-task` are supported!")
         return 1
 
     try:
         image = custom_image or image
         image_tag = _resolve_image(image, graph_config)
     except Exception as e:
-        print(e, file=sys.stderr)
+        logger.exception(e)
         return 1
 
     # Remove the payload section of the task's command. This way run-task will
