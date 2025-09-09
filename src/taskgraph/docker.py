@@ -11,7 +11,7 @@ import tempfile
 from io import BytesIO
 from pathlib import Path
 from textwrap import dedent
-from typing import Dict, Generator, List, Mapping, Optional, Union
+from typing import Any, Dict, Generator, List, Mapping, Optional, Union
 
 try:
     import zstandard as zstd
@@ -374,7 +374,7 @@ def _resolve_image(image: Union[str, Dict[str, str]], graph_config: GraphConfig)
 
 def load_task(
     graph_config: GraphConfig,
-    task_id: str,
+    task: Union[str, Dict[str, Any]],
     remove: bool = True,
     user: Optional[str] = None,
     custom_image: Optional[str] = None,
@@ -388,7 +388,7 @@ def load_task(
 
     Args:
         graph_config: The graph configuration object.
-        task_id: The ID of the task to load.
+        task: The ID of the task, or task definition to load.
         remove: Whether to remove the container after exit (default True).
         user: The user to switch to in the container (default 'worker').
         custom_image: A custom image to use instead of the task's image.
@@ -402,9 +402,17 @@ def load_task(
         in the interactive shell.
     """
     user = user or "worker"
-    task_def = get_task_definition(task_id)
+    if isinstance(task, str):
+        task_id = task
+        task_def = get_task_definition(task)
+        source = f"task {task_id}"
+    else:
+        # We're running a locally generated definition and don't have a proper id.
+        task_id = "fake"
+        task_def = task
+        source = "provided definition"
 
-    logger.info(f"Loading '{task_def['metadata']['name']}' from {task_id}")
+    logger.info(f"Loading '{task_def['metadata']['name']}' from {source}")
 
     if "payload" not in task_def or not (image := task_def["payload"].get("image")):
         logger.error("Tasks without a `payload.image` are not supported!")
