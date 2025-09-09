@@ -6,6 +6,7 @@ import pytest
 
 from taskgraph import docker
 from taskgraph.config import GraphConfig
+from taskgraph.transforms.docker_image import IMAGE_BUILDER_IMAGE
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -25,87 +26,6 @@ def mock_docker_build(mocker):
 
     m_run = mocker.patch.object(docker.subprocess, "run")
     return (m_stream, m_run)
-
-
-def test_build_image(caplog, mock_docker_build):
-    caplog.set_level(logging.DEBUG)
-    m_stream, m_run = mock_docker_build
-    image = "hello-world-tag"
-    tag = f"test/{image}:1.0"
-
-    graph_config = GraphConfig(
-        {
-            "trust-domain": "test-domain",
-            "docker-image-kind": "docker-image",
-        },
-        "test/data/taskcluster",
-    )
-
-    assert docker.build_image(image, None, graph_config=graph_config) is None
-    m_stream.assert_called_once()
-    m_run.assert_called_once_with(
-        ["docker", "image", "build", "--no-cache", f"-t={tag}", "-"],
-        input=b"xyz",
-        check=True,
-    )
-
-    assert f"Successfully built {image} and tagged with {tag}" in caplog.text
-
-
-def test_build_image_no_tag(caplog, mock_docker_build):
-    caplog.set_level(logging.DEBUG)
-    m_stream, m_run = mock_docker_build
-    image = "hello-world"
-
-    graph_config = GraphConfig(
-        {
-            "trust-domain": "test-domain",
-            "docker-image-kind": "docker-image",
-        },
-        "test/data/taskcluster",
-    )
-
-    assert docker.build_image(image, None, graph_config=graph_config) is None
-    m_stream.assert_called_once()
-    m_run.assert_called_once_with(
-        ["docker", "image", "build", "--no-cache", "-"],
-        input=b"xyz",
-        check=True,
-    )
-
-    assert f"Successfully built {image}" in caplog.text
-
-
-def test_build_image_error(caplog, mock_docker_build):
-    caplog.set_level(logging.DEBUG)
-    m_stream, m_run = mock_docker_build
-
-    def mock_run(*popenargs, check=False, **kwargs):
-        if check:
-            raise docker.subprocess.CalledProcessError(1, popenargs)
-        return 1
-
-    m_run.side_effect = mock_run
-    image = "hello-world"
-
-    graph_config = GraphConfig(
-        {
-            "trust-domain": "test-domain",
-            "docker-image-kind": "docker-image",
-        },
-        "test/data/taskcluster",
-    )
-
-    with pytest.raises(Exception):
-        docker.build_image(image, None, graph_config=graph_config)
-    m_stream.assert_called_once()
-    m_run.assert_called_once_with(
-        ["docker", "image", "build", "--no-cache", "-"],
-        input=b"xyz",
-        check=True,
-    )
-
-    assert f"Successfully built {image}" not in caplog.text
 
 
 @pytest.fixture
@@ -131,7 +51,7 @@ def run_load_task(mocker):
 
         mocks = {
             "build_image": mocker.patch.object(
-                docker, "build_image", return_value=None
+                docker, "build_image", return_value="taskcluster/hello-world:latest"
             ),
             "load_image_by_task_id": mocker.patch.object(
                 docker, "load_image_by_task_id", return_value="image/tag"
@@ -515,3 +435,152 @@ def test_load_task_with_custom_image_registry(mocker, run_load_task, task):
     assert ret == 0
     assert not mocks["load_image_by_task_id"].called
     assert not mocks["build_image"].called
+
+
+@pytest.fixture
+def run_build_image(mocker):
+    def inner(image_name, save_image=None, context_file=None):
+        graph_config = GraphConfig(
+            {
+                "trust-domain": "test-domain",
+                "docker-image-kind": "docker-image",
+            },
+            "test/data/taskcluster",
+        )
+
+        # Mock the TemporaryDirectory context manager since the current build_image uses it
+        temp_dir_mock = mocker.MagicMock()
+        temp_dir_str = "/tmp/test_temp_dir"
+        temp_dir_mock.__enter__ = mocker.MagicMock(return_value=temp_dir_str)
+        temp_dir_mock.__exit__ = mocker.MagicMock(return_value=False)
+
+        # Mock Path objects
+        temp_dir_path = mocker.MagicMock()
+        output_dir = mocker.MagicMock()
+
+        # Mock Path constructor
+        original_path = docker.Path
+
+        def mock_path_constructor(path_arg):
+            if str(path_arg) == temp_dir_str:
+                return temp_dir_path
+            elif str(path_arg).endswith(".tar.gz"):
+                # This is the image_context path
+                image_context_mock = mocker.MagicMock()
+                image_context_mock.resolve.return_value = image_context_mock
+                return image_context_mock
+            elif save_image and str(path_arg) == save_image:
+                save_path_mock = mocker.MagicMock()
+                save_path_mock.resolve.return_value = save_path_mock
+                save_path_mock.__str__ = lambda self: save_image
+                return save_path_mock
+            return original_path(path_arg)
+
+        # Set up directory operations
+        temp_dir_path.__truediv__ = mocker.MagicMock(return_value=output_dir)
+        output_dir.mkdir = mocker.MagicMock()
+        output_dir.__truediv__ = mocker.MagicMock()
+
+        # Initialize mocks dictionary
+        mocks = {
+            "TemporaryDirectory": mocker.patch.object(
+                docker.tempfile, "TemporaryDirectory", return_value=temp_dir_mock
+            ),
+            "Path": mocker.patch.object(
+                docker, "Path", side_effect=mock_path_constructor
+            ),
+            "load_tasks_for_kind": mocker.patch.object(docker, "load_tasks_for_kind"),
+            "load_task": mocker.patch.object(docker, "load_task"),
+            "subprocess": mocker.patch.object(docker.subprocess, "run"),
+            "shutil_copy": mocker.patch.object(docker.shutil, "copy"),
+            "shutil_move": mocker.patch.object(docker.shutil, "move"),
+            "status_task": mocker.patch.object(docker, "status_task"),
+            "isdir": mocker.patch.object(docker.os.path, "isdir", return_value=True),
+            "getuid": mocker.patch.object(docker.os, "getuid", return_value=1000),
+            "getgid": mocker.patch.object(docker.os, "getgid", return_value=1000),
+        }
+
+        # Mock image task
+        mocks["task"] = mocker.MagicMock()
+        mocks["task"].task = {"payload": {"env": {}}}
+        mocks["load_tasks_for_kind"].return_value = {
+            f"docker-image-{image_name}": mocks["task"]
+        }
+
+        # Mock subprocess result for docker load
+        mocks["proc_result"] = mocker.MagicMock()
+        mocks["proc_result"].stdout = f"Loaded image: {image_name}:latest"
+        mocks["subprocess"].return_value = mocks["proc_result"]
+
+        # Add convenience references
+        mocks["graph_config"] = graph_config
+        mocks["temp_dir_path"] = temp_dir_path
+        mocks["output_dir"] = output_dir
+
+        # Run the build_image function
+        result = docker.build_image(
+            graph_config, image_name, context_file=context_file, save_image=save_image
+        )
+
+        return result, mocks
+
+    return inner
+
+
+def test_build_image(run_build_image):
+    # Test building image without save_image
+    result, mocks = run_build_image("hello-world")
+
+    # Verify TemporaryDirectory is used for cleanup
+    mocks["TemporaryDirectory"].assert_called_once()
+
+    # Verify the function calls
+    mocks["load_tasks_for_kind"].assert_called_once_with(
+        {"do_not_optimize": ["docker-image-hello-world"]},
+        "docker-image",
+        graph_attr="morphed_task_graph",
+        write_artifacts=True,
+    )
+
+    mocks["load_task"].assert_called_once()
+    call_args = mocks["load_task"].call_args
+    assert call_args[0][0] == mocks["graph_config"]
+    assert call_args[0][1] == mocks["task"].task
+    assert call_args[1]["custom_image"] == IMAGE_BUILDER_IMAGE
+    assert call_args[1]["interactive"] is False
+    assert "volumes" in call_args[1]
+
+    # Verify docker load was called
+    mocks["subprocess"].assert_called_once()
+    docker_load_args = mocks["subprocess"].call_args[0][0]
+    assert docker_load_args[:3] == ["docker", "load", "-i"]
+
+    assert result == "hello-world:latest"
+
+
+def test_build_image_with_save_image(run_build_image):
+    save_path = "/path/to/save.tar"
+
+    # Test building image with save_image option
+    result, mocks = run_build_image("test", save_image=save_path)
+
+    # Verify TemporaryDirectory is used for cleanup
+    mocks["TemporaryDirectory"].assert_called_once()
+
+    # Verify copy was called instead of docker load
+    mocks["shutil_copy"].assert_called_once()
+
+    # Result should be the string representation of the save path
+    assert save_path in str(result)
+
+
+def test_build_image_context_only(run_build_image):
+    context_path = "/path/to/context.tar"
+
+    # Test building only the context file
+    result, mocks = run_build_image("context-test", context_file=context_path)
+
+    # Verify move was called for the context file
+    mocks["shutil_move"].assert_called_once()
+
+    assert result == ""
