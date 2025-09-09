@@ -380,6 +380,7 @@ def load_task(
     user: Optional[str] = None,
     custom_image: Optional[str] = None,
     interactive: Optional[bool] = False,
+    volumes: Optional[Dict[str, str]] = None,
 ) -> int:
     """Load and run a task interactively in a Docker container.
 
@@ -498,6 +499,11 @@ def load_task(
 
         if task_command:
             command.extend(task_command)
+
+        if volumes:
+            for k, v in volumes.items():
+                command[2:2] = ["-v", f"{k}:{v}"]
+
         if remove:
             command.insert(2, "--rm")
 
