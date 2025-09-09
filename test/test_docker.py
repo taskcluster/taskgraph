@@ -1,3 +1,4 @@
+import logging
 import re
 import tempfile
 
@@ -26,7 +27,8 @@ def mock_docker_build(mocker):
     return (m_stream, m_run)
 
 
-def test_build_image(capsys, mock_docker_build):
+def test_build_image(caplog, mock_docker_build):
+    caplog.set_level(logging.DEBUG)
     m_stream, m_run = mock_docker_build
     image = "hello-world-tag"
     tag = f"test/{image}:1.0"
@@ -47,11 +49,11 @@ def test_build_image(capsys, mock_docker_build):
         check=True,
     )
 
-    out, _ = capsys.readouterr()
-    assert f"Successfully built {image} and tagged with {tag}" in out
+    assert f"Successfully built {image} and tagged with {tag}" in caplog.text
 
 
-def test_build_image_no_tag(capsys, mock_docker_build):
+def test_build_image_no_tag(caplog, mock_docker_build):
+    caplog.set_level(logging.DEBUG)
     m_stream, m_run = mock_docker_build
     image = "hello-world"
 
@@ -71,11 +73,11 @@ def test_build_image_no_tag(capsys, mock_docker_build):
         check=True,
     )
 
-    out, _ = capsys.readouterr()
-    assert f"Successfully built {image}" in out
+    assert f"Successfully built {image}" in caplog.text
 
 
-def test_build_image_error(capsys, mock_docker_build):
+def test_build_image_error(caplog, mock_docker_build):
+    caplog.set_level(logging.DEBUG)
     m_stream, m_run = mock_docker_build
 
     def mock_run(*popenargs, check=False, **kwargs):
@@ -103,8 +105,7 @@ def test_build_image_error(capsys, mock_docker_build):
         check=True,
     )
 
-    out, _ = capsys.readouterr()
-    assert f"Successfully built {image}" not in out
+    assert f"Successfully built {image}" not in caplog.text
 
 
 @pytest.fixture
@@ -328,7 +329,8 @@ def test_load_task_with_different_image_types(
     mocks["load_image_by_task_id"].assert_called_once_with(image_task_id)
 
 
-def test_load_task_with_unsupported_image_type(capsys, run_load_task):
+def test_load_task_with_unsupported_image_type(caplog, run_load_task):
+    caplog.set_level(logging.DEBUG)
     task = {
         "payload": {
             "command": [
@@ -344,8 +346,7 @@ def test_load_task_with_unsupported_image_type(capsys, run_load_task):
     ret, mocks = run_load_task(task)
     assert ret == 1
 
-    out, _ = capsys.readouterr()
-    assert "Tasks with unsupported-type images are not supported!" in out
+    assert "Tasks with unsupported-type images are not supported!" in caplog.text
 
 
 @pytest.fixture
