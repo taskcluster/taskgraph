@@ -677,7 +677,7 @@ def image_digest(args):
 @argument(
     "task",
     help="The task id or definition to load into a docker container. Can use "
-    "'-' to read from stdin."
+    "'-' to read from stdin.",
 )
 @argument(
     "--keep",
