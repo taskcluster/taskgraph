@@ -674,7 +674,11 @@ def image_digest(args):
     "The task's payload.command will be replaced with 'bash'. You need to have "
     "docker installed and running for this to work.",
 )
-@argument("task_id", help="The task id to load into a docker container.")
+@argument(
+    "task",
+    help="The task id or definition to load into a docker container. Can use "
+    "'-' to read from stdin.",
+)
 @argument(
     "--keep",
     dest="remove",
@@ -699,14 +703,22 @@ def image_digest(args):
 def load_task(args):
     from taskgraph.config import load_graph_config  # noqa: PLC0415
     from taskgraph.docker import load_task  # noqa: PLC0415
+    from taskgraph.util import json  # noqa: PLC0415
 
     validate_docker()
+
+    if args["task"] == "-":
+        data = sys.stdin.read()
+        try:
+            args["task"] = json.loads(data)
+        except ValueError:
+            args["task"] = data  # assume it is a taskId
 
     root = args["root"]
     graph_config = load_graph_config(root)
     return load_task(
         graph_config,
-        args["task_id"],
+        args["task"],
         remove=args["remove"],
         user=args["user"],
         custom_image=args["image"],
