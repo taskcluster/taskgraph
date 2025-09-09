@@ -366,7 +366,8 @@ def _resolve_image(image: Union[str, Dict[str, str]], graph_config: GraphConfig)
             index = image.split("=", 1)[1]
             image_task_id = find_task_id(index)
         else:
-            raise Exception(f"Unable to resolve image '{image}'!")
+            # Assume the string references an image from a registry.
+            return image
 
     return load_image_by_task_id(image_task_id)
 
