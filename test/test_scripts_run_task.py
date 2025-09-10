@@ -152,9 +152,10 @@ def test_install_pip_requirements_with_uv(
 
 
 @pytest.mark.parametrize(
-    "env,extra_expected",
+    "args,env,extra_expected",
     [
         pytest.param(
+            {},
             {
                 "REPOSITORY_TYPE": "hg",
                 "BASE_REPOSITORY": "https://hg.mozilla.org/mozilla-central",
@@ -165,10 +166,27 @@ def test_install_pip_requirements_with_uv(
             {
                 "base-repo": "https://hg.mozilla.org/mozilla-unified",
             },
-        )
+            id="hg",
+        ),
+        pytest.param(
+            {"myrepo_shallow_clone": True},
+            {
+                "REPOSITORY_TYPE": "git",
+                "HEAD_REPOSITORY": "https://github.com/test/repo.git",
+                "HEAD_REV": "abc123",
+            },
+            {"shallow-clone": True},
+            id="git_with_shallow_clone",
+        ),
     ],
 )
-def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
+def test_collect_vcs_options(
+    monkeypatch,
+    run_task_mod,
+    args,
+    env,
+    extra_expected,
+):
     name = "myrepo"
     checkout = "checkout"
 
@@ -176,9 +194,10 @@ def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
     for k, v in env.items():
         monkeypatch.setenv(f"{name.upper()}_{k.upper()}", v)
 
-    args = Namespace()
-    setattr(args, f"{name}_checkout", checkout)
-    setattr(args, f"{name}_sparse_profile", False)
+    args.setdefault(f"{name}_checkout", checkout)
+    args.setdefault(f"{name}_shallow_clone", False)
+    args.setdefault(f"{name}_sparse_profile", False)
+    args = Namespace(**args)
 
     result = run_task_mod.collect_vcs_options(args, name, name)
 
@@ -194,6 +213,7 @@ def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
         "head-ref": env.get("HEAD_REF"),
         "head-rev": env.get("HEAD_REV"),
         "repo-type": env.get("REPOSITORY_TYPE"),
+        "shallow-clone": False,
         "ssh-secret-name": env.get("SSH_SECRET_NAME"),
         "sparse-profile": False,
         "store-path": env.get("HG_STORE_PATH"),
@@ -454,6 +474,104 @@ def test_git_checkout_with_commit(
         universal_newlines=True,
     ).strip()
     assert current_rev == head_rev
+
+
+def test_git_checkout_shallow(
+    mock_stdin,
+    run_task_mod,
+    mock_git_repo,
+    tmp_path,
+):
+    destination = tmp_path / "destination"
+
+    # Git ignores `--depth` when cloning from local directories, so use file://
+    # protocol to force shallow clone.
+    repo_url = f"file://{mock_git_repo['path']}"
+    base_rev = mock_git_repo["main"][-1]
+    head_rev = mock_git_repo["branch"][-1]
+
+    # Use shallow clone with head_ref != head_rev
+    run_task_mod.git_checkout(
+        destination_path=str(destination),
+        head_repo=repo_url,
+        base_repo=repo_url,
+        base_rev=base_rev,
+        head_ref="mybranch",
+        head_rev=head_rev,
+        ssh_key_file=None,
+        ssh_known_hosts_file=None,
+        shallow=True,
+    )
+    shallow_file = destination / ".git" / "shallow"
+    assert shallow_file.exists()
+
+    # Verify we're on the correct commit
+    final_rev = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"],
+        cwd=str(destination),
+        universal_newlines=True,
+    ).strip()
+    assert final_rev == head_rev
+
+    # Verify both base_rev and head_rev are available.
+    for sha in (base_rev, head_rev):
+        result = subprocess.run(
+            ["git", "cat-file", "-t", sha],
+            cwd=str(destination),
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, f"Commit {sha} should be available"
+        assert result.stdout.strip() == "commit"
+
+
+def test_git_fetch_shallow(
+    mock_stdin,
+    run_task_mod,
+    mock_git_repo,
+    tmp_path,
+):
+    destination = tmp_path / "destination"
+
+    # Git ignores `--depth` when cloning from local directories, so use file://
+    # protocol to force shallow clone.
+    repo_url = f"file://{mock_git_repo['path']}"
+
+    run_task_mod.run_command(
+        b"vcs",
+        [
+            "git",
+            "clone",
+            "--depth=1",
+            "--no-checkout",
+            repo_url,
+            str(destination),
+        ],
+    )
+    shallow_file = destination / ".git" / "shallow"
+    assert shallow_file.exists()
+
+    # Verify base_rev doesn't exist yet
+    base_rev = mock_git_repo["branch"][-1]
+    result = subprocess.run(
+        ["git", "cat-file", "-t", base_rev],
+        cwd=str(destination),
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+
+    run_task_mod.git_fetch(str(destination), base_rev, remote=repo_url, shallow=True)
+
+    # Verify base_rev is now available
+    result = subprocess.run(
+        ["git", "cat-file", "-t", base_rev],
+        cwd=str(destination),
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert result.stdout.strip() == "commit"
 
 
 def test_display_python_version_should_output_python_versions_title(

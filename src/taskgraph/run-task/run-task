@@ -571,12 +571,16 @@ def git_fetch(
     *targets: str,
     remote: str = "origin",
     tags: bool = False,
+    shallow: bool = False,
     env: Optional[dict[str, str]] = None,
 ):
     args = ["git", "fetch"]
     if tags:
         # `--force` is needed to be able to update an existing outdated tag.
         args.extend(["--tags", "--force"])
+
+    if shallow:
+        args.append("--depth=1")
 
     args.extend([remote, *set(targets)])
     retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
@@ -643,6 +647,7 @@ def git_checkout(
     head_rev: Optional[str],
     ssh_key_file: Optional[Path],
     ssh_known_hosts_file: Optional[Path],
+    shallow: bool = False,
 ):
     assert head_ref or head_rev
 
@@ -688,9 +693,17 @@ def git_checkout(
         args = [
             "git",
             "clone",
-            base_repo if base_repo else head_repo,
-            destination_path,
         ]
+
+        if shallow:
+            args.extend(["--depth=1", "--no-checkout"])
+
+        args.extend(
+            [
+                base_repo if base_repo else head_repo,
+                destination_path,
+            ]
+        )
 
         retry_required_command(b"vcs", args, extra_env=env)
 
@@ -700,7 +713,7 @@ def git_checkout(
     # that consumers can compute the merge-base or files modified between the
     # two as needed.
     if base_rev and base_rev != NULL_REVISION:
-        git_fetch(destination_path, base_rev, env=env)
+        git_fetch(destination_path, base_rev, shallow=shallow, env=env)
 
     # If a head_ref was provided, it might be tag, so we need to make sure we fetch
     # those. This is explicitly only done when base and head repo match,
@@ -715,8 +728,9 @@ def git_checkout(
     targets = []
     if head_ref:
         targets.append(head_ref)
-    if not targets:
-        # If head_ref wasn't provided, we fallback to head_rev.
+    if not head_ref or (shallow and head_rev):
+        # If head_ref wasn't provided, we fallback to head_rev. If we have a
+        # shallow clone, head_rev needs to be fetched independently regardless.
         targets.append(head_rev)
 
     git_fetch(
@@ -724,6 +738,7 @@ def git_checkout(
         *targets,
         remote=head_repo,
         tags=tags,
+        shallow=shallow,
         env=env,
     )
 
@@ -911,11 +926,17 @@ def add_vcs_arguments(parser, project, name):
         f"--{project}-sparse-profile",
         help=f"Path to sparse profile for {name} checkout",
     )
+    parser.add_argument(
+        f"--{project}-shallow-clone",
+        action="store_true",
+        help=f"Use shallow clone for {name}",
+    )
 
 
 def collect_vcs_options(args, project, name):
     checkout = getattr(args, f"{project}_checkout")
     sparse_profile = getattr(args, f"{project}_sparse_profile")
+    shallow_clone = getattr(args, f"{project}_shallow_clone")
 
     env_prefix = project.upper()
 
@@ -960,6 +981,7 @@ def collect_vcs_options(args, project, name):
         "repo-type": repo_type,
         "ssh-secret-name": private_key_secret,
         "pip-requirements": pip_requirements,
+        "shallow-clone": shallow_clone,
     }
 
 
@@ -1008,6 +1030,7 @@ def vcs_checkout_from_args(options):
                 head_rev,
                 ssh_key_file,
                 ssh_known_hosts_file,
+                shallow=options.get("shallow-clone", False),
             )
         elif options["repo-type"] == "hg":
             revision = hg_checkout(
