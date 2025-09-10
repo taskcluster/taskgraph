@@ -568,7 +568,7 @@ def configure_volume_posix(volume, user, group, running_as_root):
 
 def git_fetch(
     destination_path: str,
-    ref: str,
+    *targets: str,
     remote: str = "origin",
     tags: bool = False,
     env: Optional[dict[str, str]] = None,
@@ -578,7 +578,7 @@ def git_fetch(
         # `--force` is needed to be able to update an existing outdated tag.
         args.extend(["--tags", "--force"])
 
-    args.extend([remote, ref])
+    args.extend([remote, *set(targets)])
     retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
 
 
@@ -631,6 +631,8 @@ def git_checkout(
     ssh_key_file: Optional[Path],
     ssh_known_hosts_file: Optional[Path],
 ):
+    assert head_ref or head_rev
+
     env = {
         # abort if transfer speed is lower than 1kB/s for 1 minute
         "GIT_HTTP_LOW_SPEED_LIMIT": "1024",
@@ -696,9 +698,21 @@ def git_checkout(
     if head_ref and not head_ref.startswith("refs/heads/") and base_repo == head_repo:
         tags = True
 
-    # If a head_ref isn't provided, we fetch all refs from head_repo, which may be slow.
-    target = head_ref if head_ref else "+refs/heads/*:refs/remotes/work/*"
-    git_fetch(destination_path, target, remote=head_repo, tags=tags, env=env)
+    # Fetch head_ref and/or head_rev
+    targets = []
+    if head_ref:
+        targets.append(head_ref)
+    if not targets:
+        # If head_ref wasn't provided, we fallback to head_rev.
+        targets.append(head_rev)
+
+    git_fetch(
+        destination_path,
+        *targets,
+        remote=head_repo,
+        tags=tags,
+        env=env,
+    )
 
     args = [
         "git",
