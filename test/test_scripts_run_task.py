@@ -1,3 +1,4 @@
+import functools
 import io
 import os
 import site
@@ -332,34 +333,42 @@ def mock_git_repo():
             ["git", "config", "user.email", "py@tes.t"], cwd=repo_path
         )
 
-        def _commit_file(message, filename):
-            with open(os.path.join(repo, filename), "w") as fout:
-                fout.write("test file content")
+        def _commit_file(message, filename, content):
+            filepath = os.path.join(repo, filename)
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            with open(filepath, "w") as fout:
+                fout.write(content)
             subprocess.check_call(["git", "add", filename], cwd=repo_path)
             subprocess.check_call(["git", "commit", "-m", message], cwd=repo_path)
             return git_current_rev(repo_path)
 
         # Commit mainfile (to main branch)
-        main_commit = _commit_file("Initial commit", "mainfile")
+        main_commits = [_commit_file("Initial commit", "mainfile", "foo")]
 
         # New branch mybranch
         subprocess.check_call(["git", "checkout", "-b", "mybranch"], cwd=repo_path)
-        # Commit branchfile to mybranch branch
-        branch_commit = _commit_file("File in mybranch", "branchfile")
+        # Create two commits to mybranch
+        branch_commits = []
+        branch_commits.append(
+            _commit_file("Add file in mybranch2", "branchfile", "bar")
+        )
+        branch_commits.append(
+            _commit_file("Update file in mybranch", "branchfile", "baz")
+        )
 
         # Set current branch back to main
         subprocess.check_call(["git", "checkout", "main"], cwd=repo_path)
-        yield {"path": repo_path, "main": main_commit, "branch": branch_commit}
+        yield {"path": repo_path, "main": main_commits, "branch": branch_commits}
 
 
 @pytest.mark.parametrize(
-    "base_rev,head_ref,files,hash_key",
+    "base_rev,head_ref,files,hash_key,exc",
     [
-        (None, None, ["mainfile"], "main"),
-        (None, "main", ["mainfile"], "main"),
-        (None, "mybranch", ["mainfile", "branchfile"], "branch"),
-        ("main", "main", ["mainfile"], "main"),
-        ("main", "mybranch", ["mainfile", "branchfile"], "branch"),
+        (None, None, ["mainfile"], "main", AssertionError),
+        (None, "main", ["mainfile"], "main", None),
+        (None, "mybranch", ["mainfile", "branchfile"], "branch", None),
+        ("main", "main", ["mainfile"], "main", None),
+        ("main", "mybranch", ["mainfile", "branchfile"], "branch", None),
     ],
 )
 def test_git_checkout(
@@ -371,9 +380,11 @@ def test_git_checkout(
     head_ref,
     files,
     hash_key,
+    exc,
 ):
     destination = tmp_path / "destination"
-    run_task_mod.git_checkout(
+    run_git_checkout = functools.partial(
+        run_task_mod.git_checkout,
         destination_path=destination,
         head_repo=mock_git_repo["path"],
         base_repo=mock_git_repo["path"],
@@ -383,6 +394,12 @@ def test_git_checkout(
         ssh_key_file=None,
         ssh_known_hosts_file=None,
     )
+    if exc:
+        with pytest.raises(exc):
+            run_git_checkout()
+        return
+
+    run_git_checkout()
 
     # Check desired files exist
     for filename in files:
@@ -398,23 +415,35 @@ def test_git_checkout(
         assert current_branch == head_ref
 
         current_rev = git_current_rev(destination)
-        assert current_rev == mock_git_repo[hash_key]
+        assert current_rev == mock_git_repo[hash_key][-1]
 
 
+@pytest.mark.parametrize(
+    "head_ref,head_rev_index",
+    (
+        pytest.param("mybranch", 1, id="head"),
+        pytest.param("mybranch", 0, id="non tip"),
+        pytest.param(None, 0, id="non tip without head_ref"),
+    ),
+)
 def test_git_checkout_with_commit(
     mock_stdin,
     run_task_mod,
     mock_git_repo,
     tmp_path,
+    head_ref,
+    head_rev_index,
 ):
     destination = tmp_path / "destination"
+    base_rev = mock_git_repo["main"][-1]
+    head_rev = mock_git_repo["branch"][head_rev_index]
     run_task_mod.git_checkout(
         destination_path=str(destination),
         head_repo=mock_git_repo["path"],
         base_repo=mock_git_repo["path"],
-        base_rev=mock_git_repo["main"],
-        head_ref="mybranch",
-        head_rev=mock_git_repo["branch"],
+        base_rev=base_rev,
+        head_ref=head_ref,
+        head_rev=head_rev,
         ssh_key_file=None,
         ssh_known_hosts_file=None,
     )
@@ -424,7 +453,7 @@ def test_git_checkout_with_commit(
         cwd=str(destination),
         universal_newlines=True,
     ).strip()
-    assert current_rev == mock_git_repo["branch"]
+    assert current_rev == head_rev
 
 
 def test_display_python_version_should_output_python_versions_title(
