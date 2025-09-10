@@ -1,5 +1,11 @@
 # Change Log
 
+## [15.2.0] - 2025-09-10
+
+### Added
+
+- Process kinds in parallel on Linux with a pool of processes (#765)
+
 ## [15.1.4] - 2025-09-09
 
 ### Fixed
