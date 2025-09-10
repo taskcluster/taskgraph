@@ -550,6 +550,7 @@ def git_fetch(
     ref: str,
     remote: str = "origin",
     tags: bool = False,
+    shallow: bool = False,
     env: Optional[Dict[str, str]] = None,
 ):
     args = ["git", "fetch"]
@@ -558,6 +559,35 @@ def git_fetch(
         args.extend(["--tags", "--force"])
 
     args.extend([remote, ref])
+
+    if shallow:
+        # If we have a full sha, we can fetch it directly
+        if re.match(r"^[a-f0-9]{40}$", ref):
+            fetch_args = args[:2] + ["--depth=1"] + args[2:]
+            ret = run_command(b"vcs", fetch_args, cwd=destination_path, extra_env=env)
+            if ret == 0:
+                return
+
+        # Otherwise we need to incrementally deepen the repo until we detect
+        # the ref.
+        for deepen in range(10, 100, 10):
+            fetch_args = args[:2] + [f"--deepen={deepen}"] + args[2:]
+            run_command(b"vcs", fetch_args, cwd=destination_path, extra_env=env)
+
+            # Check if the target ref exists, if not deepen further.
+            ret = run_command(
+                b"vcs",
+                ["git", "cat-file", "-e", "FETCH_HEAD"],
+                cwd=destination_path,
+                extra_env=env,
+            )
+            if ret == 0:
+                return
+
+        print(f"unable to fetch {ref} from {remote} in shallow clone")
+        sys.exit(1)
+
+    # Non-shallow repo
     retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
 
 
@@ -600,6 +630,19 @@ def _clean_git_checkout(destination_path):
     print_line(b"vcs", b"successfully cleaned git checkout!\n")
 
 
+def shortref(ref: str) -> str:
+    """Normalize a git ref to its short form.
+
+    Returns the ref unchanged if it's already in short form.
+    """
+    # Strip common ref prefixes
+    for prefix in ("refs/heads/", "refs/tags/"):
+        if ref.startswith(prefix):
+            return ref[len(prefix) :]
+
+    return ref
+
+
 def git_checkout(
     destination_path: str,
     head_repo: str,
@@ -609,6 +652,7 @@ def git_checkout(
     commit: Optional[str],
     ssh_key_file: Optional[Path],
     ssh_known_hosts_file: Optional[Path],
+    shallow: bool = False,
 ):
     env = {
         # abort if transfer speed is lower than 1kB/s for 1 minute
@@ -652,16 +696,24 @@ def git_checkout(
         args = [
             "git",
             "clone",
-            base_repo if base_repo else head_repo,
-            destination_path,
         ]
+
+        if shallow:
+            args.extend(["--depth=1", "--no-checkout"])
+
+        args.extend(
+            [
+                base_repo if base_repo else head_repo,
+                destination_path,
+            ]
+        )
 
         retry_required_command(b"vcs", args, extra_env=env)
 
     # First fetch the base_rev. This allows Taskgraph to compute the files
     # changed by the push.
     if base_rev and base_rev != NULL_REVISION:
-        git_fetch(destination_path, base_rev, env=env)
+        git_fetch(destination_path, base_rev, shallow=shallow, env=env)
 
     # Next fetch the head ref.
 
@@ -676,7 +728,18 @@ def git_checkout(
 
     # If a ref isn't provided, we fetch all refs from head_repo, which may be slow.
     target = ref if ref else "+refs/heads/*:refs/remotes/work/*"
-    git_fetch(destination_path, target, remote=head_repo, tags=tags, env=env)
+    git_fetch(
+        destination_path,
+        target,
+        remote=head_repo,
+        tags=tags,
+        shallow=shallow,
+        env=env,
+    )
+
+    # If we have a shallow clone and specific commit, we need to fetch it too.
+    if shallow and commit and commit != ref:
+        git_fetch(destination_path, commit, remote=head_repo, shallow=shallow, env=env)
 
     args = [
         "git",
@@ -684,8 +747,8 @@ def git_checkout(
         "-f",
     ]
 
-    if ref:
-        args.extend(["-B", ref])
+    if ref and ref != commit:
+        args.extend(["-B", shortref(ref)])
 
     # `git fetch` set `FETCH_HEAD` reference to the last commit of the desired branch
     args.append(commit if commit else "FETCH_HEAD")
@@ -862,11 +925,17 @@ def add_vcs_arguments(parser, project, name):
         f"--{project}-sparse-profile",
         help=f"Path to sparse profile for {name} checkout",
     )
+    parser.add_argument(
+        f"--{project}-shallow-clone",
+        action="store_true",
+        help=f"Use shallow clone for {name}",
+    )
 
 
 def collect_vcs_options(args, project, name):
     checkout = getattr(args, f"{project}_checkout")
     sparse_profile = getattr(args, f"{project}_sparse_profile")
+    shallow_clone = getattr(args, f"{project}_shallow_clone")
 
     env_prefix = project.upper()
 
@@ -911,6 +980,7 @@ def collect_vcs_options(args, project, name):
         "repo-type": repo_type,
         "ssh-secret-name": private_key_secret,
         "pip-requirements": pip_requirements,
+        "shallow-clone": shallow_clone,
     }
 
 
@@ -958,6 +1028,7 @@ def vcs_checkout_from_args(options):
                 revision,
                 ssh_key_file,
                 ssh_known_hosts_file,
+                shallow=options.get("shallow-clone", False),
             )
         elif options["repo-type"] == "hg":
             if not revision and not ref:

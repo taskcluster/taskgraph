@@ -151,9 +151,10 @@ def test_install_pip_requirements_with_uv(
 
 
 @pytest.mark.parametrize(
-    "env,extra_expected",
+    "args,env,extra_expected",
     [
         pytest.param(
+            {},
             {
                 "REPOSITORY_TYPE": "hg",
                 "BASE_REPOSITORY": "https://hg.mozilla.org/mozilla-central",
@@ -164,10 +165,27 @@ def test_install_pip_requirements_with_uv(
             {
                 "base-repo": "https://hg.mozilla.org/mozilla-unified",
             },
-        )
+            id="hg",
+        ),
+        pytest.param(
+            {"myrepo_shallow_clone": True},
+            {
+                "REPOSITORY_TYPE": "git",
+                "HEAD_REPOSITORY": "https://github.com/test/repo.git",
+                "HEAD_REV": "abc123",
+            },
+            {"shallow-clone": True},
+            id="git_with_shallow_clone",
+        ),
     ],
 )
-def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
+def test_collect_vcs_options(
+    monkeypatch,
+    run_task_mod,
+    args,
+    env,
+    extra_expected,
+):
     name = "myrepo"
     checkout = "checkout"
 
@@ -175,9 +193,10 @@ def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
     for k, v in env.items():
         monkeypatch.setenv(f"{name.upper()}_{k.upper()}", v)
 
-    args = Namespace()
-    setattr(args, f"{name}_checkout", checkout)
-    setattr(args, f"{name}_sparse_profile", False)
+    args.setdefault(f"{name}_checkout", checkout)
+    args.setdefault(f"{name}_shallow_clone", False)
+    args.setdefault(f"{name}_sparse_profile", False)
+    args = Namespace(**args)
 
     result = run_task_mod.collect_vcs_options(args, name, name)
 
@@ -193,6 +212,7 @@ def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
         "ref": env.get("HEAD_REF"),
         "repo-type": env.get("REPOSITORY_TYPE"),
         "revision": env.get("HEAD_REV"),
+        "shallow-clone": False,
         "ssh-secret-name": env.get("SSH_SECRET_NAME"),
         "sparse-profile": False,
         "store-path": env.get("HG_STORE_PATH"),
@@ -333,7 +353,9 @@ def mock_git_repo():
         )
 
         def _commit_file(message, filename):
-            with open(os.path.join(repo, filename), "w") as fout:
+            filepath = os.path.join(repo, filename)
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            with open(filepath, "w") as fout:
                 fout.write("test file content")
             subprocess.check_call(["git", "add", filename], cwd=repo_path)
             subprocess.check_call(["git", "commit", "-m", message], cwd=repo_path)
@@ -405,19 +427,171 @@ def test_git_checkout_with_commit(
     mock_stdin,
     run_task_mod,
     mock_git_repo,
+    tmp_path,
 ):
-    with tempfile.TemporaryDirectory() as workdir:
-        destination = os.path.join(workdir, "destination")
-        run_task_mod.git_checkout(
-            destination_path=destination,
-            head_repo=mock_git_repo["path"],
-            base_repo=mock_git_repo["path"],
-            base_rev=mock_git_repo["main"],
-            ref=mock_git_repo["branch"],
-            commit=mock_git_repo["branch"],
-            ssh_key_file=None,
-            ssh_known_hosts_file=None,
-        )
+    destination = tmp_path / "destination"
+
+    run_task_mod.git_checkout(
+        destination_path=str(destination),
+        head_repo=mock_git_repo["path"],
+        base_repo=mock_git_repo["path"],
+        base_rev=mock_git_repo["main"],
+        ref="mybranch",
+        commit=mock_git_repo["branch"],
+        ssh_key_file=None,
+        ssh_known_hosts_file=None,
+        shallow=False,
+    )
+
+    current_rev = subprocess.check_output(
+        args=["git", "rev-parse", "HEAD"],
+        cwd=str(destination),
+        universal_newlines=True,
+    ).strip()
+    assert current_rev == mock_git_repo["branch"]
+
+
+def test_git_checkout_with_commit_shallow(
+    mock_stdin,
+    run_task_mod,
+    mock_git_repo,
+    tmp_path,
+    mocker,
+):
+    destination = tmp_path / "destination"
+
+    # Shallow clones don't work well with local repos, so mock git_fetch to
+    # track calls
+    original_git_fetch = run_task_mod.git_fetch
+    fetch_calls = []
+
+    def mock_git_fetch(*args, **kwargs):
+        fetch_calls.append((args, kwargs))
+        return original_git_fetch(*args, **kwargs)
+
+    mocker.patch.object(run_task_mod, "git_fetch", side_effect=mock_git_fetch)
+
+    # Use shallow clone with ref != commit
+    run_task_mod.git_checkout(
+        destination_path=str(destination),
+        head_repo=mock_git_repo["path"],
+        base_repo=mock_git_repo["path"],
+        base_rev=mock_git_repo["main"],
+        ref="mybranch",  # Branch name (different from commit)
+        commit=mock_git_repo["branch"],  # Specific SHA
+        ssh_key_file=None,
+        ssh_known_hosts_file=None,
+        shallow=True,
+    )
+
+    # Verify that git_fetch was called for both the ref and the commit
+    # Should have at least 3 calls: base_rev, ref, and commit
+    assert len(fetch_calls) >= 3
+
+    # Verify base_rev fetch
+    base_call = fetch_calls[0]
+    assert base_call[0][1] == mock_git_repo["main"]  # base_rev
+    assert base_call[1]["shallow"] is True
+
+    # Verify ref fetch
+    ref_call = fetch_calls[1]
+    assert ref_call[1]["shallow"] is True
+
+    # Verify commit fetch (our fix)
+    commit_call = fetch_calls[2]
+    assert commit_call[0][1] == mock_git_repo["branch"]  # commit SHA
+    assert commit_call[1]["shallow"] is True
+
+    # Verify final checkout worked
+    final_rev = subprocess.check_output(
+        args=["git", "rev-parse", "HEAD"],
+        cwd=str(destination),
+        universal_newlines=True,
+    ).strip()
+    assert final_rev == mock_git_repo["branch"]
+
+
+def test_git_checkout_shallow_clone(
+    mock_stdin,
+    run_task_mod,
+    mock_git_repo,
+    tmp_path,
+):
+    destination = tmp_path / "destination"
+    # Note: shallow clone with local repos doesn't work as expected due to git limitations
+    # The --depth flag is ignored in local clones
+    run_task_mod.git_checkout(
+        destination_path=str(destination),
+        head_repo=mock_git_repo["path"],
+        base_repo=mock_git_repo["path"],
+        base_rev=None,
+        ref="mybranch",
+        commit=None,
+        ssh_key_file=None,
+        ssh_known_hosts_file=None,
+        shallow=True,
+    )
+
+    # Check that files were checked out properly
+    assert (destination / "mainfile").exists()
+    assert (destination / "branchfile").exists()
+
+    # Check repo is on the right branch
+    current_branch = subprocess.check_output(
+        args=["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        cwd=str(destination),
+        universal_newlines=True,
+    ).strip()
+    assert current_branch == "mybranch"
+
+
+def test_git_fetch_shallow_sha(
+    mock_stdin,
+    run_task_mod,
+    mock_git_repo,
+    tmp_path,
+    mocker,
+):
+    destination = tmp_path / "destination"
+
+    run_task_mod.run_command(
+        b"vcs",
+        [
+            "git",
+            "clone",
+            "--depth=1",
+            "--no-checkout",
+            mock_git_repo["path"],
+            str(destination),
+        ],
+    )
+
+    # Mock run_command to track calls
+    original_run_command = run_task_mod.run_command
+    command_calls = []
+
+    def mock_run_command(*args, **kwargs):
+        command_calls.append(args[1])  # Store the command arguments
+        return original_run_command(*args, **kwargs)
+
+    mocker.patch.object(run_task_mod, "run_command", side_effect=mock_run_command)
+
+    # Test fetching with full SHA (should use optimized path)
+    full_sha = mock_git_repo["branch"]  # This is a full 40-char SHA
+    run_task_mod.git_fetch(
+        str(destination), full_sha, remote=mock_git_repo["path"], shallow=True
+    )
+
+    # Verify that the optimized SHA fetch was attempted first
+    fetch_commands = [
+        cmd for cmd in command_calls if cmd[0] == "git" and cmd[1] == "fetch"
+    ]
+    assert len(fetch_commands) >= 1
+
+    # First fetch command should be the optimized SHA fetch with --depth=1
+    first_fetch = fetch_commands[0]
+    assert "--depth=1" in first_fetch
+    assert full_sha in first_fetch
 
 
 def test_display_python_version_should_output_python_versions_title(
