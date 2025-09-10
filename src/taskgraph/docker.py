@@ -14,12 +14,11 @@ import tempfile
 from io import BytesIO
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, Dict, Generator, List, Mapping, Optional, Union
+from typing import Any, Dict, Generator, List, Optional, Union
 
 from requests import HTTPError
 
 from taskgraph.generator import load_tasks_for_kind
-from taskgraph.task import Task
 
 try:
     import zstandard as zstd

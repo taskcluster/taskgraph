@@ -600,6 +600,8 @@ def git_checkout(
     commit: Optional[str],
     ssh_key_file: Optional[Path],
     ssh_known_hosts_file: Optional[Path],
+    efficient_clone: bool = False,
+    sparse_dirs: Optional[str] = None,
 ):
     env = {
         # abort if transfer speed is lower than 1kB/s for 1 minute
@@ -636,22 +638,43 @@ def git_checkout(
         args = [
             "git",
             "clone",
+        ]
+        
+        if efficient_clone:
+            # Use blobless clone for faster initial clone
+            # This fetches commit and tree objects but not file contents
+            args.extend(["--filter=blob:none"])
+            # Use shallow clone with depth 1 for minimal history
+            args.extend(["--depth=1"])
+            # Skip checkout initially, we'll do sparse checkout later
+            args.extend(["--no-checkout"])
+        elif sparse_dirs:
+            # For sparse checkout without efficient clone, still skip initial checkout
+            # so we can set up sparse checkout before checking out files
+            args.extend(["--no-checkout"])
+        
+        args.extend([
             base_repo if base_repo else head_repo,
             destination_path,
-        ]
+        ])
 
         retry_required_command(b"vcs", args, extra_env=env)
 
     if base_ref:
-        args = ["git", "fetch", "origin", base_ref]
+        args = ["git", "fetch"]
+        if efficient_clone:
+            # For shallow clones, we need to deepen to fetch more history
+            args.extend(["--depth=100"])
+        args.extend(["origin", base_ref])
 
         retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
 
         # Create local branch so that taskgraph is able to compute differences
         # between the head branch and the base one, if needed
-        args = ["git", "checkout", base_ref]
-
-        retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
+        if not efficient_clone and not sparse_dirs:
+            # Only checkout if we didn't use --no-checkout initially
+            args = ["git", "checkout", base_ref]
+            retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
 
     # When commits are force-pushed (like on a testing branch), base_rev doesn't
     # exist on base_ref. Fetching it allows taskgraph to compute differences
@@ -660,7 +683,11 @@ def git_checkout(
     # Unlike base_ref just above, there is no need to checkout the revision:
     # it's immediately available after the fetch.
     if base_rev and base_rev != NULL_REVISION:
-        args = ["git", "fetch", "origin", base_rev]
+        args = ["git", "fetch"]
+        if efficient_clone:
+            # For shallow clones, we need to deepen to fetch more history
+            args.extend(["--depth=100"])
+        args.extend(["origin", base_rev])
 
         retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
 
@@ -671,28 +698,44 @@ def git_checkout(
     # in not having a tag, or worse: having an outdated version of one.
     # `--force` is needed to be able to update an existing tag.
     if ref and base_repo == head_repo:
-        args = [
-            "git",
-            "fetch",
-            "--tags",
-            "--force",
-            base_repo,
-            ref,
-        ]
+        args = ["git", "fetch"]
+        if efficient_clone:
+            # For shallow clones, we need to deepen to fetch more history  
+            args.extend(["--depth=100"])
+        args.extend(["--tags", "--force", base_repo, ref])
 
         retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
 
     # If a ref isn't provided, we fetch all refs from head_repo, which may be slow
-    args = [
-        "git",
-        "fetch",
-        "--no-tags",
-        head_repo,
-        ref if ref else "+refs/heads/*:refs/remotes/work/*",
-    ]
+    args = ["git", "fetch"]
+    if efficient_clone:
+        # For shallow clones, we need to deepen to fetch more history
+        args.extend(["--depth=100"])
+        # With blobless clones, we only fetch the blobs we need
+        args.extend(["--filter=blob:none"])
+    args.extend(["--no-tags", head_repo, ref if ref else "+refs/heads/*:refs/remotes/work/*"])
 
     retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
 
+    if sparse_dirs:
+        # When sparse directories/files are specified, set up sparse checkout
+        # The sparse_dirs should be a colon-separated list of directories or files
+        # 
+        # Note: Git's sparse-checkout behavior in cone mode (default since Git 2.37):
+        # - Root-level files: Checked out exactly as specified
+        # - Files in subdirectories: Entire parent directory is included
+        # - Directories: All contents included
+        
+        # Enable sparse checkout (cone mode is default since Git 2.37)
+        args = ["git", "sparse-checkout", "init"]
+        run_required_command(b"vcs", args, cwd=destination_path)
+        
+        # Set the sparse entries
+        entries = sparse_dirs.split(":")
+        args = ["git", "sparse-checkout", "set"] + entries
+        run_required_command(b"vcs", args, cwd=destination_path)
+    
+    # Now do the actual checkout
     args = [
         "git",
         "checkout",
@@ -879,11 +922,17 @@ def add_vcs_arguments(parser, project, name):
         "--%s-sparse-profile" % project,
         help="Path to sparse profile for %s checkout" % name,
     )
+    parser.add_argument(
+        "--%s-efficient-clone" % project,
+        action="store_true",
+        help="Use efficient cloning strategies (blobless, shallow, no-checkout) for %s" % name,
+    )
 
 
 def collect_vcs_options(args, project, name):
     checkout = getattr(args, "%s_checkout" % project)
     sparse_profile = getattr(args, "%s_sparse_profile" % project)
+    efficient_clone = getattr(args, "%s_efficient_clone" % project)
 
     env_prefix = project.upper()
 
@@ -896,6 +945,7 @@ def collect_vcs_options(args, project, name):
     ref = os.environ.get("%s_HEAD_REF" % env_prefix)
     pip_requirements = os.environ.get("%s_PIP_REQUIREMENTS" % env_prefix)
     private_key_secret = os.environ.get("%s_SSH_SECRET_NAME" % env_prefix)
+    sparse_dirs = os.environ.get("%s_SPARSE_DIRS" % env_prefix)
 
     store_path = os.environ.get("HG_STORE_PATH")
 
@@ -930,6 +980,8 @@ def collect_vcs_options(args, project, name):
         "repo-type": repo_type,
         "ssh-secret-name": private_key_secret,
         "pip-requirements": pip_requirements,
+        "efficient-clone": efficient_clone,
+        "sparse-dirs": sparse_dirs,
     }
 
 
@@ -978,6 +1030,8 @@ def vcs_checkout_from_args(options):
                 revision,
                 ssh_key_file,
                 ssh_known_hosts_file,
+                options.get("efficient-clone", False),
+                options.get("sparse-dirs"),
             )
         elif options["repo-type"] == "hg":
             if not revision and not ref:
