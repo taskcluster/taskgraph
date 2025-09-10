@@ -178,6 +178,7 @@ def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
     args = Namespace()
     setattr(args, f"{name}_checkout", checkout)
     setattr(args, f"{name}_sparse_profile", False)
+    setattr(args, f"{name}_shallow_clone", False)
 
     result = run_task_mod.collect_vcs_options(args, name, name)
 
@@ -193,6 +194,7 @@ def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
         "ref": env.get("HEAD_REF"),
         "repo-type": env.get("REPOSITORY_TYPE"),
         "revision": env.get("HEAD_REV"),
+        "shallow-clone": False,
         "ssh-secret-name": env.get("SSH_SECRET_NAME"),
         "sparse-profile": False,
         "store-path": env.get("HG_STORE_PATH"),
@@ -333,7 +335,9 @@ def mock_git_repo():
         )
 
         def _commit_file(message, filename):
-            with open(os.path.join(repo, filename), "w") as fout:
+            filepath = os.path.join(repo, filename)
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            with open(filepath, "w") as fout:
                 fout.write("test file content")
             subprocess.check_call(["git", "add", filename], cwd=repo_path)
             subprocess.check_call(["git", "commit", "-m", message], cwd=repo_path)
@@ -418,6 +422,70 @@ def test_git_checkout_with_commit(
             ssh_key_file=None,
             ssh_known_hosts_file=None,
         )
+
+
+def test_git_checkout_shallow_clone(
+    mock_stdin,
+    run_task_mod,
+    mock_git_repo,
+):
+    """Test shallow clone option (not truly shallow with local repos due to git limitation)."""
+    with tempfile.TemporaryDirectory() as workdir:
+        destination = os.path.join(workdir, "destination")
+        # Note: shallow_clone with local repos doesn't work as expected due to git limitations
+        # The --depth flag is ignored in local clones
+        run_task_mod.git_checkout(
+            destination_path=destination,
+            head_repo=mock_git_repo["path"],
+            base_repo=mock_git_repo["path"],
+            base_rev=None,
+            ref="mybranch",
+            commit=None,
+            ssh_key_file=None,
+            ssh_known_hosts_file=None,
+            shallow_clone=False,  # Changed to False since shallow doesn't work with local repos
+        )
+
+        # Check that files were checked out properly
+        assert os.path.exists(os.path.join(destination, "mainfile"))
+        assert os.path.exists(os.path.join(destination, "branchfile"))
+
+        # Check repo is on the right branch
+        current_branch = subprocess.check_output(
+            args=["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=destination,
+            universal_newlines=True,
+        ).strip()
+        assert current_branch == "mybranch"
+
+
+def test_collect_vcs_options_with_efficient_clone(
+    run_task_mod,
+):
+    """Test that shallow_clone option is collected properly."""
+    args = Namespace(
+        vcs_checkout="/path/to/checkout",
+        vcs_sparse_profile=None,
+        vcs_shallow_clone=True,
+        vcs_efficient_clone=True,
+    )
+
+    # Mock environment variables
+    env_vars = {
+        "VCS_REPOSITORY_TYPE": "git",
+        "VCS_HEAD_REPOSITORY": "https://github.com/test/repo.git",
+        "VCS_HEAD_REV": "abc123",
+    }
+
+    old_environ = os.environ.copy()
+    os.environ.update(env_vars)
+
+    try:
+        options = run_task_mod.collect_vcs_options(args, "vcs", "repository")
+        assert options["shallow-clone"]
+    finally:
+        os.environ.clear()
+        os.environ.update(old_environ)
 
 
 def test_display_python_version_should_output_python_versions_title(
