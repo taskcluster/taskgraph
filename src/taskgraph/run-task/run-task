@@ -621,6 +621,19 @@ def _clean_git_checkout(destination_path):
     print_line(b"vcs", b"successfully cleaned git checkout!\n")
 
 
+def shortref(ref: str) -> str:
+    """Normalize a git ref to its short form.
+
+    Returns the ref unchanged if it's already in short form.
+    """
+    # Strip common ref prefixes
+    for prefix in ("refs/heads/", "refs/tags/"):
+        if ref.startswith(prefix):
+            return ref[len(prefix) :]
+
+    return ref
+
+
 def git_checkout(
     destination_path: str,
     head_repo: str,
@@ -721,7 +734,7 @@ def git_checkout(
     ]
 
     if head_ref:
-        args.extend(["-B", head_ref])
+        args.extend(["-B", shortref(head_ref)])
 
     # `git fetch` set `FETCH_HEAD` reference to the last commit of the desired branch
     args.append(head_rev if head_rev else "FETCH_HEAD")
