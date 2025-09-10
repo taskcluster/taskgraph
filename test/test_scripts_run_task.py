@@ -366,58 +366,65 @@ def test_git_checkout(
     mock_stdin,
     run_task_mod,
     mock_git_repo,
+    tmp_path,
     base_rev,
     head_ref,
     files,
     hash_key,
 ):
-    with tempfile.TemporaryDirectory() as workdir:
-        destination = os.path.join(workdir, "destination")
-        run_task_mod.git_checkout(
-            destination_path=destination,
-            head_repo=mock_git_repo["path"],
-            base_repo=mock_git_repo["path"],
-            base_rev=base_rev,
-            head_ref=head_ref,
-            head_rev=None,
-            ssh_key_file=None,
-            ssh_known_hosts_file=None,
-        )
+    destination = tmp_path / "destination"
+    run_task_mod.git_checkout(
+        destination_path=destination,
+        head_repo=mock_git_repo["path"],
+        base_repo=mock_git_repo["path"],
+        base_rev=base_rev,
+        head_ref=head_ref,
+        head_rev=None,
+        ssh_key_file=None,
+        ssh_known_hosts_file=None,
+    )
 
-        # Check desired files exist
-        for filename in files:
-            assert os.path.exists(os.path.join(destination, filename))
+    # Check desired files exist
+    for filename in files:
+        assert os.path.exists(os.path.join(destination, filename))
 
-        # Check repo is on the right branch
-        if head_ref:
-            current_branch = subprocess.check_output(
-                args=["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                cwd=destination,
-                universal_newlines=True,
-            ).strip()
-            assert current_branch == head_ref
+    # Check repo is on the right branch
+    if head_ref:
+        current_branch = subprocess.check_output(
+            args=["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=destination,
+            universal_newlines=True,
+        ).strip()
+        assert current_branch == head_ref
 
-            current_rev = git_current_rev(destination)
-            assert current_rev == mock_git_repo[hash_key]
+        current_rev = git_current_rev(destination)
+        assert current_rev == mock_git_repo[hash_key]
 
 
 def test_git_checkout_with_commit(
     mock_stdin,
     run_task_mod,
     mock_git_repo,
+    tmp_path,
 ):
-    with tempfile.TemporaryDirectory() as workdir:
-        destination = os.path.join(workdir, "destination")
-        run_task_mod.git_checkout(
-            destination_path=destination,
-            head_repo=mock_git_repo["path"],
-            base_repo=mock_git_repo["path"],
-            base_rev=mock_git_repo["main"],
-            head_ref=mock_git_repo["branch"],
-            head_rev=mock_git_repo["branch"],
-            ssh_key_file=None,
-            ssh_known_hosts_file=None,
-        )
+    destination = tmp_path / "destination"
+    run_task_mod.git_checkout(
+        destination_path=str(destination),
+        head_repo=mock_git_repo["path"],
+        base_repo=mock_git_repo["path"],
+        base_rev=mock_git_repo["main"],
+        head_ref="mybranch",
+        head_rev=mock_git_repo["branch"],
+        ssh_key_file=None,
+        ssh_known_hosts_file=None,
+    )
+
+    current_rev = subprocess.check_output(
+        args=["git", "rev-parse", "HEAD"],
+        cwd=str(destination),
+        universal_newlines=True,
+    ).strip()
+    assert current_rev == mock_git_repo["branch"]
 
 
 def test_display_python_version_should_output_python_versions_title(
