@@ -256,3 +256,31 @@ def fill_template(config, tasks):
             }
 
         yield taskdesc
+
+
+@transforms.add
+def add_pr_route(config, tasks):
+    """Taskgraph builds several docker-images that get used externally.
+
+    Indexing these images by pull request number, allows us to easily test them
+    in external repos using the `indexed-image` image definition type.
+    """
+    if not (pr_number := config.params.get("pull_request_number")):
+        yield from tasks
+        return
+
+    PR_ROUTE = (
+        "index.{trust-domain}.v2.{project}-pr.{pr-number}.latest.{product}.{task-name}"
+    )
+    subs = {
+        "trust-domain": config.graph_config["trust-domain"],
+        "project": config.params["project"],
+        "pr-number": pr_number,
+        "product": "docker-image",
+    }
+
+    for task in tasks:
+        subs["task-name"] = task["attributes"]["image_name"]
+        routes = task.setdefault("routes", [])
+        routes.append(PR_ROUTE.format(**subs))
+        yield task
