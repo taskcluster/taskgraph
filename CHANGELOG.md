@@ -1,5 +1,11 @@
 # Change Log
 
+## [15.2.1] - 2025-09-11
+
+### Fixed
+
+- Minor fixes for multiprocess kind processing (#773)
+
 ## [15.2.0] - 2025-09-10
 
 ### Added
