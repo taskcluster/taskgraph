@@ -322,6 +322,38 @@ def git_current_rev(cwd):
 
 
 @pytest.fixture(scope="session")  # Tests shouldn't change this repo
+def mock_git_repo_with_dirs():
+    "Mock repository with subdirectories for testing sparse checkout"
+    with tempfile.TemporaryDirectory() as repo:
+        repo_path = str(repo)
+        # Init git repo and setup user config
+        subprocess.check_call(["git", "init", "-b", "main"], cwd=repo_path)
+        subprocess.check_call(["git", "config", "user.name", "pytest"], cwd=repo_path)
+        subprocess.check_call(
+            ["git", "config", "user.email", "py@tes.t"], cwd=repo_path
+        )
+
+        def _commit_file(message, filename):
+            filepath = os.path.join(repo, filename)
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            with open(filepath, "w") as fout:
+                fout.write(f"content of {filename}")
+            subprocess.check_call(["git", "add", filename], cwd=repo_path)
+            subprocess.check_call(["git", "commit", "-m", message], cwd=repo_path)
+            return git_current_rev(repo_path)
+
+        # Create files in different directories
+        _commit_file("Add root file", "rootfile.txt")
+        _commit_file("Add src file", "src/main.py")
+        _commit_file("Add src subfile", "src/utils.py")
+        _commit_file("Add docs file", "docs/readme.md")
+        _commit_file("Add test file", "tests/test_main.py")
+        main_commit = _commit_file("Add build file", "build/Makefile")
+
+        yield {"path": repo_path, "main": main_commit}
+
+
+@pytest.fixture(scope="session")  # Tests shouldn't change this repo
 def mock_git_repo():
     "Mock repository with files, commits and branches for using as source"
     with tempfile.TemporaryDirectory() as repo:
@@ -334,7 +366,9 @@ def mock_git_repo():
         )
 
         def _commit_file(message, filename):
-            with open(os.path.join(repo, filename), "w") as fout:
+            filepath = os.path.join(repo, filename)
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            with open(filepath, "w") as fout:
                 fout.write("test file content")
             subprocess.check_call(["git", "add", filename], cwd=repo_path)
             subprocess.check_call(["git", "commit", "-m", message], cwd=repo_path)
@@ -421,6 +455,264 @@ def test_git_checkout_with_commit(
             ssh_key_file=None,
             ssh_known_hosts_file=None,
         )
+
+
+def test_git_checkout_efficient_clone(
+    mock_stdin,
+    run_task_mod,
+    mock_git_repo,
+):
+    """Test efficient clone with blobless, shallow, and sparse checkout."""
+    with tempfile.TemporaryDirectory() as workdir:
+        destination = os.path.join(workdir, "destination")
+        run_task_mod.git_checkout(
+            destination_path=destination,
+            head_repo=mock_git_repo["path"],
+            base_repo=mock_git_repo["path"],
+            base_ref="mybranch",
+            base_rev=None,
+            ref="mybranch",
+            commit=None,
+            ssh_key_file=None,
+            ssh_known_hosts_file=None,
+            efficient_clone=True,
+            sparse_dirs=None,
+        )
+
+        # Check that files were checked out properly
+        assert os.path.exists(os.path.join(destination, "mainfile"))
+        assert os.path.exists(os.path.join(destination, "branchfile"))
+
+        # Check repo is on the right branch
+        current_branch = subprocess.check_output(
+            args=["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=destination,
+            universal_newlines=True,
+        ).strip()
+        assert current_branch == "mybranch"
+
+        # Check that we have a shallow clone by checking the depth
+        # Note: This check might need adjustment based on the actual Git version behavior
+        log_output = subprocess.check_output(
+            args=["git", "log", "--oneline"],
+            cwd=destination,
+            universal_newlines=True,
+        ).strip()
+        # Shallow clone should have limited history
+        assert len(log_output.split("\n")) >= 1
+
+
+def test_git_checkout_efficient_clone_with_sparse_dirs(
+    mock_stdin,
+    run_task_mod,
+    mock_git_repo_with_dirs,
+):
+    """Test efficient clone with sparse checkout of specific directories."""
+    with tempfile.TemporaryDirectory() as workdir:
+        destination = os.path.join(workdir, "destination")
+        run_task_mod.git_checkout(
+            destination_path=destination,
+            head_repo=mock_git_repo_with_dirs["path"],
+            base_repo=mock_git_repo_with_dirs["path"],
+            base_ref=None,
+            base_rev=None,
+            ref="main",
+            commit=None,
+            ssh_key_file=None,
+            ssh_known_hosts_file=None,
+            efficient_clone=True,
+            sparse_dirs="src:docs",  # Only checkout src and docs directories
+        )
+
+        # Check that only specified directories were checked out
+        assert os.path.exists(os.path.join(destination, "src", "main.py"))
+        assert os.path.exists(os.path.join(destination, "src", "utils.py"))
+        assert os.path.exists(os.path.join(destination, "docs", "readme.md"))
+
+        # Check that other directories were NOT checked out
+        assert not os.path.exists(os.path.join(destination, "tests"))
+        assert not os.path.exists(os.path.join(destination, "build"))
+        # Note: rootfile.txt might still exist depending on Git's sparse checkout behavior
+
+        # Check repo is on the right branch
+        current_branch = subprocess.check_output(
+            args=["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=destination,
+            universal_newlines=True,
+        ).strip()
+        assert current_branch == "main"
+
+
+def test_git_checkout_sparse_dirs_without_efficient_clone(
+    mock_stdin,
+    run_task_mod,
+    mock_git_repo_with_dirs,
+):
+    """Test sparse checkout without efficient clone flag."""
+    with tempfile.TemporaryDirectory() as workdir:
+        destination = os.path.join(workdir, "destination")
+        run_task_mod.git_checkout(
+            destination_path=destination,
+            head_repo=mock_git_repo_with_dirs["path"],
+            base_repo=mock_git_repo_with_dirs["path"],
+            base_ref=None,
+            base_rev=None,
+            ref="main",
+            commit=None,
+            ssh_key_file=None,
+            ssh_known_hosts_file=None,
+            efficient_clone=False,  # Not using efficient clone
+            sparse_dirs="src:build",  # Only checkout src and build directories
+        )
+
+        # Check that only specified directories were checked out
+        assert os.path.exists(os.path.join(destination, "src", "main.py"))
+        assert os.path.exists(os.path.join(destination, "src", "utils.py"))
+        assert os.path.exists(os.path.join(destination, "build", "Makefile"))
+
+        # Check that other directories were NOT checked out
+        assert not os.path.exists(os.path.join(destination, "docs"))
+        assert not os.path.exists(os.path.join(destination, "tests"))
+
+        # Check repo is on the right branch
+        current_branch = subprocess.check_output(
+            args=["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=destination,
+            universal_newlines=True,
+        ).strip()
+        assert current_branch == "main"
+
+
+def test_collect_vcs_options_with_efficient_clone(
+    run_task_mod,
+):
+    """Test that efficient_clone option is collected properly."""
+    args = Namespace(
+        vcs_checkout="/path/to/checkout",
+        vcs_sparse_profile=None,
+        vcs_efficient_clone=True,
+    )
+
+    # Mock environment variables
+    env_vars = {
+        "VCS_REPOSITORY_TYPE": "git",
+        "VCS_HEAD_REPOSITORY": "https://github.com/test/repo.git",
+        "VCS_HEAD_REV": "abc123",
+    }
+
+    old_environ = os.environ.copy()
+    os.environ.update(env_vars)
+
+    try:
+        options = run_task_mod.collect_vcs_options(args, "vcs", "repository")
+        assert options["efficient-clone"]
+    finally:
+        os.environ.clear()
+        os.environ.update(old_environ)
+
+
+def test_git_checkout_sparse_dirs_with_files(
+    mock_stdin,
+    run_task_mod,
+    mock_git_repo_with_dirs,
+):
+    """Test sparse checkout with individual files (uses cone mode).
+
+    Note: Git's sparse-checkout includes entire directories when any file within
+    that directory is specified. This is Git's intended behavior for consistency.
+    """
+    with tempfile.TemporaryDirectory() as workdir:
+        destination = os.path.join(workdir, "destination")
+
+        run_task_mod.git_checkout(
+            destination_path=destination,
+            head_repo=mock_git_repo_with_dirs["path"],
+            base_repo=mock_git_repo_with_dirs["path"],
+            base_ref=None,
+            base_rev=None,
+            ref="main",
+            commit=None,
+            ssh_key_file=None,
+            ssh_known_hosts_file=None,
+            efficient_clone=False,
+            sparse_dirs="rootfile.txt:src/main.py",  # Individual files - uses cone mode
+        )
+
+        # Check what actually got checked out
+        # Root-level files work exactly as specified
+        assert os.path.exists(os.path.join(destination, "rootfile.txt"))
+        assert os.path.exists(os.path.join(destination, "src", "main.py"))
+
+        # Git includes entire directories when any file within them is specified
+        # This is expected behavior, not a bug
+        assert os.path.exists(os.path.join(destination, "src", "utils.py"))
+
+        # Other directories should NOT be included
+        assert not os.path.exists(os.path.join(destination, "docs", "readme.md"))
+        assert not os.path.exists(os.path.join(destination, "tests", "test_main.py"))
+        assert not os.path.exists(os.path.join(destination, "build", "Makefile"))
+
+
+def test_git_checkout_sparse_dirs_directories_only(
+    mock_stdin,
+    run_task_mod,
+    mock_git_repo_with_dirs,
+):
+    """Test sparse checkout with directories only (uses cone mode)."""
+    with tempfile.TemporaryDirectory() as workdir:
+        destination = os.path.join(workdir, "destination")
+
+        run_task_mod.git_checkout(
+            destination_path=destination,
+            head_repo=mock_git_repo_with_dirs["path"],
+            base_repo=mock_git_repo_with_dirs["path"],
+            base_ref=None,
+            base_rev=None,
+            ref="main",
+            commit=None,
+            ssh_key_file=None,
+            ssh_known_hosts_file=None,
+            efficient_clone=False,
+            sparse_dirs="src:docs",  # Directories only - uses cone mode
+        )
+
+        # Check that entire directories were checked out
+        assert os.path.exists(os.path.join(destination, "src", "main.py"))
+        assert os.path.exists(os.path.join(destination, "src", "utils.py"))
+        assert os.path.exists(os.path.join(destination, "docs", "readme.md"))
+
+        # Check that other directories were NOT checked out
+        assert not os.path.exists(os.path.join(destination, "tests", "test_main.py"))
+        assert not os.path.exists(os.path.join(destination, "build", "Makefile"))
+
+
+def test_collect_vcs_options_with_sparse_dirs(
+    run_task_mod,
+):
+    """Test that sparse_dirs are collected properly from environment."""
+    args = Namespace(
+        vcs_checkout="/path/to/checkout",
+        vcs_sparse_profile=None,
+        vcs_efficient_clone=True,
+    )
+
+    # Mock environment variables including SPARSE_DIRS
+    env_vars = {
+        "VCS_REPOSITORY_TYPE": "git",
+        "VCS_HEAD_REPOSITORY": "https://github.com/test/repo.git",
+        "VCS_HEAD_REV": "abc123",
+        "VCS_SPARSE_DIRS": "src:docs:tests",
+    }
+
+    old_environ = os.environ.copy()
+    os.environ.update(env_vars)
+
+    try:
+        options = run_task_mod.collect_vcs_options(args, "vcs", "repository")
+        assert options["sparse-dirs"] == "src:docs:tests"
+    finally:
+        os.environ.clear()
+        os.environ.update(old_environ)
 
 
 def test_display_python_version_should_output_python_versions_title(

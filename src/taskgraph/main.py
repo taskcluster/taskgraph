@@ -569,10 +569,7 @@ def show_taskgraph(options):
     "--root",
     "-r",
     default="taskcluster",
-    help="relative path for the root of the taskgraph definition",
-)
-@argument(
-    "-t", "--tag", help="tag that the image should be built as.", metavar="name:tag"
+    help="Relative path to the root of the Taskgraph definition.",
 )
 @argument(
     "--context-only",
@@ -582,19 +579,16 @@ def show_taskgraph(options):
 )
 def build_image(args):
     from taskgraph.config import load_graph_config  # noqa: PLC0415
-    from taskgraph.docker import build_context, build_image  # noqa: PLC0415
+    from taskgraph.docker import build_image  # noqa: PLC0415
 
     validate_docker()
+    graph_config = load_graph_config(args["root"])
 
-    root = args["root"]
-    graph_config = load_graph_config(root)
-
-    if args["context_only"] is None:
-        build_image(args["image_name"], args["tag"], graph_config, os.environ)
-    else:
-        build_context(
-            args["image_name"], args["context_only"], graph_config, os.environ
-        )
+    return build_image(
+        graph_config,
+        args["image_name"],
+        args["context_only"],
+    )
 
 
 @command(
@@ -674,7 +668,11 @@ def image_digest(args):
     "The task's payload.command will be replaced with 'bash'. You need to have "
     "docker installed and running for this to work.",
 )
-@argument("task_id", help="The task id to load into a docker container.")
+@argument(
+    "task",
+    help="The task id or definition to load into a docker container. Can use "
+    "'-' to read from stdin.",
+)
 @argument(
     "--keep",
     dest="remove",
@@ -683,11 +681,42 @@ def image_digest(args):
     help="Keep the docker container after exiting.",
 )
 @argument("--user", default=None, help="Container user to start shell with.")
+@argument(
+    "--image",
+    default=None,
+    help="Use a custom image instead of the task's image. Can be the name of "
+    "an image under `taskcluster/docker`, a reference to a local docker image, "
+    "`task-id=<task id>`, or `index=<index path>`.",
+)
+@argument(
+    "--root",
+    "-r",
+    default="taskcluster",
+    help="Relative path to the root of the Taskgraph definition.",
+)
 def load_task(args):
+    from taskgraph.config import load_graph_config  # noqa: PLC0415
     from taskgraph.docker import load_task  # noqa: PLC0415
+    from taskgraph.util import json  # noqa: PLC0415
 
     validate_docker()
-    return load_task(args["task_id"], remove=args["remove"], user=args["user"])
+
+    if args["task"] == "-":
+        data = sys.stdin.read()
+        try:
+            args["task"] = json.loads(data)
+        except ValueError:
+            args["task"] = data  # assume it is a taskId
+
+    root = args["root"]
+    graph_config = load_graph_config(root)
+    return load_task(
+        graph_config,
+        args["task"],
+        remove=args["remove"],
+        user=args["user"],
+        custom_image=args["image"],
+    )
 
 
 @command("decision", help="Run the decision task")
