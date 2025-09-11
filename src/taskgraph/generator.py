@@ -4,6 +4,7 @@
 
 import copy
 import logging
+import multiprocessing
 import os
 import platform
 from concurrent.futures import (
@@ -302,7 +303,9 @@ class TaskGraphGenerator:
         futures = set()
         edges = set(kind_graph.edges)
 
-        with ProcessPoolExecutor() as executor:
+        with ProcessPoolExecutor(
+            mp_context=multiprocessing.get_context("fork")
+        ) as executor:
 
             def submit_ready_kinds():
                 """Create the next batch of tasks for kinds without dependencies."""
@@ -420,7 +423,7 @@ class TaskGraphGenerator:
         # redone in the new processes. Ideally this would be fixed, or we
         # would take another approach to parallel kind generation. In the
         # meantime, it's not supported outside of Linux.
-        if platform.system() != "Linux":
+        if platform.system() != "Linux" or os.environ.get("TASKGRAPH_SERIAL"):
             all_tasks = self._load_tasks_serial(kinds, kind_graph, parameters)
         else:
             all_tasks = self._load_tasks_parallel(kinds, kind_graph, parameters)
