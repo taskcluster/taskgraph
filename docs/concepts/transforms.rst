@@ -111,7 +111,7 @@ about the state of the tasks at given points. Here is an example:
 
    class MySchema(Schema):
        foo: str  # Required field
-       bar: Optional[bool] = None # Optional field
+       bar: Optional[bool] = None  # Optional field
 
    transforms = TransformSequence()
    transforms.add_validate(MySchema)

@@ -22,7 +22,18 @@ from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.set_name import SET_NAME_MAP
 
 SetNameType = Literal["strip-kind", "retain-kind"]
-GroupByType = Literal["single", "all", "attribute"]
+GroupByType = Literal[
+    "single",
+    "all",
+    "attribute",
+    "single-with-filters",
+    "platform",
+    "single-locale",
+    "chunk-locales",
+    "partner-repack-ids",
+    "component",
+    "build-type",
+]
 
 
 class FromDepsChildSchema(Schema):
