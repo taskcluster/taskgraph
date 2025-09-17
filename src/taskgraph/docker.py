@@ -10,7 +10,7 @@ import tarfile
 import tempfile
 from io import BytesIO
 from textwrap import dedent
-from typing import Dict, Generator, List, Mapping, Optional, Union
+from typing import Dict, Generator, List, Mapping, Optional
 
 try:
     import zstandard as zstd
@@ -65,7 +65,7 @@ def get_image_digest(image_name: str) -> str:
     return task.attributes["cached_task"]["digest"]
 
 
-def load_image_by_name(image_name: str, tag: Optional[str] = None) -> Union[str, bool]:
+def load_image_by_name(image_name: str, tag: Optional[str] = None) -> Optional[str]:
     """Load a docker image by its name.
 
     Finds the appropriate docker image task by name and loads it from
@@ -77,7 +77,7 @@ def load_image_by_name(image_name: str, tag: Optional[str] = None) -> Union[str,
             uses the tag from the image artifact.
 
     Returns:
-        str or bool: The full image tag (name:tag) if successful, False if
+        str or None: The full image tag (name:tag) if successful, None if
             the image artifacts could not be found.
     """
     from taskgraph.generator import load_tasks_for_kind  # noqa: PLC0415
@@ -104,7 +104,7 @@ def load_image_by_name(image_name: str, tag: Optional[str] = None) -> Union[str,
                 image_name=image_name, project=params["project"]
             )
         )
-        return False
+        return None
 
     return load_image_by_task_id(task_id, tag)
 
