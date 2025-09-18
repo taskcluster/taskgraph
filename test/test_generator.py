@@ -216,6 +216,18 @@ def test_load_tasks_for_kind(monkeypatch):
     )
 
 
+def test_loader_backwards_compat_interface(graph_config):
+    """Ensure loaders can be called even if they don't support a
+    `write_artifacts` argument."""
+
+    class OldLoaderKind(Kind):
+        def _get_loader(self):
+            return lambda kind, path, config, params, tasks: []
+
+    kind = OldLoaderKind("", "", {"transforms": []}, graph_config)
+    kind.load_tasks({}, {}, False)
+
+
 @pytest.mark.parametrize(
     "config,expected_transforms",
     (
@@ -243,7 +255,7 @@ def test_default_loader(config, expected_transforms):
     assert loader is default_loader, (
         "Default Kind loader should be taskgraph.loader.default.loader"
     )
-    loader("", "", config, {}, [])
+    loader("", "", config, {}, [], False)
 
     assert config["transforms"] == expected_transforms
 
@@ -273,7 +285,7 @@ def test_default_loader(config, expected_transforms):
 def test_default_loader_errors(config):
     loader = Kind("", "", config, {})._get_loader()
     try:
-        loader("", "", config, {}, [])
+        loader("", "", config, {}, [], False)
     except KeyError:
         return
 
