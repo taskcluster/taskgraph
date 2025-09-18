@@ -26,7 +26,9 @@ class TestDecision(unittest.TestCase):
         try:
             decision.ARTIFACTS_DIR = Path(tmpdir) / "artifacts"
             decision.write_artifact("artifact.json", data)
-            with open(os.path.join(decision.ARTIFACTS_DIR, "artifact.json")) as f:
+            with open(
+                os.path.join(decision.ARTIFACTS_DIR, "public", "artifact.json")
+            ) as f:
                 self.assertEqual(json.load(f), data)
         finally:
             if os.path.exists(tmpdir):
@@ -39,7 +41,97 @@ class TestDecision(unittest.TestCase):
         try:
             decision.ARTIFACTS_DIR = Path(tmpdir) / "artifacts"
             decision.write_artifact("artifact.yml", data)
-            self.assertEqual(load_yaml(decision.ARTIFACTS_DIR, "artifact.yml"), data)
+            self.assertEqual(
+                load_yaml(decision.ARTIFACTS_DIR / "public", "artifact.yml"), data
+            )
+        finally:
+            if os.path.exists(tmpdir):
+                shutil.rmtree(tmpdir)
+            decision.ARTIFACTS_DIR = Path("artifacts")
+
+    def test_write_artifact_custom_prefix(self):
+        data = [{"some": "data"}]
+        tmpdir = tempfile.mkdtemp()
+        try:
+            decision.ARTIFACTS_DIR = Path(tmpdir) / "artifacts"
+            decision.write_artifact("artifact.json", data, "custom-prefix")
+            with open(
+                os.path.join(decision.ARTIFACTS_DIR, "custom-prefix", "artifact.json")
+            ) as f:
+                self.assertEqual(json.load(f), data)
+        finally:
+            if os.path.exists(tmpdir):
+                shutil.rmtree(tmpdir)
+            decision.ARTIFACTS_DIR = Path("artifacts")
+
+    def test_read_artifact_json(self):
+        data = {"test": "data"}
+        tmpdir = tempfile.mkdtemp()
+        try:
+            decision.ARTIFACTS_DIR = Path(tmpdir) / "artifacts"
+            decision.write_artifact("test.json", data)
+            result = decision.read_artifact("test.json")
+            self.assertEqual(result, data)
+        finally:
+            if os.path.exists(tmpdir):
+                shutil.rmtree(tmpdir)
+            decision.ARTIFACTS_DIR = Path("artifacts")
+
+    def test_read_artifact_yml(self):
+        data = {"test": "data"}
+        tmpdir = tempfile.mkdtemp()
+        try:
+            decision.ARTIFACTS_DIR = Path(tmpdir) / "artifacts"
+            decision.write_artifact("test.yml", data)
+            result = decision.read_artifact("test.yml")
+            self.assertEqual(result, data)
+        finally:
+            if os.path.exists(tmpdir):
+                shutil.rmtree(tmpdir)
+            decision.ARTIFACTS_DIR = Path("artifacts")
+
+    def test_read_artifact_custom_prefix(self):
+        data = {"test": "data"}
+        tmpdir = tempfile.mkdtemp()
+        try:
+            decision.ARTIFACTS_DIR = Path(tmpdir) / "artifacts"
+            decision.write_artifact("test.json", data, "custom")
+            result = decision.read_artifact("test.json", "custom")
+            self.assertEqual(result, data)
+        finally:
+            if os.path.exists(tmpdir):
+                shutil.rmtree(tmpdir)
+            decision.ARTIFACTS_DIR = Path("artifacts")
+
+    def test_rename_artifact(self):
+        data = {"test": "data"}
+        tmpdir = tempfile.mkdtemp()
+        try:
+            decision.ARTIFACTS_DIR = Path(tmpdir) / "artifacts"
+            decision.write_artifact("original.json", data)
+            decision.rename_artifact("original.json", "renamed.json")
+            result = decision.read_artifact("renamed.json")
+            self.assertEqual(result, data)
+            # Verify original is gone
+            with self.assertRaises(FileNotFoundError):
+                decision.read_artifact("original.json")
+        finally:
+            if os.path.exists(tmpdir):
+                shutil.rmtree(tmpdir)
+            decision.ARTIFACTS_DIR = Path("artifacts")
+
+    def test_rename_artifact_custom_prefix(self):
+        data = {"test": "data"}
+        tmpdir = tempfile.mkdtemp()
+        try:
+            decision.ARTIFACTS_DIR = Path(tmpdir) / "artifacts"
+            decision.write_artifact("original.json", data, "custom")
+            decision.rename_artifact("original.json", "renamed.json", "custom")
+            result = decision.read_artifact("renamed.json", "custom")
+            self.assertEqual(result, data)
+            # Verify original is gone
+            with self.assertRaises(FileNotFoundError):
+                decision.read_artifact("original.json", "custom")
         finally:
             if os.path.exists(tmpdir):
                 shutil.rmtree(tmpdir)

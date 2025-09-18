@@ -790,6 +790,11 @@ def load_task(args):
 @argument(
     "--verbose", "-v", action="store_true", help="include debug-level logging output"
 )
+@argument(
+    "--artifact-prefix",
+    default="public",
+    help="Prefix for artifact paths (default: public)",
+)
 def decision(options):
     from taskgraph.decision import taskgraph_decision  # noqa: PLC0415
 

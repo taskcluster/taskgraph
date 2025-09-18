@@ -113,34 +113,42 @@ def taskgraph_decision(options, parameters=None):
         enable_verifications=options.get("verify", True),
     )
 
-    # write out the parameters used to generate this graph
-    write_artifact("parameters.yml", dict(**tgg.parameters))
+    # Get the artifact prefix from parameters
+    artifact_prefix = tgg.parameters.get("artifact_prefix", "public")
 
-    # write out the public/actions.json file
+    # write out the parameters used to generate this graph
+    write_artifact("parameters.yml", dict(**tgg.parameters), artifact_prefix)
+
+    # write out the actions.json file
     write_artifact(
         "actions.json",
         render_actions_json(tgg.parameters, tgg.graph_config, decision_task_id),
+        artifact_prefix,
     )
 
     # write out the full graph for reference
     full_task_json = tgg.full_task_graph.to_json()
-    write_artifact("full-task-graph.json", full_task_json)
+    write_artifact("full-task-graph.json", full_task_json, artifact_prefix)
 
-    # write out the public/runnable-jobs.json file
+    # write out the runnable-jobs.json file
     write_artifact(
-        "runnable-jobs.json", full_task_graph_to_runnable_tasks(full_task_json)
+        "runnable-jobs.json",
+        full_task_graph_to_runnable_tasks(full_task_json),
+        artifact_prefix,
     )
 
     # this is just a test to check whether the from_json() function is working
     _, _ = TaskGraph.from_json(full_task_json)
 
     # write out the target task set to allow reproducing this as input
-    write_artifact("target-tasks.json", list(tgg.target_task_set.tasks.keys()))
+    write_artifact(
+        "target-tasks.json", list(tgg.target_task_set.tasks.keys()), artifact_prefix
+    )
 
     # write out the optimized task graph to describe what will actually happen,
     # and the map of labels to taskids
-    write_artifact("task-graph.json", tgg.morphed_task_graph.to_json())
-    write_artifact("label-to-taskid.json", tgg.label_to_taskid)
+    write_artifact("task-graph.json", tgg.morphed_task_graph.to_json(), artifact_prefix)
+    write_artifact("label-to-taskid.json", tgg.label_to_taskid, artifact_prefix)
 
     # write out current run-task and fetch-content scripts
     RUN_TASK_DIR = pathlib.Path(__file__).parent / "run-task"
@@ -181,6 +189,7 @@ def get_decision_parameters(graph_config, options):
             "level",
             "target_tasks_method",
             "tasks_for",
+            "artifact_prefix",
         ]
         if n in options
     }
@@ -366,11 +375,14 @@ def set_try_config(parameters, task_config_file):
             )
 
 
-def write_artifact(filename, data):
-    logger.info(f"writing artifact file `{filename}`")
+def write_artifact(filename, data, artifact_prefix="public"):
+    prefixed_filename = f"{artifact_prefix}/{filename}"
+    logger.info(f"writing artifact file `{prefixed_filename}`")
     if not os.path.isdir(ARTIFACTS_DIR):
         os.mkdir(ARTIFACTS_DIR)
-    path = ARTIFACTS_DIR / filename
+    prefix_dir = ARTIFACTS_DIR / artifact_prefix
+    os.makedirs(prefix_dir, exist_ok=True)
+    path = prefix_dir / filename
     if filename.endswith(".yml"):
         with open(path, "w") as f:
             yaml.safe_dump(data, f, allow_unicode=True, default_flow_style=False)
@@ -386,10 +398,11 @@ def write_artifact(filename, data):
         raise TypeError(f"Don't know how to write to {filename}")
 
 
-def read_artifact(filename):
-    path = ARTIFACTS_DIR / filename
+def read_artifact(filename, artifact_prefix="public"):
+    prefix_dir = ARTIFACTS_DIR / artifact_prefix
+    path = prefix_dir / filename
     if filename.endswith(".yml"):
-        return load_yaml(path, filename)
+        return load_yaml(prefix_dir, filename)
     elif filename.endswith(".json"):
         with open(path) as f:
             return json.load(f)
@@ -402,5 +415,6 @@ def read_artifact(filename):
         raise TypeError(f"Don't know how to read {filename}")
 
 
-def rename_artifact(src, dest):
-    os.rename(ARTIFACTS_DIR / src, ARTIFACTS_DIR / dest)
+def rename_artifact(src, dest, artifact_prefix="public"):
+    prefix_dir = ARTIFACTS_DIR / artifact_prefix
+    os.rename(prefix_dir / src, prefix_dir / dest)

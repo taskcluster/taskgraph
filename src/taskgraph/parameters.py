@@ -61,6 +61,7 @@ base_schema = Schema(
         Required("target_tasks_method"): str,
         Required("tasks_for"): str,
         Required("version"): Any(str, None),
+        Optional("artifact_prefix"): str,
         Optional("code-review"): {
             Required("phabricator-build-target"): str,
         },

@@ -19,6 +19,7 @@ from taskgraph.taskgraph import TaskGraph
 from taskgraph.util.taskcluster import (
     CONCURRENCY,
     get_artifact,
+    get_artifact_with_prefix,
     get_session,
     list_tasks,
     parse_time,
@@ -28,8 +29,8 @@ from taskgraph.util.taskgraph import find_decision_task
 logger = logging.getLogger(__name__)
 
 
-def get_parameters(decision_task_id):
-    return get_artifact(decision_task_id, "public/parameters.yml")
+def get_parameters(decision_task_id, artifact_prefix="public"):
+    return get_artifact(decision_task_id, f"{artifact_prefix}/parameters.yml")
 
 
 def fetch_graph_and_labels(parameters, graph_config, task_group_id=None):
@@ -43,9 +44,13 @@ def fetch_graph_and_labels(parameters, graph_config, task_group_id=None):
         decision_task_id = task_group_id
 
     # First grab the graph and labels generated during the initial decision task
-    full_task_graph = get_artifact(decision_task_id, "public/full-task-graph.json")
+    full_task_graph = get_artifact_with_prefix(
+        decision_task_id, "full-task-graph.json", parameters
+    )
     _, full_task_graph = TaskGraph.from_json(full_task_graph)
-    label_to_taskid = get_artifact(decision_task_id, "public/label-to-taskid.json")
+    label_to_taskid = get_artifact_with_prefix(
+        decision_task_id, "label-to-taskid.json", parameters
+    )
 
     # fetch everything in parallel; this avoids serializing any delay in downloading
     # each artifact (such as waiting for the artifact to be mirrored locally)
@@ -56,7 +61,9 @@ def fetch_graph_and_labels(parameters, graph_config, task_group_id=None):
         # for old ones
         def fetch_action(task_id):
             logger.info(f"fetching label-to-taskid.json for action task {task_id}")
-            run_label_to_id = get_artifact(task_id, "public/label-to-taskid.json")
+            run_label_to_id = get_artifact_with_prefix(
+                    task_id, "label-to-taskid.json", parameters
+                )
             if label_to_taskid and run_label_to_id:
                 label_to_taskid.update(run_label_to_id)
             else:
@@ -81,7 +88,9 @@ def fetch_graph_and_labels(parameters, graph_config, task_group_id=None):
         def fetch_cron(task_id):
             logger.info(f"fetching label-to-taskid.json for cron task {task_id}")
             try:
-                run_label_to_id = get_artifact(task_id, "public/label-to-taskid.json")
+                run_label_to_id = get_artifact_with_prefix(
+                    task_id, "label-to-taskid.json", parameters
+                )
                 label_to_taskid.update(run_label_to_id)  # type: ignore
             except HTTPError as e:
                 if e.response.status_code != 404:

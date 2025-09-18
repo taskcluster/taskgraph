@@ -161,8 +161,28 @@ def get_artifact_path(task, path):
     return f"{get_artifact_prefix(task)}/{path}"
 
 
-def get_index_url(index_path, multiple=False):
-    index_tmpl = liburls.api(get_root_url(), "index", "v1", "task{}/{}")
+def get_artifact_prefix_from_parameters(parameters):
+    return parameters.get("artifact_prefix", "public")
+
+
+def get_artifact_with_prefix(task_id, path, parameters, use_proxy=False):
+    prefix = get_artifact_prefix_from_parameters(parameters)
+    prefixed_path = f"{prefix}/{path}"
+    return get_artifact(task_id, prefixed_path, use_proxy)
+
+
+def get_artifact_prefix_from_parameters(parameters):
+    return parameters.get("artifact_prefix", "public")
+
+
+def get_artifact_with_prefix(task_id, path, parameters, use_proxy=False):
+    prefix = get_artifact_prefix_from_parameters(parameters)
+    prefixed_path = f"{prefix}/{path}"
+    return get_artifact(task_id, prefixed_path, use_proxy)
+
+
+def get_index_url(index_path, use_proxy=False, multiple=False):
+    index_tmpl = liburls.api(get_root_url(use_proxy), "index", "v1", "task{}/{}")
     return index_tmpl.format("s" if multiple else "", index_path)
 
 
