@@ -13,6 +13,7 @@ import taskgraph
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util import json
 from taskgraph.util.docker import create_context_tar, generate_context_hash
+from taskgraph.util.taskcluster import get_artifact_prefix_from_parameters
 from taskgraph.util.schema import Schema
 
 from .task import task_description_schema
@@ -143,6 +144,8 @@ def fill_template(config, tasks):
                     f"Missing package job for {config.kind}-{image_name}: {p}"
                 )
 
+        artifact_prefix = get_artifact_prefix_from_parameters(config.params)
+
         if not taskgraph.fast:
             context_path = os.path.join("taskcluster", "docker", definition)
             topsrcdir = os.path.dirname(config.graph_config.taskcluster_yml)
@@ -199,12 +202,12 @@ def fill_template(config, tasks):
                     {
                         "type": "file",
                         "path": "/workspace/out/image.tar.zst",
-                        "name": "public/image.tar.zst",
+                        "name": f"{artifact_prefix}/image.tar.zst",
                     }
                 ],
                 "env": {
                     "CONTEXT_TASK_ID": {"task-reference": "<decision>"},
-                    "CONTEXT_PATH": f"public/docker-contexts/{image_name}.tar.gz",
+                    "CONTEXT_PATH": f"{artifact_prefix}/docker-contexts/{image_name}.tar.gz",
                     "HASH": context_hash,
                     "PROJECT": config.params["project"],
                     "IMAGE_NAME": image_name,
