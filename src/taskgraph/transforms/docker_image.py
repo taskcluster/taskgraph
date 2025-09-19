@@ -231,7 +231,7 @@ def fill_template(config, tasks):
         }
 
         if not is_public_artifact_prefix(config.params):
-            taskdesc["worker"]["features"] = {"taskclusterProxy": True}
+            taskdesc["worker"]["taskcluster-proxy"] = True
         if "index" in task:
             taskdesc["index"] = task["index"]
         if job_symbol:
