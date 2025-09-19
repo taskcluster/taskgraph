@@ -17,7 +17,7 @@ from taskgraph.util.templates import merge
 here = Path(__file__).parent
 
 
-def fake_loader(kind, path, config, parameters, loaded_tasks):
+def fake_loader(kind, path, config, parameters, loaded_tasks, write_artifacts):
     for i in range(3):
         dependencies = {}
         if i >= 1:
