@@ -14,6 +14,10 @@ from taskgraph.transforms.base import TransformSequence
 from taskgraph.util import json
 from taskgraph.util.docker import create_context_tar, generate_context_hash
 from taskgraph.util.schema import Schema
+from taskgraph.util.taskcluster import (
+    get_artifact_prefix_from_parameters,
+    is_public_artifact_prefix,
+)
 
 from .task import task_description_schema
 
@@ -23,11 +27,11 @@ CONTEXTS_DIR = "docker-contexts"
 
 DIGEST_RE = re.compile("^[0-9a-f]{64}$")
 
-IMAGE_BUILDER_IMAGE = (
-    "mozillareleases/image_builder:5.1.0"
-    "@sha256:"
-    "7fe70dcedefffffa03237ba5d456d42e0d7461de066db3f7a7c280a104869cd5"
-)
+IMAGE_BUILDER_IMAGE = {
+    "path": "public/image.tar.zst",
+    "type": "task-image",
+    "task-id": "EbA_upYqQn6GSpUS7t1TLw"
+}
 
 transforms = TransformSequence()
 
@@ -143,6 +147,8 @@ def fill_template(config, tasks):
                     f"Missing package job for {config.kind}-{image_name}: {p}"
                 )
 
+        artifact_prefix = get_artifact_prefix_from_parameters(config.params)
+
         if not taskgraph.fast:
             context_path = os.path.join("taskcluster", "docker", definition)
             topsrcdir = os.path.dirname(config.graph_config.taskcluster_yml)
@@ -189,7 +195,9 @@ def fill_template(config, tasks):
             },
             "always-target": True,
             "expires-after": expires if config.params.is_try() else "1 year",
-            "scopes": [],
+            "scopes": []
+            if is_public_artifact_prefix(config.params)
+            else [f"queue:get-artifact:{artifact_prefix}/docker-contexts/*.tar.gz"],
             "run-on-projects": [],
             "worker-type": "images",
             "worker": {
@@ -199,12 +207,12 @@ def fill_template(config, tasks):
                     {
                         "type": "file",
                         "path": "/workspace/image.tar.zst",
-                        "name": "public/image.tar.zst",
+                        "name": f"{artifact_prefix}/image.tar.zst",
                     }
                 ],
                 "env": {
                     "CONTEXT_TASK_ID": {"task-reference": "<decision>"},
-                    "CONTEXT_PATH": f"public/docker-contexts/{image_name}.tar.gz",
+                    "CONTEXT_PATH": f"{artifact_prefix}/docker-contexts/{image_name}.tar.gz",
                     "HASH": context_hash,
                     "PROJECT": config.params["project"],
                     "IMAGE_NAME": image_name,
@@ -221,6 +229,9 @@ def fill_template(config, tasks):
                 "max-run-time": 7200,
             },
         }
+
+        if not is_public_artifact_prefix(config.params):
+            taskdesc["worker"]["taskcluster-proxy"] = True
         if "index" in task:
             taskdesc["index"] = task["index"]
         if job_symbol:

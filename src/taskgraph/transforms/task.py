@@ -489,6 +489,8 @@ def verify_index(config, index):
             {"in-tree": str},
             # an indexed docker image
             {"indexed": str},
+            # an external task image
+            {"path": str, "type": str, "task-id": str},
         ),
         # worker features that should be enabled
         Required("relengapi-proxy"): bool,
@@ -592,6 +594,13 @@ def build_docker_worker_payload(config, task, task_def):
                 "path": "public/image.tar.zst",
                 "namespace": image["indexed"],
                 "type": "indexed-image",
+            }
+        elif "task-id" in image:
+            # External task image - convert to taskId format for Taskcluster
+            image = {
+                "path": image["path"],
+                "taskId": image["task-id"],
+                "type": image["type"],
             }
         else:
             raise Exception("unknown docker image type")
