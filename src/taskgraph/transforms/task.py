@@ -490,7 +490,7 @@ def verify_index(config, index):
             # an indexed docker image
             {"indexed": str},
             # an external task image
-            {"path": str, "type": str, "taskId": str},
+            {"path": str, "type": str, "task-id": str},
         ),
         # worker features that should be enabled
         Required("relengapi-proxy"): bool,
