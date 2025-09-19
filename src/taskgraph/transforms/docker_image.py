@@ -30,7 +30,7 @@ DIGEST_RE = re.compile("^[0-9a-f]{64}$")
 IMAGE_BUILDER_IMAGE = {
     "path": "public/image.tar.zst",
     "type": "task-image",
-    "taskId": "EbA_upYqQn6GSpUS7t1TLw"
+    "task-id": "EbA_upYqQn6GSpUS7t1TLw"
 }
 
 transforms = TransformSequence()
