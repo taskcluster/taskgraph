@@ -165,6 +165,10 @@ def get_artifact_prefix_from_parameters(parameters):
     return parameters.get("artifact_prefix", "public")
 
 
+def is_public_artifact_prefix(parameters):
+    return get_artifact_prefix_from_parameters(parameters) == "public"
+
+
 def get_artifact_with_prefix(task_id, path, parameters, use_proxy=False):
     prefix = get_artifact_prefix_from_parameters(parameters)
     prefixed_path = f"{prefix}/{path}"

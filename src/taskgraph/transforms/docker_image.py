@@ -13,8 +13,11 @@ import taskgraph
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util import json
 from taskgraph.util.docker import create_context_tar, generate_context_hash
-from taskgraph.util.taskcluster import get_artifact_prefix_from_parameters
 from taskgraph.util.schema import Schema
+from taskgraph.util.taskcluster import (
+    get_artifact_prefix_from_parameters,
+    is_public_artifact_prefix,
+)
 
 from .task import task_description_schema
 
@@ -192,7 +195,9 @@ def fill_template(config, tasks):
             },
             "always-target": True,
             "expires-after": expires if config.params.is_try() else "1 year",
-            "scopes": [],
+            "scopes": []
+            if is_public_artifact_prefix(config.params)
+            else [f"queue:get-artifact:{artifact_prefix}/docker-contexts/*.tar.gz"],
             "run-on-projects": [],
             "worker-type": "images",
             "worker": {
@@ -224,6 +229,9 @@ def fill_template(config, tasks):
                 "max-run-time": 7200,
             },
         }
+
+        if not is_public_artifact_prefix(config.params):
+            taskdesc["worker"]["features"] = {"taskclusterProxy": True}
         if "index" in task:
             taskdesc["index"] = task["index"]
         if job_symbol:
