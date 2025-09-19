@@ -489,6 +489,8 @@ def verify_index(config, index):
             {"in-tree": str},
             # an indexed docker image
             {"indexed": str},
+            # an external task image
+            {"path": str, "type": str, "taskId": str},
         ),
         # worker features that should be enabled
         Required("relengapi-proxy"): bool,
