@@ -27,11 +27,11 @@ CONTEXTS_DIR = "docker-contexts"
 
 DIGEST_RE = re.compile("^[0-9a-f]{64}$")
 
-IMAGE_BUILDER_IMAGE = (
-    "mozillareleases/image_builder:5.1.0"
-    "@sha256:"
-    "7fe70dcedefffffa03237ba5d456d42e0d7461de066db3f7a7c280a104869cd5"
-)
+IMAGE_BUILDER_IMAGE = {
+    "path": "public/image.tar.zst",
+    "type": "task-image",
+    "taskId": "EbA_upYqQn6GSpUS7t1TLw"
+}
 
 transforms = TransformSequence()
 
