@@ -1,5 +1,12 @@
 # Change Log
 
+## [15.3.0] - 2025-09-19
+
+### Added
+
+- pass along `write_artifacts` to loaders (#779)
+- add `openssh-client` to the run-task and decision docker images (#777)
+
 ## [15.2.1] - 2025-09-11
 
 ### Fixed
