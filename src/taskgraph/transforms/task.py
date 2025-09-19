@@ -595,6 +595,13 @@ def build_docker_worker_payload(config, task, task_def):
                 "namespace": image["indexed"],
                 "type": "indexed-image",
             }
+        elif "task-id" in image:
+            # External task image - convert to taskId format for Taskcluster
+            image = {
+                "path": image["path"],
+                "taskId": image["task-id"],
+                "type": image["type"],
+            }
         else:
             raise Exception("unknown docker image type")
 
