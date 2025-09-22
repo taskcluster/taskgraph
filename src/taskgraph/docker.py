@@ -425,9 +425,10 @@ def load_task(
 
     if "payload" not in task_def or not (image := task_def["payload"].get("image")):
         print("Tasks without a `payload.image` are not supported!")
+
         return 1
 
-    command = task_def["payload"].get("command")
+    command = task_def["payload"].get("command")  # type: ignore
     if not command or not command[0].endswith("run-task"):
         print("Only tasks using `run-task` are supported!")
         return 1
@@ -470,12 +471,12 @@ def load_task(
     # Set some env vars the worker would normally set.
     env = {
         "RUN_ID": "0",
-        "TASK_GROUP_ID": task_def.get("taskGroupId", ""),
+        "TASK_GROUP_ID": task_def.get("taskGroupId", ""),  # type: ignore
         "TASK_ID": task_id,
-        "TASKCLUSTER_ROOT_URL": get_root_url(False),
+        "TASKCLUSTER_ROOT_URL": get_root_url(),
     }
     # Add the task's environment variables.
-    env.update(task_def["payload"].get("env", {}))
+    env.update(task_def["payload"].get("env", {}))  # type: ignore
 
     # run-task expects the worker to mount a volume for each path defined in
     # TASKCLUSTER_CACHES, delete them to avoid needing to do the same.

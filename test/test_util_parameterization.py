@@ -147,6 +147,8 @@ def test_task_refs_invalid():
 @pytest.fixture
 def assert_artifact_refs(monkeypatch):
     monkeypatch.setenv("TASKCLUSTER_ROOT_URL", _test_root_url())
+    # Clear TASKCLUSTER_PROXY_URL if it's set (CI environment may have it)
+    monkeypatch.delenv("TASKCLUSTER_PROXY_URL", raising=False)
 
     def inner(input, output):
         # Clear memoized function

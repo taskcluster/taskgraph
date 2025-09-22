@@ -90,11 +90,7 @@ def resolve_task_references(
                         f"task '{label}' has no dependency named '{dependency}'"
                     )
 
-            use_proxy = False
-            if not artifact_name.startswith("public/"):
-                use_proxy = True
-
-            return get_artifact_url(task_id, artifact_name, use_proxy=use_proxy)
+            return get_artifact_url(task_id, artifact_name)
 
         return ARTIFACT_REFERENCE_PATTERN.sub(repl, val)
 
