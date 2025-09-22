@@ -468,9 +468,6 @@ def load_task(
         else:
             task_cwd = "$TASK_WORKDIR"
 
-    image_task_id = task_def["payload"]["image"]["taskId"]  # type: ignore
-    image_tag = load_image_by_task_id(image_task_id)
-    
     # Set some env vars the worker would normally set.
     env = {
         "RUN_ID": "0",
