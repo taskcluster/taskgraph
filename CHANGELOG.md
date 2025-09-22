@@ -1,5 +1,16 @@
 # Change Log
 
+## [15.4.0] - 2025-09-22
+
+### Added
+
+- `taskgraph load-task` now supports an `--image` flag to use a different docker image
+
+### Fixed
+
+- Using `unique-kinds` with `fetches` now works in from_deps transforms
+- Internal `load_image_by_name` function returns `None` instead of `False`
+
 ## [15.3.0] - 2025-09-19
 
 ### Added
