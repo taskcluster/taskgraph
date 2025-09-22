@@ -113,11 +113,22 @@ def test_build_image_error(capsys, mock_docker_build):
 def run_load_task(mocker):
     task_id = "abc"
 
-    def inner(task, remove=False):
+    def inner(task, remove=False, custom_image=None):
         proc = mocker.MagicMock()
         proc.returncode = 0
 
+        graph_config = GraphConfig(
+            {
+                "trust-domain": "test-domain",
+                "docker-image-kind": "docker-image",
+            },
+            "test/data/taskcluster",
+        )
+
         mocks = {
+            "build_image": mocker.patch.object(
+                docker, "build_image", return_value=None
+            ),
             "get_task_definition": mocker.patch.object(
                 docker, "get_task_definition", return_value=task
             ),
@@ -129,7 +140,9 @@ def run_load_task(mocker):
             ),
         }
 
-        ret = docker.load_task(task_id, remove=remove)
+        ret = docker.load_task(
+            graph_config, task_id, remove=remove, custom_image=custom_image
+        )
         return ret, mocks
 
     return inner
@@ -139,14 +152,17 @@ def test_load_task_invalid_task(run_load_task):
     task = {}
     assert run_load_task(task)[0] == 1
 
-    task["tags"] = {"worker-implementation": "generic-worker"}
+    task["payload"] = {}
     assert run_load_task(task)[0] == 1
 
-    task["tags"]["worker-implementation"] = "docker-worker"
-    task["payload"] = {"command": []}
+    task["payload"] = {"command": [], "image": {"type": "task-image"}}
     assert run_load_task(task)[0] == 1
 
     task["payload"]["command"] = ["echo", "foo"]
+    assert run_load_task(task)[0] == 1
+
+    task["payload"]["image"]["type"] = "foobar"
+    task["payload"]["command"] = ["run-task", "--", "bash", "-c", "echo foo"]
     assert run_load_task(task)[0] == 1
 
 
@@ -161,9 +177,8 @@ def test_load_task(run_load_task):
                 "--",
                 "echo foo",
             ],
-            "image": {"taskId": image_task_id},
+            "image": {"taskId": image_task_id, "type": "task-image"},
         },
-        "tags": {"worker-implementation": "docker-worker"},
     }
     ret, mocks = run_load_task(task)
     assert ret == 0
@@ -199,7 +214,33 @@ def test_load_task(run_load_task):
             assert exp == actual[i]
 
 
-def test_load_task_env_and_remove(run_load_task):
+def test_load_task_env_init_and_remove(mocker, run_load_task):
+    # Mock NamedTemporaryFile to capture what's written to it
+    mock_envfile = mocker.MagicMock()
+    mock_envfile.name = "/tmp/test_envfile"
+    mock_envfile.fileno.return_value = 123  # Mock file descriptor
+
+    written_env_content = []
+    mock_envfile.write = lambda content: written_env_content.append(content)
+    mock_envfile.close = mocker.MagicMock()
+
+    mock_initfile = mocker.MagicMock()
+    mock_initfile.name = "/tmp/test_initfile"
+    mock_initfile.fileno.return_value = 456  # Mock file descriptor
+    written_init_content = []
+    mock_initfile.write = lambda content: written_init_content.append(content)
+    mock_initfile.close = mocker.MagicMock()
+
+    # Return different mocks for each call to NamedTemporaryFile
+    mock_tempfile = mocker.patch.object(docker.tempfile, "NamedTemporaryFile")
+    mock_tempfile.side_effect = [mock_envfile, mock_initfile]
+
+    # Mock os.remove to prevent file deletion errors
+    mock_os_remove = mocker.patch.object(docker.os, "remove")
+
+    # Mock os.fchmod
+    mocker.patch.object(docker.os, "fchmod")
+
     image_task_id = "def"
     task = {
         "payload": {
@@ -210,15 +251,150 @@ def test_load_task_env_and_remove(run_load_task):
                 "--",
                 "echo foo",
             ],
-            "env": {"FOO": "BAR", "BAZ": 1},
-            "image": {"taskId": image_task_id},
+            "env": {"FOO": "BAR", "BAZ": "1", "TASKCLUSTER_CACHES": "path"},
+            "image": {"taskId": image_task_id, "type": "task-image"},
         },
-        "tags": {"worker-implementation": "docker-worker"},
     }
     ret, mocks = run_load_task(task, remove=True)
     assert ret == 0
 
+    # NamedTemporaryFile was called twice (once for env, once for init)
+    assert mock_tempfile.call_count == 2
+
+    # Verify the environment content written to the file
+    assert len(written_env_content) == 1
+    env_lines = written_env_content[0].split("\n")
+
+    # Verify written env is expected
+    assert "TASKCLUSTER_CACHES=path" not in env_lines
+    assert "FOO=BAR" in env_lines
+    assert "BAZ=1" in env_lines
+
+    # Check that the default env vars were included
+    assert any("RUN_ID=0" in line for line in env_lines)
+    assert any("TASK_ID=abc" in line for line in env_lines)
+    assert any("TASK_GROUP_ID=" in line for line in env_lines)
+    assert any("TASKCLUSTER_ROOT_URL=" in line for line in env_lines)
+
+    # Both files were closed and removed
+    mock_envfile.close.assert_called_once()
+    mock_initfile.close.assert_called_once()
+    assert mock_os_remove.call_count == 2
+    assert mock_os_remove.call_args_list[0] == mocker.call("/tmp/test_envfile")
+    assert mock_os_remove.call_args_list[1] == mocker.call("/tmp/test_initfile")
+
+    # Verify subprocess was called with the correct env file and init file
     mocks["subprocess_run"].assert_called_once()
     actual = mocks["subprocess_run"].call_args[0][0]
-    assert re.match(r"--env-file=/tmp/tmp.*", actual[4])
+    assert actual[3] == "/tmp/test_initfile:/builds/worker/.bashrc"
+    assert actual[4] == "--env-file=/tmp/test_envfile"
     assert actual[5] == "--rm"
+
+
+@pytest.mark.parametrize(
+    "image",
+    [
+        pytest.param({"type": "task-image", "taskId": "xyz"}, id="task_image"),
+        pytest.param(
+            {"type": "indexed-image", "namespace": "project.some-namespace.latest"},
+            id="indexed_image",
+        ),
+    ],
+)
+def test_load_task_with_different_image_types(
+    mocker,
+    run_load_task,
+    image,
+):
+    task_id = "abc"
+    image_task_id = "xyz"
+    task = {
+        "payload": {
+            "command": [
+                "/usr/bin/run-task",
+                "--task-cwd=/builds/worker",
+                "--",
+                "echo",
+                "test",
+            ],
+            "image": image,
+        },
+    }
+
+    mocker.patch.object(docker, "find_task_id", return_value=image_task_id)
+
+    ret, mocks = run_load_task(task)
+    assert ret == 0
+
+    mocks["get_task_definition"].assert_called_once_with(task_id)
+    mocks["load_image_by_task_id"].assert_called_once_with(image_task_id)
+
+
+def test_load_task_with_unsupported_image_type(capsys, run_load_task):
+    task = {
+        "payload": {
+            "command": [
+                "/usr/bin/run-task",
+                "--task-cwd=/builds/worker",
+                "--",
+                "echo foo",
+            ],
+            "image": {"type": "unsupported-type", "path": "/some/path"},
+        },
+    }
+
+    ret, _ = run_load_task(task)
+    assert ret == 1
+
+    _, err = capsys.readouterr()
+    assert "Tasks with unsupported-type images are not supported!" in err
+
+
+@pytest.fixture
+def task():
+    return {
+        "payload": {
+            "command": [
+                "/usr/bin/run-task",
+                "--task-cwd=/builds/worker",
+                "--",
+                "echo",
+                "test",
+            ],
+            "image": {"type": "task-image", "taskId": "abc"},
+        },
+    }
+
+
+def test_load_task_with_custom_image_in_tree(run_load_task, task):
+    image = "hello-world"
+    ret, mocks = run_load_task(task, custom_image=image)
+    assert ret == 0
+
+    mocks["build_image"].assert_called_once()
+    args = mocks["subprocess_run"].call_args[0][0]
+    tag = args[args.index("-it") + 1]
+    assert tag == f"taskcluster/{image}:latest"
+
+
+def test_load_task_with_custom_image_task_id(run_load_task, task):
+    image = "task-id=abc"
+    ret, mocks = run_load_task(task, custom_image=image)
+    assert ret == 0
+    mocks["load_image_by_task_id"].assert_called_once_with("abc")
+
+
+def test_load_task_with_custom_image_index(mocker, run_load_task, task):
+    image = "index=abc"
+    mocker.patch.object(docker, "find_task_id", return_value="abc")
+    ret, mocks = run_load_task(task, custom_image=image)
+    assert ret == 0
+    mocks["load_image_by_task_id"].assert_called_once_with("abc")
+
+
+def test_load_task_with_custom_image_registry(mocker, run_load_task, task):
+    image = "ubuntu:latest"
+    ret, mocks = run_load_task(task, custom_image=image)
+    assert ret == 0
+    assert not mocks["load_image_by_task_id"].called
+    assert not mocks["build_image"].called

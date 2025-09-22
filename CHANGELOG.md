@@ -1,5 +1,48 @@
 # Change Log
 
+## [15.4.0] - 2025-09-22
+
+### Added
+
+- `taskgraph load-task` now supports an `--image` flag to use a different docker image
+
+### Fixed
+
+- Using `unique-kinds` with `fetches` now works in from_deps transforms
+- Internal `load_image_by_name` function returns `None` instead of `False`
+
+## [15.3.0] - 2025-09-19
+
+### Added
+
+- pass along `write_artifacts` to loaders (#779)
+- add `openssh-client` to the run-task and decision docker images (#777)
+
+## [15.2.1] - 2025-09-11
+
+### Fixed
+
+- Minor fixes for multiprocess kind processing (#773)
+
+## [15.2.0] - 2025-09-10
+
+### Added
+
+- Process kinds in parallel on Linux with a pool of processes (#765)
+
+## [15.1.4] - 2025-09-09
+
+### Fixed
+
+- various changes to `taskgraph load-task` to support more types of tasks
+- issue in the `GraphConfig.vcs_root` detection logic
+
+## [15.1.3] - 2025-09-05
+
+### Fixed
+
+- set continuation token correctly in `status_task_batched` (#763)
+
 ## [15.1.2] - 2025-09-04
 
 ### Fixed

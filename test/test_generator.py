@@ -3,16 +3,27 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
+from concurrent.futures import ProcessPoolExecutor
+
 import pytest
-from pytest_taskgraph import FakeKind, WithFakeKind, fake_load_graph_config
+from pytest_taskgraph import WithFakeKind, fake_load_graph_config
 
 from taskgraph import generator, graph
 from taskgraph.generator import Kind, load_tasks_for_kind, load_tasks_for_kinds
 from taskgraph.loader.default import loader as default_loader
 
 
-def test_kind_ordering(maketgg):
+class FakePPE(ProcessPoolExecutor):
+    loaded_kinds = []
+
+    def submit(self, kind_load_tasks, *args):
+        self.loaded_kinds.append(kind_load_tasks.__self__.name)
+        return super().submit(kind_load_tasks, *args)
+
+
+def test_kind_ordering(mocker, maketgg):
     "When task kinds depend on each other, they are loaded in postorder"
+    mocked_ppe = mocker.patch.object(generator, "ProcessPoolExecutor", new=FakePPE)
     tgg = maketgg(
         kinds=[
             ("_fake3", {"kind-dependencies": ["_fake2", "_fake1"]}),
@@ -21,7 +32,7 @@ def test_kind_ordering(maketgg):
         ]
     )
     tgg._run_until("full_task_set")
-    assert FakeKind.loaded_kinds == ["_fake1", "_fake2", "_fake3"]
+    assert mocked_ppe.loaded_kinds == ["_fake1", "_fake2", "_fake3"]
 
 
 def test_full_task_set(maketgg):
@@ -182,7 +193,7 @@ def test_load_tasks_for_kind(monkeypatch):
     tasks = load_tasks_for_kind(
         {"_kinds": [("_example-kind", []), ("docker-image", [])]},
         "_example-kind",
-        "/root",
+        "/root/taskcluster",
     )
     assert "docker-image-t-1" not in tasks
     assert (
@@ -193,7 +204,7 @@ def test_load_tasks_for_kind(monkeypatch):
     tasks = load_tasks_for_kinds(
         {"_kinds": [("_example-kind", []), ("docker-image", [])]},
         ["_example-kind", "docker-image"],
-        "/root",
+        "/root/taskcluster",
     )
     assert (
         "docker-image-t-1" in tasks
@@ -203,6 +214,18 @@ def test_load_tasks_for_kind(monkeypatch):
         "_example-kind-t-1" in tasks
         and tasks["_example-kind-t-1"].label == "_example-kind-t-1"
     )
+
+
+def test_loader_backwards_compat_interface(graph_config):
+    """Ensure loaders can be called even if they don't support a
+    `write_artifacts` argument."""
+
+    class OldLoaderKind(Kind):
+        def _get_loader(self):
+            return lambda kind, path, config, params, tasks: []
+
+    kind = OldLoaderKind("", "", {"transforms": []}, graph_config)
+    kind.load_tasks({}, {}, False)
 
 
 @pytest.mark.parametrize(
@@ -232,7 +255,7 @@ def test_default_loader(config, expected_transforms):
     assert loader is default_loader, (
         "Default Kind loader should be taskgraph.loader.default.loader"
     )
-    loader("", "", config, {}, [])
+    loader("", "", config, {}, [], False)
 
     assert config["transforms"] == expected_transforms
 
@@ -262,7 +285,7 @@ def test_default_loader(config, expected_transforms):
 def test_default_loader_errors(config):
     loader = Kind("", "", config, {})._get_loader()
     try:
-        loader("", "", config, {}, [])
+        loader("", "", config, {}, [], False)
     except KeyError:
         return
 
@@ -293,5 +316,5 @@ def test_kind_load_tasks(monkeypatch, graph_config, parameters, datadir, kind_co
     kind = Kind(
         name="fake", path="foo/bar", config=kind_config, graph_config=graph_config
     )
-    tasks = kind.load_tasks(parameters, [], False)
+    tasks = kind.load_tasks(parameters, {}, False)
     assert tasks

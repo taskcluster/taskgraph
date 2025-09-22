@@ -307,7 +307,6 @@ def status_task_batched(task_ids):
         for t in status_list
         if "namespace" in t and "taskId" in t
     }
-
     return statuses
 
 
