@@ -389,6 +389,10 @@ class GitRepository(Repository):
         return self.run("branch", "--show-current").strip() or None
 
     @property
+    def is_shallow(self):
+        return self.run("rev-parse", "--is-shallow-repository").strip() == "true"
+
+    @property
     def all_remote_names(self):
         remotes = self.run("remote").splitlines()
         if not remotes:
@@ -546,10 +550,25 @@ class GitRepository(Repository):
         self.run("checkout", ref)
 
     def find_latest_common_revision(self, base_ref_or_rev, head_rev):
-        try:
-            return self.run("merge-base", base_ref_or_rev, head_rev).strip()
-        except subprocess.CalledProcessError:
-            return self.NULL_REVISION
+
+        def run_merge_base():
+            try:
+                return self.run("merge-base", base_ref_or_rev, head_rev).strip()
+            except subprocess.CalledProcessError:
+                return None
+
+        if not self.is_shallow:
+            return run_merge_base() or self.NULL_REVISION
+
+        deepen = 10
+        rev = run_merge_base()
+        while not rev:
+            self.run("fetch", "--deepen", str(deepen), self.remote_name)
+            rev = run_merge_base()
+            deepen = deepen * 10
+
+        return rev
+
 
     def does_revision_exist_locally(self, revision):
         try:
