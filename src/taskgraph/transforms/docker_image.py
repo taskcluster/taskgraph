@@ -197,7 +197,7 @@ def fill_template(config, tasks):
             "expires-after": expires if config.params.is_try() else "1 year",
             "scopes": []
             if is_public_artifact_prefix(config.params)
-            else [f"queue:get-artifact:{artifact_prefix}/docker-contexts/*.tar.gz"],
+            else [f"queue:get-artifact:{artifact_prefix}/docker-contexts/*"],
             "run-on-projects": [],
             "worker-type": "images",
             "worker": {
