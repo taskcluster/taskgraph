@@ -680,6 +680,16 @@ def image_digest(args):
     "'-' to read from stdin.",
 )
 @argument(
+    "-i",
+    "--interactive",
+    action="store_true",
+    default=False,
+    help="Setup the task but pause execution before executing its command. "
+    "Repositories will be cloned, environment variables will be set and an"
+    "executable script named `exec-task` will be provided to resume task "
+    "execution. Only supported for `run-task` based tasks.",
+)
+@argument(
     "--keep",
     dest="remove",
     action="store_false",
@@ -719,6 +729,7 @@ def load_task(args):
     return load_task(
         graph_config,
         args["task"],
+        interactive=args["interactive"],
         remove=args["remove"],
         user=args["user"],
         custom_image=args["image"],

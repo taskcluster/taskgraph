@@ -379,7 +379,7 @@ def load_task(
     remove: bool = True,
     user: Optional[str] = None,
     custom_image: Optional[str] = None,
-    interactive: Optional[bool] = True,
+    interactive: Optional[bool] = False,
 ) -> int:
     """Load and run a task interactively in a Docker container.
 
@@ -396,7 +396,7 @@ def load_task(
         custom_image: A custom image to use instead of the task's image.
         interactive: If True, execution of the task will be paused and user
           will be dropped into a shell. They can run `exec-task` to resume
-          it (default: True).
+          it (default: False).
 
     Returns:
         int: The exit code from the Docker container.

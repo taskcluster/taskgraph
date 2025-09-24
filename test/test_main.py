@@ -444,7 +444,7 @@ def run_load_task(mocker, monkeypatch):
 
 
 def test_load_task_command(run_load_task):
-    # Test normal task ID
+    # Test normal task ID (default non-interactive)
     result, mocks = run_load_task(["load-task", "task-id-123"])
 
     assert result == 0
@@ -453,6 +453,20 @@ def test_load_task_command(run_load_task):
     mocks["docker_load_task"].assert_called_once_with(
         mocks["graph_config"],
         "task-id-123",
+        interactive=False,
+        remove=True,
+        user=None,
+        custom_image=None,
+    )
+
+    # Test with interactive flag
+    result, mocks = run_load_task(["load-task", "-i", "task-id-456"])
+
+    assert result == 0
+    mocks["docker_load_task"].assert_called_once_with(
+        mocks["graph_config"],
+        "task-id-456",
+        interactive=True,
         remove=True,
         user=None,
         custom_image=None,
@@ -476,6 +490,7 @@ def test_load_task_command_with_stdin(run_load_task):
     mocks["docker_load_task"].assert_called_once_with(
         mocks["graph_config"],
         task_def,
+        interactive=False,
         remove=True,
         user=None,
         custom_image=None,
@@ -492,6 +507,7 @@ def test_load_task_command_with_task_id(run_load_task):
     mocks["docker_load_task"].assert_called_once_with(
         mocks["graph_config"],
         "task-id-from-stdin",
+        interactive=False,
         remove=True,
         user=None,
         custom_image=None,
