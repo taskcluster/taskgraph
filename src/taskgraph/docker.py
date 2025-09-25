@@ -26,7 +26,7 @@ except ImportError as e:
     zstd = e
 
 from taskgraph.config import GraphConfig
-from taskgraph.transforms.docker_image import IMAGE_BUILDER_IMAGE
+from taskgraph.transforms import docker_image
 from taskgraph.util import docker, json
 from taskgraph.util.taskcluster import (
     find_task_id,
@@ -162,22 +162,31 @@ def build_image(
     if not os.path.isdir(image_dir):
         raise Exception(f"image directory does not exist: {image_dir}")
 
-    label = f"docker-image-{name}"
-    image_tasks = load_tasks_for_kind(
-        {"do_not_optimize": [label]},
-        "docker-image",
-        graph_attr="morphed_task_graph",
-        write_artifacts=True,
-    )
-
-    image_context = Path(f"docker-contexts/{name}.tar.gz").resolve()
-    if context_file:
-        shutil.move(image_context, context_file)
-        return ""
-
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_dir = Path(temp_dir)
-        output_dir = temp_dir / "artifacts"
+
+        # Ensure the docker-image transforms save the docker-contexts to our
+        # temp_dir
+        label = f"docker-image-{name}"
+        contexts_dir = temp_dir / "docker-contexts"
+        old_contexts_dir = docker_image.CONTEXTS_DIR
+        try:
+            docker_image.CONTEXTS_DIR = str(contexts_dir)
+            image_tasks = load_tasks_for_kind(
+                {"do_not_optimize": [label]},
+                "docker-image",
+                graph_attr="morphed_task_graph",
+                write_artifacts=True,
+            )
+        finally:
+            docker_image.CONTEXTS_DIR = old_contexts_dir
+
+        image_context = contexts_dir.joinpath(f"{name}.tar.gz").resolve()
+        if context_file:
+            shutil.move(image_context, context_file)
+            return ""
+
+        output_dir = temp_dir / "out"
         output_dir.mkdir()
         volumes = {
             # TODO write artifacts to tmpdir
@@ -208,7 +217,7 @@ def build_image(
         load_task(
             graph_config,
             task_def,
-            custom_image=IMAGE_BUILDER_IMAGE,
+            custom_image=docker_image.IMAGE_BUILDER_IMAGE,
             interactive=False,
             volumes=volumes,
         )
