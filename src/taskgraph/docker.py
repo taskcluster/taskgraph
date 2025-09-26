@@ -540,24 +540,15 @@ def load_task(
         if isatty:
             command.append("-t")
 
-        command.append(image_tag)
-
-        if task_command:
-            command.extend(task_command)
-
-        if volumes:
-            for k, v in volumes.items():
-                command[2:2] = ["-v", f"{k}:{v}"]
-
         if remove:
-            command.insert(2, "--rm")
+            command.append("--rm")
 
         if env:
             envfile = tempfile.NamedTemporaryFile("w+", delete=False)
             envfile.write("\n".join([f"{k}={v}" for k, v in env.items()]))
             envfile.close()
 
-            command.insert(2, f"--env-file={envfile.name}")
+            command.append(f"--env-file={envfile.name}")
 
         if exec_command:
             initfile = tempfile.NamedTemporaryFile("w+", delete=False)
@@ -576,7 +567,16 @@ def load_task(
             )
             initfile.close()
 
-            command[2:2] = ["-v", f"{initfile.name}:/builds/worker/.bashrc"]
+            command.extend(["-v", f"{initfile.name}:/builds/worker/.bashrc"])
+
+        if volumes:
+            for k, v in volumes.items():
+                command.extend(["-v", f"{k}:{v}"])
+
+        command.append(image_tag)
+
+        if task_command:
+            command.extend(task_command)
 
         logger.info(f"Running: {' '.join(command)}")
         proc = subprocess.run(command)
