@@ -15,3 +15,4 @@ A collection of how-to guides.
    docker
    create-actions
    send-notifications
+   load-task-locally
