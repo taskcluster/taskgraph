@@ -136,15 +136,15 @@ def test_load_task(run_load_task):
     expected = [
         "docker",
         "run",
-        "-v",
-        re.compile(f"{tempfile.gettempdir()}/tmp.*:/builds/worker/.bashrc"),
-        re.compile(f"--env-file={tempfile.gettempdir()}/tmp.*"),
-        "-v",
-        "/another/host:/another/container",
-        "-v",
-        "/host/path:/container/path",
         "-i",
         "-t",
+        re.compile(f"--env-file={tempfile.gettempdir()}/tmp.*"),
+        "-v",
+        re.compile(f"{tempfile.gettempdir()}/tmp.*:/builds/worker/.bashrc"),
+        "-v",
+        "/host/path:/container/path",
+        "-v",
+        "/another/host:/another/container",
         "image/tag",
         "bash",
         "-c",
@@ -239,9 +239,9 @@ def test_load_task_env_init_and_remove(mocker, run_load_task):
     # Verify subprocess was called with the correct env file and init file
     mocks["subprocess_run"].assert_called_once()
     actual = mocks["subprocess_run"].call_args[0][0]
-    assert actual[3] == "/tmp/test_initfile:/builds/worker/.bashrc"
-    assert actual[4] == "--env-file=/tmp/test_envfile"
-    assert actual[5] == "--rm"
+    assert actual[4] == "--rm"
+    assert actual[5] == "--env-file=/tmp/test_envfile"
+    assert actual[6:8] == ["-v", "/tmp/test_initfile:/builds/worker/.bashrc"]
 
 
 @pytest.mark.parametrize(
