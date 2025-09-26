@@ -9,7 +9,7 @@
 import os
 import re
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any, Callable, Dict, Literal, Optional, Union
 
 import msgspec
 
@@ -24,14 +24,26 @@ from .base import TransformSequence
 CACHE_TYPE = "content.v1"
 
 
+# Base class for fetch configurations - ensures type field exists
+class BaseFetchSchema(Schema, forbid_unknown_fields=False):
+    """Base schema for fetch configurations.
+
+    This allows any additional fields beyond 'type' to support
+    different fetch types (static-url, git, etc).
+    """
+
+    type: str
+
+
 class FetchSchema(Schema):
     # Required fields
     # Name of the task.
     name: str
     # Description of the task.
     description: str
-    # Fetch configuration with type and additional fields.
-    fetch: Dict[str, Any]  # Must have 'type' key, other keys depend on type
+    # Fetch configuration - validated as BaseFetchSchema which ensures 'type' exists
+    # Additional type-specific validation is done by the fetch_builder decorator
+    fetch: BaseFetchSchema
 
     # Optional fields
     # Relative path (from config.path) to the file the task was defined in.
@@ -49,11 +61,6 @@ class FetchSchema(Schema):
     artifact_prefix: Optional[str] = None
     # Task attributes.
     attributes: Optional[Dict[str, Any]] = None
-
-    def __post_init__(self):
-        # Validate that fetch has a 'type' field
-        if not isinstance(self.fetch, dict) or "type" not in self.fetch:
-            raise msgspec.ValidationError("fetch must be a dict with a 'type' field")
 
 
 # define a collection of payload builders, depending on the worker implementation
@@ -199,7 +206,7 @@ class GPGSignatureSchema(Schema):
 class StaticUrlFetchSchema(Schema):
     """Configuration for static-url fetch type."""
 
-    type: str
+    type: Literal["static-url"]
     # The URL to download.
     url: str
     # The SHA-256 of the downloaded content.
@@ -291,7 +298,7 @@ def create_fetch_url_task(config, name, fetch):
 class GitFetchSchema(Schema):
     """Configuration for git fetch type."""
 
-    type: str
+    type: Literal["git"]
     repo: str
     revision: str
     include_dot_git: Optional[bool] = None

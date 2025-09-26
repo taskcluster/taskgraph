@@ -15,7 +15,8 @@ from taskgraph.transforms.run.common import (
     support_vcs_checkout,
 )
 from taskgraph.util import path, taskcluster
-from taskgraph.util.schema import Schema
+from taskgraph.util.caches import CACHES
+from taskgraph.util.schema import Schema, taskref_or_string
 
 EXEC_COMMANDS = {
     "bash": ["bash", "-cx"],
@@ -36,7 +37,7 @@ class RunTaskSchema(Schema):
     # The command arguments to pass to the `run-task` script, after the checkout
     # arguments. If a list, it will be passed directly; otherwise it will be
     # included in a single argument to the command specified by `exec-with`.
-    command: Union[List[Union[str, Dict[str, str]]], str, Dict[str, str]]
+    command: Union[List[taskref_or_string], taskref_or_string]
 
     # Base work directory used to set up the task.
     workdir: str
@@ -61,7 +62,7 @@ class RunTaskSchema(Schema):
 
     # Specifies what to execute the command with in the event the command is a
     # string.
-    exec_with: Optional[Literal["bash", "powershell"]] = None
+    exec_with: Optional[str] = None
 
     # Command used to invoke the `run-task` script. Can be used if the script
     # or Python installation is in a non-standard location on the workers.
@@ -69,6 +70,24 @@ class RunTaskSchema(Schema):
 
     # Whether to run as root. Defaults to False.
     run_as_root: bool = False
+
+    def __post_init__(self):
+        """Validate cache names and exec_with values."""
+        # Validate cache names
+        if isinstance(self.use_caches, list):
+            invalid = set(self.use_caches) - set(CACHES.keys())
+            if invalid:
+                raise ValueError(
+                    f"Invalid cache names: {invalid}. "
+                    f"Valid names are: {list(CACHES.keys())}"
+                )
+
+        # Validate exec_with
+        if self.exec_with is not None and self.exec_with not in EXEC_COMMANDS:
+            raise ValueError(
+                f"Invalid exec_with value: {self.exec_with}. "
+                f"Valid values are: {list(EXEC_COMMANDS.keys())}"
+            )
 
 
 def common_setup(config, task, taskdesc, command):

@@ -24,8 +24,12 @@ from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.hash import hash_path
 from taskgraph.util.keyed_by import evaluate_keyed_by
 from taskgraph.util.schema import (
+    OptimizationType,
     Schema,
+    TaskPriority,
+    optionally_keyed_by,
     resolve_keyed_by,
+    taskref_or_string,
     validate_schema,
 )
 from taskgraph.util.treeherder import split_symbol, treeherder_defaults
@@ -49,9 +53,19 @@ def _run_task_suffix():
 class TaskDescriptionTreeherderSchema(Schema, rename=None):
     """Treeherder-related information for a task."""
 
+    # Either a bare symbol, or 'grp(sym)'. Defaults to the
+    # uppercased first letter of each section of the kind
+    # (delimited by '-') all smooshed together.
     symbol: Optional[str] = None
+    # The task kind. Defaults to 'build', 'test', or 'other'
+    # based on the kind name.
     kind: Optional[Literal["build", "test", "other"]] = None
+    # Tier for this task. Defaults to 1.
     tier: Optional[int] = None
+    # Task platform in the form platform/collection, used to
+    # set treeherder.machine.platform and
+    # treeherder.collection or treeherder.labels. Defaults to
+    # 'default/opt'.
     platform: Optional[str] = None
 
 
@@ -64,7 +78,16 @@ class TaskDescriptionIndexSchema(Schema, rename="kebab"):
     job_name: str
     # Type of gecko v2 index to use
     type: str = "generic"  # Default to generic as that's what's commonly used
-    # The rank that the task will receive in the TaskCluster index
+    # The rank that the task will receive in the TaskCluster
+    # index. A newly completed task supersedes the currently
+    # indexed task iff it has a higher rank. If unspecified,
+    # 'by-tier' behavior will be used.
+    # Rank is equal the timestamp of the build_date for tier-1
+    # tasks, and zero for non-tier-1. This sorts tier-{2,3}
+    # builds below tier-1 in the index.
+    # Can also be given as an integer constant (e.g. zero to make
+    # sure a task is last in the index) or 'build_date' to equal
+    # the timestamp of the build_date.
     rank: Union[Literal["by-tier", "build_date"], int] = "by-tier"
 
 
@@ -74,66 +97,94 @@ class TaskDescriptionWorkerSchema(Schema, rename=None, forbid_unknown_fields=Fal
     This schema allows extra fields for worker-specific configuration.
     """
 
-    implementation: str
+    implementation: Optional[str] = None
 
 
 class TaskDescriptionSchema(Schema):
     """Schema for task descriptions."""
 
-    # The label for this task
+    # The label for this task.
     label: str
-    # Description of the task (for metadata)
+    # Description of the task (for metadata).
     description: str
-    # The provisioner-id/worker-type for the task
+    # The provisioner-id/worker-type for the task. The following
+    # parameters will be substituted in this string:
+    #   {level} -- the scm level of this push.
     worker_type: str
-    # Attributes for this task
+    # Attributes for this task.
     attributes: Dict[str, Any] = msgspec.field(default_factory=dict)
-    # Relative path (from config.path) to the file task was defined in
+    # Relative path (from config.path) to the file task was defined in.
     task_from: Optional[str] = None
-    # Dependencies of this task, keyed by name
+    # Dependencies of this task, keyed by name; these are passed
+    # through verbatim and subject to the interpretation of the
+    # Task's get_dependencies method.
     dependencies: Dict[str, Any] = msgspec.field(default_factory=dict)
-    # Priority of the task
-    priority: Optional[
-        Literal["highest", "very-high", "high", "medium", "low", "very-low", "lowest"]
-    ] = None
-    # Soft dependencies of this task, as a list of task labels
+    # Priority of the task.
+    priority: Optional[TaskPriority] = None
+    # Soft dependencies of this task, as a list of task labels.
     soft_dependencies: List[str] = msgspec.field(default_factory=list)
-    # Dependencies that must be scheduled in order for this task to run
+    # Dependencies that must be scheduled in order for this task to run.
     if_dependencies: List[str] = msgspec.field(default_factory=list)
-    # Specifies the condition for task execution
+    # Specifies the condition for task execution.
     requires: Literal["all-completed", "all-resolved"] = "all-completed"
-    # Expiration time relative to task creation
+    # Expiration time relative to task creation, with units (e.g.,
+    # '14 days'). Defaults are set based on the project.
     expires_after: Optional[str] = None
-    # Deadline time relative to task creation
+    # Deadline time relative to task creation, with units (e.g.,
+    # '14 days'). Defaults are set based on the project.
     deadline_after: Optional[str] = None
-    # Custom routes for this task
+    # Custom routes for this task; the default treeherder routes will
+    # be added automatically.
     routes: List[str] = msgspec.field(default_factory=list)
-    # Custom scopes for this task
+    # Custom scopes for this task; any scopes required for the worker
+    # will be added automatically. The following parameters will be
+    # substituted in each scope:
+    #     {level} -- the scm level of this push
+    #     {project} -- the project of this push.
     scopes: List[str] = msgspec.field(default_factory=list)
-    # Tags for this task
+    # Tags for this task.
     tags: Dict[str, str] = msgspec.field(default_factory=dict)
-    # Custom 'task.extra' content
+    # Custom 'task.extra' content.
     extra: Dict[str, Any] = msgspec.field(default_factory=dict)
-    # Treeherder-related information
-    treeherder: Union[bool, TaskDescriptionTreeherderSchema, None] = None
-    # Information for indexing this build
+    # Treeherder-related information. Can be a simple `true` to
+    # auto-generate information or a dictionary with specific keys.
+    treeherder: Optional[Union[bool, TaskDescriptionTreeherderSchema]] = None
+    # Information for indexing this build so its artifacts can be
+    # discovered. If omitted, the build will not be indexed.
     index: Optional[TaskDescriptionIndexSchema] = None
-    # The `run_on_projects` attribute
-    run_on_projects: Any = None  # This uses optionally_keyed_by, so we need Any
-    # Specifies tasks for which this task should run
+    # The `run_on_projects` attribute, defaulting to 'all'. Dictates
+    # the projects on which this task should be included in the
+    # target task set. See the attributes documentation for details.
+    run_on_projects: optionally_keyed_by("build-platform", List[str]) = None  # type: ignore
+    # Specifies tasks for which this task should run.
     run_on_tasks_for: List[str] = msgspec.field(default_factory=list)
-    # Specifies git branches for which this task should run
+    # Specifies git branches for which this task should run.
     run_on_git_branches: List[str] = msgspec.field(default_factory=list)
-    # The `shipping_phase` attribute
+    # The `shipping_phase` attribute, defaulting to None. Specifies
+    # the release promotion phase that this task belongs to.
     shipping_phase: Optional[Literal["build", "promote", "push", "ship"]] = None
-    # The `always-target` attribute
+    # The `always-target` attribute will cause the task to be
+    # included in the target_task_graph regardless of filtering.
+    # Tasks included in this manner will be candidates for
+    # optimization even when `optimize_target_tasks` is False, unless
+    # the task was also explicitly chosen by the target_tasks method.
     always_target: bool = False
-    # Optimization to perform on this task
-    optimization: Any = None  # Uses OptimizationSchema which has custom validation
-    # Whether the task should use sccache compiler caching
+    # Optimization to perform on this task during the optimization
+    # phase. Defined in taskcluster/taskgraph/optimize.py.
+    optimization: OptimizationType = None
+    # Whether the task should use sccache compiler caching.
     needs_sccache: bool = False
     # Information specific to the worker implementation
     worker: Optional[TaskDescriptionWorkerSchema] = None
+
+    def __post_init__(self):
+        """Validate dependency names."""
+        if self.dependencies:
+            invalid_names = {"self", "decision"} & set(self.dependencies.keys())
+            if invalid_names:
+                raise ValueError(
+                    f"Can't use {', '.join(repr(n) for n in sorted(invalid_names))} as dependency names."
+                )
 
 
 TC_TREEHERDER_SCHEMA_URL = (
@@ -188,16 +239,7 @@ class PayloadBuilder:
 def payload_builder(name, schema):
     """
     Decorator for registering payload builders.
-
-    Requires msgspec.Struct schema types for type safety and performance.
     """
-    # Ensure we're using msgspec schemas
-    if not (isinstance(schema, type) and issubclass(schema, msgspec.Struct)):
-        raise TypeError(
-            f"payload_builder requires msgspec.Struct schema, got {type(schema).__name__}. "
-            f"Please migrate to msgspec: class {name.title()}Schema(Schema): ..."
-        )
-
     # Verify the schema has required fields
     fields = {f.name for f in msgspec.structs.fields(schema)}
     if "implementation" not in fields:
@@ -250,6 +292,40 @@ class DockerWorkerCacheSchema(Schema, rename="kebab"):
     skip_untrusted: bool = False
 
 
+class DockerImageInTreeSchema(Schema, rename="kebab"):
+    """In-tree generated docker image."""
+
+    in_tree: str
+
+
+class DockerImageIndexedSchema(Schema):
+    """Indexed docker image."""
+
+    indexed: str
+
+
+# Create a class for docker image types to avoid dict union issues
+class DockerImageTypeSchema(Schema, forbid_unknown_fields=False):
+    """Schema that accepts either in-tree or indexed docker images."""
+
+    in_tree: Optional[str] = None
+    indexed: Optional[str] = None
+
+    def __post_init__(self):
+        """Ensure exactly one image type is provided."""
+        if self.in_tree and self.indexed:
+            raise ValueError("Cannot have both in-tree and indexed")
+        if not self.in_tree and not self.indexed:
+            raise ValueError("Must have either in-tree or indexed")
+
+
+# Type for docker-image field
+DockerImageType = Union[
+    str,  # a raw Docker image path (repo/image:tag)
+    DockerImageTypeSchema,  # docker image configs
+]
+
+
 class DockerWorkerArtifactSchema(Schema, rename=None):
     """Artifact configuration for docker-worker."""
 
@@ -265,10 +341,10 @@ class DockerWorkerPayloadSchema(Schema):
     """Schema for docker-worker payload."""
 
     # Required fields first
-    implementation: str
+    implementation: Literal["docker-worker"]
     # For tasks that will run in docker-worker, this is the name of the docker
     # image or in-tree docker image to run the task in.
-    docker_image: Union[str, Dict[str, str]]
+    docker_image: DockerImageType
     # the maximum time to run, in seconds
     max_run_time: int
 
@@ -290,10 +366,10 @@ class DockerWorkerPayloadSchema(Schema):
     # artifacts to extract from the task image after completion
     artifacts: Optional[List[DockerWorkerArtifactSchema]] = None
     # environment variables
-    env: Dict[str, Union[str, Dict[str, str]]] = msgspec.field(default_factory=dict)
+    env: Dict[str, taskref_or_string] = msgspec.field(default_factory=dict)
     # the command to run; if not given, docker-worker will default to the
     # command in the docker image
-    command: Optional[List[Union[str, Dict[str, str]]]] = None
+    command: Optional[List[taskref_or_string]] = None
     # the exit status code(s) that indicates the task should be retried
     retry_exit_status: Optional[List[int]] = None
     # the exit status code(s) that indicates the caches used by the task should be purged
@@ -533,7 +609,7 @@ class GenericWorkerMountContentSchema(Schema, rename="kebab"):
     # Artifact name that contains the content.
     artifact: Optional[str] = None
     # Task ID that has the artifact that contains the content.
-    task_id: Optional[Union[str, Dict[str, str]]] = None
+    task_id: Optional[taskref_or_string] = None
     # URL that supplies the content in response to an unauthenticated GET request.
     url: Optional[str] = None
 
@@ -557,12 +633,11 @@ class GenericWorkerPayloadSchema(Schema):
     """Schema for generic-worker payload."""
 
     # Required fields first
-    implementation: str
+    implementation: Literal["generic-worker"]
     os: Literal["windows", "macosx", "linux", "linux-bitbar"]
     # command is a list of commands to run, sequentially
     # on Windows, each command is a string, on OS X and Linux, each command is a string array
-    # Using Any here because msgspec doesn't support union of multiple list types
-    command: Any
+    command: List[Union[str, List[taskref_or_string]]]
     # the maximum time to run, in seconds
     max_run_time: int
 
@@ -572,7 +647,7 @@ class GenericWorkerPayloadSchema(Schema):
     # Directories and/or files to be mounted
     mounts: Optional[List[GenericWorkerMountSchema]] = None
     # environment variables
-    env: Dict[str, Union[str, Dict[str, str]]] = msgspec.field(default_factory=dict)
+    env: Dict[str, taskref_or_string] = msgspec.field(default_factory=dict)
     # the exit status code(s) that indicates the task should be retried
     retry_exit_status: Optional[List[int]] = None
     # the exit status code(s) that indicates the caches used by the task should be purged
@@ -718,7 +793,7 @@ class BeetmoverUpstreamArtifactSchema(Schema, rename=None, omit_defaults=False):
     """Upstream artifact definition for beetmover."""
 
     # taskId of the task with the artifact
-    taskId: Union[str, Dict[str, str]]  # Can be string or task-reference dict
+    taskId: taskref_or_string  # Can be string or task-reference dict
     # type of signing task (for CoT)
     taskType: str
     # Paths to the artifacts to sign
@@ -731,7 +806,7 @@ class BeetmoverPayloadSchema(Schema):
     """Schema for beetmover worker payload."""
 
     # Required fields first
-    implementation: str
+    implementation: Literal["beetmover"]
     # the maximum time to run, in seconds
     max_run_time: int
     release_properties: BeetmoverReleasePropertiesSchema
@@ -774,22 +849,22 @@ def build_beetmover_payload(config, task, task_def):
 
 
 # Simple payload schemas using msgspec
-class InvalidPayloadSchema(Schema, rename=None, omit_defaults=False):
+class InvalidPayloadSchema(
+    Schema, rename=None, omit_defaults=False, forbid_unknown_fields=False
+):
     """Schema for invalid tasks - allows any fields."""
 
     implementation: str
     os: str = ""
-    # Allow any extra fields for invalid tasks
-    _extra: dict = msgspec.field(default_factory=dict, name="")
 
 
-class AlwaysOptimizedPayloadSchema(Schema, rename=None, omit_defaults=False):
+class AlwaysOptimizedPayloadSchema(
+    Schema, rename=None, omit_defaults=False, forbid_unknown_fields=False
+):
     """Schema for always-optimized tasks - allows any fields."""
 
     implementation: str
     os: str = ""
-    # Allow any extra fields
-    _extra: dict = msgspec.field(default_factory=dict, name="")
 
 
 class SucceedPayloadSchema(Schema, rename=None, omit_defaults=False):

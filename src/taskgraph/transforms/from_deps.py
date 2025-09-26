@@ -16,6 +16,7 @@ from textwrap import dedent
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from taskgraph.transforms.base import TransformSequence
+from taskgraph.transforms.run import FetchesSchema
 from taskgraph.util.attributes import attrmatch
 from taskgraph.util.dependencies import GROUP_BY_MAP, get_dependencies
 from taskgraph.util.schema import Schema, validate_schema
@@ -68,7 +69,8 @@ class FromDepsChildSchema(Schema):
     # dependency. Attributes of the upstream task may be used as
     # substitution values in the `artifact` or `dest` values of the
     # `fetches` entry.
-    fetches: Optional[Dict[str, List[Union[str, Dict[str, str]]]]] = None
+    # Keys are task kind names, values are lists of FetchesSchema objects.
+    fetches: Optional[Dict[str, List[FetchesSchema]]] = None
 
 
 # Schema for from_deps transforms

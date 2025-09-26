@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Literal, Optional, Union
 import msgspec
 
 from taskgraph.transforms.base import TransformSequence
-from taskgraph.util.schema import Schema, resolve_keyed_by
+from taskgraph.util.schema import Schema, optionally_keyed_by, resolve_keyed_by
 
 StatusType = Literal[
     "on-completed",
@@ -30,7 +30,7 @@ class EmailRecipientSchema(Schema):
     """Email notification recipient."""
 
     type: Literal["email"]
-    address: Union[str, Dict[str, Any]]  # Can be keyed-by
+    address: optionally_keyed_by("project", "level", str)
     status_type: Optional[StatusType] = None
 
 
@@ -114,10 +114,18 @@ class NotifyContentSchema(Schema, rename=None):
     slack: Optional[SlackContentSchema] = None
 
 
+RecipientSchema = Union[
+    EmailRecipientSchema,
+    MatrixRoomRecipientSchema,
+    PulseRecipientSchema,
+    SlackChannelRecipientSchema,
+]
+
+
 class NotifyConfigSchema(Schema, rename=None):
     """Modern notification configuration."""
 
-    recipients: List[Dict[str, Any]]  # Will be validated as Recipient union
+    recipients: List[RecipientSchema]
     content: Optional[NotifyContentSchema] = None
 
 
@@ -147,37 +155,6 @@ class NotifySchema(Schema, tag_field="notify_type", forbid_unknown_fields=False)
             raise msgspec.ValidationError(
                 "Cannot specify both 'notify' and 'notifications'"
             )
-
-        # Validate recipients if notify is present
-        if self.notify and self.notify.recipients:
-            validated_recipients = []
-            for r in self.notify.recipients:
-                try:
-                    # Try to convert to one of the recipient types
-                    if r.get("type") == "email":
-                        validated_recipients.append(
-                            msgspec.convert(r, EmailRecipientSchema)
-                        )
-                    elif r.get("type") == "matrix-room":
-                        validated_recipients.append(
-                            msgspec.convert(r, MatrixRoomRecipientSchema)
-                        )
-                    elif r.get("type") == "pulse":
-                        validated_recipients.append(
-                            msgspec.convert(r, PulseRecipientSchema)
-                        )
-                    elif r.get("type") == "slack-channel":
-                        validated_recipients.append(
-                            msgspec.convert(r, SlackChannelRecipientSchema)
-                        )
-                    else:
-                        raise msgspec.ValidationError(
-                            f"Unknown recipient type: {r.get('type')}"
-                        )
-                except msgspec.ValidationError:
-                    # Keep as dict if it contains keyed-by
-                    validated_recipients.append(r)
-            self.notify.recipients = validated_recipients
 
 
 transforms = TransformSequence()

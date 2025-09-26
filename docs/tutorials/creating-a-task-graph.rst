@@ -140,7 +140,7 @@ comments for explanations):
    from taskgraph.util.schema import Schema
    from taskgraph.transforms.base import TransformSequence
 
-   # Define the schema using Schema base class for better type checking and performance.
+   # Define the schema using Schema base class.
    class HelloDescriptionSchema(Schema):
        text: str                          # Required field
        description: Optional[str] = None  # Optional field

@@ -5,10 +5,11 @@
 import logging
 import os
 import re
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import taskgraph
 from taskgraph.transforms.base import TransformSequence
+from taskgraph.transforms.task import TaskDescriptionIndexSchema
 from taskgraph.util import json
 from taskgraph.util.docker import create_context_tar, generate_context_hash
 from taskgraph.util.schema import Schema
@@ -49,7 +50,7 @@ class DockerImageSchema(Schema):
     # List of package tasks this docker image depends on.
     packages: Optional[List[str]] = None
     # Information for indexing this build so its artifacts can be discovered.
-    index: Optional[Any] = None
+    index: Optional[TaskDescriptionIndexSchema] = None
     # Whether this image should be cached based on inputs.
     cache: Optional[bool] = None
 

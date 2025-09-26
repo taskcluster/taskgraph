@@ -17,6 +17,7 @@ import msgspec
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.transforms.cached_tasks import order_tasks
+from taskgraph.transforms.task import TaskDescriptionWorkerSchema
 from taskgraph.util import json
 from taskgraph.util import path as mozpath
 from taskgraph.util.python_path import import_sibling_modules
@@ -41,6 +42,9 @@ class FetchesSchema(Schema):
 class WhenSchema(Schema):
     """Configuration for when a task should be included."""
 
+    # This task only needs to be run if a file matching one of the given
+    # patterns has changed in the push. The patterns use the mozpack
+    # match function (python/mozbuild/mozpack/path.py).
     files_changed: List[str] = msgspec.field(default_factory=list)
 
 
@@ -51,7 +55,9 @@ class RunSchema(Schema, rename=None, forbid_unknown_fields=False):
     This schema allows extra fields for run implementation-specific configuration.
     """
 
+    # The key to a run implementation in a peer module to this one.
     using: str
+    # Base work directory used to set up the task.
     workdir: Optional[str] = None
 
 
@@ -97,11 +103,18 @@ class RunDescriptionSchema(Schema):
     always_target: bool = False
     optimization: Any = None
     needs_sccache: bool = False
+    # The "when" section contains descriptions of the circumstances under
+    # which this task should be included in the task graph. This will be
+    # converted into an optimization, so it cannot be specified in a run
+    # description that also gives 'optimization'.
     when: Optional[WhenSchema] = None
+    # A list of artifacts to install from 'fetch' tasks.
     fetches: Dict[str, List[Union[str, FetchesSchema]]] = msgspec.field(
         default_factory=dict
     )
-    worker: Dict[str, Any] = msgspec.field(default_factory=dict)
+    # This object will be passed through to the task description, with additions
+    # provided by the task's run-using function.
+    worker: Optional[TaskDescriptionWorkerSchema] = None
 
 
 transforms = TransformSequence()

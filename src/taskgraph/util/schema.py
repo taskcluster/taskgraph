@@ -4,12 +4,17 @@
 
 import pprint
 from functools import reduce
-from typing import Dict, List, Literal, Union
+from typing import Dict, List, Literal, Optional, Union
 
 import msgspec
 
 import taskgraph
 from taskgraph.util.keyed_by import evaluate_keyed_by, iter_dot_path
+
+# Common type definitions that are used across multiple schemas
+TaskPriority = Literal[
+    "highest", "very-high", "high", "medium", "low", "very-low", "lowest"
+]
 
 
 def validate_schema(schema, obj, msg_prefix):
@@ -184,6 +189,24 @@ class SkipUnlessChangedOptimizationSchema(Schema):
     skip_unless_changed: List[str]
 
 
+# Create a class for optimization types to avoid dict union issues
+class OptimizationTypeSchema(Schema, forbid_unknown_fields=False):
+    """Schema that accepts various optimization configurations."""
+
+    index_search: Optional[List[str]] = None
+    skip_unless_changed: Optional[List[str]] = None
+
+    def __post_init__(self):
+        """Ensure at least one optimization type is provided."""
+        if not self.index_search and not self.skip_unless_changed:
+            # Allow empty schema for other dict-based optimizations
+            pass
+
+
+# Use the class in the union to avoid multiple dict types
+OptimizationType = Union[None, OptimizationTypeSchema]
+
+
 # Task reference types using msgspec
 class TaskReferenceSchema(Schema):
     """Reference to another task."""
@@ -195,6 +218,24 @@ class ArtifactReferenceSchema(Schema):
     """Reference to a task artifact."""
 
     artifact_reference: str
+
+
+class TaskRefType(Schema, forbid_unknown_fields=False):
+    """Schema that accepts either task-reference or artifact-reference."""
+
+    task_reference: Optional[str] = None
+    artifact_reference: Optional[str] = None
+
+    def __post_init__(self):
+        """Ensure exactly one reference type is provided."""
+        if self.task_reference and self.artifact_reference:
+            raise ValueError("Cannot have both task-reference and artifact-reference")
+        if not self.task_reference and not self.artifact_reference:
+            raise ValueError("Must have either task-reference or artifact-reference")
+
+
+# Use the class in the union to avoid multiple dict types
+taskref_or_string = Union[str, TaskRefType]
 
 
 def validate_optimization(value):

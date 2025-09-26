@@ -273,20 +273,6 @@ class Parameters(ReadOnlyDict):
                 }
                 msgspec.convert(base_params, BaseSchema)
 
-                # Also validate against extension schemas
-                for ext_schema in _schema_extensions:
-                    if isinstance(ext_schema, type) and issubclass(
-                        ext_schema, msgspec.Struct
-                    ):
-                        # Only validate fields that belong to this extension
-                        ext_fields = {
-                            f.encode_name for f in msgspec.structs.fields(ext_schema)
-                        }
-                        ext_params = {
-                            k: v for k, v in kebab_params.items() if k in ext_fields
-                        }
-                        if ext_params:
-                            msgspec.convert(ext_params, ext_schema)
             else:
                 # Non-strict mode: only validate fields that exist in the schemas
                 # Filter to only include fields defined in the base schema
@@ -298,19 +284,20 @@ class Parameters(ReadOnlyDict):
                 }
                 msgspec.convert(filtered_params, BaseSchema)
 
-                # Also validate extension schemas in non-strict mode
-                for ext_schema in _schema_extensions:
-                    if isinstance(ext_schema, type) and issubclass(
-                        ext_schema, msgspec.Struct
-                    ):
-                        ext_fields = {
-                            f.encode_name for f in msgspec.structs.fields(ext_schema)
-                        }
-                        ext_params = {
-                            k: v for k, v in kebab_params.items() if k in ext_fields
-                        }
-                        if ext_params:
-                            msgspec.convert(ext_params, ext_schema)
+            # Validate against extension schemas (both strict and non-strict modes)
+            for ext_schema in _schema_extensions:
+                if isinstance(ext_schema, type) and issubclass(
+                    ext_schema, msgspec.Struct
+                ):
+                    # Only validate fields that belong to this extension
+                    ext_fields = {
+                        f.encode_name for f in msgspec.structs.fields(ext_schema)
+                    }
+                    ext_params = {
+                        k: v for k, v in kebab_params.items() if k in ext_fields
+                    }
+                    if ext_params:
+                        msgspec.convert(ext_params, ext_schema)
         except (msgspec.ValidationError, msgspec.DecodeError) as e:
             raise ParameterMismatch(f"Invalid parameters: {e}")
 
