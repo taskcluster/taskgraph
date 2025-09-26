@@ -1,5 +1,31 @@
 # Change Log
 
+## [16.0.0] - 2025-09-26
+
+### Changed
+
+- BREAKING CHANGE: Must use `-i/--interactive` to pause task execution in `load-task`
+- Upgraded docker-image tasks to use image_builder v6.0.0
+- Functions in `util/taskcluster.py` now use the official Taskcluster Python client
+
+### Added
+
+- Ability to run any task with a docker-worker payload to `taskgraph load-task`
+- Ability to pipe a task definition into `taskgraph load-task`
+- Ability to specify a custom image to `taskgraph load-task`, including building them locally
+- `load_tasks_for_kind` utility function can now generate any graph stage
+
+### Fixed
+
+- `load_tasks_for_kind` utility function now forwards kwargs to `TaskGraphGenerator`
+- `taskgraph build-image` now supports images using `$DOCKER_IMAGE_PARENT`
+- `taskgraph build-image` now obtains necessary context automatically
+
+### Removed
+
+- BREAKING CHANGE: `taskgraph build-image` no longer accepts a `--tag` flag
+- BREAKING CHANGE: Functions in `util/taskcluster.py` no longer accept the `use_proxy` argument
+
 ## [15.4.0] - 2025-09-22
 
 ### Added

@@ -3,20 +3,35 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+15.x -> 16.x
+------------
+
+* Stop using the ``--tag`` flag with ``taskgraph build-image``. Images must now
+  be tagged manually via Docker post build.
+* Running ``taskgraph load-task`` will no longer pause task execution and
+  instead immediately execute the task's command after loading. Now you must
+  use the ``-i/--interactive`` flag to pause execution.
+* Utility functions in ``taskgraph.util.taskcluster`` no longer accept the
+  ``use_proxy`` argument. Instead the presence of ``TASKCLUSTER_PROXY_URL`` in
+  the environment will be used to determine whether or not to use the
+  Taskcluster proxy. Remove ``use_proxy`` from all function calls, and then
+  either set ``TASKCLUSTER_PROXY_URL`` or unset it depending on whether using
+  the proxy is desired or not.
+
 14.x -> 15.x
 ------------
 
-* `get_primary_dependency` now requires a `primary-dependency-label` to be set
-  on the task it is passed instead of `primary-kind-dependency`. Update any tasks
+* ``get_primary_dependency`` now requires a ``primary-dependency-label`` to be set
+  on the task it is passed instead of ``primary-kind-dependency``. Update any tasks
   you were calling this for to set this attribute. (If your only usage of this
-  is indirectly through `from_deps`, no change is needed: `from-deps` generated
-  tasks will set this for you.)
+  is indirectly through ``from_deps``, no change is needed: ``from-deps`` generated
+  tasks will set this for you).
 
 13.x -> 14.x
 ------------
 
-* The `{task_workdir}` string in environment variables no longer gets
-  interpolated by `run-task`. This is backing out a feature introduced in
+* The ``{task_workdir}`` string in environment variables no longer gets
+  interpolated by ``run-task``. This is backing out a feature introduced in
   version 13.x, so this release introduces no new backwards incompatibilities
   with version 12.x or earlier.
 
