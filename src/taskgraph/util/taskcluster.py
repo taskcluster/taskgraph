@@ -308,7 +308,7 @@ def status_task_batched(task_ids):
             {
                 t["taskId"]: t["status"]
                 for t in response.get("statuses", [])
-                if "namespace" in t and "taskId" in t
+                if "status" in t and "taskId" in t
             }
         )
 
