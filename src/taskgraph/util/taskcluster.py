@@ -186,15 +186,20 @@ def find_task_id_batched(index_paths):
         https://docs.taskcluster.net/docs/reference/core/index/api#findTasksAtIndex
     """
     index = get_taskcluster_client("index")
-    response = index.findTasksAtIndex({"indexes": index_paths})
+    task_ids = {}
 
-    if not response or "tasks" not in response:
-        return {}
+    def pagination_handler(response):
+        task_ids.update(
+            {
+                t["namespace"]: t["taskId"]
+                for t in response["tasks"]
+                if "namespace" in t and "taskId" in t
+            }
+        )
 
-    tasks = response.get("tasks", [])
-    task_ids = {
-        t["namespace"]: t["taskId"] for t in tasks if "namespace" in t and "taskId" in t
-    }
+    index.findTasksAtIndex(
+        payload={"indexes": index_paths}, paginationHandler=pagination_handler
+    )
 
     return task_ids
 
@@ -296,17 +301,19 @@ def status_task_batched(task_ids):
         return {}
 
     queue = get_taskcluster_client("queue")
-    response = queue.statuses({"taskIds": task_ids})
+    statuses = {}
 
-    if not response or "statuses" not in response:
-        return {}
+    def pagination_handler(response):
+        statuses.update(
+            {
+                t["taskId"]: t["status"]
+                for t in response.get("statuses", [])
+                if "namespace" in t and "taskId" in t
+            }
+        )
 
-    status_list = response.get("statuses", [])
-    statuses = {
-        t["taskId"]: t["status"]
-        for t in status_list
-        if "namespace" in t and "taskId" in t
-    }
+    queue.statuses(payload={"taskIds": task_ids}, paginationHandler=pagination_handler)
+
     return statuses
 
 
