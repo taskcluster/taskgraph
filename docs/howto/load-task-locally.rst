@@ -84,8 +84,8 @@ to make the supplied task run in a custom Docker image. The image can be one of:
   local Taskgraph called ``<name>``.
 * ``<registry>`` - Load the image from the specified Docker registry.
 
-Specifying ``<image name>`` is particularly useful when working on changes to
-the image. For example, let's say you're making changes to
+Specifying ``<name>`` is particularly useful when working on changes to the
+image. For example, let's say you're making changes to
 ``taskcluster/docker/python/Dockerfile``, you can run:
 
 .. code-block:: shell
