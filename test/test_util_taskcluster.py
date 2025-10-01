@@ -190,6 +190,27 @@ def test_find_task_id(monkeypatch):
     mock_index.findTask.assert_called_with(index)
 
 
+def test_find_task_id_batched(monkeypatch, responses, root_url):
+    monkeypatch.setattr(os, "environ", {"TASKCLUSTER_ROOT_URL": root_url})
+    responses.post(
+        f"{root_url}/api/index/v1/tasks/indexes",
+        json={
+            "tasks": [{"taskId": "abc", "namespace": "index.abc"}],
+            "continuationToken": "abc",
+        },
+    )
+    responses.post(
+        f"{root_url}/api/index/v1/tasks/indexes",
+        json={
+            "tasks": [{"taskId": "def", "namespace": "index.def"}],
+            "continuationToken": None,
+        },
+    )
+
+    result = tc.find_task_id_batched(["index.abc", "index.def"])
+    assert result == {"index.abc": "abc", "index.def": "def"}
+
+
 def test_get_artifact_from_index(monkeypatch):
     index = "foo"
     path = "file.txt"
@@ -296,6 +317,40 @@ def test_status_task(monkeypatch):
     result = tc.status_task(tid)
     assert result == {"state": "running"}
     mock_queue.status.assert_called_with(tid)
+
+
+def test_status_task_batched(monkeypatch, responses, root_url):
+    monkeypatch.setattr(os, "environ", {"TASKCLUSTER_ROOT_URL": root_url})
+    responses.post(
+        f"{root_url}/api/queue/v1/tasks/status",
+        json={
+            "statuses": [
+                {
+                    "taskId": "abc",
+                    "status": {"taskId": "abc", "state": "completed", "runs": []},
+                }
+            ],
+            "continuationToken": "abc",
+        },
+    )
+    responses.post(
+        f"{root_url}/api/queue/v1/tasks/status",
+        json={
+            "statuses": [
+                {
+                    "taskId": "def",
+                    "status": {"taskId": "def", "state": "exception", "runs": []},
+                }
+            ],
+            "continuationToken": None,
+        },
+    )
+
+    result = tc.status_task_batched(["abc", "def"])
+    assert result == {
+        "abc": {"taskId": "abc", "state": "completed", "runs": []},
+        "def": {"taskId": "def", "state": "exception", "runs": []},
+    }
 
 
 def test_state_task(monkeypatch):
