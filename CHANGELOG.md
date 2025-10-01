@@ -1,5 +1,11 @@
 # Change Log
 
+## [16.1.0] - 2025-10-01
+
+### Fixed
+
+- `find_task_id_batched` and `status_task_batched` now supports pagination for tasks pulled from the taskcluster package
+
 ## [16.0.0] - 2025-09-26
 
 ### Changed
