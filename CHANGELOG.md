@@ -1,4 +1,10 @@
 # Change Log
+## [16.1.1] - 2025-10-01
+
+### Fixed
+
+- `status_task_batched` now works with pagination
+- Added test for `find_task_id_batched` and `status_task_batched`
 
 ## [16.1.0] - 2025-10-01
 
