@@ -93,7 +93,8 @@ source = ["src/taskgraph/", "src/taskgraph/run-task/", "packages", "test"]
 ### Lint and Format
 [tool.ruff]
 extend-exclude = [
-  "taskcluster/scripts/external_tools"
+  "taskcluster/scripts/external_tools",
+  "src/taskgraph/run-task/robustcheckout.py"
 ]
 line-length = 88
 
