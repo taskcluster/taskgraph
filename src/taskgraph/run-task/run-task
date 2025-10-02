@@ -588,7 +588,6 @@ def git_checkout(
     destination_path: str,
     head_repo: str,
     base_repo: Optional[str],
-    base_ref: Optional[str],
     base_rev: Optional[str],
     ref: Optional[str],
     commit: Optional[str],
@@ -643,29 +642,14 @@ def git_checkout(
 
         retry_required_command(b"vcs", args, extra_env=env)
 
-    if base_ref:
-        args = ["git", "fetch", "origin", base_ref]
-
-        retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
-
-        # Create local branch so that taskgraph is able to compute differences
-        # between the head branch and the base one, if needed
-        args = ["git", "checkout", base_ref]
-
-        retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
-
-    # When commits are force-pushed (like on a testing branch), base_rev doesn't
-    # exist on base_ref. Fetching it allows taskgraph to compute differences
-    # between the previous state before the force-push and the current state.
-    #
-    # Unlike base_ref just above, there is no need to checkout the revision:
-    # it's immediately available after the fetch.
+    # Fetching base_rev allows Taskgraph to compute the files changed by the
+    # push.
     if base_rev and base_rev != NULL_REVISION:
         args = ["git", "fetch", "origin", base_rev]
 
         retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
 
-    # Fetch ref
+    # Fetch head ref
     args = ["git", "fetch"]
     if ref and base_repo == head_repo:
         # If a ref was provided, it might be tag, so we need to make sure we fetch
@@ -877,7 +861,6 @@ def collect_vcs_options(args, project, name):
 
     repo_type = os.environ.get(f"{env_prefix}_REPOSITORY_TYPE")
     base_repo = os.environ.get(f"{env_prefix}_BASE_REPOSITORY")
-    base_ref = os.environ.get(f"{env_prefix}_BASE_REF")
     base_rev = os.environ.get(f"{env_prefix}_BASE_REV")
     head_repo = os.environ.get(f"{env_prefix}_HEAD_REPOSITORY")
     revision = os.environ.get(f"{env_prefix}_HEAD_REV")
@@ -910,7 +893,6 @@ def collect_vcs_options(args, project, name):
         "checkout": checkout,
         "sparse-profile": sparse_profile,
         "base-repo": base_repo,
-        "base-ref": base_ref,
         "base-rev": base_rev,
         "head-repo": head_repo,
         "revision": revision,
@@ -960,7 +942,6 @@ def vcs_checkout_from_args(options):
                 options["checkout"],
                 options["head-repo"],
                 options["base-repo"],
-                options["base-ref"],
                 options["base-rev"],
                 ref,
                 revision,
