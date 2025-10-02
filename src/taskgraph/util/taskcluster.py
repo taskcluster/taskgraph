@@ -216,12 +216,12 @@ def list_tasks(index_path):
     in the index. Results are sorted by expiration date from oldest to newest.
     """
     index = get_taskcluster_client("index")
-    response = index.listTasks(index_path, {})
+    tasks = []
 
-    if not response or "tasks" not in response:
-        return []
+    def pagination_handler(response):
+        tasks.extend(response["tasks"])
 
-    tasks = response.get("tasks", [])
+    index.listTasks(index_path, paginationHandler=pagination_handler)
 
     # We can sort on expires because in the general case
     # all of these tasks should be created with the same expires time so they end up in
@@ -229,7 +229,7 @@ def list_tasks(index_path):
     # fetching each task and sorting on the created date.
     tasks.sort(key=lambda t: parse_time(t["expires"]))
 
-    task_ids = [t["taskId"] for t in tasks if "taskId" in t]
+    task_ids = [t["taskId"] for t in tasks]
 
     return task_ids
 
