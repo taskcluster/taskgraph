@@ -566,6 +566,22 @@ def configure_volume_posix(volume, user, group, running_as_root):
         set_dir_permissions(volume, user.pw_uid, group.gr_gid)
 
 
+def git_fetch(
+    destination_path: str,
+    ref: str,
+    remote: str = "origin",
+    tags: bool = False,
+    env: Optional[dict[str, str]] = None,
+):
+    args = ["git", "fetch"]
+    if tags:
+        # `--force` is needed to be able to update an existing outdated tag.
+        args.extend(["--tags", "--force"])
+
+    args.extend([remote, ref])
+    retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
+
+
 def _clean_git_checkout(destination_path):
     # Delete untracked files (i.e. build products)
     print_line(b"vcs", b"cleaning git checkout...\n")
@@ -669,29 +685,18 @@ def git_checkout(
     # that consumers can compute the merge-base or files modified between the
     # two as needed.
     if base_rev and base_rev != NULL_REVISION:
-        args = ["git", "fetch", "origin", base_rev]
+        git_fetch(destination_path, base_rev, env=env)
 
-        retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
-
-    # Fetch head_ref
-    args = ["git", "fetch"]
-    if head_ref and base_repo == head_repo:
-        # If a head_ref was provided, it might be tag, so we need to make sure we fetch
-        # those. This is explicitly only done when base and head repo match,
-        # because it is the only scenario where tags could be present. (PRs, for
-        # example, always include an explicit rev.) Failure to do this could result
-        # in not having a tag, or worse: having an outdated version of one.
-        # `--force` is needed to be able to update an existing tag.
-        args.extend(["--tags", "--force"])
-
-    else:
-        args.append("--no-tags")
+    # If a head_ref was provided, it might be tag, so we need to make sure we fetch
+    # those. This is explicitly only done when base and head repo match,
+    # because it is the only scenario where tags could be present. (PRs, for
+    # example, always include an explicit rev.) Failure to do this could result
+    # in not having a tag, or worse: having an outdated version of one.
+    tags = True if head_ref and base_repo == head_repo else False
 
     # If a head_ref isn't provided, we fetch all refs from head_repo, which may be slow.
-    args.extend(
-        [head_repo, head_ref if head_ref else "+refs/heads/*:refs/remotes/work/*"]
-    )
-    retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
+    target = head_ref if head_ref else "+refs/heads/*:refs/remotes/work/*"
+    git_fetch(destination_path, target, remote=head_repo, tags=tags, env=env)
 
     args = [
         "git",
