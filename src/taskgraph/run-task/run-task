@@ -37,7 +37,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from threading import Thread
-from typing import Optional
+from typing import Dict, Optional
 
 SECRET_BASEURL_TPL = "{}/secrets/v1/secret/{{}}".format(os.environ.get("TASKCLUSTER_PROXY_URL", "http://taskcluster").rstrip('/'))
 
@@ -551,6 +551,22 @@ def configure_volume_posix(volume, user, group, running_as_root):
         set_dir_permissions(volume, user.pw_uid, group.gr_gid)
 
 
+def git_fetch(
+    destination_path: str,
+    ref: str,
+    remote: str = "origin",
+    tags: bool = False,
+    env: Optional[Dict[str, str]] = None,
+):
+    args = ["git", "fetch"]
+    if tags:
+        # `--force` is needed to be able to update an existing outdated tag.
+        args.extend(["--tags", "--force"])
+
+    args.extend([remote, ref])
+    retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
+
+
 def _clean_git_checkout(destination_path):
     # Delete untracked files (i.e. build products)
     print_line(b"vcs", b"cleaning git checkout...\n")
@@ -641,30 +657,23 @@ def git_checkout(
 
         retry_required_command(b"vcs", args, extra_env=env)
 
-    # Fetching base_rev allows Taskgraph to compute the files changed by the
-    # push.
+    # First fetch the base_rev. This allows Taskgraph to compute the files
+    # changed by the push.
     if base_rev and base_rev != NULL_REVISION:
-        args = ["git", "fetch", "origin", base_rev]
+        git_fetch(destination_path, base_rev, env=env)
 
-        retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
+    # Next fetch the head ref.
 
-    # Fetch head ref
-    args = ["git", "fetch"]
-    if ref and base_repo == head_repo:
-        # If a ref was provided, it might be tag, so we need to make sure we fetch
-        # those. This is explicitly only done when base and head repo match,
-        # because it is the only scenario where tags could be present. (PRs, for
-        # example, always include an explicit rev.) Failure to do this could result
-        # in not having a tag, or worse: having an outdated version of one.
-        # `--force` is needed to be able to update an existing tag.
-        args.extend(["--tags", "--force"])
-
-    else:
-        args.append("--no-tags")
+    # If a ref was provided, it might be tag, so we need to make sure we fetch
+    # those. This is explicitly only done when base and head repo match,
+    # because it is the only scenario where tags could be present. (PRs, for
+    # example, always include an explicit rev.) Failure to do this could result
+    # in not having a tag, or worse: having an outdated version of one.
+    tags = True if ref and base_repo == head_repo else False
 
     # If a ref isn't provided, we fetch all refs from head_repo, which may be slow.
-    args.extend([head_repo, ref if ref else "+refs/heads/*:refs/remotes/work/*"])
-    retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
+    target = ref if ref else "+refs/heads/*:refs/remotes/work/*"
+    git_fetch(destination_path, target, remote=head_repo, tags=tags, env=env)
 
     args = [
         "git",
