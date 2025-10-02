@@ -233,28 +233,42 @@ def test_get_artifact_from_index(monkeypatch):
     mock_index.findArtifactFromTask.assert_called_with(index, path)
 
 
-def test_list_tasks(monkeypatch):
+def test_list_tasks(monkeypatch, responses, root_url):
     index = "foo"
 
-    mock_index = mock.MagicMock()
-
-    def mock_client(service):
-        if service == "index":
-            return mock_index
-        return mock.MagicMock()
-
-    monkeypatch.setattr(tc, "get_taskcluster_client", mock_client)
-
-    mock_index.listTasks.return_value = {
-        "tasks": [
-            {"taskId": "123", "expires": "2023-02-10T19:07:33.700Z"},
-            {"taskId": "abc", "expires": "2023-02-09T19:07:33.700Z"},
-        ]
-    }
+    monkeypatch.setattr(os, "environ", {"TASKCLUSTER_ROOT_URL": root_url})
+    responses.get(
+        f"{root_url}/api/index/v1/tasks/{index}",
+        json={
+            "tasks": [
+                {
+                    "namespace": "foo.A08Cbf8KSFqMsa3J0m-yTg",
+                    "taskId": "A08Cbf8KSFqMsa3J0m-yTg",
+                    "rank": 0,
+                    "data": {},
+                    "expires": "2025-10-29T11:58:45.474Z",
+                }
+            ],
+            "continuationToken": "qzxkXG8ZWa",
+        },
+    )
+    responses.get(
+        f"{root_url}/api/index/v1/tasks/{index}",
+        json={
+            "tasks": [
+                {
+                    "namespace": "foo.a0ha8axBTVCCgq1zm6uUhQ",
+                    "taskId": "a0ha8axBTVCCgq1zm6uUhQ",
+                    "rank": 0,
+                    "data": {},
+                    "expires": "2025-10-29T11:57:33.217Z",
+                }
+            ],
+        },
+    )
 
     result = tc.list_tasks(index)
-    assert result == ["abc", "123"]
-    mock_index.listTasks.assert_called_with(index, {})
+    assert result == ["a0ha8axBTVCCgq1zm6uUhQ", "A08Cbf8KSFqMsa3J0m-yTg"]
 
 
 def test_parse_time():
