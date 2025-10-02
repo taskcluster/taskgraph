@@ -183,7 +183,6 @@ def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
 
     expected = {
         "base-repo": env.get("BASE_REPOSITORY"),
-        "base-ref": env.get("BASE_REF"),
         "base-rev": env.get("BASE_REV"),
         "checkout": os.path.join(os.getcwd(), "checkout"),
         "env-prefix": name.upper(),
@@ -354,7 +353,7 @@ def mock_git_repo():
 
 
 @pytest.mark.parametrize(
-    "base_ref,ref,files,hash_key",
+    "base_rev,ref,files,hash_key",
     [
         (None, None, ["mainfile"], "main"),
         (None, "main", ["mainfile"], "main"),
@@ -367,7 +366,7 @@ def test_git_checkout(
     mock_stdin,
     run_task_mod,
     mock_git_repo,
-    base_ref,
+    base_rev,
     ref,
     files,
     hash_key,
@@ -378,8 +377,7 @@ def test_git_checkout(
             destination_path=destination,
             head_repo=mock_git_repo["path"],
             base_repo=mock_git_repo["path"],
-            base_ref=base_ref,
-            base_rev=None,
+            base_rev=base_rev,
             ref=ref,
             commit=None,
             ssh_key_file=None,
@@ -414,7 +412,6 @@ def test_git_checkout_with_commit(
             destination_path=destination,
             head_repo=mock_git_repo["path"],
             base_repo=mock_git_repo["path"],
-            base_ref="mybranch",
             base_rev=mock_git_repo["main"],
             ref=mock_git_repo["branch"],
             commit=mock_git_repo["branch"],
