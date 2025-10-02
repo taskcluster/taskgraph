@@ -164,7 +164,41 @@ def test_install_pip_requirements_with_uv(
             {
                 "base-repo": "https://hg.mozilla.org/mozilla-unified",
             },
-        )
+        ),
+        pytest.param(
+            {
+                "REPOSITORY_TYPE": "git",
+                "BASE_REPOSITORY": "https://github.com/mozilla-mobile/mozilla-vpn-client.git",
+                "HEAD_REPOSITORY": "https://github.com/mozilla-mobile/mozilla-vpn-client.git",
+                "HEAD_REV": "abcdef",
+                "SUBMODULES": "3rdparty/i18n",
+            },
+            {},
+        ),
+        pytest.param(
+            {
+                "REPOSITORY_TYPE": "git",
+                "BASE_REPOSITORY": "https://github.com/mozilla-mobile/mozilla-vpn-client.git",
+                "HEAD_REPOSITORY": "https://github.com/mozilla-mobile/mozilla-vpn-client.git",
+                "HEAD_REV": "abcdef",
+                "SUBMODULES": "auto",
+            },
+            {
+                "submodules": True,
+            },
+        ),
+        pytest.param(
+            {
+                "REPOSITORY_TYPE": "git",
+                "BASE_REPOSITORY": "https://github.com/mozilla-mobile/mozilla-vpn-client.git",
+                "HEAD_REPOSITORY": "https://github.com/mozilla-mobile/mozilla-vpn-client.git",
+                "HEAD_REV": "abcdef",
+                "SUBMODULES": "yes",
+            },
+            {
+                "submodules": True,
+            },
+        ),
     ],
 )
 def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
@@ -197,6 +231,7 @@ def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
         "ssh-secret-name": env.get("SSH_SECRET_NAME"),
         "sparse-profile": False,
         "store-path": env.get("HG_STORE_PATH"),
+        "submodules": env.get("SUBMODULES"),
     }
     if "PIP_REQUIREMENTS" in env:
         expected["pip-requirements"] = os.path.join(
@@ -321,32 +356,87 @@ def git_current_rev(cwd):
     ).strip()
 
 
+@pytest.fixture()
+def mock_homedir(monkeypatch):
+    "Mock home directory to isolate git config changes"
+    with tempfile.TemporaryDirectory() as fakehome:
+        env = os.environ.copy()
+        env["HOME"] = str(fakehome)
+        monkeypatch.setattr(os, "environ", env)
+
+        # Enable the git file protocol for testing.
+        subprocess.check_call(
+            ["git", "config", "--global", "protocol.file.allow", "always"], env=env
+        )
+        yield str(fakehome)
+
+
 @pytest.fixture(scope="session")  # Tests shouldn't change this repo
 def mock_git_repo():
     "Mock repository with files, commits and branches for using as source"
-    with tempfile.TemporaryDirectory() as repo:
-        repo_path = str(repo)
-        # Init git repo and setup user config
-        subprocess.check_call(["git", "init", "-b", "main"], cwd=repo_path)
-        subprocess.check_call(["git", "config", "user.name", "pytest"], cwd=repo_path)
-        subprocess.check_call(
-            ["git", "config", "user.email", "py@tes.t"], cwd=repo_path
-        )
 
-        def _commit_file(message, filename):
-            with open(os.path.join(repo, filename), "w") as fout:
-                fout.write("test file content")
-            subprocess.check_call(["git", "add", filename], cwd=repo_path)
-            subprocess.check_call(["git", "commit", "-m", message], cwd=repo_path)
-            return git_current_rev(repo_path)
+    def _create_empty_repo(path):
+        subprocess.check_call(["git", "init", "-b", "main", path])
+        subprocess.check_call(["git", "config", "user.name", "pytest"], cwd=path)
+        subprocess.check_call(["git", "config", "user.email", "py@tes.t"], cwd=path)
+
+    def _commit_file(message, filename, path):
+        with open(os.path.join(path, filename), "w") as fout:
+            fout.write("test file content")
+        subprocess.check_call(["git", "add", filename], cwd=path)
+        subprocess.check_call(["git", "commit", "-m", message], cwd=path)
+        return git_current_rev(path)
+
+    with tempfile.TemporaryDirectory() as repo:
+        # Create the submodule repositories
+        sm1_path = os.path.join(str(repo), "submodule1")
+        _create_empty_repo(sm1_path)
+        _commit_file("The first submodule", "first", sm1_path)
+
+        sm2_path = os.path.join(str(repo), "submodule2")
+        _create_empty_repo(sm2_path)
+        _commit_file("The second submodule", "second", sm2_path)
+
+        # Create the testing repository.
+        repo_path = os.path.join(str(repo), "repository")
+        _create_empty_repo(repo_path)
+
+        # Add submodules (to main branch)
+        subprocess.check_call(
+            [
+                "git",
+                "-c",
+                "protocol.file.allow=always",
+                "submodule",
+                "add",
+                f"file://{os.path.abspath(sm1_path)}",
+                "sm1",
+            ],
+            cwd=repo_path,
+        )
+        subprocess.check_call(
+            [
+                "git",
+                "-c",
+                "protocol.file.allow=always",
+                "submodule",
+                "add",
+                f"file://{os.path.abspath(sm2_path)}",
+                "sm2",
+            ],
+            cwd=repo_path,
+        )
+        subprocess.check_call(["git", "add", "sm1"], cwd=repo_path)
+        subprocess.check_call(["git", "add", "sm2"], cwd=repo_path)
+        subprocess.check_call(["git", "commit", "-m", "Add submodules"], cwd=repo_path)
 
         # Commit mainfile (to main branch)
-        main_commit = _commit_file("Initial commit", "mainfile")
+        main_commit = _commit_file("Initial commit", "mainfile", repo_path)
 
         # New branch mybranch
         subprocess.check_call(["git", "checkout", "-b", "mybranch"], cwd=repo_path)
         # Commit branchfile to mybranch branch
-        branch_commit = _commit_file("File in mybranch", "branchfile")
+        branch_commit = _commit_file("File in mybranch", "branchfile", repo_path)
 
         # Set current branch back to main
         subprocess.check_call(["git", "checkout", "main"], cwd=repo_path)
@@ -354,21 +444,47 @@ def mock_git_repo():
 
 
 @pytest.mark.parametrize(
-    "base_ref,ref,files,hash_key",
+    "base_ref,ref,submodules,files,hash_key",
     [
-        (None, None, ["mainfile"], "main"),
-        (None, "main", ["mainfile"], "main"),
-        (None, "mybranch", ["mainfile", "branchfile"], "branch"),
-        ("main", "main", ["mainfile"], "main"),
-        ("main", "mybranch", ["mainfile", "branchfile"], "branch"),
+        # Check out the repository in a bunch of states.
+        (None, None, None, ["mainfile"], "main"),
+        (None, "main", None, ["mainfile"], "main"),
+        (None, "mybranch", None, ["mainfile", "branchfile"], "branch"),
+        ("main", "main", None, ["mainfile"], "main"),
+        ("main", "mybranch", None, ["mainfile", "branchfile"], "branch"),
+        # Same tests again - but with submodules.
+        (None, None, True, ["mainfile", "sm1/first", "sm2/second"], "main"),
+        (None, "main", True, ["mainfile", "sm1/first", "sm2/second"], "main"),
+        (
+            None,
+            "mybranch",
+            True,
+            ["mainfile", "branchfile", "sm1/first", "sm2/second"],
+            "branch",
+        ),
+        ("main", "main", True, ["mainfile", "sm1/first", "sm2/second"], "main"),
+        (
+            "main",
+            "mybranch",
+            True,
+            ["mainfile", "branchfile", "sm1/first", "sm2/second"],
+            "branch",
+        ),
+        # Tests for submodule matching rules.
+        (None, "main", "sm1", ["mainfile", "sm1/first"], "main"),
+        (None, "main", "sm2", ["mainfile", "sm2/second"], "main"),
+        (None, "main", "one:two:three", ["mainfile"], "main"),
+        (None, "main", "one:two:sm1", ["mainfile", "sm1/first"], "main"),
     ],
 )
 def test_git_checkout(
     mock_stdin,
+    mock_homedir,
     run_task_mod,
     mock_git_repo,
     base_ref,
     ref,
+    submodules,
     files,
     hash_key,
 ):
@@ -384,6 +500,7 @@ def test_git_checkout(
             commit=None,
             ssh_key_file=None,
             ssh_known_hosts_file=None,
+            submodules=submodules,
         )
 
         # Check desired files exist
@@ -405,6 +522,7 @@ def test_git_checkout(
 
 def test_git_checkout_with_commit(
     mock_stdin,
+    mock_homedir,
     run_task_mod,
     mock_git_repo,
 ):
@@ -420,6 +538,7 @@ def test_git_checkout_with_commit(
             commit=mock_git_repo["branch"],
             ssh_key_file=None,
             ssh_known_hosts_file=None,
+            submodules=None,
         )
 
 
