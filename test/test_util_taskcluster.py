@@ -84,7 +84,6 @@ def test_get_artifact_url(monkeypatch):
     assert tc.get_artifact_url(task_id, path) == expected_proxy
 
 
-@pytest.mark.xfail
 def test_get_artifact(responses, root_url):
     tid = "abc123"
     tc.get_taskcluster_client.cache_clear()
@@ -194,7 +193,6 @@ def test_find_task_id_batched(responses, root_url):
     assert result == {"index.abc": "abc", "index.def": "def"}
 
 
-@pytest.mark.xfail
 def test_get_artifact_from_index(responses, root_url):
     index = "foo"
     path = "file.txt"
