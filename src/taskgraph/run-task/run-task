@@ -696,7 +696,7 @@ def git_checkout(
 
     # If a ref isn't provided, we fetch all refs from head_repo, which may be slow.
     target = ref if ref else "+refs/heads/*:refs/remotes/work/*"
-    git_fetch(destination_path, target, remote=head_repo, tags=tags, shallow=shallow_clone, env=env)
+    git_fetch(destination_path, target, remote=head_repo, tags=tags, shallow=False, env=env)
 
     args = [
         "git",
