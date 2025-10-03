@@ -670,7 +670,9 @@ def git_checkout(
     # because it is the only scenario where tags could be present. (PRs, for
     # example, always include an explicit rev.) Failure to do this could result
     # in not having a tag, or worse: having an outdated version of one.
-    tags = True if ref and base_repo == head_repo else False
+    tags = False
+    if ref and not ref.startswith("refs/heads/") and base_repo == head_repo:
+        tags = True
 
     # If a ref isn't provided, we fetch all refs from head_repo, which may be slow.
     target = ref if ref else "+refs/heads/*:refs/remotes/work/*"
