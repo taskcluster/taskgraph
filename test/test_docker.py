@@ -639,7 +639,6 @@ def test_build_image_with_parent(mocker, responses, root_url, run_build_image):
     assert docker_load_args[:3] == ["docker", "load", "-i"]
 
 
-@pytest.mark.xfail
 def test_build_image_with_parent_not_found(
     mocker, responses, root_url, run_build_image
 ):

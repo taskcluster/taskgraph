@@ -16,9 +16,7 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Any, Dict, Generator, List, Optional, Union
 
-from requests import HTTPError
-
-from taskgraph.generator import load_tasks_for_kind
+from taskcluster.exceptions import TaskclusterRestFailure
 
 try:
     import zstandard as zstd
@@ -26,6 +24,7 @@ except ImportError as e:
     zstd = e
 
 from taskgraph.config import GraphConfig
+from taskgraph.generator import load_tasks_for_kind
 from taskgraph.transforms import docker_image
 from taskgraph.util import docker, json
 from taskgraph.util.taskcluster import (
@@ -203,8 +202,8 @@ def build_image(
         if parent_id := task_def["payload"].get("env", {}).get("PARENT_TASK_ID"):
             try:
                 status_task(parent_id)
-            except HTTPError as e:
-                if e.response.status_code != 404:
+            except TaskclusterRestFailure as e:
+                if e.status_code != 404:
                     raise
 
                 # Parent id doesn't exist, needs to be re-built as well.
