@@ -6,9 +6,10 @@
 import copy
 import datetime
 import functools
+import io
 import logging
 import os
-from typing import Dict, List, Union
+from typing import Any, Dict, List, Union
 
 import requests
 import taskcluster_urls as liburls
@@ -69,12 +70,31 @@ def get_taskcluster_client(service: str):
     return getattr(taskcluster, service[0].upper() + service[1:])(options)
 
 
-def _handle_artifact(path, response):
+def _handle_artifact(
+    path: str, response: Union[requests.Response, Dict[str, Any]]
+) -> Any:
+    if isinstance(response, dict):
+        # When taskcluster client returns non-JSON responses, it wraps them in {"response": <Response>}
+        if "response" in response and isinstance(
+            response["response"], requests.Response
+        ):
+            response = response["response"]
+        else:
+            # If we already a dict (parsed JSON), return it directly.
+            return response
+
+    # We have a response object, load the content based on the path extension.
     if path.endswith(".json"):
         return response.json()
 
     if path.endswith(".yml"):
         return yaml.load_stream(response.content)
+
+    # Otherwise return raw response content
+    if hasattr(response.raw, "tell") and response.raw.tell() > 0:
+        # Stream was already read, create a new one from content. This can
+        # happen when mocking with responses.
+        return io.BytesIO(response.content)
 
     response.raw.read = functools.partial(response.raw.read, decode_content=True)
     return response.raw
