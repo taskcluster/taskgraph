@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 import tempfile
 
@@ -7,6 +8,17 @@ import pytest
 from taskgraph import docker
 from taskgraph.config import GraphConfig
 from taskgraph.transforms.docker_image import IMAGE_BUILDER_IMAGE
+
+
+@pytest.fixture
+def root_url():
+    return "https://tc.example.com"
+
+
+@pytest.fixture(autouse=True)
+def mock_environ(monkeypatch, root_url):
+    # Ensure user specified environment variables don't interfere with URLs.
+    monkeypatch.setattr(os, "environ", {"TASKCLUSTER_ROOT_URL": root_url})
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -284,6 +296,36 @@ def test_load_task_with_different_image_types(
     mocks["load_image_by_task_id"].assert_called_once_with(image_task_id)
 
 
+def test_load_task_with_local_image(
+    mocker,
+    run_load_task,
+):
+    task_id = "abc"
+    image_task_id = "xyz"
+    task = {
+        "metadata": {"name": "test-task-image-types"},
+        "payload": {
+            "command": [
+                "/usr/bin/run-task",
+                "--task-cwd=/builds/worker",
+                "--",
+                "echo",
+                "test",
+            ],
+            "image": "hello-world",
+        },
+    }
+
+    mocker.patch.object(docker, "find_task_id", return_value=image_task_id)
+
+    ret, mocks = run_load_task(task)
+    assert ret == 0
+
+    mocks["get_task_definition"].assert_called_once_with(task_id)
+    mocks["build_image"].assert_called_once()
+    assert mocks["build_image"].call_args[0][1] == "hello-world"
+
+
 def test_load_task_with_unsupported_image_type(caplog, run_load_task):
     caplog.set_level(logging.DEBUG)
     task = {
@@ -439,7 +481,7 @@ def test_load_task_with_custom_image_registry(mocker, run_load_task, task):
 
 @pytest.fixture
 def run_build_image(mocker):
-    def inner(image_name, save_image=None, context_file=None):
+    def inner(image_name, save_image=None, context_file=None, image_task=None):
         graph_config = GraphConfig(
             {
                 "trust-domain": "test-domain",
@@ -494,17 +536,23 @@ def run_build_image(mocker):
             "subprocess": mocker.patch.object(docker.subprocess, "run"),
             "shutil_copy": mocker.patch.object(docker.shutil, "copy"),
             "shutil_move": mocker.patch.object(docker.shutil, "move"),
-            "status_task": mocker.patch.object(docker, "status_task"),
             "isdir": mocker.patch.object(docker.os.path, "isdir", return_value=True),
             "getuid": mocker.patch.object(docker.os, "getuid", return_value=1000),
             "getgid": mocker.patch.object(docker.os, "getgid", return_value=1000),
         }
 
         # Mock image task
-        mocks["task"] = mocker.MagicMock()
-        mocks["task"].task = {"payload": {"env": {}}}
+        if not image_task:
+            image_task = mocker.MagicMock()
+            image_task.task = {"payload": {"env": {}}}
+
+        parent_image = mocker.MagicMock()
+        parent_image.task = {"payload": {"env": {}}}
+
+        mocks["image_task"] = image_task
         mocks["load_tasks_for_kind"].return_value = {
-            f"docker-image-{image_name}": mocks["task"]
+            f"docker-image-{image_name}": mocks["image_task"],
+            "docker-image-parent": parent_image,
         }
 
         # Mock subprocess result for docker load
@@ -545,7 +593,7 @@ def test_build_image(run_build_image):
     mocks["load_task"].assert_called_once()
     call_args = mocks["load_task"].call_args
     assert call_args[0][0] == mocks["graph_config"]
-    assert call_args[0][1] == mocks["task"].task
+    assert call_args[0][1] == mocks["image_task"].task
     assert call_args[1]["custom_image"] == IMAGE_BUILDER_IMAGE
     assert call_args[1]["interactive"] is False
     assert "volumes" in call_args[1]
@@ -556,6 +604,78 @@ def test_build_image(run_build_image):
     assert docker_load_args[:3] == ["docker", "load", "-i"]
 
     assert result == "hello-world:latest"
+
+
+def test_build_image_with_parent(mocker, responses, root_url, run_build_image):
+    parent_task_id = "abc"
+    responses.get(f"{root_url}/api/queue/v1/task/{parent_task_id}/status")
+
+    # Test building image that has a parent image
+    image_task = mocker.MagicMock()
+    image_task.task = {"payload": {"env": {"PARENT_TASK_ID": parent_task_id}}}
+    result, mocks = run_build_image("hello-world", image_task=image_task)
+    assert result == "hello-world:latest"
+
+    # Verify the graph generation call
+    mocks["load_tasks_for_kind"].assert_called_once_with(
+        {"do_not_optimize": ["docker-image-hello-world"]},
+        "docker-image",
+        graph_attr="morphed_task_graph",
+        write_artifacts=True,
+    )
+
+    # Verify load-task called (to invoke image_builder)
+    mocks["load_task"].assert_called_once()
+    call_args = mocks["load_task"].call_args
+    assert call_args[0][0] == mocks["graph_config"]
+    assert call_args[0][1] == mocks["image_task"].task
+    assert call_args[1]["custom_image"] == IMAGE_BUILDER_IMAGE
+    assert call_args[1]["interactive"] is False
+    assert "volumes" in call_args[1]
+
+    # Verify docker load was called
+    mocks["subprocess"].assert_called_once()
+    docker_load_args = mocks["subprocess"].call_args[0][0]
+    assert docker_load_args[:3] == ["docker", "load", "-i"]
+
+
+@pytest.mark.xfail
+def test_build_image_with_parent_not_found(
+    mocker, responses, root_url, run_build_image
+):
+    parent_task_id = "abc"
+    responses.get(f"{root_url}/api/queue/v1/task/{parent_task_id}/status", status=404)
+
+    # Test building image that uses DOCKER_IMAGE_PARENT
+    image_task = mocker.MagicMock()
+    image_task.task = {"payload": {"env": {"PARENT_TASK_ID": parent_task_id}}}
+    image_task.dependencies = {"parent": "docker-image-parent"}
+    result, mocks = run_build_image("hello-world", image_task=image_task)
+    assert result == "hello-world:latest"
+
+    # Verify the graph generation call
+    assert mocks["load_tasks_for_kind"].call_count == 2
+    assert mocks["load_tasks_for_kind"].call_args_list[0] == (
+        ({"do_not_optimize": ["docker-image-hello-world"]}, "docker-image"),
+        {"graph_attr": "morphed_task_graph", "write_artifacts": True},
+    )
+    assert mocks["load_tasks_for_kind"].call_args_list[1] == (
+        ({"do_not_optimize": ["docker-image-parent"]}, "docker-image"),
+        {"graph_attr": "morphed_task_graph", "write_artifacts": True},
+    )
+
+    # Verify load-task called (to invoke image_builder)
+    assert mocks["load_task"].call_count == 2
+    call_args = mocks["load_task"].call_args_list[0]
+    assert call_args[0][0] == mocks["graph_config"]
+    assert call_args[1]["custom_image"] == IMAGE_BUILDER_IMAGE
+    assert call_args[1]["interactive"] is False
+    assert "volumes" in call_args[1]
+
+    # Verify docker load was called
+    mocks["subprocess"].assert_called_once()
+    docker_load_args = mocks["subprocess"].call_args[0][0]
+    assert docker_load_args[:3] == ["docker", "load", "-i"]
 
 
 def test_build_image_with_save_image(run_build_image):
