@@ -34,141 +34,121 @@ def file_hash(path):
     return h.hexdigest()
 
 
-class TestArchive(unittest.TestCase):
-    def _create_files(self, root):
+@pytest.fixture
+def create_files(tmp_path):
+
+    def inner():
         files = {}
         for i in range(10):
-            p = os.path.join(root, f"file{i:02d}")
-            with open(p, "wb") as fh:
-                fh.write(b"file%02d" % i)
+            p = tmp_path / f"file{i:02d}"
+            p.write_bytes(b"file%02d" % i)
             # Need to set permissions or umask may influence testing.
-            os.chmod(p, MODE_STANDARD)
-            files[f"file{i:02d}"] = p
+            p.chmod(MODE_STANDARD)
+            files[f"file{i:02d}"] = str(p)
 
         for i in range(10):
             files[f"file{i + 10:02d}"] = io.BytesIO(b"file%02d" % (i + 10))
 
         return files
 
-    def _verify_basic_tarfile(self, tf):
-        self.assertEqual(len(tf.getmembers()), 20)
+    return inner
 
-        names = [f"file{i:02d}" for i in range(20)]
-        self.assertEqual(tf.getnames(), names)
 
-        for ti in tf.getmembers():
-            self.assertEqual(ti.uid, 0)
-            self.assertEqual(ti.gid, 0)
-            self.assertEqual(ti.uname, "")
-            self.assertEqual(ti.gname, "")
-            self.assertEqual(ti.mode, MODE_STANDARD)
-            self.assertEqual(ti.mtime, DEFAULT_MTIME)
+def verify_basic_tarfile(tf):
+    assert len(tf.getmembers()) == 20
 
-    @pytest.mark.xfail(
-        reason="ValueError is not thrown despite being provided directory."
-    )
-    def test_dirs_refused(self):
-        d = tempfile.mkdtemp()
-        try:
-            tp = os.path.join(d, "test.tar")
-            with open(tp, "wb") as fh:
-                with self.assertRaisesRegex(ValueError, "not a regular"):
-                    create_tar_from_files(fh, {"test": d})
-        finally:
-            shutil.rmtree(d)
+    names = [f"file{i:02d}" for i in range(20)]
+    assert tf.getnames() == names
 
-    def test_setuid_setgid_refused(self):
-        d = tempfile.mkdtemp()
-        try:
-            uid = os.path.join(d, "setuid")
-            gid = os.path.join(d, "setgid")
-            with open(uid, "a"):
-                pass
-            with open(gid, "a"):
-                pass
+    for ti in tf.getmembers():
+        assert ti.uid == 0
+        assert ti.gid == 0
+        assert ti.uname == ""
+        assert ti.gname == ""
+        assert ti.mode == MODE_STANDARD
+        assert ti.mtime == DEFAULT_MTIME
 
-            os.chmod(uid, MODE_STANDARD | stat.S_ISUID)
-            os.chmod(gid, MODE_STANDARD | stat.S_ISGID)
 
-            tp = os.path.join(d, "test.tar")
-            with open(tp, "wb") as fh:
-                with self.assertRaisesRegex(ValueError, "cannot add file with setuid"):
-                    create_tar_from_files(fh, {"test": uid})
-                with self.assertRaisesRegex(ValueError, "cannot add file with setuid"):
-                    create_tar_from_files(fh, {"test": gid})
-        finally:
-            shutil.rmtree(d)
+@pytest.mark.xfail(
+    reason="ValueError is not thrown despite being provided directory."
+)
+def test_dirs_refused(tmp_path):
+    tp = tmp_path / "test.tar"
+    with open(tp, "wb") as fh:
+        with pytest.raises(ValueError, match="not a regular"):
+            create_tar_from_files(fh, {"test": str(tmp_path)})
 
-    def test_create_tar_basic(self):
-        d = tempfile.mkdtemp()
-        try:
-            files = self._create_files(d)
 
-            tp = os.path.join(d, "test.tar")
-            with open(tp, "wb") as fh:
-                create_tar_from_files(fh, files)
+def test_setuid_setgid_refused(tmp_path):
+    uid = tmp_path / "setuid"
+    uid.touch()
+    uid.chmod(MODE_STANDARD | stat.S_ISUID)
 
-            # Output should be deterministic.
-            self.assertEqual(file_hash(tp), "01cd314e277f060e98c7de6c8ea57f96b3a2065c")
+    gid = tmp_path / "setgid"
+    gid.touch()
+    gid.chmod(MODE_STANDARD | stat.S_ISGID)
 
-            with tarfile.open(tp, "r") as tf:
-                self._verify_basic_tarfile(tf)
+    tp = tmp_path / "test.tar"
+    with open(tp, "wb") as fh:
+        with pytest.raises(ValueError, match="cannot add file with setuid"):
+            create_tar_from_files(fh, {"test": str(uid)})
+        with pytest.raises(ValueError, match="cannot add file with setuid"):
+            create_tar_from_files(fh, {"test": str(gid)})
 
-        finally:
-            shutil.rmtree(d)
 
-    @pytest.mark.xfail(reason="hash mismatch")
-    def test_executable_preserved(self):
-        d = tempfile.mkdtemp()
-        try:
-            p = os.path.join(d, "exec")
-            with open(p, "wb") as fh:
-                fh.write("#!/bin/bash\n")
-            os.chmod(p, MODE_STANDARD | stat.S_IXUSR)
+def test_create_tar_basic(tmp_path, create_files):
+    files = create_files()
 
-            tp = os.path.join(d, "test.tar")
-            with open(tp, "wb") as fh:
-                create_tar_from_files(fh, {"exec": p})
+    tp = tmp_path / "test.tar"
+    with open(tp, "wb") as fh:
+        create_tar_from_files(fh, files)
 
-            self.assertEqual(file_hash(tp), "357e1b81c0b6cfdfa5d2d118d420025c3c76ee93")
+    # Output should be deterministic.
+    assert file_hash(tp) == "01cd314e277f060e98c7de6c8ea57f96b3a2065c"
 
-            with tarfile.open(tp, "r") as tf:
-                m = tf.getmember("exec")
-                self.assertEqual(m.mode, MODE_STANDARD | stat.S_IXUSR)
+    with tarfile.open(tp, "r") as tf:
+        verify_basic_tarfile(tf)
 
-        finally:
-            shutil.rmtree(d)
 
-    def test_create_tar_gz_basic(self):
-        d = tempfile.mkdtemp()
-        try:
-            files = self._create_files(d)
+@pytest.mark.xfail(reason="hash mismatch")
+def test_executable_preserved():
+    p = os.path.join(d, "exec")
+    with open(p, "wb") as fh:
+        fh.write(b"#!/bin/bash\n")
+    os.chmod(p, MODE_STANDARD | stat.S_IXUSR)
 
-            gp = os.path.join(d, "test.tar.gz")
-            with open(gp, "wb") as fh:
-                create_tar_gz_from_files(fh, files)
+    tp = os.path.join(d, "test.tar")
+    with open(tp, "wb") as fh:
+        create_tar_from_files(fh, {"exec": p})
 
-            self.assertEqual(file_hash(gp), "7c4da5adc5088cdf00911d5daf9a67b15de714b7")
+    assert file_hash(tp) == "357e1b81c0b6cfdfa5d2d118d420025c3c76ee93"
 
-            with tarfile.open(gp, "r:gz") as tf:
-                self._verify_basic_tarfile(tf)
+    with tarfile.open(tp, "r") as tf:
+        m = tf.getmember("exec")
+        assert m.mode == MODE_STANDARD | stat.S_IXUSR
 
-        finally:
-            shutil.rmtree(d)
 
-    def test_tar_gz_name(self):
-        d = tempfile.mkdtemp()
-        try:
-            files = self._create_files(d)
+def test_create_tar_gz_basic(tmp_path, create_files):
+    files = create_files()
 
-            gp = os.path.join(d, "test.tar.gz")
-            with open(gp, "wb") as fh:
-                create_tar_gz_from_files(fh, files, filename="foobar")
+    gp = tmp_path / "test.tar.gz"
+    with open(gp, "wb") as fh:
+        create_tar_gz_from_files(fh, files)
 
-            self.assertEqual(file_hash(gp), "721e00083c17d16df2edbddf40136298c06d0c49")
+    assert file_hash(gp) == "7c4da5adc5088cdf00911d5daf9a67b15de714b7"
 
-            with tarfile.open(gp, "r:gz") as tf:
-                self._verify_basic_tarfile(tf)
+    with tarfile.open(gp, "r:gz") as tf:
+        verify_basic_tarfile(tf)
 
-        finally:
-            shutil.rmtree(d)
+
+def test_tar_gz_name(tmp_path, create_files):
+    files = create_files()
+
+    gp = tmp_path / "test.tar.gz"
+    with open(gp, "wb") as fh:
+        create_tar_gz_from_files(fh, files, filename="foobar")
+
+    assert file_hash(gp) == "721e00083c17d16df2edbddf40136298c06d0c49"
+
+    with tarfile.open(gp, "r:gz") as tf:
+        verify_basic_tarfile(tf)
