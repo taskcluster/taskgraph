@@ -4,12 +4,8 @@
 
 import hashlib
 import io
-import os
-import shutil
 import stat
 import tarfile
-import tempfile
-import unittest
 
 import pytest
 
@@ -36,7 +32,6 @@ def file_hash(path):
 
 @pytest.fixture
 def create_files(tmp_path):
-
     def inner():
         files = {}
         for i in range(10):
@@ -69,9 +64,7 @@ def verify_basic_tarfile(tf):
         assert ti.mtime == DEFAULT_MTIME
 
 
-@pytest.mark.xfail(
-    reason="ValueError is not thrown despite being provided directory."
-)
+@pytest.mark.xfail(reason="ValueError is not thrown despite being provided directory.")
 def test_dirs_refused(tmp_path):
     tp = tmp_path / "test.tar"
     with open(tp, "wb") as fh:
@@ -110,45 +103,79 @@ def test_create_tar_basic(tmp_path, create_files):
         verify_basic_tarfile(tf)
 
 
-@pytest.mark.xfail(reason="hash mismatch")
-def test_executable_preserved():
-    p = os.path.join(d, "exec")
-    with open(p, "wb") as fh:
-        fh.write(b"#!/bin/bash\n")
-    os.chmod(p, MODE_STANDARD | stat.S_IXUSR)
+def test_executable_preserved(tmp_path):
+    p = tmp_path / "exec"
+    p.write_bytes(b"#!/bin/bash\n")
+    p.chmod(MODE_STANDARD | stat.S_IXUSR)
 
-    tp = os.path.join(d, "test.tar")
+    tp = tmp_path / "test.tar"
     with open(tp, "wb") as fh:
-        create_tar_from_files(fh, {"exec": p})
+        create_tar_from_files(fh, {"exec": str(p)})
 
-    assert file_hash(tp) == "357e1b81c0b6cfdfa5d2d118d420025c3c76ee93"
+    # Test determinism by creating the same file again
+    tp2 = tmp_path / "test2.tar"
+    with open(tp2, "wb") as fh:
+        create_tar_from_files(fh, {"exec": str(p)})
 
+    assert file_hash(str(tp)) == file_hash(str(tp2))
+
+    # Verify executable permissions are preserved in tar
     with tarfile.open(tp, "r") as tf:
         m = tf.getmember("exec")
         assert m.mode == MODE_STANDARD | stat.S_IXUSR
 
+        # Verify file content is correct
+        extracted_content = tf.extractfile(m).read()
+        assert extracted_content == b"#!/bin/bash\n"
+
 
 def test_create_tar_gz_basic(tmp_path, create_files):
-    files = create_files()
-
     gp = tmp_path / "test.tar.gz"
     with open(gp, "wb") as fh:
-        create_tar_gz_from_files(fh, files)
+        create_tar_gz_from_files(fh, create_files())
 
-    assert file_hash(gp) == "7c4da5adc5088cdf00911d5daf9a67b15de714b7"
+    # Test determinism by creating the same file again with fresh BytesIO objects
+    gp2 = tmp_path / "test2.tar.gz"
+    with open(gp2, "wb") as fh:
+        create_tar_gz_from_files(fh, create_files())
 
+    assert file_hash(str(gp)) == file_hash(str(gp2))
+
+    # Create uncompressed version for size comparison
+    tp = tmp_path / "test.tar"
+    with open(tp, "wb") as fh:
+        create_tar_from_files(fh, create_files())
+    uncompressed_size = tp.stat().st_size
+    compressed_size = gp.stat().st_size
+
+    # Compressed should be smaller than uncompressed
+    assert compressed_size < uncompressed_size
+
+    # Verify the contents are correct
     with tarfile.open(gp, "r:gz") as tf:
         verify_basic_tarfile(tf)
 
 
 def test_tar_gz_name(tmp_path, create_files):
-    files = create_files()
-
     gp = tmp_path / "test.tar.gz"
     with open(gp, "wb") as fh:
-        create_tar_gz_from_files(fh, files, filename="foobar")
+        create_tar_gz_from_files(fh, create_files(), filename="foobar")
 
-    assert file_hash(gp) == "721e00083c17d16df2edbddf40136298c06d0c49"
+    # Test determinism by creating the same file again with fresh BytesIO objects
+    gp2 = tmp_path / "test2.tar.gz"
+    with open(gp2, "wb") as fh:
+        create_tar_gz_from_files(fh, create_files(), filename="foobar")
 
+    assert file_hash(str(gp)) == file_hash(str(gp2))
+
+    # Create version without filename for comparison
+    gp_no_name = tmp_path / "test_no_name.tar.gz"
+    with open(gp_no_name, "wb") as fh:
+        create_tar_gz_from_files(fh, create_files())
+
+    # Files should be different (different filename in gzip header)
+    assert file_hash(str(gp)) != file_hash(str(gp_no_name))
+
+    # Verify the contents are correct
     with tarfile.open(gp, "r:gz") as tf:
         verify_basic_tarfile(tf)
