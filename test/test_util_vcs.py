@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import os
+import shutil
 import subprocess
 from pathlib import Path
 from textwrap import dedent
@@ -493,6 +494,58 @@ def test_find_latest_common_revision(repo_with_remote):
             )
             == Repository.NULL_REVISION
         )
+
+
+def test_find_latest_common_revision_shallow_clone(
+    tmpdir, git_repo, default_git_branch
+):
+    """Test finding common revision in a shallow clone that requires deepening."""
+    remote_path = str(tmpdir / "remote_repo")
+    shutil.copytree(git_repo, remote_path)
+
+    # Add several commits to the remote repository to create depth
+    remote_repo = get_repository(remote_path)
+
+    # Create multiple commits to establish depth
+    for i in range(5):
+        test_file = os.path.join(remote_path, f"file_{i}.txt")
+        with open(test_file, "w") as f:
+            f.write(f"content {i}")
+        remote_repo.run("add", test_file)
+        remote_repo.run("commit", "-m", f"Commit {i}")
+
+    # Store the head revision of remote for comparison
+    remote_head = remote_repo.head_rev
+
+    # Create a shallow clone with depth 1
+    # Need to use file:// protocol for --depth to work with local repos
+    shallow_clone_path = str(tmpdir / "shallow_clone")
+    subprocess.check_call(
+        ["git", "clone", "--depth", "1", f"file://{remote_path}", shallow_clone_path]
+    )
+
+    shallow_repo = get_repository(shallow_clone_path)
+    assert shallow_repo.is_shallow
+
+    remote_name = "origin"
+
+    # Create a new commit in the shallow clone to diverge from remote
+    new_file = os.path.join(shallow_clone_path, "local_file.txt")
+    with open(new_file, "w") as f:
+        f.write("local content")
+    shallow_repo.run("add", new_file)
+    shallow_repo.run("commit", "-m", "Local commit")
+
+    # Now try to find the common revision - this should trigger deepening
+    # because the shallow clone doesn't have enough history
+    base_ref = f"{remote_name}/{default_git_branch}"
+    result = shallow_repo.find_latest_common_revision(base_ref, shallow_repo.head_rev)
+
+    # The result should be the remote's head (the common ancestor)
+    assert result == remote_head
+
+    # Verify the repository has been deepened
+    assert shallow_repo.does_revision_exist_locally(result)
 
 
 def test_does_revision_exist_locally(repo):

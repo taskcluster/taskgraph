@@ -389,6 +389,10 @@ class GitRepository(Repository):
         return self.run("branch", "--show-current").strip() or None
 
     @property
+    def is_shallow(self):
+        return self.run("rev-parse", "--is-shallow-repository").strip() == "true"
+
+    @property
     def all_remote_names(self):
         remotes = self.run("remote").splitlines()
         if not remotes:
@@ -546,10 +550,36 @@ class GitRepository(Repository):
         self.run("checkout", ref)
 
     def find_latest_common_revision(self, base_ref_or_rev, head_rev):
-        try:
-            return self.run("merge-base", base_ref_or_rev, head_rev).strip()
-        except subprocess.CalledProcessError:
-            return self.NULL_REVISION
+        def run_merge_base():
+            try:
+                return self.run("merge-base", base_ref_or_rev, head_rev).strip()
+            except subprocess.CalledProcessError:
+                return None
+
+        if not self.is_shallow:
+            return run_merge_base() or self.NULL_REVISION
+
+        rev = run_merge_base()
+        deepen = 10
+        while not rev:
+            self.run("fetch", "--deepen", str(deepen), self.remote_name)
+            rev = run_merge_base()
+            deepen = deepen * 10
+
+            try:
+                self.run("rev-list", "--max-parents=0", head_rev)
+                # We've reached a root commit, stop trying to deepen.
+                break
+            except subprocess.CalledProcessError:
+                pass
+
+        if not rev:
+            # If we still haven't found a merge base, unshallow the repo and
+            # try one last time.
+            self.run("fetch", "--unshallow", self.remote_name)
+            rev = run_merge_base()
+
+        return rev or self.NULL_REVISION
 
     def does_revision_exist_locally(self, revision):
         try:

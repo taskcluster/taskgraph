@@ -28,16 +28,15 @@ import os
 import platform
 import re
 import shutil
-import signal
 import socket
 import stat
 import subprocess
 import time
 import urllib.error
 import urllib.request
+from itertools import count
 from pathlib import Path
-from threading import Thread
-from typing import Optional
+from typing import Dict, Optional
 
 SECRET_BASEURL_TPL = "{}/secrets/v1/secret/{{}}".format(os.environ.get("TASKCLUSTER_PROXY_URL", "http://taskcluster").rstrip('/'))
 
@@ -551,6 +550,36 @@ def configure_volume_posix(volume, user, group, running_as_root):
         set_dir_permissions(volume, user.pw_uid, group.gr_gid)
 
 
+def git_fetch(
+    destination_path: str,
+    ref: str,
+    remote: str = "origin",
+    tags: bool = False,
+    shallow: bool = False,
+    env: Optional[Dict[str, str]] = None,
+):
+    args = ["git", "fetch"]
+    if tags:
+        # `--force` is needed to be able to update an existing outdated tag.
+        args.extend(["--tags", "--force"])
+
+    args.extend([remote, ref])
+
+    if shallow:
+        for deepen in range(10, 100, 10):
+            args[2:2] = [f"--deepen={deepen}"]
+            run_command(b"vcs", args, cwd=destination_path, extra_env=env)
+
+            ret = run_command(b"vcs", ["git", "cat-file", "-e", ref])
+            if ret == 0:
+                return
+
+        print(f"unable to fetch {ref} from {remote} in shallow clone")
+        sys.exit(1)
+    else:
+        retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
+
+
 def _clean_git_checkout(destination_path):
     # Delete untracked files (i.e. build products)
     print_line(b"vcs", b"cleaning git checkout...\n")
@@ -594,12 +623,12 @@ def git_checkout(
     destination_path: str,
     head_repo: str,
     base_repo: Optional[str],
-    base_ref: Optional[str],
     base_rev: Optional[str],
     ref: Optional[str],
     commit: Optional[str],
     ssh_key_file: Optional[Path],
     ssh_known_hosts_file: Optional[Path],
+    shallow_clone: bool = False,
 ):
     env = {
         # abort if transfer speed is lower than 1kB/s for 1 minute
@@ -636,62 +665,38 @@ def git_checkout(
         args = [
             "git",
             "clone",
+        ]
+        
+        if shallow_clone:
+            # Use shallow clone with depth 1 for minimal history
+            args.extend(["--depth=1"])
+            # Skip checkout initially
+            args.extend(["--no-checkout"])
+        
+        args.extend([
             base_repo if base_repo else head_repo,
             destination_path,
-        ]
+        ])
 
         retry_required_command(b"vcs", args, extra_env=env)
 
-    if base_ref:
-        args = ["git", "fetch", "origin", base_ref]
-
-        retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
-
-        # Create local branch so that taskgraph is able to compute differences
-        # between the head branch and the base one, if needed
-        args = ["git", "checkout", base_ref]
-
-        retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
-
-    # When commits are force-pushed (like on a testing branch), base_rev doesn't
-    # exist on base_ref. Fetching it allows taskgraph to compute differences
-    # between the previous state before the force-push and the current state.
-    #
-    # Unlike base_ref just above, there is no need to checkout the revision:
-    # it's immediately available after the fetch.
+    # First fetch the base_rev. This allows Taskgraph to compute the files
+    # changed by the push.
     if base_rev and base_rev != NULL_REVISION:
-        args = ["git", "fetch", "origin", base_rev]
+        git_fetch(destination_path, base_rev, env=env)
 
-        retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
+    # Next fetch the head ref.
 
     # If a ref was provided, it might be tag, so we need to make sure we fetch
     # those. This is explicitly only done when base and head repo match,
     # because it is the only scenario where tags could be present. (PRs, for
     # example, always include an explicit rev.) Failure to do this could result
     # in not having a tag, or worse: having an outdated version of one.
-    # `--force` is needed to be able to update an existing tag.
-    if ref and base_repo == head_repo:
-        args = [
-            "git",
-            "fetch",
-            "--tags",
-            "--force",
-            base_repo,
-            ref,
-        ]
+    tags = True if ref and base_repo == head_repo else False
 
-        retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
-
-    # If a ref isn't provided, we fetch all refs from head_repo, which may be slow
-    args = [
-        "git",
-        "fetch",
-        "--no-tags",
-        head_repo,
-        ref if ref else "+refs/heads/*:refs/remotes/work/*",
-    ]
-
-    retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
+    # If a ref isn't provided, we fetch all refs from head_repo, which may be slow.
+    target = ref if ref else "+refs/heads/*:refs/remotes/work/*"
+    git_fetch(destination_path, target, remote=head_repo, tags=tags, shallow=False, env=env)
 
     args = [
         "git",
@@ -879,17 +884,22 @@ def add_vcs_arguments(parser, project, name):
         "--%s-sparse-profile" % project,
         help="Path to sparse profile for %s checkout" % name,
     )
+    parser.add_argument(
+        "--%s-shallow-clone" % project,
+        action="store_true",
+        help="Use shallow clone for %s" % name,
+    )
 
 
 def collect_vcs_options(args, project, name):
     checkout = getattr(args, "%s_checkout" % project)
     sparse_profile = getattr(args, "%s_sparse_profile" % project)
+    shallow_clone = getattr(args, "%s_shallow_clone" % project)
 
     env_prefix = project.upper()
 
     repo_type = os.environ.get("%s_REPOSITORY_TYPE" % env_prefix)
     base_repo = os.environ.get("%s_BASE_REPOSITORY" % env_prefix)
-    base_ref = os.environ.get("%s_BASE_REF" % env_prefix)
     base_rev = os.environ.get("%s_BASE_REV" % env_prefix)
     head_repo = os.environ.get("%s_HEAD_REPOSITORY" % env_prefix)
     revision = os.environ.get("%s_HEAD_REV" % env_prefix)
@@ -922,7 +932,6 @@ def collect_vcs_options(args, project, name):
         "checkout": checkout,
         "sparse-profile": sparse_profile,
         "base-repo": base_repo,
-        "base-ref": base_ref,
         "base-rev": base_rev,
         "head-repo": head_repo,
         "revision": revision,
@@ -930,6 +939,7 @@ def collect_vcs_options(args, project, name):
         "repo-type": repo_type,
         "ssh-secret-name": private_key_secret,
         "pip-requirements": pip_requirements,
+        "shallow-clone": shallow_clone,
     }
 
 
@@ -972,12 +982,12 @@ def vcs_checkout_from_args(options):
                 options["checkout"],
                 options["head-repo"],
                 options["base-repo"],
-                options["base-ref"],
                 options["base-rev"],
                 ref,
                 revision,
                 ssh_key_file,
                 ssh_known_hosts_file,
+                options.get("shallow-clone", False),
             )
         elif options["repo-type"] == "hg":
             if not revision and not ref:
