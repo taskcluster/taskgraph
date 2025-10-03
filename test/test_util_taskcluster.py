@@ -359,7 +359,6 @@ def test_get_current_scopes(responses, root_url):
     assert result == ["foo", "bar"]
 
 
-@pytest.mark.xfail
 def test_purge_cache(responses, root_url):
     provisioner = "hardware"
     worker_type = "mac"

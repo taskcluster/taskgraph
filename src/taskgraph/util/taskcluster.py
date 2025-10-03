@@ -384,14 +384,14 @@ def get_purge_cache_url(provisioner_id, worker_type):
 
 def purge_cache(provisioner_id, worker_type, cache_name):
     """Requests a cache purge from the purge-caches service."""
+    worker_pool_id = f"{provisioner_id}/{worker_type}"
+
     if testing:
-        logger.info(f"Would have purged {provisioner_id}/{worker_type}/{cache_name}.")
+        logger.info(f"Would have purged {worker_pool_id}/{cache_name}.")
     else:
-        logger.info(f"Purging {provisioner_id}/{worker_type}/{cache_name}.")
+        logger.info(f"Purging {worker_pool_id}/{cache_name}.")
         purge_cache_client = get_taskcluster_client("purgeCache")
-        purge_cache_client.purgeCache(
-            provisioner_id, worker_type, {"cacheName": cache_name}
-        )
+        purge_cache_client.purgeCache(worker_pool_id, {"cacheName": cache_name})
 
 
 def send_email(address, subject, content, link):
