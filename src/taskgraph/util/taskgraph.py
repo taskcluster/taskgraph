@@ -6,7 +6,7 @@
 Tools for interacting with existing taskgraphs.
 """
 
-from taskgraph.util.taskcluster import find_task_id, get_artifact
+from taskgraph.util.taskcluster import find_task_id, get_artifact_with_prefix
 
 
 def find_decision_task(parameters, graph_config):
@@ -35,14 +35,16 @@ def find_decision_task(parameters, graph_config):
 
 
 def find_existing_tasks_from_previous_kinds(
-    full_task_graph, previous_graph_ids, rebuild_kinds
+    full_task_graph, previous_graph_ids, rebuild_kinds, parameters=None
 ):
     """Given a list of previous decision/action taskIds and kinds to ignore
     from the previous graphs, return a dictionary of labels-to-taskids to use
     as ``existing_tasks`` in the optimization step."""
     existing_tasks = {}
     for previous_graph_id in previous_graph_ids:
-        label_to_taskid = get_artifact(previous_graph_id, "public/label-to-taskid.json")
+        label_to_taskid = get_artifact_with_prefix(
+            previous_graph_id, "label-to-taskid.json", parameters
+        )
         if label_to_taskid:
             kind_labels = {
                 t.label
