@@ -6,9 +6,10 @@
 import copy
 import datetime
 import functools
+import io
 import logging
 import os
-from typing import Dict, List, Union
+from typing import Any, Dict, List, Union
 
 import requests
 import taskcluster_urls as liburls
@@ -69,15 +70,35 @@ def get_taskcluster_client(service: str):
     return getattr(taskcluster, service[0].upper() + service[1:])(options)
 
 
-def _handle_artifact(path, response):
+def _handle_artifact(path: str, response: Union[Dict[str, Any], Any]) -> Any:
+    # When taskcluster client returns non-JSON responses, it wraps them in {"response": <Response>}
+    # When it returns JSON, it's already parsed
+    resp: Any = response
+    if isinstance(response, dict) and "response" in response:
+        resp = response["response"]
+
     if path.endswith(".json"):
-        return response.json()
+        # If response is already a dict (parsed JSON), return it directly
+        if isinstance(resp, dict):
+            return resp
+        return resp.json()
 
     if path.endswith(".yml"):
-        return yaml.load_stream(response.content)
+        return yaml.load_stream(resp.content)
 
-    response.raw.read = functools.partial(response.raw.read, decode_content=True)
-    return response.raw
+    # For non-JSON/YAML content, return raw response content
+    if getattr(resp, "raw", None):
+        # Try to read from raw, but if it's empty, fall back to content
+        content = resp.raw.read()
+        if not content and hasattr(resp, "content"):
+            content = resp.content
+        return io.BytesIO(content)
+    elif hasattr(resp, "content"):
+        return io.BytesIO(resp.content)
+
+    # Fallback for mock objects
+    resp.raw.read = functools.partial(resp.raw.read, decode_content=True)
+    return resp.raw
 
 
 def requests_retry_session(
@@ -364,14 +385,14 @@ def get_purge_cache_url(provisioner_id, worker_type):
 
 def purge_cache(provisioner_id, worker_type, cache_name):
     """Requests a cache purge from the purge-caches service."""
+    worker_pool_id = f"{provisioner_id}/{worker_type}"
+
     if testing:
-        logger.info(f"Would have purged {provisioner_id}/{worker_type}/{cache_name}.")
+        logger.info(f"Would have purged {worker_pool_id}/{cache_name}.")
     else:
-        logger.info(f"Purging {provisioner_id}/{worker_type}/{cache_name}.")
+        logger.info(f"Purging {worker_pool_id}/{cache_name}.")
         purge_cache_client = get_taskcluster_client("purgeCache")
-        purge_cache_client.purgeCache(
-            provisioner_id, worker_type, {"cacheName": cache_name}
-        )
+        purge_cache_client.purgeCache(worker_pool_id, {"cacheName": cache_name})
 
 
 def send_email(address, subject, content, link):
