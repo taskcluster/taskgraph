@@ -43,6 +43,5 @@ repos:
         stages: [commit-msg]
 exclude: |
   (?x)^(
-    src/taskgraph/run-task/|
     taskcluster/scripts/external_tools
   )

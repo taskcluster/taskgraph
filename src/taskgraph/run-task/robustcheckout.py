@@ -453,7 +453,7 @@ def _docheckout(
         )
 
         # Do a backoff on retries to mitigate the thundering herd
-        # problem. This is an exponential backoff with a multipler
+        # problem. This is an exponential backoff with a multiplier
         # plus random jitter thrown in for good measure.
         # With the default settings, backoffs will be:
         # 1) 2.5 - 6.5
