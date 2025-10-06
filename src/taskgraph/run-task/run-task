@@ -13,33 +13,30 @@ the requested process and prints its output, prefixing it with the
 current time to improve log usefulness.
 """
 
-import sys
-
-if sys.version_info[0:2] < (3, 5):
-    print("run-task requires Python 3.5+")
-    sys.exit(1)
-
 import argparse
 import datetime
 import errno
+import grp
 import io
 import json
 import os
 import platform
+import pwd
 import re
 import shutil
-import signal
 import socket
 import stat
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
-from threading import Thread
 from typing import Optional
 
-SECRET_BASEURL_TPL = "{}/secrets/v1/secret/{{}}".format(os.environ.get("TASKCLUSTER_PROXY_URL", "http://taskcluster").rstrip('/'))
+SECRET_BASEURL_TPL = "{}/secrets/v1/secret/{{}}".format(
+    os.environ.get("TASKCLUSTER_PROXY_URL", "http://taskcluster").rstrip("/")
+)
 
 GITHUB_SSH_FINGERPRINT = (
     b"github.com ssh-ed25519 "
@@ -106,7 +103,7 @@ IS_MACOSX = sys.platform == "darwin"
 IS_POSIX = os.name == "posix"
 IS_WINDOWS = os.name == "nt"
 
-# Both mercurial and git use sha1 as revision idenfiers. Luckily, both define
+# Both mercurial and git use sha1 as revision identifiers. Luckily, both define
 # the same value as the null revision.
 #
 # https://github.com/git/git/blob/dc04167d378fb29d30e1647ff6ff51dd182bc9a3/t/oid-info/hash-info#L7
@@ -148,8 +145,7 @@ def _call_windows_retry(func, args=(), retry_max=5, retry_delay=0.5):
             retry_count += 1
 
             print(
-                '%s() failed for "%s". Reason: %s (%s). Retrying...'
-                % (func.__name__, args, e.strerror, e.errno)
+                f'{func.__name__}() failed for "{args}". Reason: {e.strerror} ({e.errno}). Retrying...'
             )
             time.sleep(retry_count * retry_delay)
         else:
@@ -209,7 +205,7 @@ def remove(path):
         and path[1] == ":"
         and path[2] in (os.pathsep, os.altsep)
     ):
-        path = "\\\\?\\%s" % path
+        path = f"\\\\?\\{path}"
 
     if os.path.isfile(path) or os.path.islink(path):
         # Verify the file or link is read/write for the current user
@@ -294,30 +290,27 @@ def run_command(prefix, args, *, extra_env=None, cwd=None):
 
 
 def get_posix_user_group(user, group):
-    import grp
-    import pwd
-
     try:
         user_record = pwd.getpwnam(user)
     except KeyError:
-        print("could not find user %s; specify a valid user with --user" % user)
+        print(f"could not find user {user}; specify a valid user with --user")
         sys.exit(1)
 
     try:
         group_record = grp.getgrnam(group)
     except KeyError:
-        print("could not find group %s; specify a valid group with --group" % group)
+        print(f"could not find group {group}; specify a valid group with --group")
         sys.exit(1)
 
     # Most tasks use worker:worker. We require they have a specific numeric ID
     # because otherwise it is too easy for files written to caches to have
     # mismatched numeric IDs, which results in permissions errors.
     if user_record.pw_name == "worker" and user_record.pw_uid != 1000:
-        print("user `worker` must have uid=1000; got %d" % user_record.pw_uid)
+        print(f"user `worker` must have uid=1000; got {user_record.pw_uid}")
         sys.exit(1)
 
     if group_record.gr_name == "worker" and group_record.gr_gid != 1000:
-        print("group `worker` must have gid=1000; got %d" % group_record.gr_gid)
+        print(f"group `worker` must have gid=1000; got {group_record.gr_gid}")
         sys.exit(1)
 
     # Find all groups to which this user is a member.
@@ -475,16 +468,17 @@ def configure_cache_posix(cache, user, group, untrusted_caches, running_as_root)
 
         elif missing:
             print(
-                "error: requirements for populated cache %s differ from "
-                "this task" % cache
+                f"error: requirements for populated cache {cache} differ from this task"
             )
             print(
-                "cache requirements: %s"
-                % " ".join(sorted(s.decode("utf-8") for s in wanted_requirements))
+                "cache requirements: {}".format(
+                    " ".join(sorted(s.decode("utf-8") for s in wanted_requirements))
+                )
             )
             print(
-                "our requirements:   %s"
-                % " ".join(sorted(s.decode("utf-8") for s in our_requirements))
+                "our requirements:   {}".format(
+                    " ".join(sorted(s.decode("utf-8") for s in our_requirements))
+                )
             )
             if any(s.startswith((b"uid=", b"gid=")) for s in missing):
                 print(CACHE_UID_GID_MISMATCH)
@@ -497,7 +491,7 @@ def configure_cache_posix(cache, user, group, untrusted_caches, running_as_root)
 
             print("")
             print("audit log:")
-            with open(audit_path, "r") as fh:
+            with open(audit_path) as fh:
                 print(fh.read())
 
             return True
@@ -514,10 +508,10 @@ def configure_cache_posix(cache, user, group, untrusted_caches, running_as_root)
     # happen because run-task should be the first thing that touches a
     # cache.
     print(
-        "error: cache %s is not empty and is missing a "
+        f"error: cache {cache} is not empty and is missing a "
         ".cacherequires file; the cache names for this task are "
         "likely mis-configured or TASKCLUSTER_CACHES is not set "
-        "properly" % cache
+        "properly"
     )
 
     write_audit_entry(audit_path, b"missing .cacherequires")
@@ -536,7 +530,7 @@ def configure_volume_posix(volume, user, group, running_as_root):
     volume_files = os.listdir(volume)
     if volume_files:
         print(NON_EMPTY_VOLUME % volume)
-        print("entries in root directory: %s" % " ".join(sorted(volume_files)))
+        print("entries in root directory: {}".format(" ".join(sorted(volume_files))))
         sys.exit(1)
 
     # The volume is almost certainly owned by root:root. Chown it so it
@@ -616,9 +610,9 @@ def git_checkout(
         env["GIT_SSH_COMMAND"] = " ".join(
             [
                 "ssh",
-                "-oIdentityFile={}".format(ssh_key_file.as_posix()),
+                f"-oIdentityFile={ssh_key_file.as_posix()}",
                 "-oStrictHostKeyChecking=yes",
-                "-oUserKnownHostsFile={}".format(ssh_known_hosts_file.as_posix()),
+                f"-oUserKnownHostsFile={ssh_known_hosts_file.as_posix()}",
             ]
         )
     elif ssh_key_file or ssh_known_hosts_file:
@@ -628,7 +622,14 @@ def git_checkout(
 
     # Bypass Git's "safe directory" feature as the destination could be
     # coming from a cache and therefore cloned by a different user.
-    args = ["git", "config", "--global", "--add", "safe.directory", Path(destination_path).as_posix()]
+    args = [
+        "git",
+        "config",
+        "--global",
+        "--add",
+        "safe.directory",
+        Path(destination_path).as_posix(),
+    ]
     retry_required_command(b"vcs", args, extra_env=env)
 
     if not os.path.exists(destination_path):
@@ -738,18 +739,16 @@ def git_checkout(
         if head_repo.endswith("/"):
             head_repo = head_repo[:-1]
 
-        tinderbox_link = "{}/commit/{}".format(head_repo, commit_hash)
+        tinderbox_link = f"{head_repo}/commit/{commit_hash}"
         repo_name = head_repo.split("/")[-1]
     else:
         tinderbox_link = head_repo
         repo_name = head_repo
 
     msg = (
-        "TinderboxPrint:<a href='{link}' "
-        "title='Built from {name} commit {commit_hash}'>"
-        "{commit_hash}</a>\n".format(
-            commit_hash=commit_hash, link=tinderbox_link, name=repo_name
-        )
+        f"TinderboxPrint:<a href='{tinderbox_link}' "
+        f"title='Built from {repo_name} commit {commit_hash}'>"
+        f"{commit_hash}</a>\n"
     )
 
     print_line(b"vcs", msg.encode("utf-8"))
@@ -795,7 +794,7 @@ def hg_checkout(
         # This is where OCC installs it in the AMIs.
         hg_bin = r"C:\Program Files\Mercurial\hg.exe"
         if not os.path.exists(hg_bin):
-            print("could not find Mercurial executable: %s" % hg_bin)
+            print(f"could not find Mercurial executable: {hg_bin}")
             sys.exit(1)
     else:
         raise RuntimeError("Must be running on mac, posix or windows")
@@ -872,30 +871,30 @@ def add_vcs_arguments(parser, project, name):
     """Adds arguments to ArgumentParser to control VCS options for a project."""
 
     parser.add_argument(
-        "--%s-checkout" % project,
-        help="Directory where %s checkout should be created" % name,
+        f"--{project}-checkout",
+        help=f"Directory where {name} checkout should be created",
     )
     parser.add_argument(
-        "--%s-sparse-profile" % project,
-        help="Path to sparse profile for %s checkout" % name,
+        f"--{project}-sparse-profile",
+        help=f"Path to sparse profile for {name} checkout",
     )
 
 
 def collect_vcs_options(args, project, name):
-    checkout = getattr(args, "%s_checkout" % project)
-    sparse_profile = getattr(args, "%s_sparse_profile" % project)
+    checkout = getattr(args, f"{project}_checkout")
+    sparse_profile = getattr(args, f"{project}_sparse_profile")
 
     env_prefix = project.upper()
 
-    repo_type = os.environ.get("%s_REPOSITORY_TYPE" % env_prefix)
-    base_repo = os.environ.get("%s_BASE_REPOSITORY" % env_prefix)
-    base_ref = os.environ.get("%s_BASE_REF" % env_prefix)
-    base_rev = os.environ.get("%s_BASE_REV" % env_prefix)
-    head_repo = os.environ.get("%s_HEAD_REPOSITORY" % env_prefix)
-    revision = os.environ.get("%s_HEAD_REV" % env_prefix)
-    ref = os.environ.get("%s_HEAD_REF" % env_prefix)
-    pip_requirements = os.environ.get("%s_PIP_REQUIREMENTS" % env_prefix)
-    private_key_secret = os.environ.get("%s_SSH_SECRET_NAME" % env_prefix)
+    repo_type = os.environ.get(f"{env_prefix}_REPOSITORY_TYPE")
+    base_repo = os.environ.get(f"{env_prefix}_BASE_REPOSITORY")
+    base_ref = os.environ.get(f"{env_prefix}_BASE_REF")
+    base_rev = os.environ.get(f"{env_prefix}_BASE_REV")
+    head_repo = os.environ.get(f"{env_prefix}_HEAD_REPOSITORY")
+    revision = os.environ.get(f"{env_prefix}_HEAD_REV")
+    ref = os.environ.get(f"{env_prefix}_HEAD_REF")
+    pip_requirements = os.environ.get(f"{env_prefix}_PIP_REQUIREMENTS")
+    private_key_secret = os.environ.get(f"{env_prefix}_SSH_SECRET_NAME")
 
     store_path = os.environ.get("HG_STORE_PATH")
 
@@ -982,7 +981,7 @@ def vcs_checkout_from_args(options):
         elif options["repo-type"] == "hg":
             if not revision and not ref:
                 raise RuntimeError(
-                    "Hg requires that at least one of a ref or revision " "is provided"
+                    "Hg requires that at least one of a ref or revision is provided"
                 )
 
             revision = hg_checkout(
@@ -1001,7 +1000,7 @@ def vcs_checkout_from_args(options):
             shutil.rmtree(ssh_dir, ignore_errors=True)
             pass
 
-    os.environ["%s_HEAD_REV" % options["env-prefix"]] = revision
+    os.environ["{}_HEAD_REV".format(options["env-prefix"])] = revision
 
 
 def install_pip_requirements(repositories):
@@ -1014,8 +1013,18 @@ def install_pip_requirements(repositories):
 
     # TODO: Stop using system Python (#381)
     if shutil.which("uv"):
-        user_site_dir = subprocess.run([sys.executable, "-msite", "--user-site"], capture_output=True, text=True).stdout.strip()
-        cmd = ["uv", "pip", "install", "--python", sys.executable, "--target", user_site_dir]
+        user_site_dir = subprocess.run(
+            [sys.executable, "-msite", "--user-site"], capture_output=True, text=True
+        ).stdout.strip()
+        cmd = [
+            "uv",
+            "pip",
+            "install",
+            "--python",
+            sys.executable,
+            "--target",
+            user_site_dir,
+        ]
     else:
         cmd = [sys.executable, "-mpip", "install", "--user", "--break-system-packages"]
 
@@ -1032,19 +1041,27 @@ def _display_python_versions():
     print_line(
         b"setup", b"Python version: %s\n" % platform.python_version().encode("utf-8")
     )
-    
+
     print_line(b"setup", b"Subprocess python version: " + b"\n")
 
     try:
-        subprocess.run(["uv", "python", "list","--no-cache","--only-installed"], check=True)
+        subprocess.run(
+            ["uv", "python", "list", "--no-cache", "--only-installed"], check=True
+        )
 
     except (FileNotFoundError, subprocess.CalledProcessError):
-
-        python_versions = ["python","python3"]
+        python_versions = ["python", "python3"]
 
         for python_executable in python_versions:
             try:
-                subprocess.run([python_executable, "-c", "import platform; print(platform.python_version())"], check=True)
+                subprocess.run(
+                    [
+                        python_executable,
+                        "-c",
+                        "import platform; print(platform.python_version())",
+                    ],
+                    check=True,
+                )
             except FileNotFoundError:
                 pass
 
@@ -1133,10 +1150,7 @@ def main(args):
 
     for cache in caches:
         if not os.path.isdir(cache):
-            print(
-                "error: cache %s is not a directory; this should never "
-                "happen" % cache
-            )
+            print(f"error: cache {cache} is not a directory; this should never happen")
             return 1
 
         purge = configure_cache_posix(
@@ -1189,7 +1203,7 @@ def main(args):
         # special cache files in the cache's root directory and working
         # directory purging could blow them away, disallow this scenario.
         if os.path.exists(os.path.join(checkout, ".cacherequires")):
-            print("error: cannot perform vcs checkout into cache root: %s" % checkout)
+            print(f"error: cannot perform vcs checkout into cache root: {checkout}")
             sys.exit(1)
 
         # TODO given the performance implications, consider making this a fatal
@@ -1281,8 +1295,7 @@ def main(args):
         "UV_CACHE_DIR",
         "npm_config_cache",
     ] + [
-        "{}_PATH".format(repository["project"].upper())
-        for repository in repositories
+        "{}_PATH".format(repository["project"].upper()) for repository in repositories
     ]:
         if k in os.environ:
             os.environ[k] = os.path.abspath(os.environ[k])
