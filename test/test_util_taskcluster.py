@@ -67,21 +67,41 @@ def test_get_root_url(monkeypatch):
 
 
 def test_get_artifact_url(monkeypatch):
+    tc.get_root_url.cache_clear()
     task_id = "abc"
     path = "public/log.txt"
-
-    # Test with default root URL
-    tc.get_root_url.cache_clear()
     expected = "https://tc.example.com/api/queue/v1/task/abc/artifacts/public/log.txt"
-    assert tc.get_artifact_url(task_id, path) == expected
-
-    # Test with proxy URL (takes priority)
-    monkeypatch.setenv("TASKCLUSTER_PROXY_URL", "https://taskcluster-proxy.net")
-    tc.get_root_url.cache_clear()
     expected_proxy = (
         "https://taskcluster-proxy.net/api/queue/v1/task/abc/artifacts/public/log.txt"
     )
-    assert tc.get_artifact_url(task_id, path) == expected_proxy
+
+    # Test with default root URL (no proxy)
+    tc.get_root_url.cache_clear()
+    assert tc.get_artifact_url(task_id, path) == expected
+
+    # Test that proxy URL is NOT used by default (since use_proxy defaults to False)
+    monkeypatch.setenv("TASKCLUSTER_PROXY_URL", "https://taskcluster-proxy.net")
+    tc.get_root_url.cache_clear()
+    assert tc.get_artifact_url(task_id, path) == expected
+
+    # Test with use_proxy=True (should use proxy URL)
+    assert tc.get_artifact_url(task_id, path, use_proxy=True) == expected_proxy
+
+    # Test with use_proxy=True but no proxy available (not in a task)
+    monkeypatch.delenv("TASKCLUSTER_PROXY_URL")
+    monkeypatch.delenv("TASK_ID", raising=False)
+    tc.get_root_url.cache_clear()
+    with pytest.raises(RuntimeError) as exc:
+        tc.get_artifact_url(task_id, path, use_proxy=True)
+    assert "taskcluster-proxy is not available when not executing in a task" in str(
+        exc.value
+    )
+
+    # Test with use_proxy=True but proxy not enabled (in a task without proxy)
+    monkeypatch.setenv("TASK_ID", "some-task-id")
+    with pytest.raises(RuntimeError) as exc:
+        tc.get_artifact_url(task_id, path, use_proxy=True)
+    assert "taskcluster-proxy is not enabled for this task" in str(exc.value)
 
 
 def test_get_artifact(responses, root_url):
