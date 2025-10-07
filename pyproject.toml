@@ -34,6 +34,25 @@ dependencies = [
   "voluptuous>=0.12.1",
 ]
 
+[dependency-groups]
+dev = [
+  "coverage",
+  "mock",
+  "pre-commit",
+  "pyright",
+  "pytest",
+  "pytest-mock",
+  "pytest-taskgraph",
+  "responses",
+  "sphinx",
+  "sphinx-autobuild",
+  "sphinx-argparse",
+  "sphinx-book-theme >=1",
+  "sphinx-taskgraph",
+  "sphinxcontrib-mermaid",
+  "zstandard",
+]
+
 [project.optional-dependencies]
 load-image = ["zstandard"]
 orjson = ["orjson"]
@@ -53,25 +72,6 @@ sphinx-taskgraph = { workspace = true }
 members = [
   "packages/pytest-taskgraph",
   "packages/sphinx-taskgraph",
-]
-
-[tool.uv]
-dev-dependencies = [
-  "coverage",
-  "mock",
-  "pre-commit",
-  "pyright",
-  "pytest",
-  "pytest-mock",
-  "pytest-taskgraph",
-  "responses",
-  "sphinx",
-  "sphinx-autobuild",
-  "sphinx-argparse",
-  "sphinx-book-theme >=1",
-  "sphinx-taskgraph",
-  "sphinxcontrib-mermaid",
-  "zstandard",
 ]
 
 ### Build
