@@ -401,15 +401,37 @@ def test_list_task_group_incomplete_tasks(responses, root_url):
         json={
             "tasks": [
                 {"status": {"taskId": "1", "state": "pending"}},
-                {"status": {"taskId": "2", "state": "unscheduled"}},
+                {"status": {"taskId": "2", "state": "completed"}},
                 {"status": {"taskId": "3", "state": "running"}},
-                {"status": {"taskId": "4", "state": "completed"}},
+            ],
+            "continuationToken": "page2",
+        },
+    )
+
+    responses.get(
+        f"{root_url}/api/queue/v1/task-group/{tgid}/list",
+        json={
+            "tasks": [
+                {"status": {"taskId": "4", "state": "unscheduled"}},
+                {"status": {"taskId": "5", "state": "failed"}},
+                {"status": {"taskId": "6", "state": "pending"}},
+            ],
+            "continuationToken": "page3",
+        },
+    )
+
+    responses.get(
+        f"{root_url}/api/queue/v1/task-group/{tgid}/list",
+        json={
+            "tasks": [
+                {"status": {"taskId": "7", "state": "running"}},
+                {"status": {"taskId": "8", "state": "completed"}},
             ]
         },
     )
 
     result = list(tc.list_task_group_incomplete_tasks(tgid))
-    assert result == ["1", "2", "3"]
+    assert result == ["1", "3", "4", "6", "7"]
 
 
 def test_get_ancestors(responses, root_url):

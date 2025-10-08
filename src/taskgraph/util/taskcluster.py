@@ -411,20 +411,19 @@ def send_email(address, subject, content, link):
 def list_task_group_incomplete_tasks(task_group_id):
     """Generate the incomplete tasks in a task group"""
     queue = get_taskcluster_client("queue")
-    response = queue.listTaskGroup(task_group_id)
 
-    if not response or "tasks" not in response:
-        return
+    incomplete_tasks = []
 
-    tasks = response.get("tasks", [])
-    for task in tasks:
-        if (status := task.get("status")) is not None:  # type: ignore
-            if (task_id := status.get("taskId")) and status.get("state") in [
-                "running",
-                "pending",
-                "unscheduled",
-            ]:
-                yield task_id
+    def pagination_handler(response):
+        incomplete_tasks.extend(
+            task["status"]["taskId"]
+            for task in response["tasks"]
+            if task["status"]["state"] in ("running", "pending", "unscheduled")
+        )
+
+    queue.listTaskGroup(task_group_id, paginationHandler=pagination_handler)
+
+    return incomplete_tasks
 
 
 @functools.lru_cache(maxsize=None)
