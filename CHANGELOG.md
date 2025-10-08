@@ -1,4 +1,17 @@
 # Change Log
+## [16.2.0] - 2025-09-26
+
+### Added
+
+- `perfherder-data-fetch-content.json` artifact now available in production environment
+
+### Fixed
+
+- Added pagination to `listTasks` and `list_task_group_incomplete_tasks`
+- Added proxy_url flag to `get_artifact_url`
+- Added most robust support for different response types in `handle_artifact`
+- Fixed regression in `purge_cache`
+
 ## [16.1.1] - 2025-10-01
 
 ### Fixed
