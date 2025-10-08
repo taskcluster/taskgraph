@@ -37,6 +37,12 @@ class InitialVerification(Verification):
 
 
 @dataclass(frozen=True)
+class GraphConfigVerification(Verification):
+    def verify(self, graph_config: GraphConfig):
+        self.func(graph_config)
+
+
+@dataclass(frozen=True)
 class GraphVerification(Verification):
     """Verification for a TaskGraph object."""
 
@@ -95,6 +101,7 @@ class VerificationSequence:
     _verifications: Dict = field(default_factory=dict)
     _verification_types = {
         "graph": GraphVerification,
+        "graph_config": GraphConfigVerification,
         "initial": InitialVerification,
         "kinds": KindsVerification,
         "parameters": ParametersVerification,
