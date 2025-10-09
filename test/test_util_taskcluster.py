@@ -139,7 +139,7 @@ def test_list_artifact(responses, root_url):
     tc.get_taskcluster_client.cache_clear()
 
     responses.get(
-        f"{root_url}/api/queue/v1/task/{tid}",
+        f"{root_url}/api/queue/v1/task/{tid}/artifacts",
         json={"artifacts": ["file1.txt", "file2.json"]},
     )
 
