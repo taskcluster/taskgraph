@@ -175,9 +175,8 @@ def get_artifact(task_id, path):
 
 def list_artifacts(task_id):
     queue = get_taskcluster_client("queue")
-    task = queue.task(task_id)
-    if task:
-        return task["artifacts"]
+    response = queue.listLatestArtifacts(task_id)
+    return response["artifacts"]
 
 
 def get_artifact_prefix(task):
