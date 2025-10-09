@@ -33,7 +33,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 
 SECRET_BASEURL_TPL = "{}/secrets/v1/secret/{{}}".format(
     os.environ.get("TASKCLUSTER_PROXY_URL", "http://taskcluster").rstrip("/")
@@ -566,6 +566,52 @@ def configure_volume_posix(volume, user, group, running_as_root):
         set_dir_permissions(volume, user.pw_uid, group.gr_gid)
 
 
+def git_fetch(
+    destination_path: str,
+    ref: str,
+    remote: str = "origin",
+    tags: bool = False,
+    shallow: bool = False,
+    env: Optional[Dict[str, str]] = None,
+):
+    args = ["git", "fetch"]
+    if tags:
+        # `--force` is needed to be able to update an existing outdated tag.
+        args.extend(["--tags", "--force"])
+
+    args.extend([remote, ref])
+
+    if shallow:
+        # If we have a full sha, we can fetch it directly
+        if re.match(r"^[a-f0-9]{40}$", ref):
+            fetch_args = args[:2] + ["--depth=1"] + args[2:]
+            ret = run_command(b"vcs", fetch_args, cwd=destination_path, extra_env=env)
+            if ret == 0:
+                return
+
+        # Otherwise we need to incrementally deepen the repo until we detect
+        # the ref.
+        for deepen in range(10, 100, 10):
+            fetch_args = args[:2] + [f"--deepen={deepen}"] + args[2:]
+            run_command(b"vcs", fetch_args, cwd=destination_path, extra_env=env)
+
+            # Check if the target ref exists, if not deepen further.
+            ret = run_command(
+                b"vcs",
+                ["git", "cat-file", "-e", "FETCH_HEAD"],
+                cwd=destination_path,
+                extra_env=env,
+            )
+            if ret == 0:
+                return
+
+        print(f"unable to fetch {ref} from {remote} in shallow clone")
+        sys.exit(1)
+
+    # Non-shallow repo
+    retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
+
+
 def _clean_git_checkout(destination_path):
     # Delete untracked files (i.e. build products)
     print_line(b"vcs", b"cleaning git checkout...\n")
@@ -605,16 +651,29 @@ def _clean_git_checkout(destination_path):
     print_line(b"vcs", b"successfully cleaned git checkout!\n")
 
 
+def shortref(ref: str) -> str:
+    """Normalize a git ref to its short form.
+
+    Returns the ref unchanged if it's already in short form.
+    """
+    # Strip common ref prefixes
+    for prefix in ("refs/heads/", "refs/tags/"):
+        if ref.startswith(prefix):
+            return ref[len(prefix) :]
+
+    return ref
+
+
 def git_checkout(
     destination_path: str,
     head_repo: str,
     base_repo: Optional[str],
-    base_ref: Optional[str],
     base_rev: Optional[str],
     ref: Optional[str],
     commit: Optional[str],
     ssh_key_file: Optional[Path],
     ssh_known_hosts_file: Optional[Path],
+    shallow: bool = False,
 ):
     env = {
         # abort if transfer speed is lower than 1kB/s for 1 minute
@@ -658,62 +717,50 @@ def git_checkout(
         args = [
             "git",
             "clone",
-            base_repo if base_repo else head_repo,
-            destination_path,
         ]
+
+        if shallow:
+            args.extend(["--depth=1", "--no-checkout"])
+
+        args.extend(
+            [
+                base_repo if base_repo else head_repo,
+                destination_path,
+            ]
+        )
 
         retry_required_command(b"vcs", args, extra_env=env)
 
-    if base_ref:
-        args = ["git", "fetch", "origin", base_ref]
-
-        retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
-
-        # Create local branch so that taskgraph is able to compute differences
-        # between the head branch and the base one, if needed
-        args = ["git", "checkout", base_ref]
-
-        retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
-
-    # When commits are force-pushed (like on a testing branch), base_rev doesn't
-    # exist on base_ref. Fetching it allows taskgraph to compute differences
-    # between the previous state before the force-push and the current state.
-    #
-    # Unlike base_ref just above, there is no need to checkout the revision:
-    # it's immediately available after the fetch.
+    # First fetch the base_rev. This allows Taskgraph to compute the files
+    # changed by the push.
     if base_rev and base_rev != NULL_REVISION:
-        args = ["git", "fetch", "origin", base_rev]
+        git_fetch(destination_path, base_rev, shallow=shallow, env=env)
 
-        retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
+    # Next fetch the head ref.
 
     # If a ref was provided, it might be tag, so we need to make sure we fetch
     # those. This is explicitly only done when base and head repo match,
     # because it is the only scenario where tags could be present. (PRs, for
     # example, always include an explicit rev.) Failure to do this could result
     # in not having a tag, or worse: having an outdated version of one.
-    # `--force` is needed to be able to update an existing tag.
-    if ref and base_repo == head_repo:
-        args = [
-            "git",
-            "fetch",
-            "--tags",
-            "--force",
-            base_repo,
-            ref,
-        ]
+    tags = False
+    if ref and not ref.startswith("refs/heads/") and base_repo == head_repo:
+        tags = True
 
-        retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
+    # If a ref isn't provided, we fetch all refs from head_repo, which may be slow.
+    target = ref if ref else "+refs/heads/*:refs/remotes/work/*"
+    git_fetch(
+        destination_path,
+        target,
+        remote=head_repo,
+        tags=tags,
+        shallow=shallow,
+        env=env,
+    )
 
-    # If a ref isn't provided, we fetch all refs from head_repo, which may be slow
-    args = [
-        "git",
-        "fetch",
-        "--no-tags",
-        head_repo,
-        ref if ref else "+refs/heads/*:refs/remotes/work/*",
-    ]
-
-    retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
+    # If we have a shallow clone and specific commit, we need to fetch it too.
+    if shallow and commit and commit != ref:
+        git_fetch(destination_path, commit, remote=head_repo, shallow=shallow, env=env)
 
     args = [
         "git",
@@ -721,8 +768,8 @@ def git_checkout(
         "-f",
     ]
 
-    if ref:
-        args.extend(["-B", ref])
+    if ref and ref != commit:
+        args.extend(["-B", shortref(ref)])
 
     # `git fetch` set `FETCH_HEAD` reference to the last commit of the desired branch
     args.append(commit if commit else "FETCH_HEAD")
@@ -899,17 +946,22 @@ def add_vcs_arguments(parser, project, name):
         f"--{project}-sparse-profile",
         help=f"Path to sparse profile for {name} checkout",
     )
+    parser.add_argument(
+        f"--{project}-shallow-clone",
+        action="store_true",
+        help=f"Use shallow clone for {name}",
+    )
 
 
 def collect_vcs_options(args, project, name):
     checkout = getattr(args, f"{project}_checkout")
     sparse_profile = getattr(args, f"{project}_sparse_profile")
+    shallow_clone = getattr(args, f"{project}_shallow_clone")
 
     env_prefix = project.upper()
 
     repo_type = os.environ.get(f"{env_prefix}_REPOSITORY_TYPE")
     base_repo = os.environ.get(f"{env_prefix}_BASE_REPOSITORY")
-    base_ref = os.environ.get(f"{env_prefix}_BASE_REF")
     base_rev = os.environ.get(f"{env_prefix}_BASE_REV")
     head_repo = os.environ.get(f"{env_prefix}_HEAD_REPOSITORY")
     revision = os.environ.get(f"{env_prefix}_HEAD_REV")
@@ -942,7 +994,6 @@ def collect_vcs_options(args, project, name):
         "checkout": checkout,
         "sparse-profile": sparse_profile,
         "base-repo": base_repo,
-        "base-ref": base_ref,
         "base-rev": base_rev,
         "head-repo": head_repo,
         "revision": revision,
@@ -950,6 +1001,7 @@ def collect_vcs_options(args, project, name):
         "repo-type": repo_type,
         "ssh-secret-name": private_key_secret,
         "pip-requirements": pip_requirements,
+        "shallow-clone": shallow_clone,
     }
 
 
@@ -992,12 +1044,12 @@ def vcs_checkout_from_args(options):
                 options["checkout"],
                 options["head-repo"],
                 options["base-repo"],
-                options["base-ref"],
                 options["base-rev"],
                 ref,
                 revision,
                 ssh_key_file,
                 ssh_known_hosts_file,
+                shallow=options.get("shallow-clone", False),
             )
         elif options["repo-type"] == "hg":
             if not revision and not ref:
