@@ -170,7 +170,8 @@ def get_artifact(task_id, path):
     """
     queue = get_taskcluster_client("queue")
     response = queue.getLatestArtifact(task_id, path)
-    return _handle_artifact(path, response)
+    artifact_response = requests.get(response["url"])
+    return _handle_artifact(path, artifact_response)
 
 
 def list_artifacts(task_id):

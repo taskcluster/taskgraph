@@ -110,16 +110,25 @@ def test_get_artifact(responses, root_url):
 
     # Test text artifact
     responses.get(
-        f"{root_url}/api/queue/v1/task/{tid}/artifacts/artifact.txt",
+        "http://foo.bar/artifact.txt",
         body=b"foobar",
+    )
+    responses.get(
+        f"{root_url}/api/queue/v1/task/{tid}/artifacts/artifact.txt",
+        body=b'{"type": "s3", "url": "http://foo.bar/artifact.txt"}',
+        status=303,
+        headers={"Location": "http://foo.bar/artifact.txt"},
     )
     raw = tc.get_artifact(tid, "artifact.txt")
     assert raw.read() == b"foobar"
 
     # Test JSON artifact
+    responses.get("http://foo.bar/artifact.json", json={"foo": "bar"})
     responses.get(
         f"{root_url}/api/queue/v1/task/{tid}/artifacts/artifact.json",
-        json={"foo": "bar"},
+        body=b'{"type": "s3", "url": "http://foo.bar/artifact.json"}',
+        status=303,
+        headers={"Location": "http://foo.bar/artifact.json"},
     )
     result = tc.get_artifact(tid, "artifact.json")
     assert result == {"foo": "bar"}
@@ -127,8 +136,14 @@ def test_get_artifact(responses, root_url):
     # Test YAML artifact
     expected_result = {"foo": b"\xe2\x81\x83".decode()}
     responses.get(
-        f"{root_url}/api/queue/v1/task/{tid}/artifacts/artifact.yml",
+        "http://foo.bar/artifact.yml",
         body=b'foo: "\xe2\x81\x83"',
+    )
+    responses.get(
+        f"{root_url}/api/queue/v1/task/{tid}/artifacts/artifact.yml",
+        body=b'{"type": "s3", "url": "http://foo.bar/artifact.yml"}',
+        status=303,
+        headers={"Location": "http://foo.bar/artifact.yml"},
     )
     result = tc.get_artifact(tid, "artifact.yml")
     assert result == expected_result
