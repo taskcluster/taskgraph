@@ -10,8 +10,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import pytest
-
 from taskgraph import decision
 from taskgraph.util.vcs import GitRepository, HgRepository
 from taskgraph.util.yaml import load_yaml
@@ -54,6 +52,7 @@ class TestGetDecisionParameters(unittest.TestCase):
     def setUp(self):
         self.options = {
             "base_repository": "https://hg.mozilla.org/mozilla-unified",
+            "base_rev": "aaaa",
             "head_repository": "https://hg.mozilla.org/mozilla-central",
             "head_rev": "bbbb",
             "head_ref": "default",
@@ -67,27 +66,11 @@ class TestGetDecisionParameters(unittest.TestCase):
             "tasks_for": "hg-push",
             "level": "3",
         }
-        self.old_determine_more_accurate_base_rev = (
-            decision._determine_more_accurate_base_rev
-        )
-        decision._determine_more_accurate_base_rev = lambda *_, **__: "aaaa"
-        self.old_determine_more_accurate_base_ref = (
-            decision._determine_more_accurate_base_ref
-        )
-        decision._determine_more_accurate_base_ref = lambda *_, **__: "aaaa"
-
-    def tearDown(self):
-        decision._determine_more_accurate_base_rev = (
-            self.old_determine_more_accurate_base_rev
-        )
-        decision._determine_more_accurate_base_ref = (
-            self.old_determine_more_accurate_base_ref
-        )
 
     def test_simple_options(self, mock_files_changed):
         mock_files_changed.return_value = ["foo.txt"]
         params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
-        mock_files_changed.assert_called_once_with(rev="bbbb", base_rev="aaaa")
+        mock_files_changed.assert_called_once_with(rev="bbbb", base="aaaa")
         self.assertEqual(params["build_date"], 1503691511)
         self.assertEqual(params["head_tag"], "v0.0.1")
         self.assertEqual(params["pushlog_id"], "143")
@@ -154,73 +137,3 @@ class TestGetDecisionParameters(unittest.TestCase):
         self.options["tasks_for"] = "hg-push"
         params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
         self.assertEqual(params["target_tasks_method"], "nothing")
-
-
-@pytest.mark.parametrize(
-    "candidate_base_ref, base_rev, expected_base_ref",
-    (
-        ("", "base-rev", "default-branch"),
-        ("head-ref", "base-rev", "head-ref"),
-        ("head-ref", "0000000000000000000000000000000000000000", "default-branch"),
-    ),
-)
-def test_determine_more_accurate_base_ref(
-    candidate_base_ref, base_rev, expected_base_ref
-):
-    repo_mock = unittest.mock.MagicMock()
-    repo_mock.default_branch = "default-branch"
-
-    assert (
-        decision._determine_more_accurate_base_ref(
-            repo_mock, candidate_base_ref, "head-ref", base_rev
-        )
-        == expected_base_ref
-    )
-
-
-@pytest.mark.parametrize(
-    "common_rev, candidate_base_rev, expected_base_ref_or_rev, expected_base_rev",
-    (
-        ("found-rev", "", "base-ref", "found-rev"),
-        (
-            "found-rev",
-            "0000000000000000000000000000000000000000",
-            "base-ref",
-            "found-rev",
-        ),
-        ("found-rev", "non-existing-rev", "base-ref", "found-rev"),
-        ("existing-rev", "existing-rev", "existing-rev", "existing-rev"),
-    ),
-)
-def test_determine_more_accurate_base_rev(
-    common_rev, candidate_base_rev, expected_base_ref_or_rev, expected_base_rev
-):
-    repo_mock = unittest.mock.MagicMock()
-    repo_mock.find_latest_common_revision.return_value = common_rev
-    repo_mock.does_revision_exist_locally = lambda rev: rev == "existing-rev"
-
-    assert (
-        decision._determine_more_accurate_base_rev(
-            repo_mock, "base-ref", candidate_base_rev, "head-rev", env_prefix="PREFIX"
-        )
-        == expected_base_rev
-    )
-    repo_mock.find_latest_common_revision.assert_called_once_with(
-        expected_base_ref_or_rev, "head-rev"
-    )
-
-
-@pytest.mark.parametrize(
-    "graph_config, expected_value",
-    (
-        ({"taskgraph": {}}, ""),
-        ({"taskgraph": {"repositories": {}}}, ""),
-        ({"taskgraph": {"repositories": {"mobile": {}}}}, "mobile"),
-        (
-            {"taskgraph": {"repositories": {"mobile": {}, "some-other-repo": {}}}},
-            "mobile",
-        ),
-    ),
-)
-def test_get_env_prefix(graph_config, expected_value):
-    assert decision._get_env_prefix(graph_config) == expected_value

@@ -140,12 +140,12 @@ class Repository(ABC):
         diff_filter: Optional[str],
         mode: Optional[str],
         rev: Optional[str],
-        base_rev: Optional[str],
+        base: Optional[str],
     ) -> List[str]:
         """Return a list of files that are changed in:
          * either this repository's working copy,
          * or at a given revision (``rev``)
-         * or between 2 revisions (``base_rev`` and ``rev``)
+         * or between 2 revisions (``base`` and ``rev``)
 
         ``diff_filter`` controls which kinds of modifications are returned.
         It is a string which may only contain the following characters:
@@ -162,9 +162,9 @@ class Repository(ABC):
         ``rev`` is a specifier for which changesets to consider for
         changes. The exact meaning depends on the vcs system being used.
 
-        ``base_rev`` specifies the range of changesets. This parameter cannot
+        ``base`` specifies the range of changesets. This parameter cannot
         be used without ``rev``. The range includes ``rev`` but excludes
-        ``base_rev``.
+        ``base``.
         """
 
     @abstractmethod
@@ -293,17 +293,17 @@ class HgRepository(Repository):
         rev = rev or "."
         return self.run("files", "-r", rev, *paths).splitlines()
 
-    def get_changed_files(self, diff_filter=None, mode=None, rev=None, base_rev=None):
+    def get_changed_files(self, diff_filter=None, mode=None, rev=None, base=None):
         diff_filter = diff_filter or "ADM"
         if rev is None:
-            if base_rev is not None:
-                raise ValueError("Cannot specify `base_rev` without `rev`")
+            if base is not None:
+                raise ValueError("Cannot specify `base` without `rev`")
             # Use --no-status to print just the filename.
             df = self._format_diff_filter(diff_filter, for_status=True)
             return self.run("status", "--no-status", f"-{df}").splitlines()
         else:
             template = self._files_template(diff_filter)
-            revision_argument = rev if base_rev is None else f"{rev} % {base_rev}"
+            revision_argument = rev if base is None else f"{rev} % {base}"
             return self.run("log", "-r", revision_argument, "-T", template).splitlines()
 
     def get_outgoing_files(self, diff_filter="ADM", upstream=None):
@@ -479,23 +479,21 @@ class GitRepository(Repository):
         rev = rev or "HEAD"
         return self.run("ls-tree", "-r", "--name-only", rev, *paths).splitlines()
 
-    def get_changed_files(self, diff_filter=None, mode=None, rev=None, base_rev=None):
+    def get_changed_files(self, diff_filter=None, mode=None, rev=None, base=None):
         diff_filter = diff_filter or "ADM"
         mode = mode or "unstaged"
         assert all(f.lower() in self._valid_diff_filter for f in diff_filter)
 
         if rev is None:
-            if base_rev is not None:
-                raise ValueError("Cannot specify `base_rev` without `rev`")
+            if base is not None:
+                raise ValueError("Cannot specify `base` without `rev`")
             cmd = ["diff"]
             if mode == "staged":
                 cmd.append("--cached")
             elif mode == "all":
                 cmd.append("HEAD")
         else:
-            revision_argument = (
-                f"{rev}~1..{rev}" if base_rev is None else f"{base_rev}..{rev}"
-            )
+            revision_argument = f"{rev}~1..{rev}" if base is None else f"{base}..{rev}"
             cmd = ["log", "--format=format:", revision_argument]
 
         cmd.append("--name-only")
