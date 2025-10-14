@@ -1,4 +1,13 @@
 # Change Log
+
+## [16.2.1] - 2025-10-14
+
+### Fixed
+
+- `run-task` script now cleans up zombie processes
+- Fixed regression to `taskgraph.util.taskcluster.list_artifacts`
+- Fixed regression to `taskgraph.util.taskcluster.get_artifact`
+
 ## [16.2.0] - 2025-09-26
 
 ### Added
