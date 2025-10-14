@@ -134,6 +134,27 @@ def test_get_artifact(responses, root_url):
     assert result == expected_result
 
 
+def test_get_artifact_redirect(responses, root_url):
+    tid = "abc123"
+    tc.get_taskcluster_client.cache_clear()
+    contents = {"foo": "bar"}
+
+    redirect_url = "https://example.com/artifact.json"
+    responses.get(
+        f"{root_url}/api/queue/v1/task/{tid}/artifacts/artifact.json",
+        json={"url": redirect_url},
+        headers={"Location": redirect_url},
+        status=301,
+    )
+    responses.get(
+        redirect_url,
+        json=contents,
+        status=200,
+    )
+    result = tc.get_artifact(tid, "artifact.json")
+    assert result == contents
+
+
 def test_list_artifact(responses, root_url):
     tid = "abc123"
     tc.get_taskcluster_client.cache_clear()
