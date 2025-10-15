@@ -191,9 +191,9 @@ def test_collect_vcs_options(monkeypatch, run_task_mod, env, extra_expected):
         "name": name,
         "pip-requirements": None,
         "project": name,
-        "ref": env.get("HEAD_REF"),
+        "head-ref": env.get("HEAD_REF"),
+        "head-rev": env.get("HEAD_REV"),
         "repo-type": env.get("REPOSITORY_TYPE"),
-        "revision": env.get("HEAD_REV"),
         "ssh-secret-name": env.get("SSH_SECRET_NAME"),
         "sparse-profile": False,
         "store-path": env.get("HG_STORE_PATH"),
@@ -354,7 +354,7 @@ def mock_git_repo():
 
 
 @pytest.mark.parametrize(
-    "base_ref,ref,files,hash_key",
+    "base_ref,head_ref,files,hash_key",
     [
         (None, None, ["mainfile"], "main"),
         (None, "main", ["mainfile"], "main"),
@@ -368,7 +368,7 @@ def test_git_checkout(
     run_task_mod,
     mock_git_repo,
     base_ref,
-    ref,
+    head_ref,
     files,
     hash_key,
 ):
@@ -380,8 +380,8 @@ def test_git_checkout(
             base_repo=mock_git_repo["path"],
             base_ref=base_ref,
             base_rev=None,
-            ref=ref,
-            commit=None,
+            head_ref=head_ref,
+            head_rev=None,
             ssh_key_file=None,
             ssh_known_hosts_file=None,
         )
@@ -391,13 +391,13 @@ def test_git_checkout(
             assert os.path.exists(os.path.join(destination, filename))
 
         # Check repo is on the right branch
-        if ref:
+        if head_ref:
             current_branch = subprocess.check_output(
                 args=["git", "rev-parse", "--abbrev-ref", "HEAD"],
                 cwd=destination,
                 universal_newlines=True,
             ).strip()
-            assert current_branch == ref
+            assert current_branch == head_ref
 
             current_rev = git_current_rev(destination)
             assert current_rev == mock_git_repo[hash_key]
@@ -416,8 +416,8 @@ def test_git_checkout_with_commit(
             base_repo=mock_git_repo["path"],
             base_ref="mybranch",
             base_rev=mock_git_repo["main"],
-            ref=mock_git_repo["branch"],
-            commit=mock_git_repo["branch"],
+            head_ref=mock_git_repo["branch"],
+            head_rev=mock_git_repo["branch"],
             ssh_key_file=None,
             ssh_known_hosts_file=None,
         )
