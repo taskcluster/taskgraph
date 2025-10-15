@@ -508,3 +508,85 @@ def test_does_revision_exist_locally(repo):
     assert repo.does_revision_exist_locally(first_revision)
     assert repo.does_revision_exist_locally(last_revision)
     assert not repo.does_revision_exist_locally("deadbeef")
+
+
+def test_get_changed_files_shallow_clone(git_repo, tmp_path, default_git_branch):
+    tmp_repo = Path(git_repo)
+
+    # Add initial files to the existing repo (which already has first_file from fixture)
+    (tmp_repo / "common.txt").write_text("common content")
+    (tmp_repo / "file_to_modify.txt").write_text("original content")
+    (tmp_repo / "file_to_delete.txt").write_text("will be deleted")
+    subprocess.check_call(["git", "add", "."], cwd=tmp_repo)
+    subprocess.check_call(["git", "commit", "-m", "Add test files"], cwd=tmp_repo)
+
+    # Create feature branch and make changes
+    subprocess.check_call(["git", "checkout", "-b", "feature"], cwd=tmp_repo)
+
+    # On feature branch: modify file, add new file, delete file
+    (tmp_repo / "file_to_modify.txt").write_text("modified in feature")
+    (tmp_repo / "feature_only.txt").write_text("feature specific file")
+    (tmp_repo / "file_to_delete.txt").unlink()
+    subprocess.check_call(["git", "rm", "file_to_delete.txt"], cwd=tmp_repo)
+    subprocess.check_call(["git", "add", "."], cwd=tmp_repo)
+    subprocess.check_call(["git", "commit", "-m", "Feature changes"], cwd=tmp_repo)
+
+    feature_commit = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=tmp_repo, text=True
+    ).strip()
+
+    # Switch back to main and make different changes
+    subprocess.check_call(["git", "checkout", default_git_branch], cwd=tmp_repo)
+
+    # On main branch: different modifications
+    (tmp_repo / "file_to_modify.txt").write_text("modified in main")
+    (tmp_repo / "main_only.txt").write_text("main specific file")
+    subprocess.check_call(["git", "add", "."], cwd=tmp_repo)
+    subprocess.check_call(["git", "commit", "-m", "Main changes"], cwd=tmp_repo)
+
+    main_commit = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=tmp_repo, text=True
+    ).strip()
+
+    # Create a shallow clone with only the latest commit from each branch
+    shallow_path = tmp_path / "shallow"
+    subprocess.check_call(
+        [
+            "git",
+            "clone",
+            "--depth=1",
+            "--no-single-branch",
+            f"file://{tmp_repo}",
+            str(shallow_path),
+        ]
+    )
+    shallow_repo = get_repository(str(shallow_path))
+    assert shallow_repo.is_shallow
+
+    # Between main and feature:
+    # - file_to_modify.txt was modified differently (M)
+    # - file_to_delete.txt exists in main but not in feature (D)
+    # - feature_only.txt exists in feature but not in main (A)
+    # - main_only.txt exists in main but not in feature (D when comparing feature to main)
+    changed_files = shallow_repo.get_changed_files(
+        "AMD", "all", feature_commit, main_commit
+    )
+    assert "file_to_modify.txt" in changed_files  # Modified
+    assert "file_to_delete.txt" in changed_files  # Deleted in feature
+    assert "feature_only.txt" in changed_files  # Added in feature
+    assert (
+        "main_only.txt" in changed_files
+    )  # Not in feature (shows as deleted from main's perspective)
+
+    added = shallow_repo.get_changed_files("A", "all", feature_commit, main_commit)
+    assert "feature_only.txt" in added
+    assert "file_to_delete.txt" not in added
+
+    deleted = shallow_repo.get_changed_files("D", "all", feature_commit, main_commit)
+    assert "file_to_delete.txt" in deleted
+    assert (
+        "main_only.txt" in deleted
+    )  # From feature's perspective, main_only.txt doesn't exist
+
+    modified = shallow_repo.get_changed_files("M", "all", feature_commit, main_commit)
+    assert "file_to_modify.txt" in modified
