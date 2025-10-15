@@ -59,6 +59,11 @@ class Repository(ABC):
 
     @property
     @abstractmethod
+    def is_shallow(self) -> str:
+        """Whether this repo is a shallow clone."""
+
+    @property
+    @abstractmethod
     def head_rev(self) -> str:
         """Hash of HEAD revision."""
 
@@ -225,6 +230,10 @@ class HgRepository(Repository):
         self._env["HGPLAIN"] = "1"
 
     @property
+    def is_shallow(self):
+        return False
+
+    @property
     def head_rev(self):
         return self.run("log", "-r", ".", "-T", "{node}").strip()
 
@@ -372,6 +381,10 @@ class GitRepository(Repository):
     _LS_REMOTE_PATTERN = re.compile(r"ref:\s+refs/heads/(?P<branch_name>\S+)\s+HEAD")
 
     @property
+    def is_shallow(self):
+        return self.run("rev-parse", "--is-shallow-repository").strip() == "true"
+
+    @property
     def head_rev(self):
         return self.run("rev-parse", "--verify", "HEAD").strip()
 
@@ -492,6 +505,15 @@ class GitRepository(Repository):
                 cmd.append("--cached")
             elif mode == "all":
                 cmd.append("HEAD")
+        elif self.is_shallow:
+            # In shallow clones, `git log` won't have the history necessary to
+            # determine the files changed. Using `git diff` finds the
+            # differences between the two trees which is slightly more
+            # accurate. However, Github events often don't provide the true
+            # base revision so shallow Github clones will still return
+            # incorrect files changed in many cases, most notably pull
+            # requests that need rebasing.
+            cmd = ["diff", base, rev]
         else:
             revision_argument = f"{rev}~1..{rev}" if base is None else f"{base}..{rev}"
             cmd = ["log", "--format=format:", revision_argument]
