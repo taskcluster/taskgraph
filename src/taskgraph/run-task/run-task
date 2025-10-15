@@ -611,8 +611,8 @@ def git_checkout(
     base_repo: Optional[str],
     base_ref: Optional[str],
     base_rev: Optional[str],
-    ref: Optional[str],
-    commit: Optional[str],
+    head_ref: Optional[str],
+    head_rev: Optional[str],
     ssh_key_file: Optional[Path],
     ssh_known_hosts_file: Optional[Path],
 ):
@@ -686,31 +686,31 @@ def git_checkout(
 
         retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
 
-    # If a ref was provided, it might be tag, so we need to make sure we fetch
+    # If a head_ref was provided, it might be tag, so we need to make sure we fetch
     # those. This is explicitly only done when base and head repo match,
     # because it is the only scenario where tags could be present. (PRs, for
     # example, always include an explicit rev.) Failure to do this could result
     # in not having a tag, or worse: having an outdated version of one.
     # `--force` is needed to be able to update an existing tag.
-    if ref and base_repo == head_repo:
+    if head_ref and base_repo == head_repo:
         args = [
             "git",
             "fetch",
             "--tags",
             "--force",
             base_repo,
-            ref,
+            head_ref,
         ]
 
         retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
 
-    # If a ref isn't provided, we fetch all refs from head_repo, which may be slow
+    # If a head_ref isn't provided, we fetch all refs from head_repo, which may be slow
     args = [
         "git",
         "fetch",
         "--no-tags",
         head_repo,
-        ref if ref else "+refs/heads/*:refs/remotes/work/*",
+        head_ref if head_ref else "+refs/heads/*:refs/remotes/work/*",
     ]
 
     retry_required_command(b"vcs", args, cwd=destination_path, extra_env=env)
@@ -721,11 +721,11 @@ def git_checkout(
         "-f",
     ]
 
-    if ref:
-        args.extend(["-B", ref])
+    if head_ref:
+        args.extend(["-B", head_ref])
 
     # `git fetch` set `FETCH_HEAD` reference to the last commit of the desired branch
-    args.append(commit if commit else "FETCH_HEAD")
+    args.append(head_rev if head_rev else "FETCH_HEAD")
 
     run_required_command(b"vcs", args, cwd=destination_path)
 
@@ -912,8 +912,8 @@ def collect_vcs_options(args, project, name):
     base_ref = os.environ.get(f"{env_prefix}_BASE_REF")
     base_rev = os.environ.get(f"{env_prefix}_BASE_REV")
     head_repo = os.environ.get(f"{env_prefix}_HEAD_REPOSITORY")
-    revision = os.environ.get(f"{env_prefix}_HEAD_REV")
-    ref = os.environ.get(f"{env_prefix}_HEAD_REF")
+    head_ref = os.environ.get(f"{env_prefix}_HEAD_REF")
+    head_rev = os.environ.get(f"{env_prefix}_HEAD_REV")
     pip_requirements = os.environ.get(f"{env_prefix}_PIP_REQUIREMENTS")
     private_key_secret = os.environ.get(f"{env_prefix}_SSH_SECRET_NAME")
 
@@ -945,8 +945,8 @@ def collect_vcs_options(args, project, name):
         "base-ref": base_ref,
         "base-rev": base_rev,
         "head-repo": head_repo,
-        "revision": revision,
-        "ref": ref,
+        "head-ref": head_ref,
+        "head-rev": head_rev,
         "repo-type": repo_type,
         "ssh-secret-name": private_key_secret,
         "pip-requirements": pip_requirements,
@@ -955,13 +955,13 @@ def collect_vcs_options(args, project, name):
 
 def vcs_checkout_from_args(options):
     if not options["checkout"]:
-        if options["ref"] and not options["revision"]:
+        if options["head-ref"] and not options["head-rev"]:
             print("task should be defined in terms of non-symbolic revision")
             sys.exit(1)
         return
 
-    revision = options["revision"]
-    ref = options["ref"]
+    head_ref = options["head-ref"]
+    head_rev = options["head-rev"]
     ssh_key_file = None
     ssh_known_hosts_file = None
     ssh_dir = None
@@ -979,13 +979,14 @@ def vcs_checkout_from_args(options):
             ssh_known_hosts_file = ssh_dir.joinpath("known_hosts")
             ssh_known_hosts_file.write_bytes(GITHUB_SSH_FINGERPRINT)
 
-        if options["repo-type"] == "git":
-            if not revision and not ref:
-                raise RuntimeError(
-                    "Git requires that either a ref, a revision, or both are provided"
-                )
+        if not head_rev and not head_ref:
+            raise RuntimeError(
+                f"{options['repo-type'].capitalize()} requires that either a "
+                "ref, a revision, or both are provided"
+            )
 
-            if not ref:
+        if options["repo-type"] == "git":
+            if not head_ref:
                 print("Providing a ref will improve the performance of this checkout")
 
             revision = git_checkout(
@@ -994,25 +995,20 @@ def vcs_checkout_from_args(options):
                 options["base-repo"],
                 options["base-ref"],
                 options["base-rev"],
-                ref,
-                revision,
+                head_ref,
+                head_rev,
                 ssh_key_file,
                 ssh_known_hosts_file,
             )
         elif options["repo-type"] == "hg":
-            if not revision and not ref:
-                raise RuntimeError(
-                    "Hg requires that at least one of a ref or revision is provided"
-                )
-
             revision = hg_checkout(
                 options["checkout"],
                 options["head-repo"],
                 options["base-repo"],
                 options["store-path"],
                 options["sparse-profile"],
-                ref,
-                revision,
+                head_ref,
+                head_rev,
             )
         else:
             raise RuntimeError('Type of VCS must be either "git" or "hg"')
