@@ -1,6 +1,8 @@
 import logging
 from datetime import datetime
 
+from taskcluster.exceptions import TaskclusterRestFailure
+
 from taskgraph.optimize.base import OptimizationStrategy, register_strategy
 from taskgraph.util.path import match as match_path
 from taskgraph.util.taskcluster import find_task_id, status_task
@@ -64,7 +66,7 @@ class IndexSearch(OptimizationStrategy):
                     continue
 
                 return task_id
-            except KeyError:
+            except (KeyError, TaskclusterRestFailure):
                 # go on to the next index path
                 pass
 
