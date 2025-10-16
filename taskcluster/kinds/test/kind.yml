@@ -42,7 +42,7 @@ tasks:
         matrix:
             set-name: "unit-py{matrix[python]}"
             substitution-fields: [description, run.command, treeherder, worker]
-            python: ["313", "312", "311", "310", "39"]
+            python: ["314", "313", "312", "311", "310", "39"]
         worker:
             artifacts:
                 - type: file
