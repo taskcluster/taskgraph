@@ -5,7 +5,6 @@
 
 import collections
 from dataclasses import dataclass
-from typing import FrozenSet
 
 
 @dataclass(frozen=True)
@@ -24,8 +23,8 @@ class Graph:
     node `left` to node `right`..
     """
 
-    nodes: FrozenSet
-    edges: FrozenSet
+    nodes: frozenset
+    edges: frozenset
 
     def transitive_closure(self, nodes, reverse=False):
         """Return the transitive closure of <nodes>: the graph containing all

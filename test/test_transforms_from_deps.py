@@ -3,7 +3,6 @@ Tests for the 'from_deps' transforms.
 """
 
 from pprint import pprint
-from typing import Dict
 
 import pytest
 from pytest_taskgraph import make_task
@@ -13,7 +12,7 @@ from taskgraph.transforms import from_deps
 
 
 def get_task_label_by_attributes(
-    tasks: Dict[str, Task], attributes: Dict[str, str]
+    tasks: dict[str, Task], attributes: dict[str, str]
 ) -> str:
     for task in tasks.values():
         if all([task.attributes[k] == v for k, v in attributes.items()]):

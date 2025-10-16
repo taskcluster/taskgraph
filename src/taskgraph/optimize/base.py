@@ -15,7 +15,6 @@ import datetime
 import logging
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
-from typing import Dict, Set
 
 from slugid import nice as slugid
 
@@ -367,9 +366,9 @@ def replace_tasks(
 
 def get_subgraph(
     target_task_graph: TaskGraph,
-    removed_tasks: Set[str],
-    replaced_tasks: Set[str],
-    label_to_taskid: Dict[str, str],
+    removed_tasks: set[str],
+    replaced_tasks: set[str],
+    label_to_taskid: dict[str, str],
     decision_task_id: str,
 ):
     """

@@ -14,7 +14,7 @@ from concurrent.futures import (
     wait,
 )
 from dataclasses import dataclass
-from typing import Callable, Dict, Optional, Union
+from typing import Callable, Optional, Union
 
 from . import filter_tasks
 from .config import GraphConfig, load_graph_config
@@ -42,7 +42,7 @@ class KindNotFound(Exception):
 class Kind:
     name: str
     path: str
-    config: Dict
+    config: dict
     graph_config: GraphConfig
 
     def _get_loader(self) -> Callable:
