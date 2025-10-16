@@ -413,9 +413,12 @@ def extract_archive(path, dest_dir):
         raise ValueError(f"unknown archive format: {path}")
 
     if args:
-        with ifh, subprocess.Popen(
-            args, cwd=str(dest_dir), bufsize=0, stdin=subprocess.PIPE
-        ) as p:
+        with (
+            ifh,
+            subprocess.Popen(
+                args, cwd=str(dest_dir), bufsize=0, stdin=subprocess.PIPE
+            ) as p,
+        ):
             while True:
                 if not pipe_stdin:
                     break
@@ -527,10 +530,13 @@ def repack_archive(
     with rename_after_close(dest, "wb") as fh:
         ctx = ZstdCompressor()
         if orig_typ in ("exec", None):
-            with ctx.stream_writer(fh) as compressor, tarfile.open(
-                fileobj=compressor,
-                mode="w:",
-            ) as tar:
+            with (
+                ctx.stream_writer(fh) as compressor,
+                tarfile.open(
+                    fileobj=compressor,
+                    mode="w:",
+                ) as tar,
+            ):
                 tarinfo = tarfile.TarInfo()
                 tarinfo.name = filter(orig.name) if filter else orig.name
                 st = orig.stat()
@@ -543,9 +549,10 @@ def repack_archive(
             assert typ == "tar"
             zip = zipfile.ZipFile(ifh)
             # Convert the zip stream to a tar on the fly.
-            with ctx.stream_writer(fh) as compressor, tarfile.open(
-                fileobj=compressor, mode="w:"
-            ) as tar:
+            with (
+                ctx.stream_writer(fh) as compressor,
+                tarfile.open(fileobj=compressor, mode="w:") as tar,
+            ):
                 for zipinfo in zip.infolist():
                     if zipinfo.is_dir():
                         continue
@@ -587,11 +594,14 @@ def repack_archive(
                 # To apply the filter, we need to open the tar stream and
                 # tweak it.
                 origtar = tarfile.open(fileobj=ifh, mode="r|")
-                with ctx.stream_writer(fh) as compressor, tarfile.open(
-                    fileobj=compressor,
-                    mode="w:",
-                    format=origtar.format,
-                ) as tar:
+                with (
+                    ctx.stream_writer(fh) as compressor,
+                    tarfile.open(
+                        fileobj=compressor,
+                        mode="w:",
+                        format=origtar.format,
+                    ) as tar,
+                ):
                     for tarinfo in origtar:
                         if tarinfo.isdir():
                             continue

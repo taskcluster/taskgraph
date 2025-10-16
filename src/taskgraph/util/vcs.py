@@ -9,7 +9,7 @@ import re
 import subprocess
 from abc import ABC, abstractmethod
 from shutil import which
-from typing import List, Optional
+from typing import Optional
 
 from taskgraph.util.path import ancestors
 
@@ -74,7 +74,7 @@ class Repository(ABC):
 
     @property
     @abstractmethod
-    def all_remote_names(self) -> List[str]:
+    def all_remote_names(self) -> list[str]:
         """Name of all configured remote repositories."""
 
     @property
@@ -126,7 +126,7 @@ class Repository(ABC):
         """Commit message of specified revision or current commit."""
 
     @abstractmethod
-    def get_tracked_files(self, *paths: str, rev: Optional[str] = None) -> List[str]:
+    def get_tracked_files(self, *paths: str, rev: Optional[str] = None) -> list[str]:
         """Return list of tracked files.
 
         ``*paths`` are path specifiers to limit results to.
@@ -141,7 +141,7 @@ class Repository(ABC):
         mode: Optional[str],
         rev: Optional[str],
         base: Optional[str],
-    ) -> List[str]:
+    ) -> list[str]:
         """Return a list of files that are changed in:
          * either this repository's working copy,
          * or at a given revision (``rev``)
@@ -168,7 +168,7 @@ class Repository(ABC):
         """
 
     @abstractmethod
-    def get_outgoing_files(self, diff_filter: str, upstream: str) -> List[str]:
+    def get_outgoing_files(self, diff_filter: str, upstream: str) -> list[str]:
         """Return a list of changed files compared to upstream.
 
         ``diff_filter`` works the same as `get_changed_files`.

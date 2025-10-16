@@ -16,7 +16,7 @@ from collections import namedtuple
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, List
+from typing import Any
 from urllib.parse import urlparse
 
 import appdirs
@@ -412,7 +412,7 @@ def show_taskgraph(options):
     overrides = {
         "target-kinds": options.get("target_kinds"),
     }
-    parameters: List[Any[str, Parameters]] = options.pop("parameters")
+    parameters: list[Any[str, Parameters]] = options.pop("parameters")
     if not parameters:
         parameters = [
             parameters_loader(None, strict=False, overrides=overrides)

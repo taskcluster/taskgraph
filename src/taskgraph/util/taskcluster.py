@@ -9,7 +9,7 @@ import functools
 import io
 import logging
 import os
-from typing import Any, Dict, List, Union
+from typing import Any, Union
 
 import requests
 import taskcluster_urls as liburls
@@ -32,7 +32,7 @@ PRODUCTION_TASKCLUSTER_ROOT_URL = None
 CONCURRENCY = 50
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def get_root_url(block_proxy=False):
     if "TASKCLUSTER_PROXY_URL" in os.environ and not block_proxy:
         logger.debug(
@@ -60,7 +60,7 @@ def get_root_url(block_proxy=False):
         )
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def get_taskcluster_client(service: str):
     if "TASKCLUSTER_PROXY_URL" in os.environ:
         options = {"rootUrl": os.environ["TASKCLUSTER_PROXY_URL"]}
@@ -71,7 +71,7 @@ def get_taskcluster_client(service: str):
 
 
 def _handle_artifact(
-    path: str, response: Union[requests.Response, Dict[str, Any]]
+    path: str, response: Union[requests.Response, dict[str, Any]]
 ) -> Any:
     if isinstance(response, dict):
         # When taskcluster client returns non-JSON responses, it wraps them in {"response": <Response>}
@@ -135,7 +135,7 @@ def requests_retry_session(
     return session
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def get_session():
     return requests_retry_session(retries=5)
 
@@ -277,7 +277,7 @@ def get_task_url(task_id):
     return task_tmpl.format(task_id)
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def get_task_definition(task_id):
     queue = get_taskcluster_client("queue")
     return queue.task(task_id)
@@ -439,7 +439,7 @@ def list_task_group_incomplete_tasks(task_group_id):
     return incomplete_tasks
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def _get_deps(task_ids):
     upstream_tasks = {}
     for task_id in task_ids:
@@ -459,7 +459,7 @@ def _get_deps(task_ids):
     return upstream_tasks
 
 
-def get_ancestors(task_ids: Union[List[str], str]) -> Dict[str, str]:
+def get_ancestors(task_ids: Union[list[str], str]) -> dict[str, str]:
     """Gets the ancestor tasks of the given task_ids as a dictionary of taskid -> label.
 
     Args:
@@ -468,7 +468,7 @@ def get_ancestors(task_ids: Union[List[str], str]) -> Dict[str, str]:
     Returns:
         dict: A dict whose keys are task ids and values are task labels.
     """
-    upstream_tasks: Dict[str, str] = {}
+    upstream_tasks: dict[str, str] = {}
 
     if isinstance(task_ids, str):
         task_ids = [task_ids]

@@ -8,7 +8,7 @@ import sys
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Union
+from typing import Callable, Union
 
 from taskgraph.config import GraphConfig
 from taskgraph.parameters import Parameters
@@ -40,7 +40,7 @@ class InitialVerification(Verification):
 class GraphVerification(Verification):
     """Verification for a TaskGraph object."""
 
-    run_on_projects: Union[List, None] = field(default=None)
+    run_on_projects: Union[list, None] = field(default=None)
 
     def verify(
         self, graph: TaskGraph, graph_config: GraphConfig, parameters: Parameters
@@ -92,7 +92,7 @@ class VerificationSequence:
     that was passed for each task.
     """
 
-    _verifications: Dict = field(default_factory=dict)
+    _verifications: dict = field(default_factory=dict)
     _verification_types = {
         "graph": GraphVerification,
         "initial": InitialVerification,

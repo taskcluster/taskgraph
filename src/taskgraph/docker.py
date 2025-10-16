@@ -11,10 +11,11 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+from collections.abc import Generator
 from io import BytesIO
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, Dict, Generator, List, Optional, Union
+from typing import Any, Optional, Union
 
 from taskcluster.exceptions import TaskclusterRestFailure
 
@@ -246,7 +247,7 @@ def build_image(
 
 def load_image(
     url: str, imageName: Optional[str] = None, imageTag: Optional[str] = None
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """Load docker image from URL as imageName:tag.
 
     Downloads a zstd-compressed docker image tarball from the given URL and
@@ -286,7 +287,7 @@ def load_image(
         else:
             imageTag = "latest"
 
-    info: Dict[str, str] = {}
+    info: dict[str, str] = {}
 
     def download_and_modify_image() -> Generator[bytes, None, None]:
         # This function downloads and edits the downloaded tar file on the fly.
@@ -377,14 +378,14 @@ def load_image(
     return info
 
 
-def _index(l: List, s: str) -> Optional[int]:
+def _index(l: list, s: str) -> Optional[int]:
     try:
         return l.index(s)
     except ValueError:
         pass
 
 
-def _resolve_image(image: Union[str, Dict[str, str]], graph_config: GraphConfig) -> str:
+def _resolve_image(image: Union[str, dict[str, str]], graph_config: GraphConfig) -> str:
     image_task_id = None
 
     # Standard case, image comes from the task definition.
@@ -419,12 +420,12 @@ def _resolve_image(image: Union[str, Dict[str, str]], graph_config: GraphConfig)
 
 def load_task(
     graph_config: GraphConfig,
-    task: Union[str, Dict[str, Any]],
+    task: Union[str, dict[str, Any]],
     remove: bool = True,
     user: Optional[str] = None,
     custom_image: Optional[str] = None,
     interactive: Optional[bool] = False,
-    volumes: Optional[Dict[str, str]] = None,
+    volumes: Optional[dict[str, str]] = None,
 ) -> int:
     """Load and run a task interactively in a Docker container.
 
