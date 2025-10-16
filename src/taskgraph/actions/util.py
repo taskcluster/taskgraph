@@ -11,6 +11,7 @@ from concurrent import futures
 from functools import reduce
 
 from requests.exceptions import HTTPError
+from taskcluster.exceptions import TaskclusterRestFailure
 
 from taskgraph import create
 from taskgraph.decision import read_artifact, rename_artifact, write_artifact
@@ -36,7 +37,7 @@ def fetch_graph_and_labels(parameters, graph_config, task_group_id=None):
     try:
         # Look up the decision_task id in the index
         decision_task_id = find_decision_task(parameters, graph_config)
-    except KeyError:
+    except (KeyError, TaskclusterRestFailure):
         if not task_group_id:
             raise
         # Not found (e.g. from github-pull-request), fall back to the task group id.
