@@ -1,5 +1,32 @@
 # Change Log
 
+## [17.0.0] - 2025-10-17
+
+### Changed
+
+- BREAKING CHANGE: Dropped support for Python 3.8
+- BREAKING CHANGE: `base_ref` parameter no longer gets reset to default branch by Decision task
+- BREAKING CHANGE: `base_rev` parameter no longer gets reset to merge-base by Decision task
+- BREAKING CHANGE: `run-task` script no longer fetches or checks out `base_ref` parameter
+- BREAKING CHANGE: `run-task` script no longer fetches all heads if `head_ref` was not specified
+
+### Added
+
+- `run-task` now supports shallow Git clones
+- Improved support for shallow clones in `repo.get_changed_files()`
+
+### Perf
+
+- Improvements to graph traversal logic and caching
+
+### Fixed
+
+- Bug in `retrigger-multiple` action's schema definition
+- `run-task` no longer fetches head ref twice in some scenarios
+- `run-task` avoids fetching tags in some scenarios when not necessary
+- `run-task` properly normalizes `head_ref` before checking it out
+- Appropriate exception now being caught in various `taskcluster` call sites
+
 ## [16.2.1] - 2025-10-14
 
 ### Fixed

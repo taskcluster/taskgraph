@@ -3,6 +3,38 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+16.x -> 17.x
+------------
+
+* Upgrade to Python 3.9 or above.
+* The ``base_ref`` parameter could now be ``None`` if it wasn't explicitly
+  passed into the Decision task. If this was relied upon, do the following
+  instead:
+
+  .. code-block:: python
+
+     from taskgraph.util.vcs import get_repository
+
+     repo = get_repository()
+     base_ref = repo.default_branch
+
+* The ``base_rev`` parameter is no longer being reset to the merge-base. This
+  means in some cases, ``base_rev`` might not actually be an ancestor of
+  ``head_rev``. If you need the merge-base, you can use:
+
+  .. code-block:: python
+
+     from taskgraph.util.vcs import get_repository
+
+     repo = get_repository()
+     base_rev = repo.find_latest_common_revision(parameters["base_rev"], parameters["head_rev"])
+
+* The ``base_ref`` is no longer being fetched by ``run-task``. If you were
+  relying on it, you can run ``git fetch origin <base_ref>`` in a subprocess.
+* The ``run-task`` scripts no longer fetches all heads when ``head_ref`` isn't
+  specified. If this behaviour was relied upon, you can run
+  ``git fetch +refs/heads/*:refs/remotes/work/*`` in a subprocess.
+
 15.x -> 16.x
 ------------
 
