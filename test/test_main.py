@@ -65,14 +65,23 @@ def test_show_taskgraph_attr(run_taskgraph, capsys, attr, expected):
 
 
 def test_show_taskgraph_parallel(run_taskgraph):
+    # Test that parallel execution works correctly with valid parameters
     res = run_taskgraph(["full", "-p", "taskcluster/test/params"])
     assert res == 0
 
-    # Craft params to cause an exception
-    res = run_taskgraph(
-        ["full", "-p", "taskcluster/test/params"], params={"_kinds": None}
-    )
-    assert res == 1
+
+def test_show_taskgraph_parallel_bad_params(tmp_path):
+    # Create parameter files that will cause processing errors
+    bad_params_dir = tmp_path / "bad_params"
+    bad_params_dir.mkdir()
+    (bad_params_dir / "invalid-yaml.yml").write_text("invalid: yaml: [syntax error")
+
+    try:
+        result = taskgraph_main(["full", "-p", str(bad_params_dir)])
+    except SystemExit as e:
+        result = e.code
+
+    assert result == 1
 
 
 def test_show_taskgraph_force_local_files_changed(mocker, run_taskgraph):
