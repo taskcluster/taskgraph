@@ -4,6 +4,7 @@
 
 
 import collections
+import functools
 from dataclasses import dataclass
 
 
@@ -75,20 +76,25 @@ class Graph(_Graph):
         return Graph(new_nodes, new_edges)
 
     def _visit(self, reverse):
-        queue = collections.deque(sorted(self.nodes))
-        links_by_node = self.reverse_links_dict() if reverse else self.links_dict()
-        seen = set()
+        forward_links, reverse_links = self.links_and_reverse_links_dict()
+
+        dependencies = reverse_links if reverse else forward_links
+        dependents = forward_links if reverse else reverse_links
+
+        indegree = {node: len(dependencies[node]) for node in self.nodes}
+
+        queue = collections.deque(
+            node for node, degree in indegree.items() if degree == 0
+        )
+
         while queue:
             node = queue.popleft()
-            if node in seen:
-                continue
-            links = links_by_node[node]
-            if all((n in seen) for n in links):
-                seen.add(node)
-                yield node
-            else:
-                queue.extend(n for n in links if n not in seen)
-                queue.append(node)
+            yield node
+
+            for dependent in dependents[node]:
+                indegree[dependent] -= 1
+                if indegree[dependent] == 0:
+                    queue.append(dependent)
 
     def visit_postorder(self):
         """
@@ -106,6 +112,21 @@ class Graph(_Graph):
         any nodes it links to.
         """
         return self._visit(True)
+
+    @functools.cache
+    def links_and_reverse_links_dict(self):
+        """
+        Return both links and reverse_links dictionaries.
+        Returns a (forward_links, reverse_links) tuple where forward_links maps
+        each node to the set of nodes it links to, and reverse_links maps each
+        node to the set of nodes linking to it.
+        """
+        forward = collections.defaultdict(set)
+        reverse = collections.defaultdict(set)
+        for left, right, _ in self.edges:
+            forward[left].add(right)
+            reverse[right].add(left)
+        return (forward, reverse)
 
     def links_dict(self):
         """
