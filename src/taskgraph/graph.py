@@ -7,6 +7,8 @@ import collections
 import functools
 from dataclasses import dataclass
 
+from .util.readonlydict import ReadOnlyDict
+
 
 @dataclass(frozen=True)
 class _Graph:
@@ -81,7 +83,7 @@ class Graph(_Graph):
         dependencies = reverse_links if reverse else forward_links
         dependents = forward_links if reverse else reverse_links
 
-        indegree = {node: len(dependencies[node]) for node in self.nodes}
+        indegree = {node: len(dependencies.get(node, ())) for node in self.nodes}
 
         queue = collections.deque(
             node for node, degree in indegree.items() if degree == 0
@@ -91,7 +93,7 @@ class Graph(_Graph):
             node = queue.popleft()
             yield node
 
-            for dependent in dependents[node]:
+            for dependent in dependents.get(node, ()):
                 indegree[dependent] -= 1
                 if indegree[dependent] == 0:
                     queue.append(dependent)
@@ -120,13 +122,18 @@ class Graph(_Graph):
         Returns a (forward_links, reverse_links) tuple where forward_links maps
         each node to the set of nodes it links to, and reverse_links maps each
         node to the set of nodes linking to it.
+
+        Because the return value is cached, this function returns a pair of
+        `ReadOnlyDict` instead of defaultdicts like its `links_dict` and
+        `reverse_links_dict` counterparts to avoid consumers modifying the
+        cached value by mistake.
         """
         forward = collections.defaultdict(set)
         reverse = collections.defaultdict(set)
         for left, right, _ in self.edges:
             forward[left].add(right)
             reverse[right].add(left)
-        return (forward, reverse)
+        return (ReadOnlyDict(forward), ReadOnlyDict(reverse))
 
     def links_dict(self):
         """
