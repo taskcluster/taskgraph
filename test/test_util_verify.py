@@ -11,6 +11,7 @@ from pytest_taskgraph import make_graph, make_task
 from taskgraph.task import Task
 from taskgraph.util.treeherder import split_symbol
 from taskgraph.util.verify import (
+    GraphConfigVerification,
     GraphVerification,
     ParametersVerification,
     VerificationSequence,
@@ -38,6 +39,8 @@ def run_verification(parameters, graph_config):
 
         if isinstance(v, GraphVerification):
             assert "graph" in kwargs
+
+        if isinstance(v, (GraphVerification, GraphConfigVerification)):
             kwargs.setdefault("graph_config", graph_config)
 
         if isinstance(v, (GraphVerification, ParametersVerification)):
@@ -93,6 +96,13 @@ def assert_simple_verification(arg):
             assert_simple_verification,
             1,
             id="ParametersVerification",
+        ),
+        pytest.param(
+            "graph_config",
+            ("passed-thru",),
+            assert_simple_verification,
+            1,
+            id="GraphConfigVerification",
         ),
     ),
 )
