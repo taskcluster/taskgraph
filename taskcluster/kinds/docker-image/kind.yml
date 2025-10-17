@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 ---
 meta:
-    - &uv_version 0.6.1
+    - &uv_version 0.9.3
 
 loader: taskgraph.loader.transform:loader
 
@@ -29,7 +29,7 @@ tasks:
     python:
         symbol: I(py)
         args:
-            PYTHON_VERSIONS: "3.13 3.12 3.11 3.10 3.9"
+            PYTHON_VERSIONS: "3.14 3.13 3.12 3.11 3.10 3.9"
             UV_VERSION: *uv_version
     run-task:
         symbol: I(rt)
