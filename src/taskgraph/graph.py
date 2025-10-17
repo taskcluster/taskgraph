@@ -8,7 +8,12 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class Graph:
+class _Graph:
+    nodes: frozenset
+    edges: frozenset
+
+
+class Graph(_Graph):
     """Generic representation of a directed acyclic graph with labeled edges
     connecting the nodes. Graph operations are implemented in a functional
     manner, so the data structure is immutable.
@@ -23,8 +28,8 @@ class Graph:
     node `left` to node `right`..
     """
 
-    nodes: frozenset
-    edges: frozenset
+    def __init__(self, nodes, edges):
+        super().__init__(frozenset(nodes), frozenset(edges))
 
     def transitive_closure(self, nodes, reverse=False):
         """Return the transitive closure of <nodes>: the graph containing all
@@ -67,7 +72,7 @@ class Graph:
             add_nodes = {(left if reverse else right) for (left, right, _) in add_edges}
             new_nodes = nodes | add_nodes
             new_edges = edges | add_edges
-        return Graph(new_nodes, new_edges)  # type: ignore
+        return Graph(new_nodes, new_edges)
 
     def _visit(self, reverse):
         queue = collections.deque(sorted(self.nodes))

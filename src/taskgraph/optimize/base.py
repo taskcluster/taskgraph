@@ -451,7 +451,9 @@ def get_subgraph(
         if left in tasks_by_taskid and right in tasks_by_taskid
     }
 
-    return TaskGraph(tasks_by_taskid, Graph(set(tasks_by_taskid), edges_by_taskid))  # type: ignore
+    return TaskGraph(
+        tasks_by_taskid, Graph(frozenset(tasks_by_taskid), edges_by_taskid)
+    )
 
 
 @register_strategy("never")
