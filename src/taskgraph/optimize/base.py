@@ -297,8 +297,9 @@ def replace_tasks(
 
     opt_counts = defaultdict(int)
     replaced = set()
-    dependents_of = target_task_graph.graph.reverse_links_dict()
-    dependencies_of = target_task_graph.graph.links_dict()
+    dependencies_of, dependents_of = (
+        target_task_graph.graph.links_and_reverse_links_dict()
+    )
 
     for label in target_task_graph.graph.visit_postorder():
         logger.debug(f"replace_tasks: {label}")
