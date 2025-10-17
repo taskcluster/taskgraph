@@ -83,7 +83,7 @@ class Graph(_Graph):
         dependencies = reverse_links if reverse else forward_links
         dependents = forward_links if reverse else reverse_links
 
-        indegree = {node: len(dependencies.get(node, ())) for node in self.nodes}
+        indegree = {node: len(dependencies[node]) for node in self.nodes}
 
         queue = collections.deque(
             node for node, degree in indegree.items() if degree == 0
@@ -93,7 +93,7 @@ class Graph(_Graph):
             node = queue.popleft()
             yield node
 
-            for dependent in dependents.get(node, ()):
+            for dependent in dependents[node]:
                 indegree[dependent] -= 1
                 if indegree[dependent] == 0:
                     queue.append(dependent)
@@ -128,8 +128,8 @@ class Graph(_Graph):
         `reverse_links_dict` counterparts to avoid consumers modifying the
         cached value by mistake.
         """
-        forward = collections.defaultdict(set)
-        reverse = collections.defaultdict(set)
+        forward = {node: set() for node in self.nodes}
+        reverse = {node: set() for node in self.nodes}
         for left, right, _ in self.edges:
             forward[left].add(right)
             reverse[right].add(left)
