@@ -133,7 +133,11 @@ class Graph(_Graph):
         for left, right, _ in self.edges:
             forward[left].add(right)
             reverse[right].add(left)
-        return (ReadOnlyDict(forward), ReadOnlyDict(reverse))
+
+        return (
+            ReadOnlyDict({key: frozenset(value) for key, value in forward.items()}),
+            ReadOnlyDict({key: frozenset(value) for key, value in reverse.items()}),
+        )
 
     def links_dict(self):
         """
