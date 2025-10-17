@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 ---
 meta:
-    - &uv_version 0.6.1
+    - &uv_version 0.9.3
 
 loader: taskgraph.loader.transform:loader
 
