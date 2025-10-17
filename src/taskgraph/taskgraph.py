@@ -67,5 +67,5 @@ class TaskGraph:
                 tasks[key].task_id = value["task_id"]
             for depname, dep in value["dependencies"].items():
                 edges.add((key, dep, depname))
-        task_graph = cls(tasks, Graph(set(tasks), edges))  # type: ignore
+        task_graph = cls(tasks, Graph(frozenset(tasks), edges))
         return tasks, task_graph
