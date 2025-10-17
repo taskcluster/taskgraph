@@ -50,6 +50,7 @@ dev = [
   "sphinx-taskgraph",
   "sphinxcontrib-mermaid",
   "zstandard",
+  "pytest-xdist>=3.6.1",
 ]
 
 [project.optional-dependencies]
