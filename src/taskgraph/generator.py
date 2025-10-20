@@ -378,6 +378,7 @@ class TaskGraphGenerator:
 
         # Initial verifications that don't depend on any generation state.
         self.verify("initial")
+        self.verify("graph_config", graph_config)
 
         if callable(self._parameters):
             parameters = self._parameters(graph_config)

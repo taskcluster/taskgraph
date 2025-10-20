@@ -175,7 +175,7 @@ def test_verifications(mocker, maketgg):
     m = mocker.patch.object(generator, "verifications")
     tgg = maketgg(["_fake-t-2"], enable_verifications=True)
     tgg.morphed_task_graph
-    assert m.call_count == 9
+    assert m.call_count == 10
 
     m = mocker.patch.object(generator, "verifications")
     tgg = maketgg(["_fake-t-2"], enable_verifications=False)
