@@ -32,9 +32,9 @@ workers:
             provisioner: 'taskgraph-t'
             implementation: docker-worker
             os: linux
-            worker-type: linux-gcp
+            worker-type: linux-docker
         misc:
             provisioner: 'taskgraph-t'
             implementation: docker-worker
             os: linux
-            worker-type: linux-gcp
+            worker-type: linux-docker
