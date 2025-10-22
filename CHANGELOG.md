@@ -1,5 +1,15 @@
 # Change Log
 
+## [17.1.0] - 2025-10-22
+
+### Added
+
+- Support for "graph_config" verifications
+
+### Fixed
+
+- Added Python 3.8 support back to `fetch-content` script for Gecko workaround
+
 ## [17.0.0] - 2025-10-17
 
 ### Changed
