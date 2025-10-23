@@ -250,6 +250,15 @@ class TaskGraphGenerator:
         """
         return self._run_until("graph_config")
 
+    @property
+    def kind_graph(self):
+        """
+        The dependency graph of kinds.
+
+        @type: Graph
+        """
+        return self._run_until("kind_graph")
+
     def _load_kinds(self, graph_config, target_kinds=None):
         if target_kinds:
             # docker-image is an implicit dependency that never appears in
@@ -421,6 +430,8 @@ class TaskGraphGenerator:
             kind_graph = kind_graph.transitive_closure(
                 set(target_kinds) | {"docker-image"}
             )
+
+        yield "kind_graph", kind_graph
 
         logger.info("Generating full task set")
         # Current parallel generation relies on multiprocessing, and forking.
