@@ -141,20 +141,7 @@ def get_session():
 
 
 def get_artifact_url(task_id, path, use_proxy=False):
-    if use_proxy:
-        try:
-            url = liburls.normalize_root_url(os.environ["TASKCLUSTER_PROXY_URL"])
-        except KeyError:
-            if "TASK_ID" not in os.environ:
-                raise RuntimeError(
-                    "taskcluster-proxy is not available when not executing in a task"
-                )
-            else:
-                raise RuntimeError("taskcluster-proxy is not enabled for this task")
-
-    else:
-        url = get_root_url(block_proxy=True)
-
+    url = get_root_url(block_proxy=not use_proxy)
     artifact_tmpl = liburls.api(url, "queue", "v1", "task/{}/artifacts/{}")
     return artifact_tmpl.format(task_id, path)
 
