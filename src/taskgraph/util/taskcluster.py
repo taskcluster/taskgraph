@@ -194,8 +194,10 @@ def get_artifact_path(task, path):
     return f"{get_artifact_prefix(task)}/{path}"
 
 
-def get_index_url(index_path, multiple=False):
-    index_tmpl = liburls.api(get_root_url(), "index", "v1", "task{}/{}")
+def get_index_url(index_path, multiple=False, use_proxy=False):
+    index_tmpl = liburls.api(
+        get_root_url(block_proxy=not use_proxy), "index", "v1", "task{}/{}"
+    )
     return index_tmpl.format("s" if multiple else "", index_path)
 
 
