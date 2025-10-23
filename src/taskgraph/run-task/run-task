@@ -604,7 +604,6 @@ def _clean_git_checkout(destination_path):
         # accurate.
         bufsize=0,
         stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
         stdin=sys.stdin.fileno(),
         cwd=destination_path,
         env=os.environ,
