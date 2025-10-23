@@ -65,9 +65,9 @@ def test_get_artifact_url(monkeypatch):
     tc.get_root_url.cache_clear()
     task_id = "abc"
     path = "public/log.txt"
-    expected = "https://tc.example.com/api/queue/v1/task/abc/artifacts/public/log.txt"
+    expected = f"https://tc.example.com/api/queue/v1/task/{task_id}/artifacts/{path}"
     expected_proxy = (
-        "https://taskcluster-proxy.net/api/queue/v1/task/abc/artifacts/public/log.txt"
+        f"https://taskcluster-proxy.net/api/queue/v1/task/{task_id}/artifacts/{path}"
     )
 
     # Test with default root URL (no proxy)
@@ -86,17 +86,11 @@ def test_get_artifact_url(monkeypatch):
     monkeypatch.delenv("TASKCLUSTER_PROXY_URL")
     monkeypatch.delenv("TASK_ID", raising=False)
     tc.get_root_url.cache_clear()
-    with pytest.raises(RuntimeError) as exc:
-        tc.get_artifact_url(task_id, path, use_proxy=True)
-    assert "taskcluster-proxy is not available when not executing in a task" in str(
-        exc.value
-    )
+    assert tc.get_artifact_url(task_id, path, use_proxy=True) == expected
 
     # Test with use_proxy=True but proxy not enabled (in a task without proxy)
     monkeypatch.setenv("TASK_ID", "some-task-id")
-    with pytest.raises(RuntimeError) as exc:
-        tc.get_artifact_url(task_id, path, use_proxy=True)
-    assert "taskcluster-proxy is not enabled for this task" in str(exc.value)
+    assert tc.get_artifact_url(task_id, path, use_proxy=True) == expected
 
 
 def test_get_artifact(responses, root_url):
