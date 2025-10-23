@@ -1,5 +1,4 @@
 import functools
-import io
 import os
 import site
 import stat
@@ -293,23 +292,20 @@ def test_clean_git_checkout(monkeypatch, mock_stdin, run_task_mod):
     output_str = (
         f"{prefix}{untracked_dir_rel_path}/\n{prefix}{untracked_file_rel_path}\n"
     )
-    output_bytes = output_str.encode("latin1")
-    output = io.BytesIO(output_bytes)
+
+    real_popen = subprocess.Popen
 
     def _Popen(
         args,
-        bufsize=None,
-        stdout=None,
-        stderr=None,
-        stdin=None,
-        cwd=None,
-        env=None,
         **kwargs,
     ):
-        return Mock(
-            stdout=output,
-            wait=lambda: 0,
+        kwargs["stdin"] = subprocess.PIPE
+        proc = real_popen(
+            ["cat"],
+            **kwargs,
         )
+        proc.stdin.write(output_str)
+        return proc
 
     monkeypatch.setattr(
         subprocess,
