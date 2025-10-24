@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import datetime
-import os
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -19,13 +19,8 @@ def root_url():
 @pytest.fixture(autouse=True)
 def mock_environ(monkeypatch, root_url):
     # Ensure user specified environment variables don't interfere with URLs.
-    monkeypatch.setattr(
-        os,
-        "environ",
-        {
-            "TASKCLUSTER_ROOT_URL": root_url,
-        },
-    )
+    monkeypatch.setenv("TASKCLUSTER_ROOT_URL", root_url)
+    monkeypatch.delenv("TASKCLUSTER_PROXY_URL", raising=False)
 
 
 @pytest.fixture(autouse=True)
@@ -566,3 +561,47 @@ def test_get_ancestors_string(responses, root_url):
         "eee": "task-eee",
     }
     assert got == expected, f"got: {got}, expected: {expected}"
+
+
+def test_get_taskcluster_client(monkeypatch, root_url):
+    tc.get_root_url.cache_clear()
+    tc.get_taskcluster_client.cache_clear()
+    service_mock = MagicMock()
+    monkeypatch.setattr("taskcluster.Foo", service_mock, raising=False)
+
+    # No environment and no default → error
+    monkeypatch.delenv("TASKCLUSTER_ROOT_URL", raising=False)
+    monkeypatch.delenv("TASKCLUSTER_PROXY_URL", raising=False)
+    monkeypatch.setattr(tc, "PRODUCTION_TASKCLUSTER_ROOT_URL", None)
+    with pytest.raises(RuntimeError):
+        tc.get_taskcluster_client("foo")
+    service_mock.assert_not_called()
+
+    tc.get_root_url.cache_clear()
+    tc.get_taskcluster_client.cache_clear()
+    service_mock.reset_mock()
+
+    # No environment, use default
+    monkeypatch.setattr(
+        tc, "PRODUCTION_TASKCLUSTER_ROOT_URL", "http://taskcluster-prod"
+    )
+    tc.get_taskcluster_client("foo")
+    service_mock.assert_called_once_with({"rootUrl": "http://taskcluster-prod"})
+
+    tc.get_root_url.cache_clear()
+    tc.get_taskcluster_client.cache_clear()
+    service_mock.reset_mock()
+
+    # root url from environment
+    monkeypatch.setenv("TASKCLUSTER_ROOT_URL", "http://taskcluster-env")
+    tc.get_taskcluster_client("foo")
+    service_mock.assert_called_once_with({"rootUrl": "http://taskcluster-env"})
+
+    tc.get_root_url.cache_clear()
+    tc.get_taskcluster_client.cache_clear()
+    service_mock.reset_mock()
+
+    # proxy url from environment
+    monkeypatch.setenv("TASKCLUSTER_PROXY_URL", "http://taskcluster-proxy")
+    tc.get_taskcluster_client("foo")
+    service_mock.assert_called_once_with({"rootUrl": "http://taskcluster-proxy"})
