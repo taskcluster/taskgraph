@@ -65,7 +65,7 @@ def get_taskcluster_client(service: str):
     if "TASKCLUSTER_PROXY_URL" in os.environ:
         options = {"rootUrl": os.environ["TASKCLUSTER_PROXY_URL"]}
     else:
-        options = taskcluster.optionsFromEnvironment()
+        options = taskcluster.optionsFromEnvironment({"rootUrl": get_root_url()})
 
     return getattr(taskcluster, service[0].upper() + service[1:])(options)
 
