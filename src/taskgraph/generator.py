@@ -11,6 +11,7 @@ import platform
 from concurrent.futures import (
     FIRST_COMPLETED,
     ProcessPoolExecutor,
+    ThreadPoolExecutor,
     wait,
 )
 from dataclasses import dataclass
@@ -432,30 +433,50 @@ class TaskGraphGenerator:
         yield "kind_graph", kind_graph
 
         logger.info("Generating full task set")
-        # The short version of the below is: we only support parallel kind
-        # processing on Linux.
+
+        # The next block deals with enabling parallel kind processing, which
+        # currently has different support on different platforms. In summary:
+        # * Parallel kind processing is supported and enabled by default on
+        #   Linux. We use multiple processes by default, but experimental
+        #   support for multiple threads can be enabled instead.
+        # * On other platforms, we have experimental support for parallel
+        #   kind processing with multiple threads.
         #
-        # Current parallel generation relies on multiprocessing, and more
-        # specifically: the "fork" multiprocessing method. This is not supported
-        # at all on Windows (it uses "spawn"). Forking is supported on macOS,
-        # but no longer works reliably in all cases, and our usage of it here
-        # causes crashes. See https://github.com/python/cpython/issues/77906
-        # and http://sealiesoftware.com/blog/archive/2017/6/5/Objective-C_and_fork_in_macOS_1013.html
-        # for more details on that.
-        # Other methods of multiprocessing (both "spawn" and "forkserver")
-        # do not work for our use case, because they cause global variables
-        # to be reinitialized, which are sometimes modified earlier in graph
-        # generation. These issues can theoretically be worked around by
-        # eliminating all reliance on globals as part of task generation, but
-        # is far from a small amount of work in users like Gecko/Firefox.
-        # In the long term, the better path forward is likely to be switching
-        # to threading with a free-threaded python to achieve similar parallel
-        # processing.
-        if platform.system() != "Linux" or os.environ.get("TASKGRAPH_SERIAL"):
-            all_tasks = self._load_tasks_serial(kinds, kind_graph, parameters)
-        else:
-            executor = ProcessPoolExecutor(mp_context=multiprocessing.get_context("fork"))
-            all_tasks = self._load_tasks_parallel(kinds, kind_graph, parameters, executor)
+        # On all platforms serial kind processing can be enabled by setting
+        # TASKGRAPH_SERIAL in the environment.
+        #
+        # On all platforms, multiple threads can be enabled by setting
+        # TASKGRAPH_USE_THREADS in the environment. Taskgraph must be running
+        # from a free-threaded Python build to see any performance benefits.
+        #
+        # In the long term, the goal is turn enabled parallel kind processing for
+        # all platforms by default using threads, and remove support for multiple
+        # processes altogether.
+        def load_tasks():
+            if platform.system() == "Linux":
+                if os.environ.get("TASKGRAPH_SERIAL"):
+                    return self._load_tasks_serial(kinds, kind_graph, parameters)
+                elif os.environ.get("TASKGRAPH_USE_THREADS"):
+                    executor = ThreadPoolExecutor(max_workers=os.process_cpu_count())
+                else:
+                    executor = ProcessPoolExecutor(
+                        mp_context=multiprocessing.get_context("fork")
+                    )
+                return self._load_tasks_parallel(
+                    kinds, kind_graph, parameters, executor
+                )
+            else:
+                if os.environ.get("TASKGRAPH_SERIAL") or not os.environ.get(
+                    "TASKGRAPH_USE_THREADS"
+                ):
+                    return self._load_tasks_serial(kinds, kind_graph, parameters)
+                else:
+                    executor = ThreadPoolExecutor(max_workers=os.process_cpu_count())
+                return self._load_tasks_parallel(
+                    kinds, kind_graph, parameters, executor
+                )
+
+        all_tasks = load_tasks()
 
         full_task_set = TaskGraph(all_tasks, Graph(frozenset(all_tasks), frozenset()))
         yield self.verify("full_task_set", full_task_set, graph_config, parameters)
