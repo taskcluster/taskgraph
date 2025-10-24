@@ -338,3 +338,44 @@ def test_kind_load_tasks(monkeypatch, graph_config, parameters, datadir, kind_co
     )
     tasks = kind.load_tasks(parameters, {}, False)
     assert tasks
+
+
+def test_kind_graph(maketgg):
+    "The kind_graph property has all kinds and their dependencies"
+    tgg = maketgg(
+        kinds=[
+            ("_fake3", {"kind-dependencies": ["_fake2", "_fake1"]}),
+            ("_fake2", {"kind-dependencies": ["_fake1"]}),
+            ("_fake1", {"kind-dependencies": []}),
+        ]
+    )
+    kind_graph = tgg.kind_graph
+    assert isinstance(kind_graph, graph.Graph)
+    assert kind_graph.nodes == {"_fake1", "_fake2", "_fake3"}
+    assert kind_graph.edges == {
+        ("_fake3", "_fake2", "kind-dependency"),
+        ("_fake3", "_fake1", "kind-dependency"),
+        ("_fake2", "_fake1", "kind-dependency"),
+    }
+
+
+def test_kind_graph_with_target_kinds(maketgg):
+    "The kind_graph property respects target_kinds parameter"
+    tgg = maketgg(
+        kinds=[
+            ("_fake3", {"kind-dependencies": ["_fake2"]}),
+            ("_fake2", {"kind-dependencies": ["_fake1"]}),
+            ("_fake1", {"kind-dependencies": []}),
+            ("_other", {"kind-dependencies": []}),
+            ("docker-image", {"kind-dependencies": []}),  # Add docker-image
+        ],
+        params={"target-kinds": ["_fake2"]},
+    )
+    kind_graph = tgg.kind_graph
+    # Should only include _fake2, _fake1, and docker-image (implicit dependency)
+    assert "_fake2" in kind_graph.nodes
+    assert "_fake1" in kind_graph.nodes
+    assert "docker-image" in kind_graph.nodes
+    # _fake3 and _other should not be included
+    assert "_fake3" not in kind_graph.nodes
+    assert "_other" not in kind_graph.nodes

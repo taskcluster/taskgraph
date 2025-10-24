@@ -12,7 +12,7 @@ import pytest
 import taskgraph
 from taskgraph.actions import registry
 from taskgraph.graph import Graph
-from taskgraph.main import get_filtered_taskgraph
+from taskgraph.main import format_kind_graph_mermaid, get_filtered_taskgraph
 from taskgraph.main import main as taskgraph_main
 from taskgraph.task import Task
 from taskgraph.taskgraph import TaskGraph
@@ -521,3 +521,124 @@ def test_load_task_command_with_task_id(run_load_task):
         user=None,
         custom_image=None,
     )
+
+
+def test_format_kind_graph_mermaid():
+    """Test conversion of kind graph to Mermaid format"""
+    # Test with simple graph
+    kinds = frozenset(["docker-image"])
+    edges = frozenset()
+    kind_graph = Graph(kinds, edges)
+
+    output = format_kind_graph_mermaid(kind_graph)
+    assert "flowchart TD" in output
+    assert "docker_image[docker-image]" in output
+
+    # Test with complex graph with dependencies
+    kinds = frozenset(["docker-image", "build", "test", "lint"])
+    edges = frozenset(
+        [
+            ("build", "docker-image", "kind-dependency"),
+            ("test", "build", "kind-dependency"),
+            ("lint", "docker-image", "kind-dependency"),
+        ]
+    )
+    kind_graph = Graph(kinds, edges)
+
+    output = format_kind_graph_mermaid(kind_graph)
+    lines = output.split("\n")
+
+    assert lines[0] == "flowchart TD"
+    # Check all nodes are present
+    assert any("build[build]" in line for line in lines)
+    assert any("docker_image[docker-image]" in line for line in lines)
+    assert any("lint[lint]" in line for line in lines)
+    assert any("test[test]" in line for line in lines)
+    # Check edges are reversed (dependencies point to dependents)
+    assert any("docker_image --> build" in line for line in lines)
+    assert any("build --> test" in line for line in lines)
+    assert any("docker_image --> lint" in line for line in lines)
+
+
+def test_show_kinds_command(run_taskgraph, capsys):
+    """Test the kinds command outputs Mermaid format"""
+    res = run_taskgraph(
+        ["kind-graph"],
+        kinds=[
+            ("_fake", {"kind-dependencies": []}),
+        ],
+    )
+    assert res == 0
+
+    out, _ = capsys.readouterr()
+    assert "flowchart TD" in out
+    assert "_fake[_fake]" in out
+
+
+def test_show_kinds_with_dependencies(run_taskgraph, capsys):
+    """Test the kinds command with kind dependencies"""
+    res = run_taskgraph(
+        ["kind-graph"],
+        kinds=[
+            ("_fake3", {"kind-dependencies": ["_fake2"]}),
+            ("_fake2", {"kind-dependencies": ["_fake1"]}),
+            ("_fake1", {"kind-dependencies": []}),
+        ],
+    )
+    assert res == 0
+
+    out, _ = capsys.readouterr()
+    assert "flowchart TD" in out
+    # Check all kinds are present
+    assert "_fake1[_fake1]" in out
+    assert "_fake2[_fake2]" in out
+    assert "_fake3[_fake3]" in out
+    # Check edges are present and reversed
+    assert "_fake1 --> _fake2" in out
+    assert "_fake2 --> _fake3" in out
+
+
+def test_show_kinds_output_file(run_taskgraph, tmpdir):
+    """Test the kinds command writes to file"""
+    output_file = tmpdir.join("kinds.mmd")
+    assert not output_file.check()
+
+    res = run_taskgraph(
+        ["kind-graph", f"--output-file={output_file.strpath}"],
+        kinds=[
+            ("_fake", {"kind-dependencies": []}),
+        ],
+    )
+    assert res == 0
+    assert output_file.check()
+
+    content = output_file.read_text("utf-8")
+    assert "flowchart TD" in content
+    assert "_fake[_fake]" in content
+
+
+def test_show_kinds_with_target_kinds(run_taskgraph, capsys):
+    """Test the kinds command with --target-kind filter"""
+    res = run_taskgraph(
+        ["kind-graph", "-k", "_fake2"],
+        kinds=[
+            ("_fake3", {"kind-dependencies": ["_fake2"]}),
+            ("_fake2", {"kind-dependencies": ["_fake1"]}),
+            ("_fake1", {"kind-dependencies": []}),
+            ("_other", {"kind-dependencies": []}),
+            ("docker-image", {"kind-dependencies": []}),
+        ],
+        params={"target-kinds": ["_fake2"]},
+    )
+    assert res == 0
+
+    out, _ = capsys.readouterr()
+    assert "flowchart TD" in out
+    # Should include _fake2 and its dependencies
+    assert "_fake2[_fake2]" in out
+    assert "_fake1[_fake1]" in out
+    # Should include docker-image (implicit dependency for target_kinds)
+    assert "docker_image[docker-image]" in out
+    # Should not include _fake3 or _other
+    assert "_fake3" not in out
+    assert "_other" not in out
