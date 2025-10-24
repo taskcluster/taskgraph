@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
+import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 
 import pytest
@@ -11,6 +12,11 @@ from pytest_taskgraph import WithFakeKind, fake_load_graph_config
 from taskgraph import generator, graph
 from taskgraph.generator import Kind, load_tasks_for_kind, load_tasks_for_kinds
 from taskgraph.loader.default import loader as default_loader
+
+forkonly = pytest.mark.skipif(
+    "fork" not in multiprocessing.get_all_start_methods(),
+    reason="requires 'fork' multiprocessing support",
+)
 
 
 class FakePPE(ProcessPoolExecutor):
@@ -21,6 +27,7 @@ class FakePPE(ProcessPoolExecutor):
         return super().submit(kind_load_tasks, *args)
 
 
+@forkonly
 def test_kind_ordering(mocker, maketgg):
     "When task kinds depend on each other, they are loaded in postorder"
     mocked_ppe = mocker.patch.object(generator, "ProcessPoolExecutor", new=FakePPE)

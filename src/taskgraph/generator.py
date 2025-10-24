@@ -7,7 +7,6 @@ import inspect
 import logging
 import multiprocessing
 import os
-import platform
 from concurrent.futures import (
     FIRST_COMPLETED,
     ProcessPoolExecutor,
@@ -441,7 +440,9 @@ class TaskGraphGenerator:
         # redone in the new processes. Ideally this would be fixed, or we
         # would take another approach to parallel kind generation. In the
         # meantime, it's not supported outside of Linux.
-        if platform.system() != "Linux" or os.environ.get("TASKGRAPH_SERIAL"):
+        if "fork" not in multiprocessing.get_all_start_methods() or os.environ.get(
+            "TASKGRAPH_SERIAL"
+        ):
             all_tasks = self._load_tasks_serial(kinds, kind_graph, parameters)
         else:
             all_tasks = self._load_tasks_parallel(kinds, kind_graph, parameters)
