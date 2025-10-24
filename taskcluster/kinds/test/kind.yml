@@ -54,4 +54,4 @@ tasks:
             symbol: unit(py{matrix[python]})
         run:
             command: >-
-                uv run coverage run --data-file /builds/worker/artifacts/coverage --context=py{matrix[python]} -m pytest -vv
+                uv run coverage run --data-file /builds/worker/artifacts/coverage --context=py{matrix[python]} -m pytest -n auto -vv
