@@ -5,12 +5,20 @@
 
 import pprint
 import re
+import threading
 from collections.abc import Mapping
 
 import voluptuous
 
 import taskgraph
 from taskgraph.util.keyed_by import evaluate_keyed_by, iter_dot_path
+
+# Global reentrant lock for thread-safe Schema creation, largely to work around
+# thread unsafe code in voluptuous.
+# RLock allows the same thread to acquire the lock multiple times (for recursive validation)
+# This is particularly important when running with a free-threaded Python, which
+# makes races more likely.
+_schema_creation_lock = threading.RLock()
 
 
 def validate_schema(schema, obj, msg_prefix):
@@ -206,25 +214,32 @@ class Schema(voluptuous.Schema):
     """
 
     def __init__(self, *args, check=True, **kwargs):
-        super().__init__(*args, **kwargs)
+        with _schema_creation_lock:
+            super().__init__(*args, **kwargs)
 
-        self.check = check
-        if not taskgraph.fast and self.check:
-            check_schema(self)
+            self.check = check
+            if not taskgraph.fast and self.check:
+                check_schema(self)
 
     def extend(self, *args, **kwargs):
-        schema = super().extend(*args, **kwargs)
+        with _schema_creation_lock:
+            schema = super().extend(*args, **kwargs)
 
-        if self.check:
-            check_schema(schema)
-        # We want twice extend schema to be checked too.
-        schema.__class__ = Schema
-        return schema
+            if self.check:
+                check_schema(schema)
+            # We want twice extend schema to be checked too.
+            schema.__class__ = Schema
+            return schema
 
     def _compile(self, schema):
         if taskgraph.fast:
             return
-        return super()._compile(schema)
+        with _schema_creation_lock:
+            return super()._compile(schema)
+
+    def __call__(self, data):
+        with _schema_creation_lock:
+            return super().__call__(data)
 
     def __getitem__(self, item):
         return self.schema[item]  # type: ignore
