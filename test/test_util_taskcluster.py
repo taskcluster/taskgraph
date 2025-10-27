@@ -21,6 +21,8 @@ def mock_environ(monkeypatch, root_url):
     # Ensure user specified environment variables don't interfere with URLs.
     monkeypatch.setenv("TASKCLUSTER_ROOT_URL", root_url)
     monkeypatch.delenv("TASKCLUSTER_PROXY_URL", raising=False)
+    monkeypatch.delenv("TASKCLUSTER_CLIENT_ID", raising=False)
+    monkeypatch.delenv("TASKCLUSTER_ACCESS_TOKEN", raising=False)
 
 
 @pytest.fixture(autouse=True)
