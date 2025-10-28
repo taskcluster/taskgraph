@@ -38,3 +38,13 @@ workers:
             implementation: docker-worker
             os: linux
             worker-type: linux-docker
+        t-windows:
+            provisioner: 'taskgraph-t'
+            implementation: generic-worker
+            os: windows
+            worker-type: win11-64-24h2
+        t-mac:
+            provisioner: 'taskgraph-t'
+            implementation: generic-worker
+            os: macosx
+            worker-type: macos
