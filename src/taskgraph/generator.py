@@ -434,13 +434,25 @@ class TaskGraphGenerator:
         yield "kind_graph", kind_graph
 
         logger.info("Generating full task set")
-        # Current parallel generation relies on multiprocessing, and forking.
-        # This causes problems on Windows and macOS due to how new processes
-        # are created there, and how doing so reinitializes global variables
-        # that are modified earlier in graph generation, that doesn't get
-        # redone in the new processes. Ideally this would be fixed, or we
-        # would take another approach to parallel kind generation. In the
-        # meantime, it's not supported outside of Linux.
+        # The short version of the below is: we only support parallel kind
+        # processing on Linux.
+        #
+        # Current parallel generation relies on multiprocessing, and more
+        # specifically: the "fork" multiprocessing method. This is not supported
+        # at all on Windows (it uses "spawn"). Forking is supported on macOS,
+        # but no longer works reliably in all cases, and our usage of it here
+        # causes crashes. See https://github.com/python/cpython/issues/77906
+        # and http://sealiesoftware.com/blog/archive/2017/6/5/Objective-C_and_fork_in_macOS_1013.html
+        # for more details on that.
+        # Other methods of multiprocessing (both "spawn" and "forkserver")
+        # do not work for our use case, because they cause global variables
+        # to be reinitialized, which are sometimes modified earlier in graph
+        # generation. These issues can theoretically be worked around by
+        # eliminating all reliance on globals as part of task generation, but
+        # is far from a small amount of work in users like Gecko/Firefox.
+        # In the long term, the better path forward is likely to be switching
+        # to threading with a free-threaded python to achieve similar parallel
+        # processing.
         if platform.system() != "Linux" or os.environ.get("TASKGRAPH_SERIAL"):
             all_tasks = self._load_tasks_serial(kinds, kind_graph, parameters)
         else:
