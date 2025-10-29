@@ -41,8 +41,10 @@ tasks:
         description: "Run unit tests with py{matrix[python]}"
         matrix:
             set-name: "unit-py{matrix[python]}"
-            substitution-fields: [description, run.command, treeherder, worker]
+            substitution-fields: [description, run.command, treeherder, worker, attributes]
             python: ["314t", "314", "313", "312", "311", "310", "39"]
+        attributes:
+            python: "{matrix[python]}"
         worker:
             artifacts:
                 - type: file

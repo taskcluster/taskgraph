@@ -21,6 +21,9 @@ tasks:
             group-by: all
             unique-kinds: false
             set-name: null
+            with-attributes:
+                # exclude free-threaded python until it is officially supported
+                python: ["314", "313", "312", "311", "310", "39"]
             fetches:
                 test:
                     - artifact: coverage.py{matrix[python]}
