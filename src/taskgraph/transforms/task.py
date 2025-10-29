@@ -25,8 +25,8 @@ from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.hash import hash_path
 from taskgraph.util.keyed_by import evaluate_keyed_by
 from taskgraph.util.schema import (
+    LegacySchema,
     OptimizationSchema,
-    Schema,
     optionally_keyed_by,
     resolve_keyed_by,
     taskref_or_string,
@@ -50,7 +50,7 @@ def _run_task_suffix():
 
 
 #: Schema for the task transforms
-task_description_schema = Schema(
+task_description_schema = LegacySchema(
     {
         Required(
             "label",
@@ -432,14 +432,14 @@ payload_builders = {}
 
 @dataclass(frozen=True)
 class PayloadBuilder:
-    schema: Schema
+    schema: LegacySchema
     builder: Callable
 
 
 def payload_builder(name, schema):
-    schema = Schema({Required("implementation"): name, Optional("os"): str}).extend(
-        schema
-    )
+    schema = LegacySchema(
+        {Required("implementation"): name, Optional("os"): str}
+    ).extend(schema)
 
     def wrap(func):
         assert name not in payload_builders, f"duplicate payload builder name {name}"
