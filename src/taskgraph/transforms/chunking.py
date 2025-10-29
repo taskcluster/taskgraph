@@ -7,11 +7,11 @@ from textwrap import dedent
 from voluptuous import ALLOW_EXTRA, Optional, Required
 
 from taskgraph.transforms.base import TransformSequence
-from taskgraph.util.schema import Schema
+from taskgraph.util.schema import LegacySchema
 from taskgraph.util.templates import substitute
 
 #: Schema for chunking transforms
-CHUNK_SCHEMA = Schema(
+CHUNK_SCHEMA = LegacySchema(
     {
         # Optional, so it can be used for a subset of tasks in a kind
         Optional(

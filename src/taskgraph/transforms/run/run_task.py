@@ -19,7 +19,7 @@ from taskgraph.transforms.run.common import (
 from taskgraph.transforms.task import taskref_or_string
 from taskgraph.util import path, taskcluster
 from taskgraph.util.caches import CACHES
-from taskgraph.util.schema import Schema
+from taskgraph.util.schema import LegacySchema
 
 EXEC_COMMANDS = {
     "bash": ["bash", "-cx"],
@@ -28,7 +28,7 @@ EXEC_COMMANDS = {
 
 
 #: Schema for run.using run_task
-run_task_schema = Schema(
+run_task_schema = LegacySchema(
     {
         Required(
             "using",

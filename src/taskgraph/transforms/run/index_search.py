@@ -12,13 +12,13 @@ from voluptuous import Required
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.transforms.run import run_task_using
-from taskgraph.util.schema import Schema
+from taskgraph.util.schema import LegacySchema
 
 transforms = TransformSequence()
 
 
 #: Schema for run.using index-search
-run_task_schema = Schema(
+run_task_schema = LegacySchema(
     {
         Required("using"): "index-search",
         Required(

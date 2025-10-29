@@ -20,7 +20,7 @@ from taskgraph.parameters import Parameters, get_version
 from taskgraph.taskgraph import TaskGraph
 from taskgraph.util import json
 from taskgraph.util.python_path import find_object
-from taskgraph.util.schema import Schema, validate_schema
+from taskgraph.util.schema import LegacySchema, validate_schema
 from taskgraph.util.vcs import get_repository
 from taskgraph.util.yaml import load_yaml
 
@@ -40,7 +40,7 @@ PER_PROJECT_PARAMETERS = {
 
 
 #: Schema for try_task_config.json version 2
-try_task_config_schema_v2 = Schema(
+try_task_config_schema_v2 = LegacySchema(
     {
         Optional("parameters"): {str: object},
     }

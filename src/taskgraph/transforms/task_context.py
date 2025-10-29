@@ -3,12 +3,12 @@ from textwrap import dedent
 from voluptuous import ALLOW_EXTRA, Any, Optional, Required
 
 from taskgraph.transforms.base import TransformSequence
-from taskgraph.util.schema import Schema
+from taskgraph.util.schema import LegacySchema
 from taskgraph.util.templates import deep_get, substitute_task_fields
 from taskgraph.util.yaml import load_yaml
 
 #: Schema for the task_context transforms
-SCHEMA = Schema(
+SCHEMA = LegacySchema(
     {
         Optional("name"): str,
         Optional(

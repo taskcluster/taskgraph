@@ -20,11 +20,11 @@ from taskgraph.transforms.base import TransformSequence
 from taskgraph.transforms.run import fetches_schema
 from taskgraph.util.attributes import attrmatch
 from taskgraph.util.dependencies import GROUP_BY_MAP, get_dependencies
-from taskgraph.util.schema import Schema, validate_schema
+from taskgraph.util.schema import LegacySchema, validate_schema
 from taskgraph.util.set_name import SET_NAME_MAP
 
 #: Schema for from_deps transforms
-FROM_DEPS_SCHEMA = Schema(
+FROM_DEPS_SCHEMA = LegacySchema(
     {
         Required("from-deps"): {
             Optional(

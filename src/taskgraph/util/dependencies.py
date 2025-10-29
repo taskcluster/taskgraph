@@ -7,7 +7,7 @@ from typing import Optional
 
 from taskgraph.task import Task
 from taskgraph.transforms.base import TransformConfig
-from taskgraph.util.schema import Schema
+from taskgraph.util.schema import LegacySchema
 
 # Define a collection of group_by functions
 GROUP_BY_MAP = {}
@@ -36,7 +36,7 @@ def group_by_all(config, tasks):
     return [[task for task in tasks]]
 
 
-@group_by("attribute", schema=Schema(str))
+@group_by("attribute", schema=LegacySchema(str))
 def group_by_attribute(config, tasks, attr):
     groups = {}
     for task in tasks:

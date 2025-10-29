@@ -11,7 +11,7 @@ more information.
 from voluptuous import ALLOW_EXTRA, Any, Exclusive, Optional, Required
 
 from taskgraph.transforms.base import TransformSequence
-from taskgraph.util.schema import Schema, optionally_keyed_by, resolve_keyed_by
+from taskgraph.util.schema import LegacySchema, optionally_keyed_by, resolve_keyed_by
 
 _status_type = Any(
     "on-completed",
@@ -55,7 +55,7 @@ _route_keys = {
 """Map each type to its primary key that will be used in the route."""
 
 #: Schema for notify transforms
-NOTIFY_SCHEMA = Schema(
+NOTIFY_SCHEMA = LegacySchema(
     {
         Exclusive("notify", "config"): {
             Required("recipients"): [Any(*_recipients)],

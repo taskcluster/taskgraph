@@ -12,7 +12,7 @@ from taskgraph.task import Task
 
 from ..config import GraphConfig
 from ..parameters import Parameters
-from ..util.schema import Schema, validate_schema
+from ..util.schema import LegacySchema, validate_schema
 
 
 @dataclass(frozen=True)
@@ -138,7 +138,7 @@ class TransformSequence:
 
 @dataclass
 class ValidateSchema:
-    schema: Schema
+    schema: LegacySchema
 
     def __call__(self, config, tasks):
         for task in tasks:

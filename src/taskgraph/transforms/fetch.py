@@ -18,14 +18,14 @@ import taskgraph
 
 from ..util import path
 from ..util.cached_tasks import add_optimization
-from ..util.schema import Schema, validate_schema
+from ..util.schema import LegacySchema, validate_schema
 from ..util.treeherder import join_symbol
 from .base import TransformSequence
 
 CACHE_TYPE = "content.v1"
 
 #: Schema for fetch transforms
-FETCH_SCHEMA = Schema(
+FETCH_SCHEMA = LegacySchema(
     {
         Required(
             "name",
@@ -87,12 +87,12 @@ fetch_builders = {}
 
 @dataclass(frozen=True)
 class FetchBuilder:
-    schema: Schema
+    schema: LegacySchema
     builder: Callable
 
 
 def fetch_builder(name, schema):
-    schema = Schema({Required("type"): name}).extend(schema)
+    schema = LegacySchema({Required("type"): name}).extend(schema)
 
     def wrap(func):
         fetch_builders[name] = FetchBuilder(schema, func)  # type: ignore
