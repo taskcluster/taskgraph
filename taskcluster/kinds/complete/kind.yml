@@ -21,3 +21,9 @@ tasks:
       group-by: all
       set-name: false
       unique-kinds: false
+      with-attributes:
+        # exclude free-threaded python until it is officially supported
+        python: ["314", "313", "312", "311", "310", "39"]
+    # needs to be added explicitly until we can drop the `with-attributes` above
+    dependencies:
+      check-type: check-type

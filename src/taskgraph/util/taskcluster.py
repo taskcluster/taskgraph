@@ -73,15 +73,17 @@ def get_taskcluster_client(service: str):
 def _handle_artifact(
     path: str, response: Union[requests.Response, dict[str, Any]]
 ) -> Any:
-    if isinstance(response, dict):
-        # When taskcluster client returns non-JSON responses, it wraps them in {"response": <Response>}
-        if "response" in response and isinstance(
-            response["response"], requests.Response
-        ):
-            response = response["response"]
-        else:
-            # If we already a dict (parsed JSON), return it directly.
-            return response
+    # When taskcluster client returns non-JSON responses, it wraps them in {"response": <Response>}
+    if (
+        isinstance(response, dict)
+        and "response" in response
+        and isinstance(response["response"], requests.Response)
+    ):
+        response = response["response"]
+
+    if not isinstance(response, requests.Response):
+        # At this point, if we don't have a response object, it's already parsed, return it
+        return response
 
     # We have a response object, load the content based on the path extension.
     if path.endswith(".json"):
@@ -465,15 +467,11 @@ def get_ancestors(task_ids: Union[list[str], str]) -> dict[str, str]:
     for task_id in task_ids:
         try:
             task_def = get_task_definition(task_id)
-        except (requests.HTTPError, taskcluster.TaskclusterRestFailure) as e:
+        except taskcluster.TaskclusterRestFailure as e:
             # Task has most likely expired, which means it's no longer a
             # dependency for the purposes of this function.
-            if isinstance(e, requests.HTTPError):
-                if e.response and e.response.status_code == 404:
-                    continue
-            elif isinstance(e, taskcluster.TaskclusterRestFailure):
-                if e.status_code == 404:
-                    continue
+            if e.status_code == 404:
+                continue
             raise e
 
         dependencies = task_def.get("dependencies", [])

@@ -1,5 +1,20 @@
 # Change Log
 
+## [17.2.0] - 2025-10-30
+
+### Added
+
+- Added support for outputting a mermaid flowchart of the kind graph (`taskgraph kind-graph`)
+
+### Fixed
+
+- `get_taskcluster_client` respects `PRODUCTION_TASKCLUSTER_ROOT_URL` again
+- Avoid using the proxy in `get_index_url`, aligning it with `get_artifact_url`
+- Don't parse `git clean`'s stderr to prevent trying to parse error messages
+- Fixed stripping prefixes for hard links when repacking archives in fetch-content
+- Fixed fetching JSON artifacts that are not an object with `util.taskcluster.get_artifact`
+- Fixed the `run_task` transform to not use the proxy to get script artifacts
+
 ## [17.1.0] - 2025-10-22
 
 ### Added
