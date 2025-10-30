@@ -124,6 +124,17 @@ def test_get_artifact(responses, root_url):
     result = tc.get_artifact(tid, "artifact.json")
     assert result == {"foo": "bar"}
 
+    # Test JSON artifact that isn't a dict (bug 1997236)
+    responses.get("http://foo.bar/artifact.json", json=[1, 2, 3])
+    responses.get(
+        f"{root_url}/api/queue/v1/task/{tid}/artifacts/artifact.json",
+        body=b'{"type": "s3", "url": "http://foo.bar/artifact.json"}',
+        status=303,
+        headers={"Location": "http://foo.bar/artifact.json"},
+    )
+    result = tc.get_artifact(tid, "artifact.json")
+    assert result == [1, 2, 3]
+
     # Test YAML artifact
     expected_result = {"foo": b"\xe2\x81\x83".decode()}
     responses.get(

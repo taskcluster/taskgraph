@@ -73,15 +73,17 @@ def get_taskcluster_client(service: str):
 def _handle_artifact(
     path: str, response: Union[requests.Response, dict[str, Any]]
 ) -> Any:
-    if isinstance(response, dict):
-        # When taskcluster client returns non-JSON responses, it wraps them in {"response": <Response>}
-        if "response" in response and isinstance(
-            response["response"], requests.Response
-        ):
-            response = response["response"]
-        else:
-            # If we already a dict (parsed JSON), return it directly.
-            return response
+    # When taskcluster client returns non-JSON responses, it wraps them in {"response": <Response>}
+    if (
+        isinstance(response, dict)
+        and "response" in response
+        and isinstance(response["response"], requests.Response)
+    ):
+        response = response["response"]
+
+    if not isinstance(response, requests.Response):
+        # At this point, if we don't have a response object, it's already parsed, return it
+        return response
 
     # We have a response object, load the content based on the path extension.
     if path.endswith(".json"):
