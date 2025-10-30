@@ -2,12 +2,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+from contextlib import nullcontext as does_not_raise
 from functools import partial
 from itertools import chain
 
 import pytest
 from pytest_taskgraph import make_graph, make_task
 
+from taskgraph import MAX_DEPENDENCIES
 from taskgraph.task import Task
 from taskgraph.util.treeherder import split_symbol
 from taskgraph.util.verify import (
@@ -134,7 +136,7 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
 
 
 @pytest.mark.parametrize(
-    "name,graph,exception",
+    "name,graph,expectation",
     (
         pytest.param(
             "verify_task_graph_symbol",
@@ -145,7 +147,7 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
                 make_task_treeherder("d", "M(2)", "linux/opt"),
                 make_task_treeherder("e", "1", "linux/opt"),
             ),
-            None,
+            does_not_raise(),
             id="task_graph_symbol: valid",
         ),
         pytest.param(
@@ -154,7 +156,7 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
                 make_task_treeherder("a", "M(1)"),
                 make_task_treeherder("b", "M(1)"),
             ),
-            Exception,
+            pytest.raises(Exception),
             id="task_graph_symbol: conflicting symbol",
         ),
         pytest.param(
@@ -169,7 +171,7 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
                     },
                 ),
             ),
-            Exception,
+            pytest.raises(Exception),
             id="task_graph_symbol: too many collections",
         ),
         pytest.param(
@@ -182,7 +184,7 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
                     },
                 ),
             ),
-            None,
+            does_not_raise(),
             id="routes_notfication_filter: valid",
         ),
         pytest.param(
@@ -195,7 +197,7 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
                     },
                 ),
             ),
-            Exception,
+            pytest.raises(Exception),
             id="routes_notfication_filter: invalid",
         ),
         pytest.param(
@@ -206,7 +208,7 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
                     task_def={"routes": ["notify.email.default@email.address.on-any"]},
                 ),
             ),
-            DeprecationWarning,
+            pytest.raises(DeprecationWarning),
             id="routes_notfication_filter: deprecated",
         ),
         pytest.param(
@@ -221,16 +223,52 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
                     },
                 ),
             ),
-            Exception,
+            pytest.raises(Exception),
             id="verify_index_route: invalid slash in route",
+        ),
+        pytest.param(
+            "verify_task_dependencies",
+            make_graph(
+                make_task(
+                    "task2",
+                    dependencies=["dependency"] * (MAX_DEPENDENCIES - 3),
+                    soft_dependencies=["dependency"] * 1,
+                    if_dependencies=["dependency"] * 1,
+                )
+            ),
+            does_not_raise(),
+            id="dependencies under limit",
+        ),
+        pytest.param(
+            "verify_task_dependencies",
+            make_graph(
+                make_task(
+                    "task3",
+                    dependencies=["dependency"] * (MAX_DEPENDENCIES - 2),
+                    soft_dependencies=["dependency"] * 1,
+                    if_dependencies=["dependency"] * 1,
+                )
+            ),
+            does_not_raise(),
+            id="dependencies at limit",
+        ),
+        pytest.param(
+            "verify_task_dependencies",
+            make_graph(
+                make_task(
+                    "task3",
+                    dependencies=["dependency"] * (MAX_DEPENDENCIES - 1),
+                    soft_dependencies=["dependency"] * 1,
+                    if_dependencies=["dependency"] * 1,
+                )
+            ),
+            pytest.raises(Exception),
+            id="dependencies over limit",
         ),
     ),
 )
 @pytest.mark.filterwarnings("error")
-def test_verification(run_verification, name, graph, exception):
+def test_verification(run_verification, name, graph, expectation):
     func = partial(run_verification, name, graph=graph)
-    if exception:
-        with pytest.raises(exception):
-            func()
-    else:
-        func()  # no exceptions
+    with expectation:
+        func()
