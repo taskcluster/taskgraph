@@ -32,8 +32,12 @@ def fake_loader(kind, path, config, parameters, loaded_tasks, write_artifacts):
                 "i": i,
                 "metadata": {"name": f"{kind}-t-{i}"},
                 "deadline": "soon",
+                "workerType": "linux",
+                "provisionerId": "prov",
             },
             "dependencies": dependencies,
+            "if-dependencies": [],
+            "soft-dependencies": [],
         }
         if "task-defaults" in config:
             task = merge(config["task-defaults"], task)
@@ -250,6 +254,7 @@ def make_task(
     task_id=None,
     dependencies=None,
     if_dependencies=None,
+    soft_dependencies=None,
     attributes=None,
 ):
     task_def = task_def or {
@@ -260,6 +265,7 @@ def make_task(
         attributes=attributes or {},
         dependencies=dependencies or {},
         if_dependencies=if_dependencies or [],
+        soft_dependencies=soft_dependencies or [],
         kind=kind,
         label=label,
         task=task_def,
