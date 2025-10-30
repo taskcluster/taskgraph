@@ -258,6 +258,7 @@ def make_task(
     }
     task = Task(
         attributes=attributes or {},
+        dependencies=dependencies or {},
         if_dependencies=if_dependencies or [],
         kind=kind,
         label=label,
@@ -266,7 +267,13 @@ def make_task(
     task.optimization = optimization
     task.task_id = task_id
     if dependencies is not None:
-        task.task["dependencies"] = sorted(dependencies)
+        # The dependencies dict is converted from a dict to a list during the
+        # optimization phase. This is pretty confusing and means this utility
+        # might break assumptions about the format of 'dependencies'.
+        if isinstance(dependencies, dict):
+            task.task["dependencies"] = sorted(dependencies.values())
+        else:
+            task.task["dependencies"] = sorted(dependencies)
     return task
 
 

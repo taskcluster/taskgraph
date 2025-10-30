@@ -410,8 +410,10 @@ def test_replace_tasks(
             {},
             make_opt_graph(
                 make_task("t1", task_id="tid1", dependencies={}),
-                make_task("t2", task_id="tid2", dependencies={"tid1"}),
-                make_task("t3", task_id="tid3", dependencies={"tid1", "tid2"}),
+                make_task("t2", task_id="tid2", dependencies={"dep": "tid1"}),
+                make_task(
+                    "t3", task_id="tid3", dependencies={"dep": "tid2", "dep2": "tid1"}
+                ),
                 ("tid3", "tid2", "dep"),
                 ("tid3", "tid1", "dep2"),
                 ("tid2", "tid1", "dep"),
@@ -438,7 +440,11 @@ def test_replace_tasks(
                 "label_to_taskid": {"t1": "e1", "t2": "e2"},
             },
             # expectations
-            make_opt_graph(make_task("t3", task_id="tid1", dependencies={"e1", "e2"})),
+            make_opt_graph(
+                make_task(
+                    "t3", task_id="tid1", dependencies={"dep": "e2", "dep2": "e1"}
+                )
+            ),
             {"t1": "e1", "t2": "e2", "t3": "tid1"},
             id="replaced",
         ),
