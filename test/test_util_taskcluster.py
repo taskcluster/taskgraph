@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import datetime
-import os
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -19,13 +19,10 @@ def root_url():
 @pytest.fixture(autouse=True)
 def mock_environ(monkeypatch, root_url):
     # Ensure user specified environment variables don't interfere with URLs.
-    monkeypatch.setattr(
-        os,
-        "environ",
-        {
-            "TASKCLUSTER_ROOT_URL": root_url,
-        },
-    )
+    monkeypatch.setenv("TASKCLUSTER_ROOT_URL", root_url)
+    monkeypatch.delenv("TASKCLUSTER_PROXY_URL", raising=False)
+    monkeypatch.delenv("TASKCLUSTER_CLIENT_ID", raising=False)
+    monkeypatch.delenv("TASKCLUSTER_ACCESS_TOKEN", raising=False)
 
 
 @pytest.fixture(autouse=True)
@@ -70,9 +67,9 @@ def test_get_artifact_url(monkeypatch):
     tc.get_root_url.cache_clear()
     task_id = "abc"
     path = "public/log.txt"
-    expected = "https://tc.example.com/api/queue/v1/task/abc/artifacts/public/log.txt"
+    expected = f"https://tc.example.com/api/queue/v1/task/{task_id}/artifacts/{path}"
     expected_proxy = (
-        "https://taskcluster-proxy.net/api/queue/v1/task/abc/artifacts/public/log.txt"
+        f"https://taskcluster-proxy.net/api/queue/v1/task/{task_id}/artifacts/{path}"
     )
 
     # Test with default root URL (no proxy)
@@ -91,17 +88,11 @@ def test_get_artifact_url(monkeypatch):
     monkeypatch.delenv("TASKCLUSTER_PROXY_URL")
     monkeypatch.delenv("TASK_ID", raising=False)
     tc.get_root_url.cache_clear()
-    with pytest.raises(RuntimeError) as exc:
-        tc.get_artifact_url(task_id, path, use_proxy=True)
-    assert "taskcluster-proxy is not available when not executing in a task" in str(
-        exc.value
-    )
+    assert tc.get_artifact_url(task_id, path, use_proxy=True) == expected
 
     # Test with use_proxy=True but proxy not enabled (in a task without proxy)
     monkeypatch.setenv("TASK_ID", "some-task-id")
-    with pytest.raises(RuntimeError) as exc:
-        tc.get_artifact_url(task_id, path, use_proxy=True)
-    assert "taskcluster-proxy is not enabled for this task" in str(exc.value)
+    assert tc.get_artifact_url(task_id, path, use_proxy=True) == expected
 
 
 def test_get_artifact(responses, root_url):
@@ -132,6 +123,17 @@ def test_get_artifact(responses, root_url):
     )
     result = tc.get_artifact(tid, "artifact.json")
     assert result == {"foo": "bar"}
+
+    # Test JSON artifact that isn't a dict (bug 1997236)
+    responses.get("http://foo.bar/artifact.json", json=[1, 2, 3])
+    responses.get(
+        f"{root_url}/api/queue/v1/task/{tid}/artifacts/artifact.json",
+        body=b'{"type": "s3", "url": "http://foo.bar/artifact.json"}',
+        status=303,
+        headers={"Location": "http://foo.bar/artifact.json"},
+    )
+    result = tc.get_artifact(tid, "artifact.json")
+    assert result == [1, 2, 3]
 
     # Test YAML artifact
     expected_result = {"foo": b"\xe2\x81\x83".decode()}
@@ -566,3 +568,47 @@ def test_get_ancestors_string(responses, root_url):
         "eee": "task-eee",
     }
     assert got == expected, f"got: {got}, expected: {expected}"
+
+
+def test_get_taskcluster_client(monkeypatch, root_url):
+    tc.get_root_url.cache_clear()
+    tc.get_taskcluster_client.cache_clear()
+    service_mock = MagicMock()
+    monkeypatch.setattr("taskcluster.Foo", service_mock, raising=False)
+
+    # No environment and no default → error
+    monkeypatch.delenv("TASKCLUSTER_ROOT_URL", raising=False)
+    monkeypatch.delenv("TASKCLUSTER_PROXY_URL", raising=False)
+    monkeypatch.setattr(tc, "PRODUCTION_TASKCLUSTER_ROOT_URL", None)
+    with pytest.raises(RuntimeError):
+        tc.get_taskcluster_client("foo")
+    service_mock.assert_not_called()
+
+    tc.get_root_url.cache_clear()
+    tc.get_taskcluster_client.cache_clear()
+    service_mock.reset_mock()
+
+    # No environment, use default
+    monkeypatch.setattr(
+        tc, "PRODUCTION_TASKCLUSTER_ROOT_URL", "http://taskcluster-prod"
+    )
+    tc.get_taskcluster_client("foo")
+    service_mock.assert_called_once_with({"rootUrl": "http://taskcluster-prod"})
+
+    tc.get_root_url.cache_clear()
+    tc.get_taskcluster_client.cache_clear()
+    service_mock.reset_mock()
+
+    # root url from environment
+    monkeypatch.setenv("TASKCLUSTER_ROOT_URL", "http://taskcluster-env")
+    tc.get_taskcluster_client("foo")
+    service_mock.assert_called_once_with({"rootUrl": "http://taskcluster-env"})
+
+    tc.get_root_url.cache_clear()
+    tc.get_taskcluster_client.cache_clear()
+    service_mock.reset_mock()
+
+    # proxy url from environment
+    monkeypatch.setenv("TASKCLUSTER_PROXY_URL", "http://taskcluster-proxy")
+    tc.get_taskcluster_client("foo")
+    service_mock.assert_called_once_with({"rootUrl": "http://taskcluster-proxy"})

@@ -49,6 +49,8 @@ This page can help when migrating Taskgraph across major versions.
   Taskcluster proxy. Remove ``use_proxy`` from all function calls, and then
   either set ``TASKCLUSTER_PROXY_URL`` or unset it depending on whether using
   the proxy is desired or not.
+* Utility functions in ``taskgraph.util.taskcluster`` now raise
+  ``taskcluster.TaskclusterRestFailure`` instead of ``requests.HTTPError``.
 
 14.x -> 15.x
 ------------
