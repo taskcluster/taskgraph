@@ -1,5 +1,13 @@
 # Change Log
 
+## [17.2.1] - 2025-10-31
+
+### Fixed
+
+- Exception when using `run-task` script on Windows
+- `run-task` script temporarily supports Python 3.8 again
+- Optimization phase updates `dependencies` property in `Task` objects
+
 ## [17.2.0] - 2025-10-30
 
 ### Added
