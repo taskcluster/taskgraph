@@ -9,13 +9,13 @@ from voluptuous import Invalid, MultipleInvalid
 
 import taskgraph
 from taskgraph.util.schema import (
-    Schema,
+    LegacySchema,
     optionally_keyed_by,
     resolve_keyed_by,
     validate_schema,
 )
 
-schema = Schema(
+schema = LegacySchema(
     {
         "x": int,
         "y": str,
@@ -39,26 +39,26 @@ class TestCheckSchema(unittest.TestCase):
     def test_schema(self):
         "Creating a schema applies taskgraph checks."
         with self.assertRaises(Exception):
-            Schema({"camelCase": int})
+            LegacySchema({"camelCase": int})
 
     def test_extend_schema(self):
         "Extending a schema applies taskgraph checks."
         with self.assertRaises(Exception):
-            Schema({"kebab-case": int}).extend({"camelCase": int})
+            LegacySchema({"kebab-case": int}).extend({"camelCase": int})
 
     def test_extend_schema_twice(self):
         "Extending a schema twice applies taskgraph checks."
         with self.assertRaises(Exception):
-            Schema({"kebab-case": int}).extend({"more-kebab": int}).extend(
+            LegacySchema({"kebab-case": int}).extend({"more-kebab": int}).extend(
                 {"camelCase": int}
             )
 
 
 def test_check_skipped(monkeypatch):
     """Schema not validated if 'check=False' or taskgraph.fast is unset."""
-    Schema({"camelCase": int}, check=False)  # assert no exception
+    LegacySchema({"camelCase": int}, check=False)  # assert no exception
     monkeypatch.setattr(taskgraph, "fast", True)
-    Schema({"camelCase": int})  # assert no exception
+    LegacySchema({"camelCase": int})  # assert no exception
 
 
 class TestResolveKeyedBy(unittest.TestCase):
