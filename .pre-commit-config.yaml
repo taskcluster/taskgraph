@@ -41,11 +41,13 @@ repos:
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]
-# TODO remove 'fetch-content' once Gecko no longer needs to use it with Python 3.8
+# TODO remove 'fetch-content' and 'run-task' once Gecko no longer needs to use
+# them with Python 3.8:
 # https://bugzilla.mozilla.org/show_bug.cgi?id=1990567#c7
 exclude: |
   (?x)^(
     src/taskgraph/run-task/fetch-content |
     src/taskgraph/run-task/robustcheckout.py |
+    src/taskgraph/run-task/run-task |
     taskcluster/scripts/external_tools
   )
