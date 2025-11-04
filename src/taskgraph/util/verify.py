@@ -334,6 +334,7 @@ def verify_run_task_caches(task, taskgraph, scratch_pad, graph_config, parameter
 
     main_command = command[0] if isinstance(command[0], str) else ""
     run_task = main_command.endswith("run-task")
+    run_task_hg = main_command.endswith("run-task-hg")
 
     for cache in payload.get("cache", {}).get(
         "task-reference", payload.get("cache", {})
@@ -349,7 +350,7 @@ def verify_run_task_caches(task, taskgraph, scratch_pad, graph_config, parameter
         if not RE_RESERVED_CACHES.match(cache):
             continue
 
-        if not run_task:
+        if not run_task and not run_task_hg:
             raise Exception(
                 f"{task.label} is using a cache ({cache}) reserved for run-task "
                 "change the task to use run-task or use a different "
