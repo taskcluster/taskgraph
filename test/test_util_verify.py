@@ -265,6 +265,43 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
             pytest.raises(Exception),
             id="dependencies over limit",
         ),
+        pytest.param(
+            "verify_run_task_caches",
+            make_graph(
+                make_task("task1", task_def={"payload": {"cache": {"foo": {}}}})
+            ),
+            pytest.raises(Exception, match="not appropriate for its trust-domain"),
+            id="using cache with wrong trust-domain",
+        ),
+        pytest.param(
+            "verify_run_task_caches",
+            make_graph(
+                make_task(
+                    "task1",
+                    task_def={
+                        "payload": {"cache": {"test-domain-level-1-checkouts": {}}}
+                    },
+                )
+            ),
+            pytest.raises(Exception, match="reserved for run-task"),
+            id="using reserved cache",
+        ),
+        pytest.param(
+            "verify_run_task_caches",
+            make_graph(
+                make_task(
+                    "task1",
+                    task_def={
+                        "payload": {
+                            "cache": {"test-domain-level-1-checkouts": {}},
+                            "command": ["run-task"],
+                        }
+                    },
+                )
+            ),
+            pytest.raises(Exception, match="cache name is not dep"),
+            id="using run-task without cache suffix",
+        ),
     ),
 )
 @pytest.mark.filterwarnings("error")
