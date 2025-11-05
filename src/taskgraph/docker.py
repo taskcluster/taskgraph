@@ -188,11 +188,11 @@ def build_image(
 
         output_dir = temp_dir / "out"
         output_dir.mkdir()
-        volumes = {
+        volumes = [
             # TODO write artifacts to tmpdir
-            str(output_dir): "/workspace/out",
-            str(image_context): "/workspace/context.tar.gz",
-        }
+            (str(output_dir), "/workspace/out"),
+            (str(image_context), "/workspace/context.tar.gz"),
+        ]
 
         assert label in image_tasks
         task = image_tasks[label]
@@ -211,7 +211,7 @@ def build_image(
                 parent = task.dependencies["parent"][len("docker-image-") :]
                 parent_tar = temp_dir / "parent.tar"
                 build_image(graph_config, parent, save_image=str(parent_tar))
-                volumes[str(parent_tar)] = "/workspace/parent.tar"
+                volumes.append((str(parent_tar), "/workspace/parent.tar"))
 
         task_def["payload"]["env"]["CHOWN_OUTPUT"] = f"{os.getuid()}:{os.getgid()}"
         load_task(
@@ -425,7 +425,7 @@ def load_task(
     user: Optional[str] = None,
     custom_image: Optional[str] = None,
     interactive: Optional[bool] = False,
-    volumes: Optional[dict[str, str]] = None,
+    volumes: Optional[list[tuple[str, str]]] = None,
 ) -> int:
     """Load and run a task interactively in a Docker container.
 
@@ -523,9 +523,20 @@ def load_task(
     env.update(task_def["payload"].get("env", {}))  # type: ignore
 
     # run-task expects the worker to mount a volume for each path defined in
-    # TASKCLUSTER_CACHES, delete them to avoid needing to do the same.
+    # TASKCLUSTER_CACHES; delete them to avoid needing to do the same, unless
+    # they're passed in as volumes.
     if "TASKCLUSTER_CACHES" in env:
-        del env["TASKCLUSTER_CACHES"]
+        if volumes:
+            caches = env["TASKCLUSTER_CACHES"].split(";")
+            caches = [
+                cache for cache in caches if any(path == cache for _, path in volumes)
+            ]
+        else:
+            caches = []
+        if caches:
+            env["TASKCLUSTER_CACHES"] = ";".join(caches)
+        else:
+            del env["TASKCLUSTER_CACHES"]
 
     envfile = None
     initfile = None
@@ -570,7 +581,7 @@ def load_task(
             command.extend(["-v", f"{initfile.name}:/builds/worker/.bashrc"])
 
         if volumes:
-            for k, v in volumes.items():
+            for k, v in volumes:
                 command.extend(["-v", f"{k}:{v}"])
 
         command.append(image_tag)

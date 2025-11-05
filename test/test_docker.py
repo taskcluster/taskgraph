@@ -137,7 +137,10 @@ def test_load_task(run_load_task):
         },
     }
     # Test with custom volumes
-    volumes = {"/host/path": "/container/path", "/another/host": "/another/container"}
+    volumes = [
+        ("/host/path", "/container/path"),
+        ("/another/host", "/another/container"),
+    ]
     ret, mocks = run_load_task(task, volumes=volumes)
     assert ret == 0
 
@@ -216,11 +219,11 @@ def test_load_task_env_init_and_remove(mocker, run_load_task):
                 "--",
                 "echo foo",
             ],
-            "env": {"FOO": "BAR", "BAZ": "1", "TASKCLUSTER_CACHES": "path"},
+            "env": {"FOO": "BAR", "BAZ": "1", "TASKCLUSTER_CACHES": "/path;/cache"},
             "image": {"taskId": image_task_id, "type": "task-image"},
         },
     }
-    ret, mocks = run_load_task(task, remove=True)
+    ret, mocks = run_load_task(task, remove=True, volumes=[("/host/path", "/cache")])
     assert ret == 0
 
     # NamedTemporaryFile was called twice (once for env, once for init)
@@ -231,7 +234,7 @@ def test_load_task_env_init_and_remove(mocker, run_load_task):
     env_lines = written_env_content[0].split("\n")
 
     # Verify written env is expected
-    assert "TASKCLUSTER_CACHES=path" not in env_lines
+    assert "TASKCLUSTER_CACHES=/cache" in env_lines
     assert "FOO=BAR" in env_lines
     assert "BAZ=1" in env_lines
 
