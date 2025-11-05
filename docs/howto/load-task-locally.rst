@@ -105,4 +105,32 @@ by combining passing in a custom image locally, and piping a task definition via
 
    taskgraph morphed -J --tasks test-unit-py | jq -r 'to_entries | first | .value.task' | taskgraph load-task --image python -
 
+Developing in the Container
+---------------------------
+
+The ``taskgraph load-task`` command also accepts a ``--develop`` flag. This mounts your
+local repository as a volume in the task's expected checkout directory, allowing you to
+add print debugging or test fixes directly in a local container.
+
+Run:
+
+.. code-block:: shell
+
+   taskgraph load-task --develop <task-id>
+
+.. warning::
+
+   Tasks can do all sorts of strange things. Running in this mode has the
+   potential to modify your local source checkout in unexpected ways, up to and
+   including data loss. Use with caution and consider using a dedicated Git
+   worktree when running with ``--develop``.
+
+.. warning::
+
+   Only tasks that use the ``run-task`` script to bootstrap their commands
+   are currently supported.
+
+Using ``--develop`` in conjunction with ``--interactive`` can be a powerful way
+to iterate quickly in a task's environment.
+
 .. _docker-worker payload format: https://docs.taskcluster.net/docs/reference/workers/docker-worker/payload

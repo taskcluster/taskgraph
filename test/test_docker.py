@@ -8,6 +8,7 @@ import pytest
 from taskgraph import docker
 from taskgraph.config import GraphConfig
 from taskgraph.transforms.docker_image import IMAGE_BUILDER_IMAGE
+from taskgraph.util.vcs import get_repository
 
 
 @pytest.fixture
@@ -87,11 +88,7 @@ def run_load_task(mocker):
             # Testing with task definition directly
             input_arg = task
 
-        ret = docker.load_task(
-            graph_config,
-            input_arg,
-            **kwargs
-        )
+        ret = docker.load_task(graph_config, input_arg, **kwargs)
         return ret, mocks
 
     return inner
@@ -217,7 +214,9 @@ def test_load_task_env_init_and_remove(mocker, run_load_task):
             "image": {"taskId": image_task_id, "type": "task-image"},
         },
     }
-    ret, mocks = run_load_task(task, interactive=True, volumes=[("/host/path", "/cache")])
+    ret, mocks = run_load_task(
+        task, interactive=True, volumes=[("/host/path", "/cache")]
+    )
     assert ret == 0
 
     # NamedTemporaryFile was called twice (once for env, once for init)
@@ -475,6 +474,57 @@ def test_load_task_with_custom_image_registry(mocker, run_load_task, task):
     assert ret == 0
     assert not mocks["load_image_by_task_id"].called
     assert not mocks["build_image"].called
+
+
+def test_load_task_with_develop(mocker, run_load_task, task):
+    repo_name = "foo"
+    repo_path = "/workdir/vcs"
+    repo = get_repository(os.getcwd())
+
+    # No REPOSITORIES env
+    ret, _ = run_load_task(task, develop=True)
+    assert ret == 1
+
+    # No --checkout flag
+    task["payload"]["env"] = {
+        "REPOSITORIES": f'{{"{repo_name}": "{repo_path}"}}',
+        "CARGO_HOME": "/cache/cargo",
+        "PIP_CACHE_DIR": "/unmounted/pip",
+        "UV_CACHE_DIR": "/unmounted/uv",
+    }
+    ret, mocks = run_load_task(task, develop=True)
+    assert ret == 1
+
+    env_file = None
+    task["payload"]["command"].insert(1, f"--{repo_name}-checkout={repo_path}")
+    m = mocker.patch("os.remove")
+    try:
+        ret, mocks = run_load_task(
+            task, develop=True, volumes=[("/host/cache", "/cache/cargo")]
+        )
+        assert ret == 0
+        cmd = mocks["subprocess_run"].call_args[0][0]
+        cmdstr = " ".join(cmd)
+        assert f"-v {repo.path}:{repo_path}" in cmdstr
+        assert "-v /host/cache:/cache/cargo" in cmdstr
+        assert f"--{repo_name}-checkout" not in cmdstr
+
+        env_file = docker._extract_arg(cmd, "--env-file")
+        assert env_file
+        with open(env_file) as fh:
+            contents = fh.read()
+
+        assert "TASKCLUSTER_VOLUMES" not in contents
+        assert "REPOSITORIES" in contents
+        assert "foo" not in contents
+        # Verify cache env vars: mounted cache should be kept, unmounted should be removed
+        assert "CARGO_HOME=/cache/cargo" in contents
+        assert "PIP_CACHE_DIR" not in contents
+        assert "UV_CACHE_DIR" not in contents
+    finally:
+        if env_file:
+            m.reset_mock()
+            os.remove(env_file)
 
 
 @pytest.fixture
