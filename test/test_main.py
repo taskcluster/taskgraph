@@ -418,6 +418,8 @@ def test_dump_actions_json(
 
 @pytest.fixture
 def run_load_task(mocker, monkeypatch, run_taskgraph):
+    monkeypatch.setenv("TASKGRAPH_LOAD_TASK_NO_WARN", "1")
+
     def inner(args, stdin_data=None):
         # Mock the docker module functions
         m_validate_docker = mocker.patch("taskgraph.main.validate_docker")
@@ -467,6 +469,7 @@ def test_load_task_command(run_load_task):
         user=None,
         custom_image=None,
         volumes=[],
+        develop=False,
     )
 
     # Test with interactive flag
@@ -481,6 +484,22 @@ def test_load_task_command(run_load_task):
         user=None,
         custom_image=None,
         volumes=[],
+        develop=False,
+    )
+
+    # Test with develop flag
+    result, mocks = run_load_task(["load-task", "--develop", "task-id-456"])
+
+    assert result == 0
+    mocks["docker_load_task"].assert_called_once_with(
+        mocks["graph_config"],
+        "task-id-456",
+        interactive=False,
+        remove=True,
+        user=None,
+        custom_image=None,
+        volumes=[],
+        develop=True,
     )
 
 
@@ -501,6 +520,7 @@ def test_load_task_command_with_volume(run_load_task):
         user=None,
         custom_image=None,
         volumes=[("/host/path", "/builds/worker/checkouts")],
+        develop=False,
     )
 
     # Test with no colon
@@ -542,6 +562,7 @@ def test_load_task_command_with_stdin(run_load_task):
         user=None,
         custom_image=None,
         volumes=[],
+        develop=False,
     )
 
 
@@ -560,7 +581,31 @@ def test_load_task_command_with_task_id(run_load_task):
         user=None,
         custom_image=None,
         volumes=[],
+        develop=False,
     )
+
+
+def test_load_task_develop_warning(monkeypatch, run_load_task, mocker):
+    monkeypatch.delenv("TASKGRAPH_LOAD_TASK_NO_WARN", raising=False)
+    input_prompt = "Proceed? [y/N]: "
+
+    mock_input = mocker.patch("builtins.input", return_value="y")
+    result, mocks = run_load_task(["load-task", "--develop", "task-id-456"])
+    assert result == 0
+    mock_input.assert_called_once_with(input_prompt)
+    mocks["docker_load_task"].assert_called_once()
+
+    mock_input = mocker.patch("builtins.input", return_value="n")
+    result, mocks = run_load_task(["load-task", "--develop", "task-id-789"])
+    assert result == 1
+    mock_input.assert_called_once_with(input_prompt)
+    mocks["docker_load_task"].assert_not_called()
+
+    mock_input = mocker.patch("builtins.input", return_value="")
+    result, mocks = run_load_task(["load-task", "--develop", "task-id-000"])
+    assert result == 1
+    mock_input.assert_called_once_with(input_prompt)
+    mocks["docker_load_task"].assert_not_called()
 
 
 def test_format_kind_graph_mermaid():

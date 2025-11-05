@@ -28,6 +28,7 @@ from taskgraph.config import GraphConfig
 from taskgraph.generator import load_tasks_for_kind
 from taskgraph.transforms import docker_image
 from taskgraph.util import docker, json
+from taskgraph.util.caches import CACHES
 from taskgraph.util.taskcluster import (
     find_task_id,
     get_artifact_url,
@@ -36,6 +37,7 @@ from taskgraph.util.taskcluster import (
     get_task_definition,
     status_task,
 )
+from taskgraph.util.vcs import get_repository
 
 logger = logging.getLogger(__name__)
 RUN_TASK_RE = re.compile(r"run-task(-(git|hg))?$")
@@ -386,6 +388,27 @@ def _index(l: list, s: str) -> Optional[int]:
         pass
 
 
+def _extract_arg(cmd: list[str], arg: str) -> Optional[str]:
+    if index := _index(cmd, arg):
+        return cmd[index + 1]
+
+    for item in cmd:
+        if item.startswith(f"{arg}="):
+            return item.split("=", 1)[1]
+
+
+def _delete_arg(cmd: list[str], arg: str) -> bool:
+    if index := _index(cmd, arg):
+        del cmd[index : index + 2]
+        return True
+
+    for i, item in enumerate(cmd):
+        if item.startswith(f"{arg}="):
+            del cmd[i]
+            return True
+    return False
+
+
 def _resolve_image(image: Union[str, dict[str, str]], graph_config: GraphConfig) -> str:
     image_task_id = None
 
@@ -432,6 +455,7 @@ def load_task(
     custom_image: Optional[str] = None,
     interactive: Optional[bool] = False,
     volumes: Optional[list[tuple[str, str]]] = None,
+    develop: bool = False,
 ) -> int:
     """Load and run a task interactively in a Docker container.
 
@@ -449,6 +473,8 @@ def load_task(
         interactive: If True, execution of the task will be paused and user
           will be dropped into a shell. They can run `exec-task` to resume
           it (default: False).
+        develop: If True, the task will be configured to use the current
+          local checkout at the current revision (default: False).
 
     Returns:
         int: The exit code from the Docker container.
@@ -476,6 +502,10 @@ def load_task(
         logger.error("Only tasks using `run-task` are supported with --interactive!")
         return 1
 
+    if develop and not is_run_task:
+        logger.error("Only tasks using `run-task` are supported with --develop!")
+        return 1
+
     try:
         image = custom_image or image
         image_tag = _resolve_image(image, graph_config)
@@ -484,6 +514,48 @@ def load_task(
         return 1
 
     task_command = task_def["payload"].get("command")  # type: ignore
+    task_env = task_def["payload"].get("env", {})
+
+    if develop:
+        repositories = json.loads(task_env.get("REPOSITORIES", "{}"))
+        if not repositories:
+            logger.error(
+                "Can't use --develop with task that doesn't define any $REPOSITORIES!"
+            )
+            return 1
+
+        try:
+            repo = get_repository(os.getcwd())
+        except RuntimeError:
+            logger.error("Can't use --develop from outside a source repository!")
+            return 1
+
+        checkout_name = list(repositories.keys())[0]
+        checkout_arg = f"--{checkout_name}-checkout"
+        checkout_dir = _extract_arg(task_command, checkout_arg)
+        if not checkout_dir:
+            logger.error(
+                f"Can't use --develop with task that doesn't use {checkout_arg}"
+            )
+            return 1
+        volumes = volumes or []
+        volumes.append((repo.path, checkout_dir))
+
+        # Delete cache environment variables for cache directories that aren't mounted.
+        # This prevents tools from trying to write to inaccessible cache paths.
+        mount_paths = {v[1] for v in volumes}
+        for cache in CACHES.values():
+            var = cache.get("env")
+            if var in task_env and task_env[var] not in mount_paths:
+                del task_env[var]
+
+        # Delete environment and arguments related to this repo so that
+        # `run-task` doesn't attempt to fetch or checkout a new revision.
+        del repositories[checkout_name]
+        task_env["REPOSITORIES"] = json.dumps(repositories)
+        for arg in ("checkout", "sparse-profile", "shallow-clone"):
+            _delete_arg(task_command, f"--{checkout_name}-{arg}")
+
     exec_command = task_cwd = None
     if interactive:
         # Remove the payload section of the task's command. This way run-task will
@@ -503,16 +575,7 @@ def load_task(
             ]
 
         # Parse `--task-cwd` so we know where to execute the task's command later.
-        if index := _index(task_command, "--task-cwd"):
-            task_cwd = task_command[index + 1]
-        else:
-            for arg in task_command:
-                if arg.startswith("--task-cwd="):
-                    task_cwd = arg.split("=", 1)[1]
-                    break
-            else:
-                task_cwd = "$TASK_WORKDIR"
-
+        task_cwd = _extract_arg(task_command, "--task-cwd") or "$TASK_WORKDIR"
         task_command = [
             "bash",
             "-c",
@@ -527,7 +590,7 @@ def load_task(
         "TASKCLUSTER_ROOT_URL": get_root_url(),
     }
     # Add the task's environment variables.
-    env.update(task_def["payload"].get("env", {}))  # type: ignore
+    env.update(task_env)  # type: ignore
 
     # run-task expects the worker to mount a volume for each path defined in
     # TASKCLUSTER_CACHES; delete them to avoid needing to do the same, unless
@@ -544,6 +607,11 @@ def load_task(
             env["TASKCLUSTER_CACHES"] = ";".join(caches)
         else:
             del env["TASKCLUSTER_CACHES"]
+
+    # run-task expects volumes listed under `TASKCLUSTER_VOLUMES` to be empty.
+    # This can interfere with load-task when using custom volumes.
+    if volumes and "TASKCLUSTER_VOLUMES" in env:
+        del env["TASKCLUSTER_VOLUMES"]
 
     envfile = None
     initfile = None
