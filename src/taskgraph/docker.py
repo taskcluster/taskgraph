@@ -38,6 +38,7 @@ from taskgraph.util.taskcluster import (
 )
 
 logger = logging.getLogger(__name__)
+RUN_TASK_RE = re.compile(r"run-task(-(git|hg))?$")
 
 
 def get_image_digest(image_name: str) -> str:
@@ -418,6 +419,11 @@ def _resolve_image(image: Union[str, dict[str, str]], graph_config: GraphConfig)
     return load_image_by_task_id(image_task_id)
 
 
+def _is_run_task(task_def: dict[str, str]):
+    cmd = task_def["payload"].get("command")  # type: ignore
+    return cmd and re.search(RUN_TASK_RE, cmd[0])
+
+
 def load_task(
     graph_config: GraphConfig,
     task: Union[str, dict[str, Any]],
@@ -465,9 +471,9 @@ def load_task(
 
         return 1
 
-    task_command = task_def["payload"].get("command")  # type: ignore
-    if interactive and (not task_command or not task_command[0].endswith("run-task")):
-        logger.error("Only tasks using `run-task` are supported with interactive!")
+    is_run_task = _is_run_task(task_def)
+    if interactive and not is_run_task:
+        logger.error("Only tasks using `run-task` are supported with --interactive!")
         return 1
 
     try:
@@ -477,6 +483,7 @@ def load_task(
         logger.exception(e)
         return 1
 
+    task_command = task_def["payload"].get("command")  # type: ignore
     exec_command = task_cwd = None
     if interactive:
         # Remove the payload section of the task's command. This way run-task will
