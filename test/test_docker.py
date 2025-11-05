@@ -44,11 +44,8 @@ def mock_docker_build(mocker):
 def run_load_task(mocker):
     def inner(
         task,
-        remove=False,
-        custom_image=None,
         pass_task_def=False,
-        interactive=True,
-        volumes=None,
+        **kwargs,
     ):
         proc = mocker.MagicMock()
         proc.returncode = 0
@@ -93,10 +90,7 @@ def run_load_task(mocker):
         ret = docker.load_task(
             graph_config,
             input_arg,
-            remove=remove,
-            custom_image=custom_image,
-            interactive=interactive,
-            volumes=volumes,
+            **kwargs
         )
         return ret, mocks
 
@@ -141,7 +135,7 @@ def test_load_task(run_load_task):
         ("/host/path", "/container/path"),
         ("/another/host", "/another/container"),
     ]
-    ret, mocks = run_load_task(task, volumes=volumes)
+    ret, mocks = run_load_task(task, remove=False, interactive=True, volumes=volumes)
     assert ret == 0
 
     if "get_task_definition" in mocks:
@@ -223,7 +217,7 @@ def test_load_task_env_init_and_remove(mocker, run_load_task):
             "image": {"taskId": image_task_id, "type": "task-image"},
         },
     }
-    ret, mocks = run_load_task(task, remove=True, volumes=[("/host/path", "/cache")])
+    ret, mocks = run_load_task(task, interactive=True, volumes=[("/host/path", "/cache")])
     assert ret == 0
 
     # NamedTemporaryFile was called twice (once for env, once for init)
@@ -410,6 +404,7 @@ def test_load_task_with_interactive_false(run_load_task):
         "run",
         "-i",
         "-t",
+        "--rm",
         "image/tag",
         "echo",
         "hello world",
