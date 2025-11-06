@@ -792,6 +792,14 @@ def image_digest(args):
     default="taskcluster",
     help="Relative path to the root of the Taskgraph definition.",
 )
+@argument(
+    "--volume",
+    "-v",
+    metavar="HOST_DIR:CONTAINER_DIR",
+    default=[],
+    action="append",
+    help="Mount local path into the container.",
+)
 def load_task(args):
     from taskgraph.config import load_graph_config  # noqa: PLC0415
     from taskgraph.docker import load_task  # noqa: PLC0415
@@ -806,6 +814,19 @@ def load_task(args):
         except ValueError:
             args["task"] = data  # assume it is a taskId
 
+    volumes = []
+    for vol in args["volume"]:
+        if ":" not in vol:
+            raise ValueError(
+                "Invalid volume specification '{vol}', expected HOST_DIR:CONTAINER_DIR"
+            )
+        k, v = vol.split(":", 1)
+        if not k or not v:
+            raise ValueError(
+                "Invalid volume specification '{vol}', expected HOST_DIR:CONTAINER_DIR"
+            )
+        volumes.append((k, v))
+
     root = args["root"]
     graph_config = load_graph_config(root)
     return load_task(
@@ -815,6 +836,7 @@ def load_task(args):
         remove=args["remove"],
         user=args["user"],
         custom_image=args["image"],
+        volumes=volumes,
     )
 
 

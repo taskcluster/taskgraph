@@ -417,7 +417,7 @@ def test_dump_actions_json(
 
 
 @pytest.fixture
-def run_load_task(mocker, monkeypatch):
+def run_load_task(mocker, monkeypatch, run_taskgraph):
     def inner(args, stdin_data=None):
         # Mock the docker module functions
         m_validate_docker = mocker.patch("taskgraph.main.validate_docker")
@@ -445,7 +445,7 @@ def run_load_task(mocker, monkeypatch):
         }
 
         # Run the command
-        result = taskgraph_main(args)
+        result = run_taskgraph(args)
 
         return result, mocks
 
@@ -466,6 +466,7 @@ def test_load_task_command(run_load_task):
         remove=True,
         user=None,
         custom_image=None,
+        volumes=[],
     )
 
     # Test with interactive flag
@@ -479,7 +480,44 @@ def test_load_task_command(run_load_task):
         remove=True,
         user=None,
         custom_image=None,
+        volumes=[],
     )
+
+
+def test_load_task_command_with_volume(run_load_task):
+    # Test with correct volume specification
+    result, mocks = run_load_task(
+        ["load-task", "task-id-123", "-v", "/host/path:/builds/worker/checkouts"]
+    )
+
+    assert result == 0
+    mocks["validate_docker"].assert_called_once()
+    mocks["load_graph_config"].assert_called_once_with("taskcluster")
+    mocks["docker_load_task"].assert_called_once_with(
+        mocks["graph_config"],
+        "task-id-123",
+        interactive=False,
+        remove=True,
+        user=None,
+        custom_image=None,
+        volumes=[("/host/path", "/builds/worker/checkouts")],
+    )
+
+    # Test with no colon
+    result, mocks = run_load_task(
+        ["load-task", "task-id-123", "-v", "/builds/worker/checkouts"]
+    )
+    assert result == 1
+    mocks["validate_docker"].assert_called_once()
+    mocks["load_graph_config"].assert_not_called()
+    mocks["docker_load_task"].assert_not_called()
+
+    # Test with missing container path
+    result, mocks = run_load_task(["load-task", "task-id-123", "-v", "/host/path:"])
+    assert result == 1
+    mocks["validate_docker"].assert_called_once()
+    mocks["load_graph_config"].assert_not_called()
+    mocks["docker_load_task"].assert_not_called()
 
 
 def test_load_task_command_with_stdin(run_load_task):
@@ -503,6 +541,7 @@ def test_load_task_command_with_stdin(run_load_task):
         remove=True,
         user=None,
         custom_image=None,
+        volumes=[],
     )
 
 
@@ -520,6 +559,7 @@ def test_load_task_command_with_task_id(run_load_task):
         remove=True,
         user=None,
         custom_image=None,
+        volumes=[],
     )
 
 
