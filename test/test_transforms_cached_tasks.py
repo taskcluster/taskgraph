@@ -55,6 +55,7 @@ def assert_cache_basic(tasks):
 def assert_cache_with_dependency(tasks):
     handle_exception(tasks)
     assert len(tasks) == 2
+    tasks = sorted(tasks, key=lambda t: t["label"])
     assert tasks[1] == {
         "attributes": {
             "cached_task": {
@@ -65,7 +66,7 @@ def assert_cache_with_dependency(tasks):
         },
         "dependencies": {"edge": "dep-cached"},
         "description": "description",
-        "label": "cached-task",
+        "label": "cached-with-dep",
         "optimization": {
             "index-search": [
                 "test-domain.cache.level-3.cached-task.v2.cache-foo.hash.db201e53944fccbb16736c8153a14de39748c0d290de84bd976c11ddcc413089",
@@ -92,15 +93,16 @@ def assert_cache_with_non_cached_dependency(e):
 
 def assert_chain_of_trust_influences_digest(tasks):
     assert len(tasks) == 3
-    # The first two tasks are chain-of-trust unspecified, and chain-of-trust: False
+    tasks = sorted(tasks, key=lambda t: t["label"])  # cot-false, cot-true, no-cot
+    # The first and third tasks are chain-of-trust: false, and chain-of-trust unspecified
     # which should result in the same digest.
     digest_0 = tasks[0]["attributes"]["cached_task"]["digest"]
-    digest_1 = tasks[1]["attributes"]["cached_task"]["digest"]
-    assert digest_0 == digest_1
-
-    # The third task is chain-of-trust: True, and should have a different digest
     digest_2 = tasks[2]["attributes"]["cached_task"]["digest"]
-    assert digest_0 != digest_2
+    assert digest_0 == digest_2
+
+    # The second task is chain-of-trust: True, and should have a different digest
+    digest_1 = tasks[1]["attributes"]["cached_task"]["digest"]
+    assert digest_0 != digest_1
 
 
 @pytest.mark.parametrize(
@@ -141,7 +143,8 @@ def assert_chain_of_trust_influences_digest(tasks):
                         "type": "cached-task.v2",
                         "name": "cache-foo",
                         "digest-data": ["abc"],
-                    }
+                    },
+                    "label": "cached-no-dep",
                 },
                 # This task has same digest-data, but a dependency on a cached task.
                 {
@@ -151,6 +154,7 @@ def assert_chain_of_trust_influences_digest(tasks):
                         "digest-data": ["abc"],
                     },
                     "dependencies": {"edge": "dep-cached"},
+                    "label": "cached-with-dep",
                 },
             ],
             # kind config
@@ -198,6 +202,7 @@ def assert_chain_of_trust_influences_digest(tasks):
                         "name": "cache-foo",
                         "digest-data": ["abc"],
                     },
+                    "label": "no-cot",
                     # no explicit chain of trust configuration; should be the
                     # same as when it is set to False
                 },
@@ -207,6 +212,7 @@ def assert_chain_of_trust_influences_digest(tasks):
                         "name": "cache-foo",
                         "digest-data": ["abc"],
                     },
+                    "label": "cot-false",
                     "worker": {
                         "chain-of-trust": False,
                     },
@@ -217,6 +223,7 @@ def assert_chain_of_trust_influences_digest(tasks):
                         "name": "cache-foo",
                         "digest-data": ["abc"],
                     },
+                    "label": "cot-true",
                     "worker": {"chain-of-trust": True},
                 },
             ],
