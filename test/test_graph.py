@@ -5,6 +5,8 @@
 
 import unittest
 
+import pytest
+
 from taskgraph.graph import Graph
 
 
@@ -61,6 +63,11 @@ class TestGraph(unittest.TestCase):
             ("β", "γ", "κόκκινο"),
             ("α", "γ", "μπλε"),
         },
+    )
+
+    loopy = Graph(
+        {"A", "B", "C"},
+        {tuple(x) for x in "ABL BCL CAL".split()},  # codespell:ignore
     )
 
     def test_transitive_closure_empty(self):
@@ -123,6 +130,10 @@ class TestGraph(unittest.TestCase):
         "transitive closure of a linear graph includes all nodes in the line"
         self.assertEqual(self.linear.transitive_closure({"1"}), self.linear)
 
+    def test_transitive_closure_loopy(self):
+        "transitive closure of a loop is the whole loop"
+        self.assertEqual(self.loopy.transitive_closure({"A"}), self.loopy)
+
     def test_visit_postorder_empty(self):
         "postorder visit of an empty graph is empty"
         self.assertEqual(list(Graph(set(), set()).visit_postorder()), [])
@@ -154,6 +165,11 @@ class TestGraph(unittest.TestCase):
         "postorder visit of a disjoint graph satisfies invariant"
         self.assert_postorder(self.disjoint.visit_postorder(), self.disjoint.nodes)
 
+    def test_visit_postorder_loopy(self):
+        with pytest.raises(Exception) as excinfo:
+            list(self.loopy.visit_postorder())
+        assert "Dependency loop detected" in str(excinfo.value)
+
     def assert_preorder(self, seq, all_nodes):
         seen = set()
         for e in seq:
@@ -178,6 +194,11 @@ class TestGraph(unittest.TestCase):
     def test_visit_preorder_disjoint(self):
         "preorder visit of a disjoint graph satisfies invariant"
         self.assert_preorder(self.disjoint.visit_preorder(), self.disjoint.nodes)
+
+    def test_visit_preorder_loopy(self):
+        with pytest.raises(Exception) as excinfo:
+            list(self.loopy.visit_preorder())
+        assert "Dependency loop detected" in str(excinfo.value)
 
     def test_links_dict(self):
         "link dict for a graph with multiple edges is correct"
