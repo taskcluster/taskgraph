@@ -65,7 +65,6 @@ def assert_docker_worker(task, taskdesc):
         "run": {
             "command": ["vcs/taskcluster/scripts/toolchain/run.sh"],
             "cwd": "{checkout}/..",
-            "sparse-profile": "toolchain-build",
             "using": "run-task",
             "workdir": "/builds/worker",
         },
@@ -140,7 +139,6 @@ def assert_generic_worker(task, taskdesc):
         "run": {
             "command": "src/taskcluster/scripts/toolchain/run.sh --foo bar",
             "cwd": "{checkout}/..",
-            "sparse-profile": "toolchain-build",
             "using": "run-task",
             "workdir": "/builds/worker",
         },
@@ -192,7 +190,6 @@ def assert_powershell(task, _):
         "command": "src/taskcluster/scripts/toolchain/run.ps1",
         "cwd": "{checkout}/..",
         "exec-with": "powershell",
-        "sparse-profile": "toolchain-build",
         "using": "run-task",
         "workdir": "/builds/worker",
     }

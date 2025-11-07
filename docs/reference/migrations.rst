@@ -3,6 +3,13 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+17.x -> 18.x
+------------
+
+* Stop setting the ``run.sparse-profile`` key in all tasks which perform a
+  Mercurial clone. If sparse profiles are still required, the task must perform
+  its own clone and not rely on the ``run-task`` script to do it.
+
 16.x -> 17.x
 ------------
 
