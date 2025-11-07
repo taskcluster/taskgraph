@@ -1,5 +1,17 @@
 # Change Log
 
+## [17.3.0] - 2025-11-07
+
+### Added
+
+- Support for local volumes to `taskgraph load-task -v host_path:container_path`
+
+### Fixed
+
+- `load-task` now takes run-task-{hg,git} into account when checking for run-task
+- Properly detect dependency cycles in the `cached_tasks` transform and raise
+  an exception instead of it being an infinite loop
+
 ## [17.2.1] - 2025-10-31
 
 ### Fixed
