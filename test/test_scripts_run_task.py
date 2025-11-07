@@ -195,7 +195,6 @@ def test_collect_vcs_options(
 
     args.setdefault(f"{name}_checkout", checkout)
     args.setdefault(f"{name}_shallow_clone", False)
-    args.setdefault(f"{name}_sparse_profile", False)
     args = Namespace(**args)
 
     result = run_task_mod.collect_vcs_options(args, name, name)
@@ -214,7 +213,6 @@ def test_collect_vcs_options(
         "repo-type": env.get("REPOSITORY_TYPE"),
         "shallow-clone": False,
         "ssh-secret-name": env.get("SSH_SECRET_NAME"),
-        "sparse-profile": False,
         "store-path": env.get("HG_STORE_PATH"),
     }
     if "PIP_REQUIREMENTS" in env:

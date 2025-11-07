@@ -824,7 +824,6 @@ def hg_checkout(
     head_repo: str,
     base_repo: Optional[str],
     store_path: str,
-    sparse_profile: Optional[str],
     branch: Optional[str],
     revision: Optional[str],
 ):
@@ -849,8 +848,6 @@ def hg_checkout(
 
     if base_repo:
         args.extend(["--upstream", base_repo])
-    if sparse_profile:
-        args.extend(["--sparseprofile", sparse_profile])
 
     # Specify method to checkout a revision. This defaults to revisions as
     # SHA-1 strings, but also supports symbolic revisions like `tip` via the
@@ -915,10 +912,6 @@ def add_vcs_arguments(parser, project, name):
         help=f"Directory where {name} checkout should be created",
     )
     parser.add_argument(
-        f"--{project}-sparse-profile",
-        help=f"Path to sparse profile for {name} checkout",
-    )
-    parser.add_argument(
         f"--{project}-shallow-clone",
         action="store_true",
         help=f"Use shallow clone for {name}",
@@ -927,7 +920,6 @@ def add_vcs_arguments(parser, project, name):
 
 def collect_vcs_options(args, project, name):
     checkout = getattr(args, f"{project}_checkout")
-    sparse_profile = getattr(args, f"{project}_sparse_profile")
     shallow_clone = getattr(args, f"{project}_shallow_clone")
 
     env_prefix = project.upper()
@@ -964,7 +956,6 @@ def collect_vcs_options(args, project, name):
         "name": name,
         "env-prefix": env_prefix,
         "checkout": checkout,
-        "sparse-profile": sparse_profile,
         "base-repo": base_repo,
         "base-rev": base_rev,
         "head-repo": head_repo,
@@ -1030,7 +1021,6 @@ def vcs_checkout_from_args(options):
                 options["head-repo"],
                 options["base-repo"],
                 options["store-path"],
-                options["sparse-profile"],
                 head_ref,
                 head_rev,
             )
