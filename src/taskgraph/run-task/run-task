@@ -1340,21 +1340,14 @@ def main(args):
                 b"%s is %s\n" % (k.encode("utf-8"), os.environ[k].encode("utf-8")),
             )
 
-    try:
-        if "MOZ_FETCHES" in os.environ:
-            fetch_artifacts()
+    if "MOZ_FETCHES" in os.environ:
+        fetch_artifacts()
 
-        # Install Python requirements after fetches in case tasks want to use
-        # fetches to grab dependencies.
-        install_pip_requirements(repositories)
+    # Install Python requirements after fetches in case tasks want to use
+    # fetches to grab dependencies.
+    install_pip_requirements(repositories)
 
-        return run_command(b"task", task_args, cwd=args.task_cwd)
-    finally:
-        fetches_dir = os.environ.get("MOZ_FETCHES_DIR")
-        if fetches_dir and os.path.isdir(fetches_dir):
-            print_line(b"fetches", b"removing %s\n" % fetches_dir.encode("utf-8"))
-            remove(fetches_dir)
-            print_line(b"fetches", b"finished\n")
+    return run_command(b"task", task_args, cwd=args.task_cwd)
 
 
 if __name__ == "__main__":
