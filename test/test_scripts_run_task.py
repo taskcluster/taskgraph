@@ -617,15 +617,21 @@ def run_main(tmp_path, mocker, mock_stdin, run_task_mod):
     return inner
 
 
-def test_main_abspath_environment(run_main):
-    envvars = ["MOZ_FETCHES_DIR", "UPLOAD_DIR"]
+def test_main_abspath_environment(mocker, run_main):
+    envvars = ["GECKO_PATH", "MOZ_FETCHES_DIR", "UPLOAD_DIR"]
     envvars += [cache["env"] for cache in CACHES.values() if "env" in cache]
     env = {key: "file" for key in envvars}
     env["FOO"] = "file"
+
+    mocker.patch("os.sep", "\\")
+    env["MOZ_PYTHON_HOME"] = "dir\\python"
+    env["MOZ_UV_HOME"] = "dir/uv"
 
     result, env = run_main(env=env)
     assert result == 0
 
     assert env.get("FOO") == "file"
+    assert env.get("MOZ_PYTHON_HOME") == "/builds/worker/dir/python"
+    assert env.get("MOZ_UV_HOME") == "/builds/worker/dir/uv"
     for key in envvars:
         assert env[key] == "/builds/worker/file"
