@@ -1,5 +1,25 @@
 # Change Log
 
+## [18.0.0] - 2025-11-17
+
+### Added
+
+- `--develop` flag to `taskgraph load-task` to support making source changes in a task
+
+### Fixed
+
+- BREAKING CHANGE: `run-task` no longer cleans up fetches dir (worker is already responsible for this)
+- Normalized certain known environment variables to use forward slashes in `run-task`
+- Added some additional environment variables to this normalization in `run-task`
+
+### Changed
+
+- `fetch-content` now uses `PERFHERDER_FETCH_CONTENT_JSON_PATH` for perf artifact
+
+### Removed
+
+- BREAKING CHANGE: Mercurial sparse profiles no longer supported in `run-task`
+
 ## [17.3.0] - 2025-11-07
 
 ### Added

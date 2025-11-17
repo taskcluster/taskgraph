@@ -9,6 +9,11 @@ This page can help when migrating Taskgraph across major versions.
 * Stop setting the ``run.sparse-profile`` key in all tasks which perform a
   Mercurial clone. If sparse profiles are still required, the task must perform
   its own clone and not rely on the ``run-task`` script to do it.
+* `run-task` no longer cleans up the fetches directory. If using
+  `generic-worker`'s multiuser engine, this should have no impact. If you are
+  using a worker that does not create separate task workspaces and you require
+  the fetches dir to be cleaned up, adjust your tasks' commands to remove
+  `$MOZ_FETCHES_DIR` explicitly.
 
 16.x -> 17.x
 ------------
