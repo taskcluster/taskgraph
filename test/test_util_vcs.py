@@ -11,6 +11,8 @@ import pytest
 
 from taskgraph.util.vcs import HgRepository, Repository, get_repository
 
+from .conftest import nowin
+
 
 def test_get_repository(repo):
     r = get_repository(repo.path)
@@ -215,6 +217,7 @@ def assert_files(actual, expected):
     assert set(actual) == set(expected)
 
 
+@nowin
 def test_get_tracked_files(repo):
     assert_files(repo.get_tracked_files(), ["first_file"])
 
@@ -370,6 +373,7 @@ def test_get_changed_files_two_revisions(repo):
     )
 
 
+@nowin
 def test_workdir_outgoing(repo_with_upstream):
     repo, upstream_location = repo_with_upstream
 

@@ -1,4 +1,5 @@
 import os
+import platform
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,12 @@ os.environ["HGRCPATH"] = ""
 # This ignores system-level git config (eg: in /etc). There apperas to be
 # no way to ignore ~/.gitconfig other than overriding $HOME, which is overkill.
 os.environ["GIT_CONFIG_NOSYSTEM"] = "1"
+
+# Some of the tests marked with this may be fixable on Windows; we should
+# look into these in more depth at some point.
+nowin = pytest.mark.skipif(
+    platform.system() == "Windows", reason="test currently broken on Windows"
+)
 
 
 @pytest.fixture

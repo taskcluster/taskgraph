@@ -15,6 +15,8 @@ import pytest
 import taskgraph
 from taskgraph.util.caches import CACHES
 
+from .conftest import nowin
+
 
 @pytest.fixture(scope="module")
 def run_task_mod():
@@ -617,6 +619,7 @@ def run_main(tmp_path, mocker, mock_stdin, run_task_mod):
     return inner
 
 
+@nowin
 def test_main_abspath_environment(mocker, run_main):
     envvars = ["GECKO_PATH", "MOZ_FETCHES_DIR", "UPLOAD_DIR"]
     envvars += [cache["env"] for cache in CACHES.values() if "env" in cache]

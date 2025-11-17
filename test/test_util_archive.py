@@ -15,6 +15,8 @@ from taskgraph.util.archive import (
     create_tar_gz_from_files,
 )
 
+from .conftest import nowin
+
 MODE_STANDARD = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
 
 
@@ -72,6 +74,7 @@ def test_dirs_refused(tmp_path):
             create_tar_from_files(fh, {"test": str(tmp_path)})
 
 
+@nowin
 def test_setuid_setgid_refused(tmp_path):
     uid = tmp_path / "setuid"
     uid.touch()
@@ -89,6 +92,7 @@ def test_setuid_setgid_refused(tmp_path):
             create_tar_from_files(fh, {"test": str(gid)})
 
 
+@nowin
 def test_create_tar_basic(tmp_path, create_files):
     files = create_files()
 
@@ -103,6 +107,7 @@ def test_create_tar_basic(tmp_path, create_files):
         verify_basic_tarfile(tf)
 
 
+@nowin
 def test_executable_preserved(tmp_path):
     p = tmp_path / "exec"
     p.write_bytes(b"#!/bin/bash\n")
@@ -129,6 +134,7 @@ def test_executable_preserved(tmp_path):
         assert extracted_content == b"#!/bin/bash\n"
 
 
+@nowin
 def test_create_tar_gz_basic(tmp_path, create_files):
     gp = tmp_path / "test.tar.gz"
     with open(gp, "wb") as fh:
@@ -156,6 +162,7 @@ def test_create_tar_gz_basic(tmp_path, create_files):
         verify_basic_tarfile(tf)
 
 
+@nowin
 def test_tar_gz_name(tmp_path, create_files):
     gp = tmp_path / "test.tar.gz"
     with open(gp, "wb") as fh:

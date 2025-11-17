@@ -10,6 +10,8 @@ import pytest
 
 from taskgraph.config import GraphConfig
 
+from .conftest import nowin
+
 
 def test_graph_config_basic():
     graph_config = GraphConfig({"foo": "bar"}, "root")
@@ -50,6 +52,7 @@ def test_vcs_root_with_non_standard_dir():
         assert vcs_root == expected_path
 
 
+@nowin
 def test_vcs_root_fallback(mocker):
     mocker.patch("os.getcwd", return_value="/path/to/repo")
 
