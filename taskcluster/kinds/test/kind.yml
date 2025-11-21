@@ -74,3 +74,17 @@ tasks:
                 python3 -V &&
                 powershell -ExecutionPolicy ByPass -c 'irm https://astral.sh/uv/install.ps1 | iex' &&
                 ~/.local/bin/uv.exe run -m pytest -vv
+
+    unit-mac:
+        description: "Run unit tests with python on macOS"
+        attributes:
+            platform: mac
+        worker-type: t-mac
+        treeherder:
+            platform: test-mac/opt
+            symbol: unit(py)
+        run:
+            command: >-
+                python3 -V &&
+                curl -LsSf https://astral.sh/uv/install.sh | sh &&
+                uv run -m pytest -vv
