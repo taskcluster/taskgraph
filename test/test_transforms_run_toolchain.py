@@ -11,6 +11,8 @@ from taskgraph.transforms.run import make_task_description
 from taskgraph.util.templates import merge
 from taskgraph.util.vcs import GitRepository
 
+from .conftest import nowin
+
 TASK_DEFAULTS = {
     "description": "fake description",
     "label": "fake-task-label",
@@ -205,6 +207,7 @@ def assert_relative_script(task, taskdesc):
     assert_docker_worker(task, taskdesc)
 
 
+@nowin
 @pytest.mark.parametrize(
     "task",
     (

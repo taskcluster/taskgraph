@@ -17,6 +17,7 @@ import taskcluster_urls as liburls
 from taskgraph.config import GraphConfig
 from taskgraph.util import docker
 
+from .conftest import nowin
 from .mockedopen import MockedOpen
 
 MODE_STANDARD = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
@@ -24,6 +25,7 @@ MODE_STANDARD = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
 
 @mock.patch.dict("os.environ", {"TASKCLUSTER_ROOT_URL": liburls.test_root_url()})
 class TestDocker(unittest.TestCase):
+    @nowin
     def test_generate_context_hash(self):
         tmpdir = tempfile.mkdtemp()
         try:
@@ -45,6 +47,7 @@ class TestDocker(unittest.TestCase):
         finally:
             shutil.rmtree(tmpdir)
 
+    @nowin
     def test_docker_image_explicit_registry(self):
         files = {}
         files[f"{docker.IMAGE_DIR}/myimage/REGISTRY"] = "cool-images"
@@ -55,6 +58,7 @@ class TestDocker(unittest.TestCase):
                 docker.docker_image("myimage"), "cool-images/myimage@sha256:434..."
             )
 
+    @nowin
     def test_docker_image_explicit_registry_by_tag(self):
         files = {}
         files[f"{docker.IMAGE_DIR}/myimage/REGISTRY"] = "myreg"
@@ -65,6 +69,7 @@ class TestDocker(unittest.TestCase):
                 docker.docker_image("myimage", by_tag=True), "myreg/myimage:1.2.3"
             )
 
+    @nowin
     def test_docker_image_default_registry(self):
         files = {}
         files[f"{docker.IMAGE_DIR}/REGISTRY"] = "mozilla"
@@ -75,6 +80,7 @@ class TestDocker(unittest.TestCase):
                 docker.docker_image("myimage"), "mozilla/myimage@sha256:434..."
             )
 
+    @nowin
     def test_docker_image_default_registry_by_tag(self):
         files = {}
         files[f"{docker.IMAGE_DIR}/REGISTRY"] = "mozilla"
@@ -85,6 +91,7 @@ class TestDocker(unittest.TestCase):
                 docker.docker_image("myimage", by_tag=True), "mozilla/myimage:1.2.3"
             )
 
+    @nowin
     def test_create_context_tar_basic(self):
         tmp = tempfile.mkdtemp()
         try:
@@ -116,6 +123,7 @@ class TestDocker(unittest.TestCase):
         finally:
             shutil.rmtree(tmp)
 
+    @nowin
     def test_create_context_topsrcdir_files(self):
         tmp = tempfile.mkdtemp()
         try:
@@ -148,6 +156,7 @@ class TestDocker(unittest.TestCase):
         finally:
             shutil.rmtree(tmp)
 
+    @nowin
     def test_create_context_absolute_path(self):
         tmp = tempfile.mkdtemp()
         try:
@@ -163,6 +172,7 @@ class TestDocker(unittest.TestCase):
         finally:
             shutil.rmtree(tmp)
 
+    @nowin
     def test_create_context_outside_topsrcdir(self):
         tmp = tempfile.mkdtemp()
         try:
@@ -177,6 +187,7 @@ class TestDocker(unittest.TestCase):
         finally:
             shutil.rmtree(tmp)
 
+    @nowin
     def test_create_context_missing_extra(self):
         tmp = tempfile.mkdtemp()
         try:
@@ -191,6 +202,7 @@ class TestDocker(unittest.TestCase):
         finally:
             shutil.rmtree(tmp)
 
+    @nowin
     def test_create_context_extra_directory(self):
         tmp = tempfile.mkdtemp()
         try:
@@ -235,6 +247,7 @@ class TestDocker(unittest.TestCase):
         finally:
             shutil.rmtree(tmp)
 
+    @nowin
     def test_stream_context_tar(self):
         tmp = tempfile.mkdtemp()
         try:
@@ -271,6 +284,7 @@ class TestDocker(unittest.TestCase):
         finally:
             shutil.rmtree(tmp)
 
+    @nowin
     def test_image_paths_with_custom_kind(self):
         """Test image_paths function with graph_config parameter."""
         temp_dir = tempfile.mkdtemp()
@@ -309,6 +323,7 @@ class TestDocker(unittest.TestCase):
         finally:
             shutil.rmtree(temp_dir)
 
+    @nowin
     def test_parse_volumes_with_graph_config(self):
         """Test parse_volumes function with graph_config parameter."""
         temp_dir = tempfile.mkdtemp()

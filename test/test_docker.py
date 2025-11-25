@@ -10,6 +10,8 @@ from taskgraph.config import GraphConfig
 from taskgraph.transforms.docker_image import IMAGE_BUILDER_IMAGE
 from taskgraph.util.vcs import get_repository
 
+from .conftest import nowin
+
 
 @pytest.fixture
 def root_url():
@@ -112,6 +114,7 @@ def test_load_task_invalid_task(run_load_task):
     assert run_load_task(task)[0] == 1
 
 
+@nowin
 def test_load_task(run_load_task):
     image_task_id = "def"
     task = {
@@ -172,6 +175,7 @@ def test_load_task(run_load_task):
             assert exp == actual[i]
 
 
+@nowin
 def test_load_task_env_init_and_remove(mocker, run_load_task):
     # Mock NamedTemporaryFile to capture what's written to it
     mock_envfile = mocker.MagicMock()
@@ -252,6 +256,7 @@ def test_load_task_env_init_and_remove(mocker, run_load_task):
     assert actual[6:8] == ["-v", "/tmp/test_initfile:/builds/worker/.bashrc"]
 
 
+@nowin
 @pytest.mark.parametrize(
     "image",
     [
@@ -292,6 +297,7 @@ def test_load_task_with_different_image_types(
     mocks["load_image_by_task_id"].assert_called_once_with(image_task_id)
 
 
+@nowin
 def test_load_task_with_local_image(
     mocker,
     run_load_task,
@@ -322,6 +328,7 @@ def test_load_task_with_local_image(
     assert mocks["build_image"].call_args[0][1] == "hello-world"
 
 
+@nowin
 def test_load_task_with_unsupported_image_type(caplog, run_load_task):
     caplog.set_level(logging.DEBUG)
     task = {
@@ -343,6 +350,7 @@ def test_load_task_with_unsupported_image_type(caplog, run_load_task):
     assert "Tasks with unsupported-type images are not supported!" in caplog.text
 
 
+@nowin
 def test_load_task_with_task_definition(run_load_task, caplog):
     # Test passing a task definition directly instead of a task ID
     caplog.set_level(logging.INFO)
@@ -372,6 +380,7 @@ def test_load_task_with_task_definition(run_load_task, caplog):
     assert "Loading 'test-task-direct' from provided definition" in caplog.text
 
 
+@nowin
 def test_load_task_with_interactive_false(run_load_task):
     # Test non-interactive mode that doesn't require run-task
     # Task that doesn't use run-task (would fail in interactive mode)
@@ -427,6 +436,7 @@ def task():
     }
 
 
+@nowin
 def test_load_task_with_custom_image_in_tree(run_load_task, task):
     image = "hello-world"
     ret, mocks = run_load_task(task, custom_image=image)
@@ -453,6 +463,7 @@ def test_load_task_with_custom_image_in_tree(run_load_task, task):
     assert tag == f"taskcluster/{image}:latest"
 
 
+@nowin
 def test_load_task_with_custom_image_task_id(run_load_task, task):
     image = "task-id=abc"
     ret, mocks = run_load_task(task, custom_image=image)
@@ -460,6 +471,7 @@ def test_load_task_with_custom_image_task_id(run_load_task, task):
     mocks["load_image_by_task_id"].assert_called_once_with("abc")
 
 
+@nowin
 def test_load_task_with_custom_image_index(mocker, run_load_task, task):
     image = "index=abc"
     mocker.patch.object(docker, "find_task_id", return_value="abc")
@@ -468,6 +480,7 @@ def test_load_task_with_custom_image_index(mocker, run_load_task, task):
     mocks["load_image_by_task_id"].assert_called_once_with("abc")
 
 
+@nowin
 def test_load_task_with_custom_image_registry(mocker, run_load_task, task):
     image = "ubuntu:latest"
     ret, mocks = run_load_task(task, custom_image=image)
@@ -476,6 +489,7 @@ def test_load_task_with_custom_image_registry(mocker, run_load_task, task):
     assert not mocks["build_image"].called
 
 
+@nowin
 def test_load_task_with_develop(mocker, run_load_task, task):
     repo_name = "foo"
     repo_path = "/workdir/vcs"
@@ -623,6 +637,7 @@ def run_build_image(mocker):
     return inner
 
 
+@nowin
 def test_build_image(run_build_image):
     # Test building image without save_image
     result, mocks = run_build_image("hello-world")
@@ -654,6 +669,7 @@ def test_build_image(run_build_image):
     assert result == "hello-world:latest"
 
 
+@nowin
 def test_build_image_with_parent(mocker, responses, root_url, run_build_image):
     parent_task_id = "abc"
     responses.get(f"{root_url}/api/queue/v1/task/{parent_task_id}/status")
@@ -687,6 +703,7 @@ def test_build_image_with_parent(mocker, responses, root_url, run_build_image):
     assert docker_load_args[:3] == ["docker", "load", "-i"]
 
 
+@nowin
 def test_build_image_with_parent_not_found(
     mocker, responses, root_url, run_build_image
 ):
@@ -725,6 +742,7 @@ def test_build_image_with_parent_not_found(
     assert docker_load_args[:3] == ["docker", "load", "-i"]
 
 
+@nowin
 def test_build_image_with_save_image(run_build_image):
     save_path = "/path/to/save.tar"
 
@@ -741,6 +759,7 @@ def test_build_image_with_save_image(run_build_image):
     assert save_path in str(result)
 
 
+@nowin
 def test_build_image_context_only(run_build_image):
     context_path = "/path/to/context.tar"
 
