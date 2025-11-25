@@ -43,3 +43,8 @@ workers:
             implementation: generic-worker
             os: windows
             worker-type: win11-64-24h2
+        t-mac:
+            provisioner: 'releng-hardware'
+            implementation: generic-worker
+            os: macosx
+            worker-type: macos
