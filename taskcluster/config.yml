@@ -27,7 +27,7 @@ workers:
             provisioner: 'taskgraph-{level}'
             implementation: docker-worker
             os: linux
-            worker-type: images-gcp
+            worker-type: images
         t-linux:
             provisioner: 'taskgraph-t'
             implementation: docker-worker
