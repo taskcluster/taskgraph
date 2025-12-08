@@ -20,6 +20,18 @@ logger = logging.getLogger(__name__)
 testing = False
 
 
+class CreateTasksException(Exception):
+    """Exception raised when one or more tasks could not be created."""
+
+    def __init__(self, errors: dict[str, Exception]):
+        message = ""
+        for label, exc in errors.items():
+            message += f"\nERROR: Could not create '{label}':\n\n"
+            message += "\n".join(f"    {line}" for line in str(exc).splitlines()) + "\n"
+
+        super().__init__(message)
+
+
 def create_tasks(graph_config, taskgraph, label_to_taskid, params, decision_task_id):
     taskid_to_label = {t: l for l, t in label_to_taskid.items()}
 
@@ -50,6 +62,9 @@ def create_tasks(graph_config, taskgraph, label_to_taskid, params, decision_task
     session = get_session()
     with futures.ThreadPoolExecutor(concurrency) as e:
         fs = {}
+        fs_to_task = {}
+        skipped = set()
+        errors = {}
 
         # We can't submit a task until its dependencies have been submitted.
         # So our strategy is to walk the graph and submit tasks once all
@@ -57,11 +72,13 @@ def create_tasks(graph_config, taskgraph, label_to_taskid, params, decision_task
         tasklist = set(taskgraph.graph.visit_postorder())
         alltasks = tasklist.copy()
 
-        def schedule_tasks():
-            # bail out early if any futures have failed
-            if any(f.done() and f.exception() for f in fs.values()):
-                return
+        def handle_exception(fut):
+            if exc := fut.exception():
+                task_id, label = fs_to_task[fut]
+                skipped.add(task_id)
+                errors[label] = exc
 
+        def schedule_tasks():
             to_remove = set()
             new = set()
 
@@ -69,14 +86,24 @@ def create_tasks(graph_config, taskgraph, label_to_taskid, params, decision_task
                 fut = e.submit(create_task, session, task_id, label, task_def)
                 new.add(fut)
                 fs[task_id] = fut
+                fs_to_task[fut] = (task_id, label)
+                fut.add_done_callback(handle_exception)
 
             for task_id in tasklist:
                 task_def = taskgraph.tasks[task_id].task
-                # If we haven't finished submitting all our dependencies yet,
-                # come back to this later.
                 # Some dependencies aren't in our graph, so make sure to filter
                 # those out
                 deps = set(task_def.get("dependencies", [])) & alltasks
+
+                # If one of the dependencies didn't get created, then
+                # don't attempt to submit as it would fail.
+                if any(d in skipped for d in deps):
+                    skipped.add(task_id)
+                    to_remove.add(task_id)
+                    continue
+
+                # If we haven't finished submitting all our dependencies yet,
+                # come back to this later.
                 if any((d not in fs or not fs[d].done()) for d in deps):
                     continue
 
@@ -90,16 +117,18 @@ def create_tasks(graph_config, taskgraph, label_to_taskid, params, decision_task
                     submit(slugid(), taskid_to_label[task_id], task_def)
             tasklist.difference_update(to_remove)
 
-            # as each of those futures complete, try to schedule more tasks
+            # As each of those futures complete, try to schedule more tasks.
             for f in futures.as_completed(new):
                 schedule_tasks()
 
-        # start scheduling tasks and run until everything is scheduled
+        # Start scheduling tasks and run until everything is scheduled.
         schedule_tasks()
 
-        # check the result of each future, raising an exception if it failed
-        for f in futures.as_completed(fs.values()):
-            f.result()
+        # Wait for all futures to complete.
+        futures.wait(fs.values())
+
+        if errors:
+            raise CreateTasksException(errors)
 
 
 def create_task(session, task_id, label, task_def):
