@@ -8,10 +8,10 @@ import unittest
 from unittest import mock
 
 import responses
-from taskcluster.exceptions import TaskclusterRestFailure
 
 from taskgraph import create
 from taskgraph.config import GraphConfig
+from taskgraph.create import CreateTasksException
 from taskgraph.graph import Graph
 from taskgraph.task import Task
 from taskgraph.taskgraph import TaskGraph
@@ -151,7 +151,7 @@ class TestCreate(unittest.TestCase):
         graph = Graph(nodes={"tid-a"}, edges=set())
         taskgraph = TaskGraph(tasks, graph)
 
-        with self.assertRaises(TaskclusterRestFailure):
+        with self.assertRaises(CreateTasksException):
             create.create_tasks(
                 GRAPH_CONFIG,
                 taskgraph,
@@ -159,3 +159,46 @@ class TestCreate(unittest.TestCase):
                 {"level": "4"},
                 decision_task_id="decisiontask",
             )
+
+    @responses.activate
+    @mock.patch.dict(
+        "os.environ",
+        {"TASKCLUSTER_ROOT_URL": "https://tc.example.com"},
+        clear=True,
+    )
+    def test_create_tasks_collects_multiple_errors(self):
+        "create_tasks collects all errors from multiple failing tasks"
+        mock_taskcluster_api(
+            error_status=409,
+            error_message={
+                "tid-a": "scope error for task a",
+                "tid-b": "scope error for task b",
+            },
+            error_task_ids={"tid-a", "tid-b"},
+        )
+
+        tasks = {
+            "tid-a": Task(
+                kind="test", label="a", attributes={}, task={"payload": "hello world"}
+            ),
+            "tid-b": Task(
+                kind="test", label="b", attributes={}, task={"payload": "hello world"}
+            ),
+        }
+        label_to_taskid = {"a": "tid-a", "b": "tid-b"}
+        graph = Graph(nodes={"tid-a", "tid-b"}, edges=set())
+        taskgraph = TaskGraph(tasks, graph)
+
+        with self.assertRaises(CreateTasksException) as cm:
+            create.create_tasks(
+                GRAPH_CONFIG,
+                taskgraph,
+                label_to_taskid,
+                {"level": "4"},
+                decision_task_id="decisiontask",
+            )
+
+        # Verify both errors are in the exception message
+        exception_message = str(cm.exception)
+        self.assertIn("Could not create 'a'", exception_message)
+        self.assertIn("Could not create 'b'", exception_message)
