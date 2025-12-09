@@ -872,6 +872,36 @@ def test_default_expires_after(run_transform, graph_config, expires_after, test_
 
 
 @pytest.mark.parametrize(
+    "command",
+    (
+        ["run-task"],
+        ["run-task-hg"],
+        ["/usr/local/bin/run-task"],
+        ["/usr/bin/run-task-hg"],
+    ),
+)
+def test_run_task_exit_status(run_transform, make_transform_config, command):
+    task_def = {
+        "description": "fake description",
+        "name": "fake-task-name",
+        "worker-type": "t-linux",
+        "worker": {
+            "docker-image": "fake-image-name",
+            "max-run-time": 1800,
+            "command": command,
+        },
+    }
+
+    task_dict = run_transform(
+        task.transforms, task_def, config=make_transform_config()
+    )[0]
+    payload = task_dict["task"]["payload"]
+    # If run-task is properly detected, then the transform sets those onExitStatus
+    assert 72 in payload["onExitStatus"]["retry"]
+    assert 72 in payload["onExitStatus"]["purgeCaches"]
+
+
+@pytest.mark.parametrize(
     "test_task",
     (
         {
