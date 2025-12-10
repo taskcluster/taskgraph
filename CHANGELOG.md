@@ -1,5 +1,12 @@
 # Change Log
 
+## [18.0.1] - 2025-12-10
+
+### Fixed
+
+- Updated run-task detection in `util.verify` and the `task` transform for
+  gecko's suffixed `run-task-hg` and `run-task-git` commands
+
 ## [18.0.0] - 2025-11-17
 
 ### Added
