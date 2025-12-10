@@ -2,9 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 ---
-meta:
-    - &uv_version 0.9.3
-
 loader: taskgraph.loader.transform:loader
 
 transforms:
@@ -28,12 +25,12 @@ tasks:
         symbol: I(idx)
     python:
         symbol: I(py)
+        parent: run-task
         args:
             PYTHON_VERSIONS: "3.14t 3.14 3.13 3.12 3.11 3.10 3.9"
-            UV_VERSION: *uv_version
     run-task:
         symbol: I(rt)
         args:
-            UV_VERSION: *uv_version
+            UV_VERSION: "0.9.3"
     skopeo:
         symbol: I(skopeo)
