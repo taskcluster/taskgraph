@@ -302,6 +302,22 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
             pytest.raises(Exception, match="cache name is not dep"),
             id="using run-task without cache suffix",
         ),
+        pytest.param(
+            "verify_run_task_caches",
+            make_graph(
+                make_task(
+                    "task1",
+                    task_def={
+                        "payload": {
+                            "cache": {"test-domain-level-1-checkouts": {}},
+                            "command": ["run-task-hg"],
+                        }
+                    },
+                )
+            ),
+            pytest.raises(Exception, match="cache name is not dep"),
+            id="using run-task-hg without cache suffix",
+        ),
     ),
 )
 @pytest.mark.filterwarnings("error")
