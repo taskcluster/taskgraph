@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import datetime
+import json
 from unittest.mock import MagicMock
 
 import pytest
@@ -309,12 +310,47 @@ def test_get_task_url(root_url):
 def test_get_task_definition(responses, root_url):
     tid = "abc123"
     tc.get_taskcluster_client.cache_clear()
+    tc._task_definitions_cache.cache.clear()
 
     responses.get(
         f"{root_url}/api/queue/v1/task/{tid}",
         json={"payload": "blah"},
     )
     result = tc.get_task_definition(tid)
+    assert result == {"payload": "blah"}
+
+
+def test_get_task_definitions(responses, root_url):
+    tid = (
+        "abc123",
+        "def456",
+    )
+    tc.get_taskcluster_client.cache_clear()
+    tc._task_definitions_cache.cache.clear()
+
+    task_definitions = {
+        "abc123": {"payload": "blah"},
+        "def456": {"payload": "foobar"},
+    }
+
+    def tasks_callback(request):
+        payload = json.loads(request.body)
+        resp_body = {
+            "tasks": [
+                {"taskId": task_id, "task": task_definitions[task_id]}
+                for task_id in payload["taskIds"]
+            ]
+        }
+        return (200, [], json.dumps(resp_body))
+
+    responses.add_callback(
+        responses.POST,
+        f"{root_url}/api/queue/v1/tasks",
+        callback=tasks_callback,
+    )
+    result = tc.get_task_definitions(tid)
+    assert result == task_definitions
+    result = tc.get_task_definition(tid[0])
     assert result == {"payload": "blah"}
 
 
@@ -487,8 +523,7 @@ def test_list_task_group_incomplete_tasks(responses, root_url):
 
 
 def test_get_ancestors(responses, root_url):
-    tc.get_task_definition.cache_clear()
-    tc._get_deps.cache_clear()
+    tc._task_definitions_cache.cache.clear()
     tc.get_taskcluster_client.cache_clear()
 
     task_definitions = {
@@ -518,12 +553,20 @@ def test_get_ancestors(responses, root_url):
         },
     }
 
-    # Mock API responses for each task definition
-    for task_id, definition in task_definitions.items():
-        responses.get(
-            f"{root_url}/api/queue/v1/task/{task_id}",
-            json=definition,
-        )
+    # Mock API response for task definitions
+    def tasks_callback(request):
+        payload = json.loads(request.body)
+        resp_body = {
+            "tasks": [
+                {"taskId": task_id, "task": task_definitions[task_id]}
+                for task_id in payload["taskIds"]
+            ]
+        }
+        return (200, [], json.dumps(resp_body))
+
+    responses.add_callback(
+        responses.POST, f"{root_url}/api/queue/v1/tasks", callback=tasks_callback
+    )
 
     got = tc.get_ancestors(["bbb", "fff"])
     expected = {
@@ -536,8 +579,7 @@ def test_get_ancestors(responses, root_url):
 
 
 def test_get_ancestors_string(responses, root_url):
-    tc.get_task_definition.cache_clear()
-    tc._get_deps.cache_clear()
+    tc._task_definitions_cache.cache.clear()
     tc.get_taskcluster_client.cache_clear()
 
     task_definitions = {
@@ -567,12 +609,20 @@ def test_get_ancestors_string(responses, root_url):
         },
     }
 
-    # Mock API responses for each task definition
-    for task_id, definition in task_definitions.items():
-        responses.get(
-            f"{root_url}/api/queue/v1/task/{task_id}",
-            json=definition,
-        )
+    # Mock API response for task definitions
+    def tasks_callback(request):
+        payload = json.loads(request.body)
+        resp_body = {
+            "tasks": [
+                {"taskId": task_id, "task": task_definitions[task_id]}
+                for task_id in payload["taskIds"]
+            ]
+        }
+        return (200, [], json.dumps(resp_body))
+
+    responses.add_callback(
+        responses.POST, f"{root_url}/api/queue/v1/tasks", callback=tasks_callback
+    )
 
     got = tc.get_ancestors("fff")
     expected = {
