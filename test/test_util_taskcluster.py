@@ -243,6 +243,21 @@ def test_get_artifact_from_index(responses, root_url):
     assert result.read() == b"foobar"
 
 
+def test_get_artifact_from_index_uses_artifact_path_for_parsing(responses, root_url):
+    # Verify artifact_path (not index_path) is used for determining how to parse the response.
+    index_path = "foo.bar"
+    artifact_path = "file.yml"
+    tc.get_taskcluster_client.cache_clear()
+
+    responses.get(
+        f"{root_url}/api/index/v1/task/{index_path}/artifacts/{artifact_path}",
+        body=b"key: value",
+    )
+
+    result = tc.get_artifact_from_index(index_path, artifact_path)
+    assert result == {"key": "value"}
+
+
 def test_list_tasks(responses, root_url):
     index = "foo"
     tc.get_taskcluster_client.cache_clear()
