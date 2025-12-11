@@ -1,5 +1,16 @@
 # Change Log
 
+## [18.0.3] - 2025-12-11
+
+### Fixed
+
+- `get_artifact_from_index` now uses `artifact_path` instead of `index_path`
+  (bug 1999039); fixes regression introduced in 16.0.0
+- Task objects created by `load_tasks` or `from_json` no longer have `None` as
+  `if_dependencies`/`soft_dependencies` attributes
+
+## [18.0.2] - Skipped
+
 ## [18.0.1] - 2025-12-10
 
 ### Fixed
