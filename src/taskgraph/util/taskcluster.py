@@ -268,10 +268,40 @@ def get_task_url(task_id):
     return task_tmpl.format(task_id)
 
 
-@functools.cache
-def get_task_definition(task_id):
-    queue = get_taskcluster_client("queue")
-    return queue.task(task_id)
+class TaskDefinitionsCache:
+    def __init__(self):
+        self.cache = {}
+
+    def get_task_definition(self, task_id):
+        if task_id not in self.cache:
+            queue = get_taskcluster_client("queue")
+            self.cache[task_id] = queue.task(task_id)
+        return self.cache[task_id]
+
+    def get_task_definitions(self, task_ids):
+        missing_task_ids = list(set(task_ids) - set(self.cache))
+        if missing_task_ids:
+            queue = get_taskcluster_client("queue")
+
+            def pagination_handler(response):
+                self.cache.update(
+                    {task["taskId"]: task["task"] for task in response["tasks"]}
+                )
+
+            queue.tasks(
+                payload={"taskIds": missing_task_ids},
+                paginationHandler=pagination_handler,
+            )
+        return {
+            task_id: self.cache[task_id]
+            for task_id in task_ids
+            if task_id in self.cache
+        }
+
+
+_task_definitions_cache = TaskDefinitionsCache()
+get_task_definition = _task_definitions_cache.get_task_definition
+get_task_definitions = _task_definitions_cache.get_task_definitions
 
 
 def cancel_task(task_id):
@@ -430,22 +460,20 @@ def list_task_group_incomplete_tasks(task_group_id):
     return incomplete_tasks
 
 
-@functools.cache
 def _get_deps(task_ids):
     upstream_tasks = {}
-    for task_id in task_ids:
-        task_def = get_task_definition(task_id)
-        if not task_def:
-            continue
-
+    task_defs = get_task_definitions(task_ids)
+    dependencies = set()
+    for task_id, task_def in task_defs.items():
         metadata = task_def.get("metadata", {})  # type: ignore
         name = metadata.get("name")  # type: ignore
         if name:
             upstream_tasks[task_id] = name
 
-        dependencies = task_def.get("dependencies", [])
-        if dependencies:
-            upstream_tasks.update(_get_deps(tuple(dependencies)))
+        dependencies |= set(task_def.get("dependencies", []))
+
+    if dependencies:
+        upstream_tasks.update(_get_deps(tuple(dependencies)))
 
     return upstream_tasks
 
@@ -464,18 +492,12 @@ def get_ancestors(task_ids: Union[list[str], str]) -> dict[str, str]:
     if isinstance(task_ids, str):
         task_ids = [task_ids]
 
-    for task_id in task_ids:
-        try:
-            task_def = get_task_definition(task_id)
-        except taskcluster.TaskclusterRestFailure as e:
-            # Task has most likely expired, which means it's no longer a
-            # dependency for the purposes of this function.
-            if e.status_code == 404:
-                continue
-            raise e
+    task_defs = get_task_definitions(task_ids)
+    dependencies = set()
 
-        dependencies = task_def.get("dependencies", [])
-        if dependencies:
-            upstream_tasks.update(_get_deps(tuple(dependencies)))
+    for task_id, task_def in task_defs.items():
+        dependencies |= set(task_def.get("dependencies", []))
+    if dependencies:
+        upstream_tasks.update(_get_deps(tuple(dependencies)))
 
     return copy.deepcopy(upstream_tasks)
