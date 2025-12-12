@@ -2,32 +2,73 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-
+import json
+import re
 import unittest
 from unittest import mock
+
+import responses
+from taskcluster.exceptions import TaskclusterRestFailure
 
 from taskgraph import create
 from taskgraph.config import GraphConfig
 from taskgraph.graph import Graph
 from taskgraph.task import Task
 from taskgraph.taskgraph import TaskGraph
+from taskgraph.util import taskcluster as tc_util
 
 GRAPH_CONFIG = GraphConfig({"trust-domain": "domain"}, "/var/empty")
 
 
+def mock_taskcluster_api(
+    created_tasks=None, error_status=None, error_message=None, error_task_ids=None
+):
+    """Mock the Taskcluster Queue API for create task calls."""
+
+    def request_callback(request):
+        task_id = request.url.split("/")[-1]
+
+        # Check if this task should error
+        if error_status is not None:
+            if error_task_ids is None or task_id in error_task_ids:
+                # Support per-task error messages
+                if isinstance(error_message, dict):
+                    message = error_message.get(task_id, "error")
+                else:
+                    message = error_message or "error"
+                return (error_status, {}, f'{{"message": "{message}"}}')
+
+        # Success case - capture task definition if requested
+        if created_tasks is not None:
+            task_def = json.loads(request.body)
+            created_tasks[task_id] = task_def
+
+        return (200, {}, f'{{"status": {{"taskId": "{task_id}"}}}}')
+
+    responses.add_callback(
+        responses.PUT,
+        re.compile(r"https://tc\.example\.com/api/queue/v1/task/.*"),
+        callback=request_callback,
+        content_type="application/json",
+    )
+
+
 class TestCreate(unittest.TestCase):
     def setUp(self):
-        self.created_tasks = {}
-        self.old_create_task = create.create_task
-        create.create_task = self.fake_create_task
+        # Clear cached Taskcluster clients/sessions since we're mocking the environment
+        tc_util.get_taskcluster_client.cache_clear()
+        tc_util.get_session.cache_clear()
 
-    def tearDown(self):
-        create.create_task = self.old_create_task
-
-    def fake_create_task(self, session, task_id, label, task_def):
-        self.created_tasks[task_id] = task_def
-
+    @responses.activate
+    @mock.patch.dict(
+        "os.environ",
+        {"TASKCLUSTER_ROOT_URL": "https://tc.example.com"},
+        clear=True,
+    )
     def test_create_tasks(self):
+        created_tasks = {}
+        mock_taskcluster_api(created_tasks=created_tasks)
+
         tasks = {
             "tid-a": Task(
                 kind="test", label="a", attributes={}, task={"payload": "hello world"}
@@ -48,7 +89,8 @@ class TestCreate(unittest.TestCase):
             decision_task_id="decisiontask",
         )
 
-        for tid, task in self.created_tasks.items():
+        assert created_tasks
+        for tid, task in created_tasks.items():
             self.assertEqual(task["payload"], "hello world")
             self.assertEqual(task["schedulerId"], "domain-level-4")
             # make sure the dependencies exist, at least
@@ -56,10 +98,19 @@ class TestCreate(unittest.TestCase):
                 if depid == "decisiontask":
                     # Don't look for decisiontask here
                     continue
-                self.assertIn(depid, self.created_tasks)
+                self.assertIn(depid, created_tasks)
 
+    @responses.activate
+    @mock.patch.dict(
+        "os.environ",
+        {"TASKCLUSTER_ROOT_URL": "https://tc.example.com"},
+        clear=True,
+    )
     def test_create_task_without_dependencies(self):
         "a task with no dependencies depends on the decision task"
+        created_tasks = {}
+        mock_taskcluster_api(created_tasks=created_tasks)
+
         tasks = {
             "tid-a": Task(
                 kind="test", label="a", attributes={}, task={"payload": "hello world"}
@@ -77,12 +128,20 @@ class TestCreate(unittest.TestCase):
             decision_task_id="decisiontask",
         )
 
-        for tid, task in self.created_tasks.items():
+        assert created_tasks
+        for tid, task in created_tasks.items():
             self.assertEqual(task.get("dependencies"), ["decisiontask"])
 
-    @mock.patch("taskgraph.create.create_task")
-    def test_create_tasks_fails_if_create_fails(self, create_task):
-        "creat_tasks fails if a single create_task call fails"
+    @responses.activate
+    @mock.patch.dict(
+        "os.environ",
+        {"TASKCLUSTER_ROOT_URL": "https://tc.example.com"},
+        clear=True,
+    )
+    def test_create_tasks_fails_if_create_fails(self):
+        "create_tasks fails if a single create_task call fails"
+        mock_taskcluster_api(error_status=403, error_message="oh no!")
+
         tasks = {
             "tid-a": Task(
                 kind="test", label="a", attributes={}, task={"payload": "hello world"}
@@ -92,13 +151,7 @@ class TestCreate(unittest.TestCase):
         graph = Graph(nodes={"tid-a"}, edges=set())
         taskgraph = TaskGraph(tasks, graph)
 
-        def fail(*args):
-            print("UHOH")
-            raise RuntimeError("oh no!")
-
-        create_task.side_effect = fail
-
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(TaskclusterRestFailure):
             create.create_tasks(
                 GRAPH_CONFIG,
                 taskgraph,
