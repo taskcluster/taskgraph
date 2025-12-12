@@ -8,6 +8,7 @@ import pytest
 from taskgraph import docker
 from taskgraph.config import GraphConfig
 from taskgraph.transforms.docker_image import IMAGE_BUILDER_IMAGE
+from taskgraph.util import taskcluster as tc_util
 from taskgraph.util.vcs import get_repository
 
 from .conftest import nowin
@@ -22,6 +23,9 @@ def root_url():
 def mock_environ(monkeypatch, root_url):
     # Ensure user specified environment variables don't interfere with URLs.
     monkeypatch.setattr(os, "environ", {"TASKCLUSTER_ROOT_URL": root_url})
+    # Clear cached Taskcluster clients/sessions since we're mocking the environment
+    tc_util.get_taskcluster_client.cache_clear()
+    tc_util.get_session.cache_clear()
 
 
 @pytest.fixture(autouse=True, scope="module")
