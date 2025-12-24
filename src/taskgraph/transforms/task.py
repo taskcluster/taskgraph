@@ -23,7 +23,6 @@ from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.hash import hash_path
 from taskgraph.util.keyed_by import evaluate_keyed_by
 from taskgraph.util.schema import (
-    OptimizationSchema,
     Schema,
     optionally_keyed_by,
     resolve_keyed_by,
@@ -340,10 +339,10 @@ task_description_schema = Schema(
             description=dedent(
                 """
                 Optimization to perform on this task during the optimization
-                phase. Defined in taskcluster/taskgraph/optimize.py.
+                phase. The schema for this value is specific to the given optimization.
                 """.lstrip()
             ),
-        ): OptimizationSchema,
+        ): Any(None, dict),
         Required(
             "worker-type",
             description=dedent(
