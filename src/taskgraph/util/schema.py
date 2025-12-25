@@ -2,67 +2,109 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-
 import pprint
 import re
 from collections.abc import Mapping
+from functools import reduce
+from typing import Literal, Optional, Union
 
+import msgspec
 import voluptuous
 
 import taskgraph
 from taskgraph.util.keyed_by import evaluate_keyed_by, iter_dot_path
+
+# Common type definitions that are used across multiple schemas
+TaskPriority = Literal[
+    "highest", "very-high", "high", "medium", "low", "very-low", "lowest"
+]
 
 
 def validate_schema(schema, obj, msg_prefix):
     """
     Validate that object satisfies schema.  If not, generate a useful exception
     beginning with msg_prefix.
+
+    Args:
+        schema: A voluptuous.Schema or msgspec-based StructSchema type
+        obj: Object to validate
+        msg_prefix: Prefix for error messages
     """
     if taskgraph.fast:
         return
+
     try:
-        schema(obj)
-    except voluptuous.MultipleInvalid as exc:
-        msg = [msg_prefix]
-        for error in exc.errors:
-            msg.append(str(error))
-        raise Exception("\n".join(msg) + "\n" + pprint.pformat(obj))
+        # Handle voluptuous Schema
+        if isinstance(schema, voluptuous.Schema):
+            schema(obj)
+        # Handle msgspec-based schemas (StructSchema and its subclasses)
+        elif isinstance(schema, type) and issubclass(schema, msgspec.Struct):
+            # Check if it's our Struct subclass with validate method
+            if issubclass(schema, Schema):
+                schema.validate(obj)
+            else:
+                # Fall back to msgspec.convert for validation
+                msgspec.convert(obj, schema)
+        else:
+            raise TypeError(f"Unsupported schema type: {type(schema)}")
+    except (
+        voluptuous.MultipleInvalid,
+        msgspec.ValidationError,
+        msgspec.DecodeError,
+    ) as exc:
+        if isinstance(exc, voluptuous.MultipleInvalid):
+            msg = [msg_prefix]
+            for error in exc.errors:
+                msg.append(str(error))
+            raise Exception("\n".join(msg) + "\n" + pprint.pformat(obj))
+        else:
+            raise Exception(f"{msg_prefix}\n{str(exc)}\n{pprint.pformat(obj)}")
 
 
-def optionally_keyed_by(*arguments):
+def UnionTypes(*types):
+    """Use `functools.reduce` to simulate `Union[*allowed_types]` on older
+    Python versions.
     """
-    Mark a schema value as optionally keyed by any of a number of fields.  The
-    schema is the last argument, and the remaining fields are taken to be the
-    field names.  For example:
+    return reduce(lambda a, b: Union[a, b], types)
 
-        'some-value': optionally_keyed_by(
-            'test-platform', 'build-platform',
-            Any('a', 'b', 'c'))
 
-    The resulting schema will allow nesting of `by-test-platform` and
-    `by-build-platform` in either order.
+def optionally_keyed_by(*arguments, use_msgspec=False):
     """
-    schema = arguments[-1]
-    fields = arguments[:-1]
+    Mark a schema value as optionally keyed by any of a number of fields.
 
-    def validator(obj):
-        if isinstance(obj, dict) and len(obj) == 1:
-            k, v = list(obj.items())[0]
-            if k.startswith("by-") and k[len("by-") :] in fields:
-                res = {}
-                for kk, vv in v.items():
-                    try:
-                        res[kk] = validator(vv)
-                    except voluptuous.Invalid as e:
-                        e.prepend([k, kk])
-                        raise
-                return res
-        return Schema(schema)(obj)
+    Args:
+        *arguments: Field names followed by the schema
+        use_msgspec: If True, return msgspec type hints; if False, return voluptuous validator
+    """
+    if use_msgspec:
+        # msgspec implementation - return type hints
+        _type = arguments[-1]
+        fields = arguments[:-1]
+        bykeys = [Literal[f"by-{field}"] for field in fields]
+        return Union[_type, dict[UnionTypes(*bykeys), dict[str, _type]]]
+    else:
+        # voluptuous implementation - return validator function
+        schema = arguments[-1]
+        fields = arguments[:-1]
 
-    # set to assist autodoc
-    setattr(validator, "schema", schema)
-    setattr(validator, "fields", fields)
-    return validator
+        def validator(obj):
+            if isinstance(obj, dict) and len(obj) == 1:
+                k, v = list(obj.items())[0]
+                if k.startswith("by-") and k[len("by-") :] in fields:
+                    res = {}
+                    for kk, vv in v.items():
+                        try:
+                            res[kk] = validator(vv)
+                        except voluptuous.Invalid as e:
+                            e.prepend([k, kk])
+                            raise
+                    return res
+            return LegacySchema(schema)(obj)
+
+        # set to assist autodoc
+        setattr(validator, "schema", schema)
+        setattr(validator, "fields", fields)
+        return validator
 
 
 def resolve_keyed_by(
@@ -199,7 +241,7 @@ def check_schema(schema):
     iter("schema", schema.schema)
 
 
-class Schema(voluptuous.Schema):
+class LegacySchema(voluptuous.Schema):
     """
     Operates identically to voluptuous.Schema, but applying some taskgraph-specific checks
     in the process.
@@ -218,7 +260,7 @@ class Schema(voluptuous.Schema):
         if self.check:
             check_schema(schema)
         # We want twice extend schema to be checked too.
-        schema.__class__ = Schema
+        schema.__class__ = LegacySchema
         return schema
 
     def _compile(self, schema):
@@ -229,6 +271,103 @@ class Schema(voluptuous.Schema):
     def __getitem__(self, item):
         return self.schema[item]  # type: ignore
 
+
+class Schema(
+    msgspec.Struct,
+    kw_only=True,
+    omit_defaults=True,
+    rename="kebab",
+    forbid_unknown_fields=True,
+):
+    """
+    Base schema class that extends msgspec.Struct.
+
+    This allows schemas to be defined directly as:
+
+        class MySchema(Schema):
+            foo: str
+            bar: int = 10
+
+    Instead of wrapping msgspec.Struct types.
+    Most schemas use kebab-case renaming by default.
+
+    By default, forbid_unknown_fields is True, meaning extra fields
+    will cause validation errors. Child classes can override this by
+    setting forbid_unknown_fields=False in their class definition:
+
+        class MySchema(Schema, forbid_unknown_fields=False):
+            foo: str
+    """
+
+    @classmethod
+    def validate(cls, data):
+        """Validate data against this schema."""
+        if taskgraph.fast:
+            return data
+
+        try:
+            return msgspec.convert(data, cls)
+        except (msgspec.ValidationError, msgspec.DecodeError) as e:
+            raise msgspec.ValidationError(str(e))
+
+
+class IndexSearchOptimizationSchema(Schema):
+    """Search the index for the given index namespaces."""
+
+    index_search: list[str]
+
+
+class SkipUnlessChangedOptimizationSchema(Schema):
+    """Skip this task if none of the given file patterns match."""
+
+    skip_unless_changed: list[str]
+
+
+# Create a class for optimization types to avoid dict union issues
+class OptimizationTypeSchema(Schema, forbid_unknown_fields=False):
+    """Schema that accepts various optimization configurations."""
+
+    index_search: Optional[list[str]] = None
+    skip_unless_changed: Optional[list[str]] = None
+
+    def __post_init__(self):
+        """Ensure at least one optimization type is provided."""
+        if not self.index_search and not self.skip_unless_changed:
+            # Allow empty schema for other dict-based optimizations
+            pass
+
+
+OptimizationType = Union[None, OptimizationTypeSchema]
+
+
+# Task reference types using msgspec
+class TaskReferenceSchema(Schema):
+    """Reference to another task (msgspec version)."""
+
+    task_reference: str
+
+
+class ArtifactReferenceSchema(Schema):
+    """Reference to a task artifact (msgspec version)."""
+
+    artifact_reference: str
+
+
+class TaskRefTypeSchema(Schema, forbid_unknown_fields=False):
+    """Schema that accepts either task-reference or artifact-reference (msgspec version)."""
+
+    task_reference: Optional[str] = None
+    artifact_reference: Optional[str] = None
+
+    def __post_init__(self):
+        """Ensure exactly one reference type is provided."""
+        if self.task_reference and self.artifact_reference:
+            raise ValueError("Cannot have both task-reference and artifact-reference")
+        if not self.task_reference and not self.artifact_reference:
+            raise ValueError("Must have either task-reference or artifact-reference")
+
+
+taskref_or_string_msgspec = Union[str, TaskRefTypeSchema]
 
 OptimizationSchema = voluptuous.Any(
     # always run this task (default)
