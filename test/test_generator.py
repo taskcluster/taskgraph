@@ -38,7 +38,7 @@ def test_kind_ordering(mocker, maketgg):
             ("_fake1", {"kind-dependencies": []}),
         ]
     )
-    tgg._run_until("full_task_set")
+    tgg.full_task_set
     assert mocked_ppe.loaded_kinds == ["_fake1", "_fake2", "_fake3"]
 
 
@@ -279,9 +279,9 @@ def test_loader_backwards_compat_interface(graph_config):
 )
 def test_default_loader(config, expected_transforms):
     loader = Kind("", "", config, {})._get_loader()
-    assert loader is default_loader, (
-        "Default Kind loader should be taskgraph.loader.default.loader"
-    )
+    assert (
+        loader is default_loader
+    ), "Default Kind loader should be taskgraph.loader.default.loader"
     loader("", "", config, {}, [], False)
 
     assert config["transforms"] == expected_transforms
