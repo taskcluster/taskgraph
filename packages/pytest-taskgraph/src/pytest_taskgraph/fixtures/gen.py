@@ -174,7 +174,7 @@ def parameters():
 
 @pytest.fixture
 def maketgg(monkeypatch, parameters):
-    def inner(target_tasks=None, kinds=None, params=None, enable_verifications=True):
+    def inner(target_tasks=None, kinds=None, params=None, enable_verifications=True, cached_params={}, cached_graphs={}):
         kinds = kinds or [("_fake", [])]
         params = params or {}
         FakeKind.loaded_kinds = []
@@ -196,7 +196,7 @@ def maketgg(monkeypatch, parameters):
         monkeypatch.setattr(generator, "load_graph_config", fake_load_graph_config)
 
         return WithFakeKind(
-            "/root", parameters, enable_verifications=enable_verifications
+            "/root", parameters, enable_verifications=enable_verifications, cached_params=cached_params, cached_graphs=cached_graphs
         )
 
     return inner

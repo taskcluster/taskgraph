@@ -7,11 +7,13 @@ import platform
 from concurrent.futures import ProcessPoolExecutor
 
 import pytest
-from pytest_taskgraph import WithFakeKind, fake_load_graph_config
+from pytest_taskgraph import WithFakeKind, fake_load_graph_config, make_task
 
 from taskgraph import generator, graph
 from taskgraph.generator import Kind, load_tasks_for_kind, load_tasks_for_kinds
 from taskgraph.loader.default import loader as default_loader
+from taskgraph.parameters import Parameters
+from taskgraph.taskgraph import TaskGraph
 
 linuxonly = pytest.mark.skipif(
     platform.system() != "Linux",
@@ -386,3 +388,37 @@ def test_kind_graph_with_target_kinds(maketgg):
     # _fake3 and _other should not be included
     assert "_fake3" not in kind_graph.nodes
     assert "_other" not in kind_graph.nodes
+
+
+def test_cached_results(maketgg):
+    """Initial results are returned instead of regenerating parts of the taskgraph"""
+    fake1 = make_task("fake1", kind="_fake1")
+    fake2 = make_task("fake2", kind="_fake2", dependencies={"fake1": "fake1"})
+    fake3 = make_task("fake3", kind="_fake3", dependencies={"fake1": "fake1", "fake2": "fake2"})
+    tasks, full_task_graph = TaskGraph.from_json({
+        "fake1": fake1.to_json(),
+        "fake2": fake2.to_json(),
+        "fake3": fake3.to_json(),
+    })
+    tgg = maketgg(
+        target_tasks=["fake1", "fake2", "fake3"],
+        kinds=[
+            ("_fake3", {"kind-dependencies": ["_fake2", "_fake1"]}),
+            ("_fake2", {"kind-dependencies": ["_fake1"]}),
+            ("_fake1", {"kind-dependencies": []}),
+        ],
+        cached_graphs={"full_task_graph": full_task_graph},
+    )
+    assert tgg.full_task_set == TaskGraph(tasks, graph.Graph(frozenset(tasks), frozenset()))
+    assert tgg.full_task_graph == full_task_graph
+    # ensure we get different results when not using cached_results
+    tgg2 = maketgg(
+        target_tasks=["fake1", "fake2", "fake3"],
+        kinds=[
+            ("_fake3", {"kind-dependencies": ["_fake2", "_fake1"]}),
+            ("_fake2", {"kind-dependencies": ["_fake1"]}),
+            ("_fake1", {"kind-dependencies": []}),
+        ],
+    )
+    assert tgg.full_task_graph != tgg2.full_task_graph
+    tgg.target_task_graph

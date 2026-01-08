@@ -144,6 +144,8 @@ class TaskGraphGenerator:
         decision_task_id: str = "DECISION-TASK",
         write_artifacts: bool = False,
         enable_verifications: bool = True,
+        cached_params: dict = {},
+        cached_graphs: dict[str, TaskGraph] = {},
     ):
         """
         @param root_dir: root directory containing the Taskgraph config.yml file
@@ -162,6 +164,28 @@ class TaskGraphGenerator:
         # start the generator
         self._run = self._run()  # type: ignore
         self._run_results = {}
+        # TODO: should we require all earlier results cached to cache a later result?
+        # this would mean that we would be required to cache and load graph_config, kind_graph
+        # the argument against it is that we still do things like, eg: load_kinds even
+        # when we use a cached full task graph
+        # it probably makes sense to have this requirement strictly for graphs, at least?
+        if cached_params:
+            self._run_results["parameters"] = cached_params
+        for k, v in cached_graphs.items():
+            if k == "full_task_graph":
+                # full task set is always the full task graph with the edges removed
+                self._run_results["full_task_set"] = TaskGraph(v.tasks, Graph(frozenset(v.tasks), frozenset()))
+                self._run_results["full_task_graph"] = v
+            elif k == "target_task_graph":
+                # target task set is always the full task graph with the edges removed
+                self._run_results["target_task_set"] = TaskGraph(v.tasks, Graph(frozenset(v.tasks), frozenset()))
+                self._run_results["target_task_graph"] = v
+            elif k == "optimized_task_graph":
+                self._run_results["optimized_task_graph"] = v
+            elif k == "morphed_task_graph":
+                self._run_results["morphed_task_graph"] = v
+            else:
+                raise ValueError(f"cached graph {k} not supported")
 
     @property
     def parameters(self):
@@ -564,7 +588,9 @@ class TaskGraphGenerator:
                 k, v = next(self._run)  # type: ignore
             except StopIteration:
                 raise AttributeError(f"No such run result {name}")
-            self._run_results[k] = v
+            # might have been in `cached_results`
+            if k not in self._run_results:
+                self._run_results[k] = v
         return self._run_results[name]
 
     def verify(self, name, *args, **kwargs):
