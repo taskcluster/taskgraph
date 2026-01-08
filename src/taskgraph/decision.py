@@ -3,10 +3,12 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
+from functools import cache
 import logging
 import os
 import pathlib
 import shutil
+import sys
 import time
 from pathlib import Path
 
@@ -64,7 +66,7 @@ def full_task_graph_to_runnable_tasks(full_task_json):
     return runnable_tasks
 
 
-def taskgraph_decision(options, parameters=None):
+def taskgraph_decision(options, parameters=None, cache_dir=None):
     """
     Run the decision task.  This function implements `mach taskgraph decision`,
     and is responsible for
@@ -104,6 +106,35 @@ def taskgraph_decision(options, parameters=None):
 
     decision_task_id = os.environ["TASK_ID"]
 
+    cached_results = {}    
+    if cache_dir:
+        # TODO: don't load irrelevant files
+        # TODO: ensure that we only use cached results if we have cached results
+        # for all prior steps
+        for name in os.listdir(cache_dir):
+            if name == "graph_config":
+                pass
+            elif name == "parameters":
+                cached_results[name] = Parameters(**load_yaml(cache_dir, name))
+            elif name == "kind_graph":
+                pass
+            elif name == "full_task_set":
+                # TODO: we should be able to get this from `full_task_graph`; don't need to load it separately
+                cached_results[name] = TaskGraph.from_json(json.load(open(os.path.join(cache_dir, name))))[0]
+            elif name == "full_task_graph":
+                cached_results[name] = TaskGraph.from_json(json.load(open(os.path.join(cache_dir, name))))[1]
+            elif name == "target_task_set":
+                # derivable from target_task_graph?
+                cached_results[name] = TaskGraph.from_json(json.load(open(os.path.join(cache_dir, name))))
+            elif name == "target_task_graph":
+                cached_results[name] = TaskGraph.from_json(json.load(open(os.path.join(cache_dir, name))))
+            elif name == "optimized_task_graph":
+                cached_results[name] = TaskGraph.from_json(json.load(open(os.path.join(cache_dir, name))))
+            elif name == "label_to_taskid":
+                cached_results[name] = json.load(open(os.path.join(cache_dir, name)))
+            elif name == "morphed_task_graph":
+                cached_results[name] = TaskGraph.from_json(json.load(open(os.path.join(cache_dir, name))))
+
     # create a TaskGraphGenerator instance
     tgg = TaskGraphGenerator(
         root_dir=options.get("root"),
@@ -111,6 +142,7 @@ def taskgraph_decision(options, parameters=None):
         decision_task_id=decision_task_id,
         write_artifacts=True,
         enable_verifications=options.get("verify", True),
+        initial_results=cached_results,
     )
 
     # write out the parameters used to generate this graph
@@ -126,6 +158,7 @@ def taskgraph_decision(options, parameters=None):
     full_task_json = tgg.full_task_graph.to_json()
     write_artifact("full-task-graph.json", full_task_json)
 
+    sys.exit(1)
     # write out the public/runnable-jobs.json file
     write_artifact(
         "runnable-jobs.json", full_task_graph_to_runnable_tasks(full_task_json)

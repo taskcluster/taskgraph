@@ -936,7 +936,10 @@ def load_task(args):
 def decision(options):
     from taskgraph.decision import taskgraph_decision  # noqa: PLC0415
 
-    taskgraph_decision(options)
+    # TODO: add parameter that instructs us to go fetch cached artifacts from
+    # elsewhere, eg: an index
+    cache_dir = "/home/bhearsum/tmp/2026-01-07/tgcache"
+    taskgraph_decision(options, cache_dir=cache_dir)
 
 
 @command("actions", help="Print the rendered actions.json")
