@@ -1,4 +1,4 @@
-FROM debian:12-slim
+FROM debian:13-slim
 LABEL maintainer="Release Engineering <release+taskgraph-ci@mozilla.com>"
 
 # Add worker user
