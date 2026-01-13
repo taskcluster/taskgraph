@@ -1,5 +1,16 @@
 # Change Log
 
+## [18.1.0] - 2026-01-13
+
+### Added
+
+- New `get_task_definitions` Taskcluster utility function
+
+### Fixed
+
+- Better error handling on task creation failure, to gather all e.g. scope
+  errors instead of giving up after the first
+
 ## [18.0.3] - 2025-12-11
 
 ### Fixed
