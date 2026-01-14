@@ -237,8 +237,10 @@ def test_get_artifact_from_index(responses, root_url):
 
     responses.get(
         f"{root_url}/api/index/v1/task/{index}/artifacts/{path}",
-        body=b"foobar",
+        status=303,
+        headers={"Location": f"http://foo.bar/{path}"},
     )
+    responses.get(f"http://foo.bar/{path}", body="foobar")
 
     result = tc.get_artifact_from_index(index, path)
     assert result.read() == b"foobar"
@@ -252,6 +254,11 @@ def test_get_artifact_from_index_uses_artifact_path_for_parsing(responses, root_
 
     responses.get(
         f"{root_url}/api/index/v1/task/{index_path}/artifacts/{artifact_path}",
+        status=303,
+        headers={"Location": f"http://foo.bar/{artifact_path}"},
+    )
+    responses.get(
+        f"http://foo.bar/{artifact_path}",
         body=b"key: value",
     )
 
