@@ -5,12 +5,13 @@ from taskcluster.exceptions import TaskclusterRestFailure
 
 from taskgraph.optimize.base import OptimizationStrategy, register_strategy
 from taskgraph.util.path import match as match_path
+from taskgraph.util.schema import Schema
 from taskgraph.util.taskcluster import find_task_id, status_task
 
 logger = logging.getLogger("optimization")
 
 
-@register_strategy("index-search")
+@register_strategy("index-search", schema=Schema([str]))
 class IndexSearch(OptimizationStrategy):
     # A task with no dependencies remaining after optimization will be replaced
     # if artifacts exist for the corresponding index_paths.
@@ -73,7 +74,7 @@ class IndexSearch(OptimizationStrategy):
         return False
 
 
-@register_strategy("skip-unless-changed")
+@register_strategy("skip-unless-changed", schema=Schema([str]))
 class SkipUnlessChanged(OptimizationStrategy):
     def check(self, files_changed, patterns):
         for pattern in patterns:

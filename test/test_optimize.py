@@ -7,6 +7,7 @@ from functools import partial
 
 import pytest
 from pytest_taskgraph import make_graph, make_task
+from voluptuous import Schema
 
 from taskgraph.graph import Graph
 from taskgraph.optimize import base as optimize_mod
@@ -487,3 +488,15 @@ def test_register_strategy(mocker):
     func = register_strategy("foo", args=("one", "two"), kwargs={"n": 1})
     func(m)
     m.assert_called_with("one", "two", n=1)
+
+
+def test_register_strategy_with_schema(mocker, monkeypatch):
+    monkeypatch.setattr(optimize_mod, "registry", {})
+    schema = Schema([str])
+
+    @register_strategy("bar", schema=schema)
+    class TestStrategy(OptimizationStrategy):
+        pass
+
+    assert "bar" in optimize_mod.registry
+    assert optimize_mod.registry["bar"].schema is schema

@@ -22,13 +22,14 @@ from taskgraph.graph import Graph
 from taskgraph.taskgraph import TaskGraph
 from taskgraph.util.parameterization import resolve_task_references, resolve_timestamps
 from taskgraph.util.python_path import import_sibling_modules
+from taskgraph.util.schema import validate_schema
 from taskgraph.util.taskcluster import find_task_id_batched, status_task_batched
 
 logger = logging.getLogger("optimization")
 registry = {}
 
 
-def register_strategy(name, args=(), kwargs=None):
+def register_strategy(name, args=(), kwargs=None, schema=None):
     kwargs = kwargs or {}
 
     def wrap(cls):
@@ -36,6 +37,7 @@ def register_strategy(name, args=(), kwargs=None):
             registry[name] = cls(*args, **kwargs)
             if not hasattr(registry[name], "description"):
                 registry[name].description = name
+            registry[name].schema = schema
         return cls
 
     return wrap
@@ -123,6 +125,13 @@ def _get_optimizations(target_task_graph, strategies):
         if task.optimization:
             opt_by, arg = list(task.optimization.items())[0]
             strategy = strategies[opt_by]
+            schema = getattr(strategy, "schema", None)
+            if schema:
+                validate_schema(
+                    schema,
+                    arg,
+                    f"In task `{label}` optimization `{opt_by}`:",
+                )
             if hasattr(strategy, "description"):
                 opt_by += f" ({strategy.description})"
             return (opt_by, strategy, arg)
