@@ -101,7 +101,7 @@ in addition to ``taskcluster-taskgraph`` we also want to depend on
    EOF
 
    # This works best if you use the same Python as the one used in the Decision
-   # image (currently 3.11).
+   # image (currently 3.13).
    pip-compile --generate-hashes --output-file requirements.txt requirements.in
 
 .. note::
