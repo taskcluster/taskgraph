@@ -126,8 +126,7 @@ def fill_template(config, tasks):
     context_hashes = {}
 
     if not taskgraph.fast and config.write_artifacts:
-        if not os.path.isdir(CONTEXTS_DIR):
-            os.makedirs(CONTEXTS_DIR)
+        os.makedirs(CONTEXTS_DIR, exist_ok=True)
 
     for task in tasks:
         image_name = task.pop("name")
