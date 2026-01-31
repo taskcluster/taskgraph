@@ -25,6 +25,7 @@ dependencies = [
   "cookiecutter~=2.1",
   "json-e>=2.7",
   "mozilla-repo-urls",
+  "msgspec>=0.20.0",
   "PyYAML>=5.3.1",
   "redo>=2.0",
   "requests>=2.25",

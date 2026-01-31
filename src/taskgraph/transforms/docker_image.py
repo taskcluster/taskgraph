@@ -13,7 +13,7 @@ import taskgraph
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util import json
 from taskgraph.util.docker import create_context_tar, generate_context_hash
-from taskgraph.util.schema import Schema
+from taskgraph.util.schema import LegacySchema
 
 from .task import task_description_schema
 
@@ -32,7 +32,7 @@ IMAGE_BUILDER_IMAGE = (
 transforms = TransformSequence()
 
 #: Schema for docker_image transforms
-docker_image_schema = Schema(
+docker_image_schema = LegacySchema(
     {
         Required(
             "name",
