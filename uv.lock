@@ -1510,7 +1510,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "pytest" },
+    { name = "pytest", specifier = ">=8.4.2" },
     { name = "taskcluster-taskgraph", editable = "." },
 ]
 
@@ -1914,8 +1914,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "sphinx" },
-    { name = "voluptuous" },
+    { name = "sphinx", specifier = ">=7.0.0" },
+    { name = "voluptuous", specifier = ">=0.12.1" },
 ]
 
 [[package]]
