@@ -1,0 +1,71 @@
+task-defaults:
+    matrix:
+        substitution-fields:
+            - attributes
+            - description
+            - run.command
+            - treeherder
+            - worker
+    attributes:
+        artifact_prefix: public
+        retrigger: true
+        code-review: true
+        python: "{matrix[python]}"
+        platform: linux
+        resolution: default
+    worker-type: t-linux
+    worker:
+        docker-image: {in-tree: python}
+        max-run-time: 1800
+        env:
+            PYTHONUTF8: "0"
+            PYTHONCOERCECLOCALE: "0"
+            HGENCODING: "utf-8"
+            LC_ALL: "C"
+            UV_PYTHON: "{matrix[python]}"
+    treeherder:
+        platform: test-linux/opt
+        kind: test
+        tier: 1
+    run:
+        using: run-task
+        cwd: '{checkout}'
+        use-caches: [checkout, uv]
+
+unit:
+    description: "Run unit tests with py{matrix[python]} on Linux"
+    matrix:
+        set-name: "unit-py{matrix[python]}"
+        substitution-fields: [description, run.command, treeherder, worker, attributes]
+        python: ["314t", "314", "313", "312", "311", "310", "39"]
+    worker:
+        docker-image: {in-tree: python}
+        artifacts:
+            - type: file
+              path: "/builds/worker/artifacts/coverage"
+              name: "public/coverage.py{matrix[python]}"
+    treeherder:
+        symbol: unit(py{matrix[python]})
+    run:
+        command: >-
+            uv run coverage run --data-file /builds/worker/artifacts/coverage --context=py{matrix[python]} -m pytest -vv
+
+integration:
+    description: "Run unit tests with py{matrix[python]} on Linux with resolution {matrix[resolution]}"
+    attributes:
+        resolution: "{matrix[resolution]}"
+    matrix:
+        set-name: "integration-py{matrix[python]}-deps-{matrix[resolution]}"
+        python: ["314", "39"]
+        resolution: ["highest", "lowest-direct"]
+        exclude:
+            - python: "314"
+              resolution: "lowest-direct"
+            - python: "39"
+              resolution: "highest"
+
+    treeherder:
+        symbol: integration(py{matrix[python]}-{matrix[resolution]})
+    run:
+        command: >-
+            uv run --isolated --resolution={matrix[resolution]} pytest -vv

@@ -24,6 +24,7 @@ tasks:
             with-attributes:
                 # exclude free-threaded python until it is officially supported
                 python: ["314", "313", "312", "311", "310", "39"]
+                resolution: default
             fetches:
                 test:
                     - artifact: coverage.py{matrix[python]}
