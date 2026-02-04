@@ -7,6 +7,7 @@ treeherder:
         'check': 'Checks and lints'
         'doc': 'Documentation tasks'
         'unit': 'Unit test tasks'
+        'integration': 'Integration test tasks'
 
 index:
     products:

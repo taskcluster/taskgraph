@@ -24,6 +24,8 @@ tasks:
       with-attributes:
         # exclude free-threaded python until it is officially supported
         python: ["314", "313", "312", "311", "310", "39"]
+        # exclude integration tests that ignore the lockfile
+        resolution: default
     # needs to be added explicitly until we can drop the `with-attributes` above
     dependencies:
       check-type: check-type
