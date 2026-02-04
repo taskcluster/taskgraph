@@ -6,10 +6,9 @@ readme = "README.md"
 authors = [
     { name = "Andrew Halberstadt", email = "ahal@mozilla.com" }
 ]
-requires-python = ">=3.8"
 dependencies = [
-    "sphinx",
-    "voluptuous",
+    "sphinx>=7.0.0",
+    "voluptuous>=0.12.1",
 ]
 
 [build-system]
