@@ -2079,7 +2079,7 @@ requires-dist = [
     { name = "redo", specifier = ">=2.0" },
     { name = "requests", specifier = ">=2.25" },
     { name = "slugid", specifier = ">=2.0" },
-    { name = "taskcluster", specifier = ">=92.0" },
+    { name = "taskcluster", specifier = ">=93.0" },
     { name = "taskcluster-urls", specifier = ">=11.0" },
     { name = "voluptuous", specifier = ">=0.12.1" },
     { name = "zstandard", marker = "extra == 'load-image'" },
