@@ -1,0 +1,32 @@
+task-defaults:
+    attributes:
+        artifact_prefix: public
+        retrigger: true
+        code-review: true
+    worker:
+        max-run-time: 1800
+        env:
+            PYTHONUTF8: "0"
+            PYTHONCOERCECLOCALE: "0"
+            HGENCODING: "utf-8"
+    treeherder:
+        kind: test
+        tier: 1
+    run:
+        using: run-task
+        cwd: '{checkout}'
+        use-caches: [checkout, uv]
+
+unit-win:
+    description: "Run unit tests with python on Windows"
+    attributes:
+        platform: windows
+    worker-type: t-windows
+    treeherder:
+        platform: test-win/opt
+        symbol: unit(py)
+    run:
+        command: >-
+            python3 -V &&
+            powershell -ExecutionPolicy ByPass -c 'irm https://astral.sh/uv/install.ps1 | iex' &&
+            ~/.local/bin/uv.exe run -m pytest -vv

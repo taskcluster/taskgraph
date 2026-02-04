@@ -24,7 +24,7 @@ dependencies = [
   "appdirs>=1.4",
   "cookiecutter~=2.1",
   "json-e>=2.7",
-  "mozilla-repo-urls",
+  "mozilla-repo-urls>=0.1.1",
   "msgspec>=0.20.0",
   "PyYAML>=5.3.1",
   "redo>=2.0",
@@ -37,26 +37,26 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-  "coverage",
-  "mock",
-  "pre-commit",
-  "pyright",
-  "pytest",
-  "pytest-mock",
-  "pytest-taskgraph",
-  "responses",
-  "sphinx",
-  "sphinx-autobuild",
-  "sphinx-argparse",
-  "sphinx-book-theme >=1",
-  "sphinx-taskgraph",
-  "sphinxcontrib-mermaid",
-  "zstandard",
+  "coverage>=7.10.7",
+  "mock>=5.2.0",
+  "pre-commit>=4.3.0",
+  "pyright>=1.1.406",
+  "pytest>=8.4.2",
+  "pytest-mock>=3.15.1",
+  "pytest-taskgraph>=0.2.0",
+  "responses>=0.25.8",
+  "sphinx>=7.4.7",
+  "sphinx-autobuild>=2024.04.16",
+  "sphinx-argparse>=0.4.0",
+  "sphinx-book-theme >=1.1.4",
+  "sphinx-taskgraph>=0.1.0",
+  "sphinxcontrib-mermaid>=1.0.0",
+  "zstandard>=0.25.0",
 ]
 
 [project.optional-dependencies]
-load-image = ["zstandard"]
-orjson = ["orjson"]
+load-image = ["zstandard>=0.23.0"]
+orjson = ["orjson>=3"]
 
 [project.scripts]
 taskgraph = "taskgraph.main:main"
