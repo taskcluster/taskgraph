@@ -139,10 +139,10 @@ comments for explanations):
    from voluptuous import Optional, Required
 
    from taskgraph.transforms.base import TransformSequence
-   from taskgraph.util.schema import Schema
+   from taskgraph.util.schema import LegacySchema
 
    # Define the schema. We use the `voluptuous` package to handle validation.
-   hello_description_schema = Schema({
+   hello_description_schema = LegacySchema({
        Required("text"): str,
        Optional("description"): str,
    })

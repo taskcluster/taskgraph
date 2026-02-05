@@ -1,9 +1,9 @@
 from voluptuous import ALLOW_EXTRA, Required
 
 from taskgraph.transforms.base import TransformSequence
-from taskgraph.util.schema import Schema
+from taskgraph.util.schema import LegacySchema
 
-HELLO_SCHEMA = Schema(
+HELLO_SCHEMA = LegacySchema(
     {
         Required("noun"): str,
     },

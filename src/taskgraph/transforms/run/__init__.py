@@ -21,7 +21,7 @@ from taskgraph.transforms.task import task_description_schema
 from taskgraph.util import json
 from taskgraph.util import path as mozpath
 from taskgraph.util.python_path import import_sibling_modules
-from taskgraph.util.schema import Schema, validate_schema
+from taskgraph.util.schema import LegacySchema, validate_schema
 from taskgraph.util.taskcluster import get_artifact_prefix
 from taskgraph.util.workertypes import worker_type_implementation
 
@@ -38,7 +38,7 @@ fetches_schema = {
 }
 
 #: Schema for a run transforms
-run_description_schema = Schema(
+run_description_schema = LegacySchema(
     {
         Optional(
             "name",
@@ -457,7 +457,7 @@ def run_task_using(worker_implementation, run_using, schema=None, defaults={}):
 
 
 @run_task_using(
-    "always-optimized", "always-optimized", Schema({"using": "always-optimized"})
+    "always-optimized", "always-optimized", LegacySchema({"using": "always-optimized"})
 )
 def always_optimized(config, task, taskdesc):
     pass

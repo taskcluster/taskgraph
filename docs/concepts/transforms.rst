@@ -108,9 +108,9 @@ about the state of the tasks at given points. Here is an example:
    from voluptuous import Optional, Required
 
    from taskgraph.transforms.base import TransformSequence
-   from taskgraph.util.schema import Schema
+   from taskgraph.util.schema import LegacySchema
 
-   my_schema = Schema({
+   my_schema = LegacySchema({
        Required("foo"): str,
        Optional("bar"): bool,
    })

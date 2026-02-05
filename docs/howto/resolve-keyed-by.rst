@@ -210,10 +210,10 @@ It can be used to generate a valid schema that allows a field to either use
 
 .. code-block:: python
 
-   from taskgraph.util.schema import Schema, optionally_keyed_by
+   from taskgraph.util.schema import LegacySchema, optionally_keyed_by
 
 
-   schema = Schema({
+   schema = LegacySchema({
        # ...
        Optional("worker"): {
            Optional("max-run-time"): optionally_keyed_by("platform", int),

@@ -176,9 +176,9 @@ allows tasks to pass down additional context (such as with the built-in
    from taskgraph.task import Task
    from taskgraph.transforms.base import TransformConfig
    from taskgraph.util.dependencies import group_by
-   from taskgraph.util.schema import Schema
+   from taskgraph.util.schema import LegacySchema
 
-   @group_by("custom-name", schema=Schema(str))
+   @group_by("custom-name", schema=LegacySchema(str))
    def group_by(config: TransformConfig, tasks: List[Task], ctx: str) -> List[List[Task]]:
       pass
 

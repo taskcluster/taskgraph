@@ -13,7 +13,7 @@ from voluptuous import ALLOW_EXTRA, All, Any, Extra, Length, Optional, Required
 
 from .util.caches import CACHES
 from .util.python_path import find_object
-from .util.schema import Schema, optionally_keyed_by, validate_schema
+from .util.schema import LegacySchema, optionally_keyed_by, validate_schema
 from .util.vcs import get_repository
 from .util.yaml import load_yaml
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 #: Schema for the graph config
-graph_config_schema = Schema(
+graph_config_schema = LegacySchema(
     {
         # The trust-domain for this graph.
         # (See https://firefox-source-docs.mozilla.org/taskcluster/taskcluster/taskgraph.html#taskgraph-trust-domain)  # noqa
