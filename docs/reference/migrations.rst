@@ -3,6 +3,37 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+18.x -> 19.x
+------------
+
+* The ``Schema`` class in ``taskgraph.util.schema`` is now based on msgspec
+  instead of voluptuous. The old voluptuous-based class has been renamed to
+  ``LegacySchema``. Both will continue to be supported.
+
+  If you have custom schemas using ``Schema``, you have two options:
+
+  **Option 1**: Switch to ``LegacySchema`` to keep using voluptuous:
+
+  .. code-block:: python
+
+     from taskgraph.util.schema import LegacySchema
+
+  **Option 2**: Migrate to the new msgspec-based ``Schema``:
+
+  .. code-block:: python
+
+     from taskgraph.util.schema import Schema
+
+     class MySchema(Schema):
+         foo: str
+         bar: int = 10
+
+  The new ``Schema`` class uses kebab-case renaming and forbids
+  unknown fields by default. See the msgspec documentation for more details.
+
+* ``validate_schema`` now supports both voluptuous and msgspec schemas, and
+  ``optionally_keyed_by`` accepts a ``use_msgspec=True`` flag for msgspec output.
+
 17.x -> 18.x
 ------------
 

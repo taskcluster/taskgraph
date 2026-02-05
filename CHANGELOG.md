@@ -1,5 +1,22 @@
 # Change Log
 
+## [19.0.0] - 2026-02-06
+
+### Added
+
+- BREAKING CHANGE: Support for msgspec schemas; voluptuous schemas renamed to `LegacySchema`
+
+### Changed
+
+- Updated taskcluster dependency to v92; artifact functions now handle redirects manually
+- Updated workerType in template `.taskcluster.yml`
+- Disabled unnecessary `taskcluster-proxy` for Windows tests
+
+### Fixed
+
+- Race condition in `docker_image` transforms when creating docker-contexts directory
+- Wrong location for `extra` in `.taskcluster.yml` template
+
 ## [18.1.0] - 2026-01-13
 
 ### Added
