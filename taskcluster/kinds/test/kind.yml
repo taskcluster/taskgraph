@@ -64,8 +64,6 @@ tasks:
         attributes:
             platform: windows
         worker-type: t-windows
-        worker:
-            taskcluster-proxy: true
         treeherder:
             platform: test-win/opt
             symbol: unit(py)
