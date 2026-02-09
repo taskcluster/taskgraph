@@ -29,7 +29,7 @@ def add_cache(task, taskdesc, name, mount_point, skip_untrusted=False):
         task (dict): Tasks object.
         taskdesc (dict): Target task description to modify.
         name (str): Name of the cache.
-        mount_point (path): Path on the host to mount the cache.
+        mount_point (str): Path on the host to mount the cache.
         skip_untrusted (bool): Whether cache is used in untrusted environments
             (default: False). Only applies to docker-worker.
     """
