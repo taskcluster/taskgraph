@@ -4,61 +4,65 @@
 
 import unittest
 
+import msgspec
 import pytest
-from voluptuous import Invalid, MultipleInvalid
 
 import taskgraph
 from taskgraph.util.schema import (
-    LegacySchema,
+    Schema,
     optionally_keyed_by,
     resolve_keyed_by,
     validate_schema,
 )
 
-schema = LegacySchema(
-    {
-        "x": int,
-        "y": str,
-    }
-)
+
+class SampleSchema(Schema):
+    x: int
+    y: str
 
 
 class TestValidateSchema(unittest.TestCase):
     def test_valid(self):
-        validate_schema(schema, {"x": 10, "y": "foo"}, "pfx")
+        validate_schema(SampleSchema, {"x": 10, "y": "foo"}, "pfx")
 
     def test_invalid(self):
         try:
-            validate_schema(schema, {"x": "not-int"}, "pfx")
+            validate_schema(SampleSchema, {"x": "not-int"}, "pfx")
             self.fail("no exception raised")
         except Exception as e:
             self.assertTrue(str(e).startswith("pfx\n"))
 
 
-class TestCheckSchema(unittest.TestCase):
-    def test_schema(self):
-        "Creating a schema applies taskgraph checks."
-        with self.assertRaises(Exception):
-            LegacySchema({"camelCase": int})
+class TestSchemaFeatures(unittest.TestCase):
+    def test_kebab_rename(self):
+        """Schema renames snake_case fields to kebab-case."""
+        result = msgspec.convert({"my-field": 42}, MyFieldSchema)
+        assert result.my_field == 42
 
-    def test_extend_schema(self):
-        "Extending a schema applies taskgraph checks."
-        with self.assertRaises(Exception):
-            LegacySchema({"kebab-case": int}).extend({"camelCase": int})
+    def test_forbid_unknown_fields(self):
+        """Schema rejects unknown fields by default."""
+        with self.assertRaises((msgspec.ValidationError, msgspec.DecodeError)):
+            msgspec.convert({"x": 1, "y": "a", "z": True}, SampleSchema)
 
-    def test_extend_schema_twice(self):
-        "Extending a schema twice applies taskgraph checks."
-        with self.assertRaises(Exception):
-            LegacySchema({"kebab-case": int}).extend({"more-kebab": int}).extend(
-                {"camelCase": int}
-            )
+    def test_allow_unknown_fields(self):
+        """Schema with forbid_unknown_fields=False allows extra fields."""
+
+        class OpenSchema(Schema, forbid_unknown_fields=False):
+            x: int
+
+        result = msgspec.convert({"x": 1, "extra": "ok"}, OpenSchema)
+        assert result.x == 1
 
 
-def test_check_skipped(monkeypatch):
-    """Schema not validated if 'check=False' or taskgraph.fast is unset."""
-    LegacySchema({"camelCase": int}, check=False)  # assert no exception
+class MyFieldSchema(Schema):
+    my_field: int
+
+
+def test_validation_skipped(monkeypatch):
+    """Validation is skipped when taskgraph.fast is True."""
     monkeypatch.setattr(taskgraph, "fast", True)
-    LegacySchema({"camelCase": int})  # assert no exception
+    # Pass invalid data — should not raise because validation is skipped
+    validate_schema(SampleSchema, {"x": "not-int"}, "pfx")
 
 
 class TestResolveKeyedBy(unittest.TestCase):
@@ -238,29 +242,32 @@ class TestResolveKeyedBy(unittest.TestCase):
 
 
 def test_optionally_keyed_by():
-    validator = optionally_keyed_by("foo", str)
-    assert validator("baz") == "baz"
-    assert validator({"by-foo": {"a": "b", "c": "d"}}) == {"a": "b", "c": "d"}
+    typ = optionally_keyed_by("foo", str, use_msgspec=True)
+    assert msgspec.convert("baz", typ) == "baz"
+    assert msgspec.convert({"by-foo": {"a": "b", "c": "d"}}, typ) == {
+        "by-foo": {"a": "b", "c": "d"}
+    }
 
-    with pytest.raises(Invalid):
-        validator({"by-foo": {"a": 1, "c": "d"}})
+    with pytest.raises(msgspec.ValidationError):
+        msgspec.convert({"by-foo": {"a": 1, "c": "d"}}, typ)
 
-    with pytest.raises(MultipleInvalid):
-        validator({"by-bar": {"a": "b"}})
+    with pytest.raises(msgspec.ValidationError):
+        msgspec.convert({"by-bar": {"a": "b"}}, typ)
 
 
 def test_optionally_keyed_by_mulitple_keys():
-    validator = optionally_keyed_by("foo", "bar", str)
-    assert validator("baz") == "baz"
-    assert validator({"by-foo": {"a": "b", "c": "d"}}) == {"a": "b", "c": "d"}
-    assert validator({"by-bar": {"x": "y"}}) == {"x": "y"}
-    assert validator({"by-foo": {"a": {"by-bar": {"x": "y"}}}}) == {"a": {"x": "y"}}
+    typ = optionally_keyed_by("foo", "bar", str, use_msgspec=True)
+    assert msgspec.convert("baz", typ) == "baz"
+    assert msgspec.convert({"by-foo": {"a": "b", "c": "d"}}, typ) == {
+        "by-foo": {"a": "b", "c": "d"}
+    }
+    assert msgspec.convert({"by-bar": {"x": "y"}}, typ) == {"by-bar": {"x": "y"}}
 
-    with pytest.raises(Invalid):
-        validator({"by-foo": {"a": 123, "c": "d"}})
+    with pytest.raises(msgspec.ValidationError):
+        msgspec.convert({"by-foo": {"a": 123, "c": "d"}}, typ)
 
-    with pytest.raises(MultipleInvalid):
-        validator({"by-bar": {"a": 1}})
+    with pytest.raises(msgspec.ValidationError):
+        msgspec.convert({"by-bar": {"a": 1}}, typ)
 
-    with pytest.raises(MultipleInvalid):
-        validator({"by-unknown": {"a": "b"}})
+    with pytest.raises(msgspec.ValidationError):
+        msgspec.convert({"by-unknown": {"a": "b"}}, typ)
