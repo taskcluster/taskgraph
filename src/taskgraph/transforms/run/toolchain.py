@@ -5,9 +5,7 @@
 Support for running toolchain-building tasks via dedicated scripts
 """
 
-from textwrap import dedent
-
-from voluptuous import ALLOW_EXTRA, Any, Optional, Required
+from typing import Literal, Optional, Union
 
 import taskgraph
 from taskgraph.transforms.run import configure_taskdesc_for_run, run_task_using
@@ -18,84 +16,36 @@ from taskgraph.transforms.run.common import (
 )
 from taskgraph.util import path as mozpath
 from taskgraph.util.hash import hash_paths
-from taskgraph.util.schema import LegacySchema
+from taskgraph.util.schema import Schema
 from taskgraph.util.shell import quote as shell_quote
 
 CACHE_TYPE = "toolchains.v3"
 
+
 #: Schema for run.using toolchain
-toolchain_run_schema = LegacySchema(
-    {
-        Required(
-            "using",
-            description=dedent(
-                """
-                Specifies the run type. Must be "toolchain-script".
-                """
-            ),
-        ): "toolchain-script",
-        Required(
-            "script",
-            description=dedent(
-                """
-                The script (in taskcluster/scripts/misc) to run.
-                """
-            ),
-        ): str,
-        Optional(
-            "arguments",
-            description=dedent(
-                """
-                Arguments to pass to the script.
-                """
-            ),
-        ): [str],
-        Optional(
-            "resources",
-            description=dedent(
-                """
-                Paths/patterns pointing to files that influence the outcome of
-                a toolchain build.
-                """
-            ),
-        ): [str],
-        Required(
-            "toolchain-artifact",
-            description=dedent(
-                """
-                Path to the artifact produced by the toolchain task.
-                """
-            ),
-        ): str,
-        Optional(
-            "toolchain-alias",
-            description=dedent(
-                """
-                An alias that can be used instead of the real toolchain task name in
-                fetch stanzas for tasks.
-                """
-            ),
-        ): Any(str, [str]),
-        Optional(
-            "toolchain-env",
-            description=dedent(
-                """
-                Additional env variables to add to the worker when using this
-                toolchain.
-                """
-            ),
-        ): {str: object},
-        Required(
-            "workdir",
-            description=dedent(
-                """
-                Base work directory used to set up the task.
-                """
-            ),
-        ): str,
-    },
-    extra=ALLOW_EXTRA,
-)
+class ToolchainRunSchema(Schema, forbid_unknown_fields=False, kw_only=True):
+    # Specifies the run type. Must be "toolchain-script".
+    using: Literal["toolchain-script"]
+    # The script (in taskcluster/scripts/misc) to run.
+    script: str
+    # Path to the artifact produced by the toolchain task.
+    toolchain_artifact: str
+    # Base work directory used to set up the task.
+    workdir: str
+    # Arguments to pass to the script.
+    arguments: Optional[list[str]] = None
+    # Paths/patterns pointing to files that influence the outcome of
+    # a toolchain build.
+    resources: Optional[list[str]] = None
+    # An alias that can be used instead of the real toolchain task name in
+    # fetch stanzas for tasks.
+    toolchain_alias: Optional[Union[str, list[str]]] = None
+    # Additional env variables to add to the worker when using this
+    # toolchain.
+    toolchain_env: Optional[dict[str, object]] = None
+
+
+toolchain_run_schema = ToolchainRunSchema
 
 
 def get_digest_data(config, run, taskdesc):
