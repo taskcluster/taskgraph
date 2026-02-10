@@ -1,82 +1,55 @@
-from textwrap import dedent
-
-from voluptuous import ALLOW_EXTRA, Any, Optional, Required
+from typing import Optional, Union
 
 from taskgraph.transforms.base import TransformSequence
-from taskgraph.util.schema import LegacySchema
+from taskgraph.util.schema import Schema
 from taskgraph.util.templates import deep_get, substitute_task_fields
 from taskgraph.util.yaml import load_yaml
 
+
+class TaskContextConfig(Schema):
+    # A list of fields in the task to substitute the provided values
+    # into.
+    substitution_fields: list[str]
+    # Retrieve task context values from parameters. A single
+    # parameter may be provided or a list of parameters in
+    # priority order. The latter can be useful in implementing a
+    # "default" value if some other parameter is not provided.
+    from_parameters: Optional[dict[str, Union[list[str], str]]] = None
+    # Retrieve task context values from a yaml file. The provided
+    # file should usually only contain top level keys and values
+    # (eg: nested objects will not be interpolated - they will be
+    # substituted as text representations of the object).
+    from_file: Optional[str] = None
+    # Key/value pairs to be used as task context
+    from_object: Optional[object] = None
+
+
 #: Schema for the task_context transforms
-SCHEMA = LegacySchema(
-    {
-        Optional("name"): str,
-        Optional(
-            "task-context",
-            description=dedent(
-                """
-            `task-context` can be used to substitute values into any field in a
-            task with data that is not known until `taskgraph` runs.
+class TaskContextSchema(Schema, forbid_unknown_fields=False, kw_only=True):
+    name: Optional[str] = None
+    # `task-context` can be used to substitute values into any field in a
+    # task with data that is not known until `taskgraph` runs.
+    #
+    # This data can be provided via `from-parameters` or `from-file`,
+    # which can pull in values from parameters and a defined yml file
+    # respectively.
+    #
+    # Data may also be provided directly in the `from-object` section of
+    # `task-context`. This can be useful in `kinds` that define most of
+    # their contents in `task-defaults`, but have some values that may
+    # differ for various concrete `tasks` in the `kind`.
+    #
+    # If the same key is found in multiple places the order of precedence
+    # is as follows:
+    #   - Parameters
+    #   - `from-object` keys
+    #   - File
+    #
+    # That is to say: parameters will always override anything else.
+    task_context: Optional[TaskContextConfig] = None
 
-            This data can be provided via `from-parameters` or `from-file`,
-            which can pull in values from parameters and a defined yml file
-            respectively.
 
-            Data may also be provided directly in the `from-object` section of
-            `task-context`. This can be useful in `kinds` that define most of
-            their contents in `task-defaults`, but have some values that may
-            differ for various concrete `tasks` in the `kind`.
-
-            If the same key is found in multiple places the order of precedence
-            is as follows:
-              - Parameters
-              - `from-object` keys
-              - File
-
-            That is to say: parameters will always override anything else.
-
-            """.lstrip(),
-            ),
-        ): {
-            Optional(
-                "from-parameters",
-                description=dedent(
-                    """
-                Retrieve task context values from parameters. A single
-                parameter may be provided or a list of parameters in
-                priority order. The latter can be useful in implementing a
-                "default" value if some other parameter is not provided.
-                """.lstrip()
-                ),
-            ): {str: Any([str], str)},
-            Optional(
-                "from-file",
-                description=dedent(
-                    """
-                Retrieve task context values from a yaml file. The provided
-                file should usually only contain top level keys and values
-                (eg: nested objects will not be interpolated - they will be
-                substituted as text representations of the object).
-                """.lstrip()
-                ),
-            ): str,
-            Optional(
-                "from-object",
-                description="Key/value pairs to be used as task context",
-            ): object,
-            Required(
-                "substitution-fields",
-                description=dedent(
-                    """
-                A list of fields in the task to substitute the provided values
-                into.
-                """.lstrip()
-                ),
-            ): [str],
-        },
-    },
-    extra=ALLOW_EXTRA,
-)
+SCHEMA = TaskContextSchema
 
 transforms = TransformSequence()
 transforms.add_validate(SCHEMA)
