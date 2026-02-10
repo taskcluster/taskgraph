@@ -45,6 +45,9 @@ def validate_schema(schema, obj, msg_prefix):
             else:
                 # Fall back to msgspec.convert for validation
                 msgspec.convert(obj, schema)
+        # Handle plain Python types (e.g. str, int) via msgspec.convert
+        elif isinstance(schema, type):
+            msgspec.convert(obj, schema)
         else:
             raise TypeError(f"Unsupported schema type: {type(schema)}")
     except (
@@ -317,12 +320,29 @@ class IndexSchema(Schema):
     # the names to use for this task in the TaskCluster index
     job_name: str
     # Type of gecko v2 index to use
-    type: str
+    type: str = "generic"
     # The rank that the task will receive in the TaskCluster
     # index.  A newly completed task supersedes the currently
     # indexed task iff it has a higher rank.  If unspecified,
     # 'by-tier' behavior will be used.
     rank: Union[Literal["by-tier", "build_date"], int] = "by-tier"
+
+
+class TreeherderConfig(Schema):
+    # Either a bare symbol, or 'grp(sym)'. Defaults to the
+    # uppercased first letter of each section of the kind
+    # (delimited by '-') all smooshed together.
+    symbol: Optional[str] = None
+    # The task kind. Defaults to 'build', 'test', or 'other'
+    # based on the kind name.
+    kind: Optional[Literal["build", "test", "other"]] = None
+    # Tier for this task. Defaults to 1.
+    tier: Optional[int] = None
+    # Task platform in the form platform/collection, used to
+    # set treeherder.machine.platform and
+    # treeherder.collection or treeherder.labels Defaults to
+    # 'default/opt'.
+    platform: Optional[str] = None
 
 
 class IndexSearchOptimizationSchema(Schema):

@@ -14,20 +14,20 @@ import os
 import time
 from copy import deepcopy
 from dataclasses import dataclass
-from textwrap import dedent
-from typing import Callable
-
-from voluptuous import All, Any, Extra, NotIn, Optional, Required
+from typing import Callable, Literal, Optional, Union
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.hash import hash_path
 from taskgraph.util.keyed_by import evaluate_keyed_by
 from taskgraph.util.schema import (
-    LegacySchema,
-    OptimizationSchema,
+    IndexSchema,
+    OptimizationType,
+    Schema,
+    TaskPriority,
+    TreeherderConfig,
     optionally_keyed_by,
     resolve_keyed_by,
-    taskref_or_string,
+    taskref_or_string_msgspec,
     validate_schema,
 )
 from taskgraph.util.treeherder import split_symbol, treeherder_defaults
@@ -47,343 +47,102 @@ def run_task_suffix():
     return hash_path(RUN_TASK)[0:20]
 
 
+class WorkerSchema(Schema, forbid_unknown_fields=False, kw_only=True):
+    # The worker implementation type.
+    implementation: str
+
+
 #: Schema for the task transforms
-task_description_schema = LegacySchema(
-    {
-        Required(
-            "label",
-            description=dedent(
-                """
-                The label for this task.
-                """.lstrip()
-            ),
-        ): str,
-        Required(
-            "description",
-            description=dedent(
-                """
-                Description of the task (for metadata).
-                """.lstrip()
-            ),
-        ): str,
-        Optional(
-            "attributes",
-            description=dedent(
-                """
-                Attributes for this task.
-                """.lstrip()
-            ),
-        ): {str: object},
-        Optional(
-            "task-from",
-            description=dedent(
-                """
-                Relative path (from config.path) to the file task was defined
-                in.
-                """.lstrip()
-            ),
-        ): str,
-        Optional(
-            "dependencies",
-            description=dedent(
-                """
-                Dependencies of this task, keyed by name; these are passed
-                through verbatim and subject to the interpretation of the
-                Task's get_dependencies method.
-                """.lstrip()
-            ),
-        ): {
-            All(
-                str,
-                NotIn(
-                    ["self", "decision"],
-                    "Can't use 'self` or 'decision' as dependency names.",
-                ),
-            ): object,
-        },
-        Optional(
-            "priority",
-            description=dedent(
-                """
-                Priority of the task.
-                """.lstrip()
-            ),
-        ): Any(
-            "highest",
-            "very-high",
-            "high",
-            "medium",
-            "low",
-            "very-low",
-            "lowest",
-        ),
-        Optional(
-            "soft-dependencies",
-            description=dedent(
-                """
-                Soft dependencies of this task, as a list of task labels.
-                """.lstrip()
-            ),
-        ): [str],
-        Optional(
-            "if-dependencies",
-            description=dedent(
-                """
-                Dependencies that must be scheduled in order for this task to run.
-                """.lstrip()
-            ),
-        ): [str],
-        Optional(
-            "requires",
-            description=dedent(
-                """
-                Specifies the condition for task execution.
-                """.lstrip()
-            ),
-        ): Any("all-completed", "all-resolved"),
-        Optional(
-            "expires-after",
-            description=dedent(
-                """
-                Expiration time relative to task creation, with units (e.g.,
-                '14 days'). Defaults are set based on the project.
-                """.lstrip()
-            ),
-        ): str,
-        Optional(
-            "deadline-after",
-            description=dedent(
-                """
-                Deadline time relative to task creation, with units (e.g.,
-                '14 days'). Defaults are set based on the project.
-                """.lstrip()
-            ),
-        ): str,
-        Optional(
-            "routes",
-            description=dedent(
-                """
-                Custom routes for this task; the default treeherder routes will
-                be added automatically.
-                """.lstrip()
-            ),
-        ): [str],
-        Optional(
-            "scopes",
-            description=dedent(
-                """
-                Custom scopes for this task; any scopes required for the worker
-                will be added automatically. The following parameters will be
-                substituted in each scope:
+class TaskDescriptionSchema(Schema):
+    # The label for this task.
+    label: str
+    # Description of the task (for metadata).
+    description: str
+    # The `always-target` attribute will cause the task to be included in
+    # the target_task_graph regardless of filtering.
+    #
+    # Tasks included in this manner will be candidates for
+    # optimization even when `optimize_target_tasks` is False, unless
+    # the task was also explicitly chosen by the target_tasks method.
+    always_target: bool
+    # Optimization to perform on this task during the optimization phase.
+    # Defined in taskcluster/taskgraph/optimize.py.
+    optimization: OptimizationType
+    # The provisioner-id/worker-type for the task. The following
+    # parameters will be substituted in this string:
+    #
+    #   {level} -- the scm level of this push.
+    worker_type: str
+    # Whether the task should use sccache compiler caching.
+    needs_sccache: bool
+    # Attributes for this task.
+    attributes: Optional[dict[str, object]] = None
+    # Relative path (from config.path) to the file task was defined in.
+    task_from: Optional[str] = None
+    # Dependencies of this task, keyed by name; these are passed through
+    # verbatim and subject to the interpretation of the Task's
+    # get_dependencies method.
+    dependencies: Optional[dict[str, object]] = None
+    # Priority of the task.
+    priority: Optional[TaskPriority] = None
+    # Soft dependencies of this task, as a list of task labels.
+    soft_dependencies: Optional[list[str]] = None
+    # Dependencies that must be scheduled in order for this task to run.
+    if_dependencies: Optional[list[str]] = None
+    # Specifies the condition for task execution.
+    requires: Optional[Literal["all-completed", "all-resolved"]] = None
+    # Expiration time relative to task creation, with units (e.g.,
+    # '14 days'). Defaults are set based on the project.
+    expires_after: Optional[str] = None
+    # Deadline time relative to task creation, with units (e.g.,
+    # '14 days'). Defaults are set based on the project.
+    deadline_after: Optional[str] = None
+    # Custom routes for this task; the default treeherder routes will
+    # be added automatically.
+    routes: Optional[list[str]] = None
+    # Custom scopes for this task; any scopes required for the worker
+    # will be added automatically. The following parameters will be
+    # substituted in each scope:
+    #
+    #     {level} -- the scm level of this push
+    #     {project} -- the project of this push.
+    scopes: Optional[list[str]] = None
+    # Tags for this task.
+    tags: Optional[dict[str, str]] = None
+    # Custom 'task.extra' content.
+    extra: Optional[dict[str, object]] = None
+    # Treeherder-related information. Can be a simple `true` to
+    # auto-generate information or a dictionary with specific keys.
+    treeherder: Optional[Union[bool, TreeherderConfig]] = None
+    # Information for indexing this build so its artifacts can be
+    # discovered. If omitted, the build will not be indexed.
+    index: Optional[IndexSchema] = None
+    # The `run_on_projects` attribute, defaulting to 'all'. Dictates
+    # the projects on which this task should be included in the
+    # target task set. See the attributes documentation for details.
+    run_on_projects: Optional[
+        optionally_keyed_by("build-platform", list[str], use_msgspec=True)  # type: ignore
+    ] = None
+    # Specifies tasks for which this task should run.
+    run_on_tasks_for: Optional[list[str]] = None
+    # Specifies git branches for which this task should run.
+    run_on_git_branches: Optional[list[str]] = None
+    # The `shipping_phase` attribute, defaulting to None. Specifies
+    # the release promotion phase that this task belongs to.
+    shipping_phase: Optional[Literal["build", "promote", "push", "ship"]] = None
+    # Information specific to the worker implementation that will run this task.
+    worker: Optional[WorkerSchema] = None
 
-                    {level} -- the scm level of this push
-                    {project} -- the project of this push.
-                """.lstrip()
-            ),
-        ): [str],
-        Optional(
-            "tags",
-            description=dedent(
-                """
-                Tags for this task.
-                """.lstrip()
-            ),
-        ): {str: str},
-        Optional(
-            "extra",
-            description=dedent(
-                """
-                Custom 'task.extra' content.
-                """.lstrip()
-            ),
-        ): {str: object},
-        Optional(
-            "treeherder",
-            description=dedent(
-                """
-                Treeherder-related information. Can be a simple `true` to
-                auto-generate information or a dictionary with specific keys.
-                """.lstrip()
-            ),
-        ): Any(
-            True,
-            {
-                "symbol": Optional(
-                    str,
-                    description=dedent(
-                        """
-                        Either a bare symbol, or 'grp(sym)'. Defaults to the
-                        uppercased first letter of each section of the kind
-                        (delimited by '-') all smooshed together.
-                        """.lstrip()
-                    ),
-                ),
-                "kind": Optional(
-                    Any("build", "test", "other"),
-                    description=dedent(
-                        """
-                        The task kind. Defaults to 'build', 'test', or 'other'
-                        based on the kind name.
-                        """.lstrip()
-                    ),
-                ),
-                "tier": Optional(
-                    int,
-                    description=dedent(
-                        """
-                        Tier for this task. Defaults to 1.
-                        """.lstrip()
-                    ),
-                ),
-                "platform": Optional(
-                    str,
-                    description=dedent(
-                        """
-                        Task platform in the form platform/collection, used to
-                        set treeherder.machine.platform and
-                        treeherder.collection or treeherder.labels Defaults to
-                        'default/opt'.
-                        """.lstrip()
-                    ),
-                ),
-            },
-        ),
-        Optional(
-            "index",
-            description=dedent(
-                """
-                Information for indexing this build so its artifacts can be
-                discovered. If omitted, the build will not be indexed.
-                """.lstrip()
-            ),
-        ): {
-            # the name of the product this build produces
-            "product": str,
-            # the names to use for this task in the TaskCluster index
-            "job-name": str,
-            # Type of gecko v2 index to use
-            "type": str,
-            # The rank that the task will receive in the TaskCluster
-            # index.  A newly completed task supersedes the currently
-            # indexed task iff it has a higher rank.  If unspecified,
-            # 'by-tier' behavior will be used.
-            "rank": Any(
-                # Rank is equal the timestamp of the build_date for tier-1
-                # tasks, and zero for non-tier-1.  This sorts tier-{2,3}
-                # builds below tier-1 in the index.
-                "by-tier",
-                # Rank is given as an integer constant (e.g. zero to make
-                # sure a task is last in the index).
-                int,
-                # Rank is equal to the timestamp of the build_date.  This
-                # option can be used to override the 'by-tier' behavior
-                # for non-tier-1 tasks.
-                "build_date",
-            ),
-        },
-        Optional(
-            "run-on-projects",
-            description=dedent(
-                """
-                The `run_on_projects` attribute, defaulting to 'all'. Dictates
-                the projects on which this task should be included in the
-                target task set. See the attributes documentation for details.
-                """.lstrip()
-            ),
-        ): optionally_keyed_by("build-platform", [str]),
-        Optional(
-            "run-on-tasks-for",
-            description=dedent(
-                """
-                Specifies tasks for which this task should run.
-                """.lstrip()
-            ),
-        ): [str],
-        Optional(
-            "run-on-git-branches",
-            description=dedent(
-                """
-                Specifies git branches for which this task should run.
-                """.lstrip()
-            ),
-        ): [str],
-        Optional(
-            "shipping-phase",
-            description=dedent(
-                """
-                The `shipping_phase` attribute, defaulting to None. Specifies
-                the release promotion phase that this task belongs to.
-                """.lstrip()
-            ),
-        ): Any(
-            None,
-            "build",
-            "promote",
-            "push",
-            "ship",
-        ),
-        Required(
-            "always-target",
-            description=dedent(
-                """
-                The `always-target` attribute will cause the task to be
-                included in the target_task_graph regardless of filtering.
+    def __post_init__(self):
+        if self.dependencies:
+            for key in self.dependencies:
+                if key in ("self", "decision"):
+                    raise ValueError(
+                        "Can't use 'self' or 'decision' as dependency names."
+                    )
 
-                Tasks included in this manner will be candidates for
-                optimization even when `optimize_target_tasks` is False, unless
-                the task was also explicitly chosen by the target_tasks method.
-                """.lstrip()
-            ),
-        ): bool,
-        Required(
-            "optimization",
-            description=dedent(
-                """
-                Optimization to perform on this task during the optimization
-                phase. Defined in taskcluster/taskgraph/optimize.py.
-                """.lstrip()
-            ),
-        ): OptimizationSchema,
-        Required(
-            "worker-type",
-            description=dedent(
-                """
-                The provisioner-id/worker-type for the task. The following
-                parameters will be substituted in this string:
 
-                  {level} -- the scm level of this push.
-                """.lstrip()
-            ),
-        ): str,
-        Required(
-            "needs-sccache",
-            description=dedent(
-                """
-                Whether the task should use sccache compiler caching.
-                """.lstrip()
-            ),
-        ): bool,
-        Optional(
-            "worker",
-            description=dedent(
-                """
-                Information specific to the worker implementation that will run
-                this task.
-                """.lstrip()
-            ),
-        ): {
-            Required(
-                "implementation",
-                description=dedent(
-                    """
-                    The worker implementation type.
-                    """.lstrip()
-                ),
-            ): str,
-            Extra: object,
-        },
-    }
-)
+task_description_schema = TaskDescriptionSchema
 
 TC_TREEHERDER_SCHEMA_URL = (
     "https://github.com/taskcluster/taskcluster-treeherder/"
@@ -430,18 +189,14 @@ payload_builders = {}
 
 @dataclass(frozen=True)
 class PayloadBuilder:
-    schema: LegacySchema
+    schema: object
     builder: Callable
 
 
 def payload_builder(name, schema):
-    schema = LegacySchema(
-        {Required("implementation"): name, Optional("os"): str}
-    ).extend(schema)
-
     def wrap(func):
         assert name not in payload_builders, f"duplicate payload builder name {name}"
-        payload_builders[name] = PayloadBuilder(schema, func)  # type: ignore
+        payload_builders[name] = PayloadBuilder(schema, func)
         return func
 
     return wrap
@@ -472,86 +227,67 @@ def verify_index(config, index):
         raise Exception(UNSUPPORTED_INDEX_PRODUCT_ERROR.format(product=product))
 
 
-@payload_builder(
-    "docker-worker",
-    schema={
-        Required("os"): "linux",
-        # For tasks that will run in docker-worker, this is the name of the docker
-        # image or in-tree docker image to run the task in.  If in-tree, then a
-        # dependency will be created automatically.  This is generally
-        # `desktop-test`, or an image that acts an awful lot like it.
-        Required("docker-image"): Any(
-            # a raw Docker image path (repo/image:tag)
-            str,
-            # an in-tree generated docker image (from `taskcluster/docker/<name>`)
-            {"in-tree": str},
-            # an indexed docker image
-            {"indexed": str},
-        ),
-        # worker features that should be enabled
-        Required("relengapi-proxy"): bool,
-        Required("chain-of-trust"): bool,
-        Required("taskcluster-proxy"): bool,
-        Required("allow-ptrace"): bool,
-        Required("loopback-video"): bool,
-        Required("loopback-audio"): bool,
-        Required("docker-in-docker"): bool,  # (aka 'dind')
-        Required("privileged"): bool,
-        # Paths to Docker volumes.
-        #
-        # For in-tree Docker images, volumes can be parsed from Dockerfile.
-        # This only works for the Dockerfile itself: if a volume is defined in
-        # a base image, it will need to be declared here. Out-of-tree Docker
-        # images will also require explicit volume annotation.
-        #
-        # Caches are often mounted to the same path as Docker volumes. In this
-        # case, they take precedence over a Docker volume. But a volume still
-        # needs to be declared for the path.
-        Optional("volumes"): [str],
-        # caches to set up for the task
-        Optional("caches"): [
-            {
-                # only one type is supported by any of the workers right now
-                "type": "persistent",
-                # name of the cache, allowing reuse by subsequent tasks naming the
-                # same cache
-                "name": str,
-                # location in the task image where the cache will be mounted
-                "mount-point": str,
-                # Whether the cache is not used in untrusted environments
-                # (like the Try repo).
-                Optional("skip-untrusted"): bool,
-            }
-        ],
-        # artifacts to extract from the task image after completion
-        Optional("artifacts"): [
-            {
-                # type of artifact -- simple file, or recursive directory,
-                # or a volume mounted directory.
-                "type": Any("file", "directory", "volume"),
-                # task image path from which to read artifact
-                "path": str,
-                # name of the produced artifact (root of the names for
-                # type=directory)
-                "name": str,
-            }
-        ],
-        # environment variables
-        Required("env"): {str: taskref_or_string},
-        # the command to run; if not given, docker-worker will default to the
-        # command in the docker image
-        Optional("command"): [taskref_or_string],
-        # the maximum time to run, in seconds
-        Required("max-run-time"): int,
-        # the exit status code(s) that indicates the task should be retried
-        Optional("retry-exit-status"): [int],
-        # the exit status code(s) that indicates the caches used by the task
-        # should be purged
-        Optional("purge-caches-exit-status"): [int],
-        # Whether any artifacts are assigned to this worker
-        Optional("skip-artifacts"): bool,
-    },
-)
+DockerImage = Union[str, dict[str, str]]
+
+
+class DockerWorkerCacheEntry(Schema):
+    # only one type is supported by any of the workers right now
+    type: Literal["persistent"]
+    # name of the cache, allowing reuse by subsequent tasks naming the same cache
+    name: str
+    # location in the task image where the cache will be mounted
+    mount_point: str
+    # Whether the cache is not used in untrusted environments (like the Try repo).
+    skip_untrusted: Optional[bool] = None
+
+
+class DockerWorkerArtifact(Schema):
+    # type of artifact -- simple file, or recursive directory, or a volume mounted directory.
+    type: Literal["file", "directory", "volume"]
+    # task image path from which to read artifact
+    path: str
+    # name of the produced artifact (root of the names for type=directory)
+    name: str
+
+
+class DockerWorkerPayloadSchema(Schema, forbid_unknown_fields=False, kw_only=True):
+    implementation: Literal["docker-worker"]
+    os: Literal["linux"]
+    # For tasks that will run in docker-worker, this is the name of the docker
+    # image or in-tree docker image to run the task in.
+    docker_image: DockerImage
+    # worker features that should be enabled
+    relengapi_proxy: bool
+    chain_of_trust: bool
+    taskcluster_proxy: bool
+    allow_ptrace: bool
+    loopback_video: bool
+    loopback_audio: bool
+    docker_in_docker: bool  # (aka 'dind')
+    privileged: bool
+    # environment variables
+    env: dict[str, taskref_or_string_msgspec]
+    # the maximum time to run, in seconds
+    max_run_time: int
+    # Paths to Docker volumes.
+    volumes: Optional[list[str]] = None
+    # caches to set up for the task
+    caches: Optional[list[DockerWorkerCacheEntry]] = None
+    # artifacts to extract from the task image after completion
+    artifacts: Optional[list[DockerWorkerArtifact]] = None
+    # the command to run; if not given, docker-worker will default to the
+    # command in the docker image
+    command: Optional[list[taskref_or_string_msgspec]] = None
+    # the exit status code(s) that indicates the task should be retried
+    retry_exit_status: Optional[list[int]] = None
+    # the exit status code(s) that indicates the caches used by the task
+    # should be purged
+    purge_caches_exit_status: Optional[list[int]] = None
+    # Whether any artifacts are assigned to this worker
+    skip_artifacts: Optional[bool] = None
+
+
+@payload_builder("docker-worker", schema=DockerWorkerPayloadSchema)
 def build_docker_worker_payload(config, task, task_def):
     worker = task["worker"]
     level = int(config.params["level"])
@@ -762,89 +498,71 @@ def build_docker_worker_payload(config, task, task_def):
         payload["capabilities"] = capabilities
 
 
-@payload_builder(
-    "generic-worker",
-    schema={
-        Required("os"): Any("windows", "macosx", "linux", "linux-bitbar"),
-        # see http://schemas.taskcluster.net/generic-worker/v1/payload.json
-        # and https://docs.taskcluster.net/reference/workers/generic-worker/payload
-        # command is a list of commands to run, sequentially
-        # on Windows, each command is a string, on OS X and Linux, each command is
-        # a string array
-        Required("command"): Any(
-            [taskref_or_string],
-            [[taskref_or_string]],  # Windows  # Linux / OS X
-        ),
-        # artifacts to extract from the task image after completion; note that artifacts
-        # for the generic worker cannot have names
-        Optional("artifacts"): [
-            {
-                # type of artifact -- simple file, or recursive directory
-                "type": Any("file", "directory"),
-                # filesystem path from which to read artifact
-                "path": str,
-                # if not specified, path is used for artifact name
-                Optional("name"): str,
-            }
-        ],
-        # Directories and/or files to be mounted.
-        # The actual allowed combinations are stricter than the model below,
-        # but this provides a simple starting point.
-        # See https://docs.taskcluster.net/reference/workers/generic-worker/payload
-        Optional("mounts"): [
-            {
-                # A unique name for the cache volume, implies writable cache directory
-                # (otherwise mount is a read-only file or directory).
-                Optional("cache-name"): str,
-                # Optional content for pre-loading cache, or mandatory content for
-                # read-only file or directory. Pre-loaded content can come from either
-                # a task artifact or from a URL.
-                Optional("content"): {
-                    # *** Either (artifact and task-id) or url must be specified. ***
-                    # Artifact name that contains the content.
-                    Optional("artifact"): str,
-                    # Task ID that has the artifact that contains the content.
-                    Optional("task-id"): taskref_or_string,
-                    # URL that supplies the content in response to an unauthenticated
-                    # GET request.
-                    Optional("url"): str,
-                },
-                # *** Either file or directory must be specified. ***
-                # If mounting a cache or read-only directory, the filesystem location of
-                # the directory should be specified as a relative path to the task
-                # directory here.
-                Optional("directory"): str,
-                # If mounting a file, specify the relative path within the task
-                # directory to mount the file (the file will be read only).
-                Optional("file"): str,
-                # Required if and only if `content` is specified and mounting a
-                # directory (not a file). This should be the archive format of the
-                # content (either pre-loaded cache or read-only directory).
-                Optional("format"): Any("rar", "tar.bz2", "tar.gz", "zip"),
-            }
-        ],
-        # environment variables
-        Required("env"): {str: taskref_or_string},
-        # the maximum time to run, in seconds
-        Required("max-run-time"): int,
-        # the exit status code(s) that indicates the task should be retried
-        Optional("retry-exit-status"): [int],
-        # the exit status code(s) that indicates the caches used by the task
-        # should be purged
-        Optional("purge-caches-exit-status"): [int],
-        # os user groups for test task workers
-        Optional("os-groups"): [str],
-        # feature for test task to run as administarotr
-        Optional("run-as-administrator"): bool,
-        # feature for task to run as current OS user
-        Optional("run-task-as-current-user"): bool,
-        # optional features
-        Required("chain-of-trust"): bool,
-        Optional("taskcluster-proxy"): bool,
-        # Whether any artifacts are assigned to this worker
-        Optional("skip-artifacts"): bool,
-    },
-)
+class GenericWorkerArtifact(Schema):
+    # type of artifact -- simple file, or recursive directory
+    type: Literal["file", "directory"]
+    # filesystem path from which to read artifact
+    path: str
+    # if not specified, path is used for artifact name
+    name: Optional[str] = None
+
+
+class MountContentSchema(Schema):
+    # Artifact name that contains the content.
+    artifact: Optional[str] = None
+    # Task ID that has the artifact that contains the content.
+    task_id: Optional[taskref_or_string_msgspec] = None
+    # URL that supplies the content in response to an unauthenticated GET request.
+    url: Optional[str] = None
+
+
+class MountSchema(Schema):
+    # A unique name for the cache volume.
+    cache_name: Optional[str] = None
+    # Optional content for pre-loading cache, or mandatory content for
+    # read-only file or directory.
+    content: Optional[MountContentSchema] = None
+    # If mounting a cache or read-only directory.
+    directory: Optional[str] = None
+    # If mounting a file.
+    file: Optional[str] = None
+    # Archive format of the content.
+    format: Optional[Literal["rar", "tar.bz2", "tar.gz", "zip"]] = None
+
+
+class GenericWorkerPayloadSchema(Schema, forbid_unknown_fields=False, kw_only=True):
+    implementation: Literal["generic-worker"]
+    os: Literal["windows", "macosx", "linux", "linux-bitbar"]
+    # command is a list of commands to run, sequentially
+    # On Windows, each command is a string; on Linux/OS X, each command is a string array
+    command: list
+    # environment variables
+    env: dict[str, taskref_or_string_msgspec]
+    # the maximum time to run, in seconds
+    max_run_time: int
+    # optional features
+    chain_of_trust: bool
+    # artifacts to extract from the task image after completion
+    artifacts: Optional[list[GenericWorkerArtifact]] = None
+    # Directories and/or files to be mounted.
+    mounts: Optional[list[MountSchema]] = None
+    # the exit status code(s) that indicates the task should be retried
+    retry_exit_status: Optional[list[int]] = None
+    # the exit status code(s) that indicates the caches used by the task
+    # should be purged
+    purge_caches_exit_status: Optional[list[int]] = None
+    # os user groups for test task workers
+    os_groups: Optional[list[str]] = None
+    # feature for test task to run as administrator
+    run_as_administrator: Optional[bool] = None
+    # feature for task to run as current OS user
+    run_task_as_current_user: Optional[bool] = None
+    taskcluster_proxy: Optional[bool] = None
+    # Whether any artifacts are assigned to this worker
+    skip_artifacts: Optional[bool] = None
+
+
+@payload_builder("generic-worker", schema=GenericWorkerPayloadSchema)
 def build_generic_worker_payload(config, task, task_def):
     worker = task["worker"]
 
@@ -956,38 +674,41 @@ def build_generic_worker_payload(config, task, task_def):
         task_def["payload"]["features"] = features
 
 
-@payload_builder(
-    "beetmover",
-    schema={
-        # the maximum time to run, in seconds
-        Required("max-run-time"): int,
-        # locale key, if this is a locale beetmover task
-        Optional("locale"): str,
-        Optional("partner-public"): bool,
-        Required("release-properties"): {
-            "app-name": str,
-            "app-version": str,
-            "branch": str,
-            "build-id": str,
-            "hash-type": str,
-            "platform": str,
-        },
-        # list of artifact URLs for the artifacts that should be beetmoved
-        Required("upstream-artifacts"): [
-            {
-                # taskId of the task with the artifact
-                Required("taskId"): taskref_or_string,
-                # type of signing task (for CoT)
-                Required("taskType"): str,
-                # Paths to the artifacts to sign
-                Required("paths"): [str],
-                # locale is used to map upload path and allow for duplicate simple names
-                Required("locale"): str,
-            }
-        ],
-        Optional("artifact-map"): object,
-    },
-)
+class ReleaseProperties(Schema):
+    app_name: str
+    app_version: str
+    branch: str
+    build_id: str
+    hash_type: str
+    platform: str
+
+
+class UpstreamArtifact(Schema, rename="camel"):
+    # taskId of the task with the artifact
+    task_id: taskref_or_string_msgspec
+    # type of signing task (for CoT)
+    task_type: str
+    # Paths to the artifacts to sign
+    paths: list[str]
+    # locale is used to map upload path and allow for duplicate simple names
+    locale: str
+
+
+class BeetmoverPayloadSchema(Schema, forbid_unknown_fields=False, kw_only=True):
+    implementation: Literal["beetmover"]
+    # the maximum time to run, in seconds
+    max_run_time: int
+    # release properties
+    release_properties: ReleaseProperties
+    # list of artifact URLs for the artifacts that should be beetmoved
+    upstream_artifacts: list[UpstreamArtifact]
+    # locale key, if this is a locale beetmover task
+    locale: Optional[str] = None
+    partner_public: Optional[bool] = None
+    artifact_map: Optional[object] = None
+
+
+@payload_builder("beetmover", schema=BeetmoverPayloadSchema)
 def build_beetmover_payload(config, task, task_def):
     worker = task["worker"]
     release_properties = worker["release-properties"]
@@ -1013,25 +734,27 @@ def build_beetmover_payload(config, task, task_def):
         task_def["payload"]["is_partner_repack_public"] = worker["partner-public"]
 
 
-@payload_builder(
-    "invalid",
-    schema={
-        # an invalid task is one which should never actually be created; this is used in
-        # release automation on branches where the task just doesn't make sense
-        Extra: object,
-    },
-)
+class InvalidPayloadSchema(Schema, forbid_unknown_fields=False, kw_only=True):
+    # an invalid task is one which should never actually be created; this is used in
+    # release automation on branches where the task just doesn't make sense
+    implementation: Literal["invalid"]
+
+
+@payload_builder("invalid", schema=InvalidPayloadSchema)
 def build_invalid_payload(config, task, task_def):
     task_def["payload"] = "invalid task - should never be created"
 
 
-@payload_builder(
-    "always-optimized",
-    schema={
-        Extra: object,
-    },
-)
-@payload_builder("succeed", schema={})
+class AlwaysOptimizedPayloadSchema(Schema, forbid_unknown_fields=False, kw_only=True):
+    implementation: Literal["always-optimized"]
+
+
+class SucceedPayloadSchema(Schema):
+    implementation: Literal["succeed"]
+
+
+@payload_builder("always-optimized", schema=AlwaysOptimizedPayloadSchema)
+@payload_builder("succeed", schema=SucceedPayloadSchema)
 def build_dummy_payload(config, task, task_def):
     task_def["payload"] = {}
 

@@ -8,12 +8,12 @@ See https://docs.taskcluster.net/docs/reference/core/notify/usage for
 more information.
 """
 
-from voluptuous import ALLOW_EXTRA, Any, Exclusive, Optional, Required
+from typing import Literal, Optional, Union
 
 from taskgraph.transforms.base import TransformSequence
-from taskgraph.util.schema import LegacySchema, optionally_keyed_by, resolve_keyed_by
+from taskgraph.util.schema import Schema, optionally_keyed_by, resolve_keyed_by
 
-_status_type = Any(
+StatusType = Literal[
     "on-completed",
     "on-defined",
     "on-exception",
@@ -21,30 +21,35 @@ _status_type = Any(
     "on-pending",
     "on-resolved",
     "on-running",
-)
-
-_recipients = [
-    {
-        Required("type"): "email",
-        Required("address"): optionally_keyed_by("project", "level", str),
-        Optional("status-type"): _status_type,
-    },
-    {
-        Required("type"): "matrix-room",
-        Required("room-id"): str,
-        Optional("status-type"): _status_type,
-    },
-    {
-        Required("type"): "pulse",
-        Required("routing-key"): str,
-        Optional("status-type"): _status_type,
-    },
-    {
-        Required("type"): "slack-channel",
-        Required("channel-id"): str,
-        Optional("status-type"): _status_type,
-    },
 ]
+
+
+class EmailRecipient(Schema, tag_field="type", tag="email", kw_only=True):
+    address: optionally_keyed_by("project", "level", str, use_msgspec=True)  # type: ignore
+    status_type: Optional[StatusType] = None
+
+
+class MatrixRoomRecipient(Schema, tag_field="type", tag="matrix-room", kw_only=True):
+    room_id: str
+    status_type: Optional[StatusType] = None
+
+
+class PulseRecipient(Schema, tag_field="type", tag="pulse", kw_only=True):
+    routing_key: str
+    status_type: Optional[StatusType] = None
+
+
+class SlackChannelRecipient(
+    Schema, tag_field="type", tag="slack-channel", kw_only=True
+):
+    channel_id: str
+    status_type: Optional[StatusType] = None
+
+
+Recipient = Union[
+    EmailRecipient, MatrixRoomRecipient, PulseRecipient, SlackChannelRecipient
+]
+
 
 _route_keys = {
     "email": "address",
@@ -54,43 +59,61 @@ _route_keys = {
 }
 """Map each type to its primary key that will be used in the route."""
 
+
+class EmailLinkContent(Schema):
+    text: str
+    href: str
+
+
+class EmailContent(Schema):
+    subject: Optional[str] = None
+    content: Optional[str] = None
+    link: Optional[EmailLinkContent] = None
+
+
+class MatrixContent(Schema):
+    body: Optional[str] = None
+    formatted_body: Optional[str] = None
+    format: Optional[str] = None
+    msg_type: Optional[str] = None
+
+
+class SlackContent(Schema):
+    text: Optional[str] = None
+    blocks: Optional[list] = None
+    attachments: Optional[list] = None
+
+
+class NotifyContentConfig(Schema):
+    email: Optional[EmailContent] = None
+    matrix: Optional[MatrixContent] = None
+    slack: Optional[SlackContent] = None
+
+
+class NotifyConfig(Schema):
+    recipients: list[Recipient]
+    content: Optional[NotifyContentConfig] = None
+
+
+class LegacyNotificationsConfig(Schema):
+    # Continue supporting the legacy schema for backwards compat.
+    emails: optionally_keyed_by("project", "level", list[str], use_msgspec=True)  # type: ignore
+    subject: str
+    message: Optional[str] = None
+    status_types: Optional[list[StatusType]] = None
+
+
 #: Schema for notify transforms
-NOTIFY_SCHEMA = LegacySchema(
-    {
-        Exclusive("notify", "config"): {
-            Required("recipients"): [Any(*_recipients)],
-            Optional("content"): {
-                Optional("email"): {
-                    Optional("subject"): str,
-                    Optional("content"): str,
-                    Optional("link"): {
-                        Required("text"): str,
-                        Required("href"): str,
-                    },
-                },
-                Optional("matrix"): {
-                    Optional("body"): str,
-                    Optional("formatted-body"): str,
-                    Optional("format"): str,
-                    Optional("msg-type"): str,
-                },
-                Optional("slack"): {
-                    Optional("text"): str,
-                    Optional("blocks"): list,
-                    Optional("attachments"): list,
-                },
-            },
-        },
-        # Continue supporting the legacy schema for backwards compat.
-        Exclusive("notifications", "config"): {
-            Required("emails"): optionally_keyed_by("project", "level", [str]),
-            Required("subject"): str,
-            Optional("message"): str,
-            Optional("status-types"): [_status_type],
-        },
-    },
-    extra=ALLOW_EXTRA,
-)
+class NotifySchema(Schema, forbid_unknown_fields=False, kw_only=True):
+    notify: Optional[NotifyConfig] = None
+    notifications: Optional[LegacyNotificationsConfig] = None
+
+    def __post_init__(self):
+        if self.notify is not None and self.notifications is not None:
+            raise ValueError("'notify' and 'notifications' are mutually exclusive")
+
+
+NOTIFY_SCHEMA = NotifySchema
 
 transforms = TransformSequence()
 transforms.add_validate(NOTIFY_SCHEMA)

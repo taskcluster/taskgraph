@@ -43,6 +43,11 @@ templates_path = ["_templates"]
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ["docs/_build", "Thumbs.db", ".DS_Store"]
 
+# Suppress ambiguous cross-reference warnings from autodoc.
+# Multiple Schema classes define fields with the same name (e.g. "path"),
+# which Sphinx can't disambiguate.
+suppress_warnings = ["ref.python"]
+
 
 # -- Options for HTML output -------------------------------------------------
 
