@@ -11,6 +11,7 @@ transforms:
 kind-dependencies:
   - check
   - test
+  - doc
 
 tasks:
   pr:
@@ -29,3 +30,4 @@ tasks:
     # needs to be added explicitly until we can drop the `with-attributes` above
     dependencies:
       check-type: check-type
+      doc: doc-generate
