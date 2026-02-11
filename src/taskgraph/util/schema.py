@@ -6,7 +6,7 @@ import pprint
 import re
 from collections.abc import Mapping
 from functools import reduce
-from typing import Literal, Optional, Union
+from typing import Any, Literal, Optional, Union
 
 import msgspec
 import voluptuous
@@ -79,9 +79,11 @@ def optionally_keyed_by(*arguments, use_msgspec=False):
     if use_msgspec:
         # msgspec implementation - return type hints
         _type = arguments[-1]
+        if _type is object:
+            return object
         fields = arguments[:-1]
         bykeys = [Literal[f"by-{field}"] for field in fields]
-        return Union[_type, dict[UnionTypes(*bykeys), dict[str, _type]]]
+        return Union[_type, dict[UnionTypes(*bykeys), dict[str, Any]]]
     else:
         # voluptuous implementation - return validator function
         schema = arguments[-1]
