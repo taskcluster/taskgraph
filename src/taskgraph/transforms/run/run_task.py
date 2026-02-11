@@ -7,19 +7,16 @@ Support for running tasks that are invoked via the `run-task` script.
 
 import dataclasses
 import os
-from textwrap import dedent
-
-from voluptuous import Any, Optional, Required
+from typing import Literal, Optional, Union
 
 from taskgraph.transforms.run import run_task_using
 from taskgraph.transforms.run.common import (
     support_caches,
     support_vcs_checkout,
 )
-from taskgraph.transforms.task import taskref_or_string
 from taskgraph.util import path, taskcluster
 from taskgraph.util.caches import CACHES
-from taskgraph.util.schema import LegacySchema
+from taskgraph.util.schema import Schema, taskref_or_string_msgspec
 
 EXEC_COMMANDS = {
     "bash": ["bash", "-cx"],
@@ -28,90 +25,65 @@ EXEC_COMMANDS = {
 
 
 #: Schema for run.using run_task
-run_task_schema = LegacySchema(
-    {
-        Required(
-            "using",
-            description=dedent(
-                """
-                Specifies the task type. Must be 'run-task'.
-                """.lstrip()
-            ),
-        ): "run-task",
-        Optional(
-            "use-caches",
-            description=dedent(
-                """
-                Specifies which caches to use. May take a boolean in which case either all
-                (True) or no (False) caches will be used. Alternatively, it can accept a
-                list of caches to enable. Defaults to only the checkout cache enabled.
-                """.lstrip()
-            ),
-        ): Any(bool, list(CACHES.keys())),
-        Required(
-            "checkout",
-            description=dedent(
-                """
-                If true (the default), perform a checkout on the worker. Can also be a
-                dictionary specifying explicit checkouts.
-                """.lstrip()
-            ),
-        ): Any(bool, {str: dict}),
-        Optional(
-            "cwd",
-            description=dedent(
-                """
-                Path to run command in. If a checkout is present, the path to the checkout
-                will be interpolated with the key `checkout`.
-                """.lstrip()
-            ),
-        ): str,
-        Required(
-            "command",
-            description=dedent(
-                """
-                The command arguments to pass to the `run-task` script, after the checkout
-                arguments. If a list, it will be passed directly; otherwise it will be
-                included in a single argument to the command specified by `exec-with`.
-                """.lstrip()
-            ),
-        ): Any([taskref_or_string], taskref_or_string),
-        Optional(
-            "exec-with",
-            description=dedent(
-                """
-                Specifies what to execute the command with in the event the command is a
-                string.
-                """.lstrip()
-            ),
-        ): Any(*list(EXEC_COMMANDS)),
-        Optional(
-            "run-task-command",
-            description=dedent(
-                """
-                Command used to invoke the `run-task` script. Can be used if the script
-                or Python installation is in a non-standard location on the workers.
-                """.lstrip()
-            ),
-        ): list,
-        Required(
-            "workdir",
-            description=dedent(
-                """
-                Base work directory used to set up the task.
-                """.lstrip()
-            ),
-        ): str,
-        Optional(
-            "run-as-root",
-            description=dedent(
-                """
-                Whether to run as root. Defaults to False.
-                """.lstrip()
-            ),
-        ): bool,
-    }
-)
+class RunTaskSchema(Schema):
+    """
+    Schema for run.using run_task.
+    """
+
+    # Required fields first
+    # Specifies the task type. Must be 'run-task'.
+    using: Literal["run-task"]
+
+    # The command arguments to pass to the `run-task` script, after the checkout
+    # arguments. If a list, it will be passed directly; otherwise it will be
+    # included in a single argument to the command specified by `exec-with`.
+    command: Union[list[taskref_or_string_msgspec], taskref_or_string_msgspec]
+
+    # Base work directory used to set up the task.
+    workdir: str
+
+    # Optional fields
+    # Specifies which caches to use. May take a boolean in which case either all
+    # (True) or no (False) caches will be used. Alternatively, it can accept a
+    # list of caches to enable. Defaults to only the checkout cache enabled.
+    use_caches: Optional[Union[bool, list[str]]] = None
+
+    # If true (the default), perform a checkout on the worker. Can also be a
+    # dictionary specifying explicit checkouts.
+    checkout: Union[bool, dict[str, dict]] = True
+
+    # Path to run command in. If a checkout is present, the path to the checkout
+    # will be interpolated with the key `checkout`.
+    cwd: Optional[str] = None
+
+    # Specifies what to execute the command with in the event the command is a
+    # string.
+    exec_with: Optional[str] = None
+
+    # Command used to invoke the `run-task` script. Can be used if the script
+    # or Python installation is in a non-standard location on the workers.
+    run_task_command: Optional[list[str]] = None
+
+    # Whether to run as root. Defaults to False.
+    run_as_root: bool = False
+
+    def __post_init__(self):
+        """Validate cache names and exec_with values."""
+        # Validate cache names
+        if isinstance(self.use_caches, list):
+            invalid = set(self.use_caches) - set(CACHES.keys())
+            if invalid:
+                raise ValueError(
+                    f"Invalid cache names: {invalid}. "
+                    f"Valid names are: {list(CACHES.keys())}"
+                )
+
+        # Validate exec_with
+        if self.exec_with is not None and self.exec_with not in EXEC_COMMANDS:
+            raise ValueError(
+                f"Invalid exec_with value: {self.exec_with}. "
+                f"Valid values are: {list(EXEC_COMMANDS.keys())}"
+            )
 
 
 def common_setup(config, task, taskdesc, command):
@@ -165,13 +137,13 @@ def script_url(config, script):
         raise Exception("TASK_ID must be defined to use run-task on generic-worker")
     task_id = os.environ.get("TASK_ID", "<TASK_ID>")
     # Assumes the cluster allows anonymous downloads of public artifacts
-    tc_url = taskcluster.get_root_url(block_proxy=True)
+    tc_url = taskcluster.get_root_url()
     # TODO: Use util/taskcluster.py:get_artifact_url once hack for Bug 1405889 is removed
     return f"{tc_url}/api/queue/v1/task/{task_id}/artifacts/public/{script}"
 
 
 @run_task_using(
-    "docker-worker", "run-task", schema=run_task_schema, defaults=worker_defaults
+    "docker-worker", "run-task", schema=RunTaskSchema, defaults=worker_defaults
 )
 def docker_worker_run_task(config, task, taskdesc):
     run = task["run"]
@@ -193,7 +165,7 @@ def docker_worker_run_task(config, task, taskdesc):
 
 
 @run_task_using(
-    "generic-worker", "run-task", schema=run_task_schema, defaults=worker_defaults
+    "generic-worker", "run-task", schema=RunTaskSchema, defaults=worker_defaults
 )
 def generic_worker_run_task(config, task, taskdesc):
     run = task["run"]

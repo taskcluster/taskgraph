@@ -1,17 +1,13 @@
-from voluptuous import ALLOW_EXTRA, Required
-
 from taskgraph.transforms.base import TransformSequence
-from taskgraph.util.schema import LegacySchema
+from taskgraph.util.schema import Schema
 
-HELLO_SCHEMA = LegacySchema(
-    {
-        Required("noun"): str,
-    },
-    extra=ALLOW_EXTRA,
-)
+
+class HelloSchema(Schema):
+    noun: str  # Required field
+
 
 transforms = TransformSequence()
-transforms.add_validate(HELLO_SCHEMA)
+transforms.add_validate(HelloSchema)
 
 
 @transforms.add

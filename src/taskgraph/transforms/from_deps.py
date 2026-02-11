@@ -13,108 +13,75 @@ after each build task, whatever builds may exist.
 
 from copy import deepcopy
 from textwrap import dedent
-
-from voluptuous import ALLOW_EXTRA, Any, Optional, Required
+from typing import Any, Literal, Optional, Union
 
 from taskgraph.transforms.base import TransformSequence
-from taskgraph.transforms.run import fetches_schema
+from taskgraph.transforms.run import FetchesSchema
 from taskgraph.util.attributes import attrmatch
 from taskgraph.util.dependencies import GROUP_BY_MAP, get_dependencies
-from taskgraph.util.schema import LegacySchema, validate_schema
+from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.set_name import SET_NAME_MAP
 
-#: Schema for from_deps transforms
-FROM_DEPS_SCHEMA = LegacySchema(
-    {
-        Required("from-deps"): {
-            Optional(
-                "kinds",
-                description=dedent(
-                    """
-                Limit dependencies to specified kinds (defaults to all kinds in
-                `kind-dependencies`).
+SetNameType = Literal["strip-kind", "retain-kind"]
+GroupByType = Literal[
+    "single",
+    "all",
+    "attribute",
+    "single-with-filters",
+    "platform",
+    "single-locale",
+    "chunk-locales",
+    "partner-repack-ids",
+    "component",
+    "build-type",
+]
 
-                The first kind in the list is the "primary" kind. The
-                dependency of this kind will be used to derive the label
-                and copy attributes (if `copy-attributes` is True).
-                """.lstrip()
-                ),
-            ): [str],
-            Optional(
-                "set-name",
-                description=dedent(
-                    """
-                UPDATE ME AND DOCS
-                """.lstrip()
-                ),
-            ): Any(
-                None,
-                False,
-                *SET_NAME_MAP,
-                {Any(*SET_NAME_MAP): object},
-            ),
-            Optional(
-                "with-attributes",
-                description=dedent(
-                    """
-                Limit dependencies to tasks whose attributes match
-                using :func:`~taskgraph.util.attributes.attrmatch`.
-                """.lstrip()
-                ),
-            ): {str: Any(list, str)},
-            Optional(
-                "group-by",
-                description=dedent(
-                    """
-                Group cross-kind dependencies using the given group-by
-                function. One task will be created for each group. If not
-                specified, the 'single' function will be used which creates
-                a new task for each individual dependency.
-                """.lstrip()
-                ),
-            ): Any(
-                None,
-                *GROUP_BY_MAP,
-                {Any(*GROUP_BY_MAP): object},
-            ),
-            Optional(
-                "copy-attributes",
-                description=dedent(
-                    """
-                If True, copy attributes from the dependency matching the
-                first kind in the `kinds` list (whether specified explicitly
-                or taken from `kind-dependencies`).
-                """.lstrip()
-                ),
-            ): bool,
-            Optional(
-                "unique-kinds",
-                description=dedent(
-                    """
-                If true (the default), there must be only a single unique task
-                for each kind in a dependency group. Setting this to false
-                disables that requirement.
-                """.lstrip()
-                ),
-            ): bool,
-            Optional(
-                "fetches",
-                description=dedent(
-                    """
-                If present, a `fetches` entry will be added for each task
-                dependency. Attributes of the upstream task may be used as
-                substitution values in the `artifact` or `dest` values of the
-                `fetches` entry.
-                """.lstrip()
-                ),
-            ): {str: [fetches_schema]},
-        },
-    },
-    extra=ALLOW_EXTRA,
-)
+
+class FromDepsChildSchema(Schema):
+    # Optional fields
+    # Limit dependencies to specified kinds (defaults to all kinds in
+    # `kind-dependencies`).
+    #
+    # The first kind in the list is the "primary" kind. The
+    # dependency of this kind will be used to derive the label
+    # and copy attributes (if `copy-attributes` is True).
+    kinds: Optional[list[str]] = None
+    # Set the task name using the specified function. Can be False to
+    # disable name setting, or a string/dict specifying the function to use.
+    set_name: Optional[Union[SetNameType, bool, dict[SetNameType, Any]]] = None
+    # Limit dependencies to tasks whose attributes match
+    # using :func:`~taskgraph.util.attributes.attrmatch`.
+    with_attributes: Optional[dict[str, Union[list[Any], str]]] = None
+    # Group cross-kind dependencies using the given group-by
+    # function. One task will be created for each group. If not
+    # specified, the 'single' function will be used which creates
+    # a new task for each individual dependency.
+    group_by: Optional[Union[GroupByType, dict[GroupByType, Any]]] = None
+    # If True, copy attributes from the dependency matching the
+    # first kind in the `kinds` list (whether specified explicitly
+    # or taken from `kind-dependencies`).
+    copy_attributes: Optional[bool] = None
+    # If true (the default), there must be only a single unique task
+    # for each kind in a dependency group. Setting this to false
+    # disables that requirement.
+    unique_kinds: Optional[bool] = None
+    # If present, a `fetches` entry will be added for each task
+    # dependency. Attributes of the upstream task may be used as
+    # substitution values in the `artifact` or `dest` values of the
+    # `fetches` entry.
+    # Keys are task kind names, values are lists of FetchesSchema objects.
+    fetches: Optional[dict[str, list[FetchesSchema]]] = None
+
+
+# Schema for from_deps transforms
+class FromDepsSchema(Schema, forbid_unknown_fields=False):
+    """Schema for from_deps transforms."""
+
+    from_deps: FromDepsChildSchema
+
 
 transforms = TransformSequence()
-transforms.add_validate(FROM_DEPS_SCHEMA)
+transforms.add_validate(FromDepsSchema)
 
 
 @transforms.add

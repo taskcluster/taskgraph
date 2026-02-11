@@ -2,112 +2,121 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-
 import logging
 import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-
-from voluptuous import ALLOW_EXTRA, All, Any, Extra, Length, Optional, Required
+from typing import Literal, Optional, Union
 
 from .util.caches import CACHES
 from .util.python_path import find_object
-from .util.schema import LegacySchema, optionally_keyed_by, validate_schema
+from .util.schema import (
+    Schema,
+    TaskPriority,
+    optionally_keyed_by,
+    validate_schema,
+)
 from .util.vcs import get_repository
 from .util.yaml import load_yaml
 
 logger = logging.getLogger(__name__)
 
+# CacheName type for valid cache names
+CacheName = Literal[tuple(CACHES.keys())]
 
-#: Schema for the graph config
-graph_config_schema = LegacySchema(
-    {
-        # The trust-domain for this graph.
-        # (See https://firefox-source-docs.mozilla.org/taskcluster/taskcluster/taskgraph.html#taskgraph-trust-domain)  # noqa
-        Required("trust-domain"): str,
-        Optional(
-            "docker-image-kind",
-            description="Name of the docker image kind (default: docker-image)",
-        ): str,
-        Required("task-priority"): optionally_keyed_by(
-            "project",
-            "level",
-            Any(
-                "highest",
-                "very-high",
-                "high",
-                "medium",
-                "low",
-                "very-low",
-                "lowest",
-            ),
-        ),
-        Optional(
-            "task-deadline-after",
-            description="Default 'deadline' for tasks, in relative date format. "
-            "Eg: '1 week'",
-        ): optionally_keyed_by("project", str),
-        Optional(
-            "task-expires-after",
-            description="Default 'expires-after' for level 1 tasks, in relative date format. "
-            "Eg: '90 days'",
-        ): str,
-        Required("workers"): {
-            Required("aliases"): {
-                str: {
-                    Required("provisioner"): optionally_keyed_by("level", str),
-                    Required("implementation"): str,
-                    Required("os"): str,
-                    Required("worker-type"): optionally_keyed_by("level", str),
-                }
-            },
-        },
-        Required("taskgraph"): {
-            Optional(
-                "register",
-                description="Python function to call to register extensions.",
-            ): str,
-            Optional("decision-parameters"): str,
-            Optional(
-                "cached-task-prefix",
-                description="The taskcluster index prefix to use for caching tasks. "
-                "Defaults to `trust-domain`.",
-            ): str,
-            Optional(
-                "cache-pull-requests",
-                description="Should tasks from pull requests populate the cache",
-            ): bool,
-            Optional(
-                "index-path-regexes",
-                description="Regular expressions matching index paths to be summarized.",
-            ): [str],
-            Optional(
-                "run",
-                description="Configuration related to the 'run' transforms.",
-            ): {
-                Optional(
-                    "use-caches",
-                    description="List of caches to enable, or a boolean to "
-                    "enable/disable all of them.",
-                ): Any(bool, list(CACHES.keys())),
-            },
-            Required("repositories"): All(
-                {
-                    str: {
-                        Required("name"): str,
-                        Optional("project-regex"): str,
-                        Optional("ssh-secret-name"): str,
-                        # FIXME
-                        Extra: str,
-                    }
-                },
-                Length(min=1),
-            ),
-        },
-    },
-    extra=ALLOW_EXTRA,
-)
+
+class WorkerAliasSchema(Schema):
+    """Worker alias configuration."""
+
+    provisioner: optionally_keyed_by("level", str, use_msgspec=True)  # type: ignore
+    implementation: str
+    os: str
+    worker_type: optionally_keyed_by("level", str, use_msgspec=True)  # type: ignore
+
+
+class WorkersSchema(Schema, rename=None):
+    """Workers configuration."""
+
+    aliases: dict[str, WorkerAliasSchema]
+
+
+class Repository(Schema, forbid_unknown_fields=False):
+    """Repository configuration.
+
+    This schema allows extra fields for repository-specific configuration.
+    """
+
+    # Required fields first
+    name: str
+
+    # Optional fields
+    project_regex: Optional[str] = None  # Maps from "project-regex"
+    ssh_secret_name: Optional[str] = None  # Maps from "ssh-secret-name"
+
+
+class RunConfig(Schema):
+    """Run transforms configuration."""
+
+    # List of caches to enable, or a boolean to enable/disable all of them.
+    use_caches: Optional[Union[bool, list[str]]] = None  # Maps from "use-caches"
+
+    def __post_init__(self):
+        """Validate that cache names are valid."""
+        if isinstance(self.use_caches, list):
+            invalid = set(self.use_caches) - set(CACHES.keys())
+            if invalid:
+                raise ValueError(
+                    f"Invalid cache names: {invalid}. "
+                    f"Valid names are: {list(CACHES.keys())}"
+                )
+
+
+class TaskGraphSchema(Schema):
+    """Taskgraph specific configuration."""
+
+    # Required fields first
+    repositories: dict[str, Repository]
+
+    # Optional fields
+    # Python function to call to register extensions.
+    register: Optional[str] = None
+    decision_parameters: Optional[str] = None  # Maps from "decision-parameters"
+    # The taskcluster index prefix to use for caching tasks. Defaults to `trust-domain`.
+    cached_task_prefix: Optional[str] = None  # Maps from "cached-task-prefix"
+    # Should tasks from pull requests populate the cache
+    cache_pull_requests: Optional[bool] = None  # Maps from "cache-pull-requests"
+    # Regular expressions matching index paths to be summarized.
+    index_path_regexes: Optional[list[str]] = None  # Maps from "index-path-regexes"
+    # Configuration related to the 'run' transforms.
+    run: Optional[RunConfig] = None
+
+
+class GraphConfigSchema(Schema, forbid_unknown_fields=False):
+    """Main graph configuration schema.
+
+    This schema allows extra fields for flexibility in graph configuration.
+    """
+
+    # Required fields first
+    # The trust-domain for this graph.
+    # (See https://firefox-source-docs.mozilla.org/taskcluster/taskcluster/taskgraph.html#taskgraph-trust-domain)
+    trust_domain: str  # Maps from "trust-domain"
+    task_priority: optionally_keyed_by(
+        "project", "level", TaskPriority, use_msgspec=True
+    )  # type: ignore
+    workers: WorkersSchema
+    taskgraph: TaskGraphSchema
+
+    # Optional fields
+    # Name of the docker image kind (default: docker-image)
+    docker_image_kind: Optional[str] = None  # Maps from "docker-image-kind"
+    # Default 'deadline' for tasks, in relative date format. Eg: '1 week'
+    task_deadline_after: Optional[
+        optionally_keyed_by("project", str, use_msgspec=True)  # pyright: ignore[reportInvalidTypeForm]
+    ] = None
+    # Default 'expires-after' for level 1 tasks, in relative date format. Eg: '90 days'
+    task_expires_after: Optional[str] = None  # Maps from "task-expires-after"
 
 
 @dataclass(frozen=True, eq=False)
@@ -178,7 +187,8 @@ class GraphConfig:
 
 
 def validate_graph_config(config):
-    validate_schema(graph_config_schema, config, "Invalid graph configuration:")
+    """Validate graph configuration using msgspec."""
+    validate_schema(GraphConfigSchema, config, "Invalid graph configuration:")
 
 
 def load_graph_config(root_dir):

@@ -136,23 +136,23 @@ comments for explanations):
 
 .. code-block:: python
 
-   from voluptuous import Optional, Required
-
+   from typing import Optional
+   from taskgraph.util.schema import Schema
    from taskgraph.transforms.base import TransformSequence
-   from taskgraph.util.schema import LegacySchema
 
-   # Define the schema. We use the `voluptuous` package to handle validation.
-   hello_description_schema = LegacySchema({
-       Required("text"): str,
-       Optional("description"): str,
-   })
+   # Define the schema using Schema base class.
+   class HelloDescriptionSchema(Schema):
+       text: str                          # Required field
+       description: Optional[str] = None  # Optional field
+
+   hello_description_struct = HelloDescriptionSchema
 
    # Create a 'TransformSequence' instance. This class collects transform
    # functions to run later.
    transforms = TransformSequence()
 
    # First let's validate tasks against the schema.
-   transforms.add_validate(hello_description_schema)
+   transforms.add_validate(hello_description_struct)
 
    # Register our first transform functions via decorator.
    @transforms.add
