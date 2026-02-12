@@ -547,7 +547,13 @@ def test_load_task_with_develop(mocker, run_load_task, task):
 
 @pytest.fixture
 def run_build_image(mocker):
-    def inner(image_name, save_image=None, context_file=None, image_task=None):
+    def inner(
+        image_name,
+        save_image=None,
+        context_file=None,
+        image_task=None,
+        parent_task_id=None,
+    ):
         graph_config = GraphConfig(
             {
                 "trust-domain": "test-domain",
@@ -614,6 +620,8 @@ def run_build_image(mocker):
 
         parent_image = mocker.MagicMock()
         parent_image.task = {"payload": {"env": {}}}
+        if parent_task_id:
+            parent_image.task_id = parent_task_id
 
         mocks["image_task"] = image_task
         mocks["load_tasks_for_kind"].return_value = {
@@ -717,8 +725,10 @@ def test_build_image_with_parent_not_found(
     # Test building image that uses DOCKER_IMAGE_PARENT
     image_task = mocker.MagicMock()
     image_task.task = {"payload": {"env": {"PARENT_TASK_ID": parent_task_id}}}
-    image_task.dependencies = {"parent": "docker-image-parent"}
-    result, mocks = run_build_image("hello-world", image_task=image_task)
+    image_task.dependencies = {"parent": parent_task_id}
+    result, mocks = run_build_image(
+        "hello-world", image_task=image_task, parent_task_id=parent_task_id
+    )
     assert result == "hello-world:latest"
 
     # Verify the graph generation call

@@ -211,7 +211,9 @@ def build_image(
                     raise
 
                 # Parent id doesn't exist, needs to be re-built as well.
-                parent = task.dependencies["parent"][len("docker-image-") :]
+                parent = next(
+                    t for t in image_tasks if image_tasks[t].task_id == parent_id
+                ).removeprefix("docker-image-")
                 parent_tar = temp_dir / "parent.tar"
                 build_image(graph_config, parent, save_image=str(parent_tar))
                 volumes.append((str(parent_tar), "/workspace/parent.tar"))
