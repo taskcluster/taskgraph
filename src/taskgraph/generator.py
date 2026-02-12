@@ -312,15 +312,13 @@ class TaskGraphGenerator:
 
         return all_tasks
 
-    def _load_tasks_parallel(self, kinds, kind_graph, parameters):
+    def _load_tasks_parallel(self, kinds, kind_graph, parameters, executor):
         all_tasks = {}
         futures_to_kind = {}
         futures = set()
         edges = set(kind_graph.edges)
 
-        with ProcessPoolExecutor(
-            mp_context=multiprocessing.get_context("fork")
-        ) as executor:
+        with executor:
 
             def submit_ready_kinds():
                 """Create the next batch of tasks for kinds without dependencies."""
@@ -456,7 +454,8 @@ class TaskGraphGenerator:
         if platform.system() != "Linux" or os.environ.get("TASKGRAPH_SERIAL"):
             all_tasks = self._load_tasks_serial(kinds, kind_graph, parameters)
         else:
-            all_tasks = self._load_tasks_parallel(kinds, kind_graph, parameters)
+            executor = ProcessPoolExecutor(mp_context=multiprocessing.get_context("fork"))
+            all_tasks = self._load_tasks_parallel(kinds, kind_graph, parameters, executor)
 
         full_task_set = TaskGraph(all_tasks, Graph(frozenset(all_tasks), frozenset()))
         yield self.verify("full_task_set", full_task_set, graph_config, parameters)
