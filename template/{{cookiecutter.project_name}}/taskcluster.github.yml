@@ -202,10 +202,10 @@ tasks:
                               # `taskgraph decision` are all on the command line.
                               $merge:
                                   - ${normProjectUpper}_BASE_REPOSITORY: '${baseRepoUrl}'
-                                    ${normProjectUpper}_BASE_REF: '${short_base_ref}'
+                                    ${normProjectUpper}_BASE_REF: '${base_ref}'
                                     ${normProjectUpper}_BASE_REV: '${base_sha}'
                                     ${normProjectUpper}_HEAD_REPOSITORY: '${repoUrl}'
-                                    ${normProjectUpper}_HEAD_REF: '${short_head_ref}'
+                                    ${normProjectUpper}_HEAD_REF: '${head_ref}'
                                     ${normProjectUpper}_HEAD_REV: '${head_sha}'
                                     ${normProjectUpper}_REPOSITORY_TYPE: git
                                     REPOSITORIES:
