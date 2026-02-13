@@ -4,6 +4,7 @@
 
 import pprint
 import re
+import threading
 from collections.abc import Mapping
 from functools import reduce
 from typing import Literal, Optional, Union
@@ -13,6 +14,8 @@ import voluptuous
 
 import taskgraph
 from taskgraph.util.keyed_by import evaluate_keyed_by, iter_dot_path
+
+_schema_creation_lock = threading.RLock()
 
 # Common type definitions that are used across multiple schemas
 TaskPriority = Literal[
@@ -248,28 +251,36 @@ class LegacySchema(voluptuous.Schema):
     """
     Operates identically to voluptuous.Schema, but applying some taskgraph-specific checks
     in the process.
+
+    voluptuous.Schema's `_compile` method is thread-unsafe. Any usage (whether direct or
+    indirect) of it must be protected by a lock.
     """
 
     def __init__(self, *args, check=True, **kwargs):
-        super().__init__(*args, **kwargs)
+        with _schema_creation_lock:
+            # this constructor may call `_compile`
+            super().__init__(*args, **kwargs)
 
-        self.check = check
-        if not taskgraph.fast and self.check:
-            check_schema(self)
+            self.check = check
+            if not taskgraph.fast and self.check:
+                check_schema(self)
 
     def extend(self, *args, **kwargs):
-        schema = super().extend(*args, **kwargs)
+        with _schema_creation_lock:
+            # `extend` may create a new Schema object, which may call `_compile`
+            schema = super().extend(*args, **kwargs)
 
-        if self.check:
-            check_schema(schema)
-        # We want twice extend schema to be checked too.
-        schema.__class__ = LegacySchema
-        return schema
+            if self.check:
+                check_schema(schema)
+            # We want twice extend schema to be checked too.
+            schema.__class__ = LegacySchema
+            return schema
 
     def _compile(self, schema):
-        if taskgraph.fast:
-            return
-        return super()._compile(schema)
+        with _schema_creation_lock:
+            if taskgraph.fast:
+                return
+            return super()._compile(schema)
 
     def __getitem__(self, item):
         return self.schema[item]  # type: ignore

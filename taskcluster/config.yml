@@ -7,6 +7,7 @@ treeherder:
         'check': 'Checks and lints'
         'doc': 'Documentation tasks'
         'unit': 'Unit test tasks'
+        'unit-multithread': 'Unit test tasks with multithreading enabled'
         'integration': 'Integration test tasks'
 
 index:
