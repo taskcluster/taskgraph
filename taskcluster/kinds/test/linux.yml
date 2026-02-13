@@ -50,6 +50,26 @@ unit:
         command: >-
             uv run coverage run --data-file /builds/worker/artifacts/coverage --context=py{matrix[python]} -m pytest -vv
 
+unit-multithread:
+    description: "Run unit tests with py{matrix[python]} on Linux with multithreading enabled"
+    matrix:
+        set-name: "unit-multithread-py{matrix[python]}"
+        substitution-fields: [description, run.command, treeherder, worker, attributes]
+        python: ["314t"]
+    worker:
+        docker-image: {in-tree: python}
+        env:
+            TASKGRAPH_USE_THREADS: "1"
+        artifacts:
+            - type: file
+              path: "/builds/worker/artifacts/coverage"
+              name: "public/coverage.py{matrix[python]}"
+    treeherder:
+        symbol: unit-multithread(py{matrix[python]})
+    run:
+        command: >-
+            uv run coverage run --data-file /builds/worker/artifacts/coverage --context=py{matrix[python]} -m pytest -vv
+
 integration:
     description: "Run unit tests with py{matrix[python]} on Linux with resolution {matrix[resolution]}"
     attributes:
