@@ -146,6 +146,8 @@ def stream_context_tar(topsrcdir, context_dir, out_file, args=None):
     context_dir = os.path.join(topsrcdir, context_dir)
 
     for root, dirs, files in os.walk(context_dir):
+        if "__pycache__" in dirs:
+            dirs.remove("__pycache__")
         for f in files:
             source_path = os.path.join(root, f)
             archive_path = source_path[len(context_dir) + 1 :]
@@ -189,6 +191,8 @@ def stream_context_tar(topsrcdir, context_dir, out_file, args=None):
 
             if os.path.isdir(fs_path):
                 for root, dirs, files in os.walk(fs_path):
+                    if "__pycache__" in dirs:
+                        dirs.remove("__pycache__")
                     for f in files:
                         source_path = os.path.join(root, f)
                         rel = source_path[len(fs_path) + 1 :]
