@@ -34,13 +34,16 @@ class Graph(_Graph):
     def __init__(self, nodes, edges):
         super().__init__(frozenset(nodes), frozenset(edges))
 
-    def transitive_closure(self, nodes, reverse=False):
+    def transitive_closure(self, nodes, reverse=False, exclude_edges=None):
         """Return the transitive closure of <nodes>: the graph containing all
         specified nodes as well as any nodes reachable from them, and any
         intervening edges.
 
         If `reverse` is true, the "reachability" will be reversed and this
         will return the set of nodes that can reach the specified nodes.
+
+        If `exclude_edges` is provided, those edges will not be followed during
+        traversal.
 
         Example:
 
@@ -61,6 +64,8 @@ class Graph(_Graph):
                 f"Unknown nodes in transitive closure: {nodes - self.nodes}"
             )
 
+        exclude_edges = exclude_edges or set()
+
         # generate a new graph by expanding along edges until reaching a fixed
         # point
         new_nodes, new_edges = nodes, set()
@@ -71,6 +76,7 @@ class Graph(_Graph):
                 (left, right, name)
                 for (left, right, name) in self.edges
                 if (right if reverse else left) in nodes
+                and (left, right, name) not in exclude_edges
             }
             add_nodes = {(left if reverse else right) for (left, right, _) in add_edges}
             new_nodes = nodes | add_nodes

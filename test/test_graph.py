@@ -134,6 +134,30 @@ class TestGraph(unittest.TestCase):
         "transitive closure of a loop is the whole loop"
         self.assertEqual(self.loopy.transitive_closure({"A"}), self.loopy)
 
+    def test_transitive_closure_exclude_edges(self):
+        "transitive closure with excluded edges doesn't follow those edges"
+        self.assertEqual(
+            self.multi_edges.transitive_closure(
+                {"3"}, exclude_edges={("3", "2", "green")}
+            ),
+            Graph(
+                {"1", "2", "3"},
+                {
+                    ("2", "1", "red"),
+                    ("2", "1", "blue"),
+                    ("3", "1", "red"),
+                    ("3", "2", "blue"),
+                },
+            ),
+        )
+
+        self.assertEqual(
+            self.multi_edges.transitive_closure(
+                {"3"}, exclude_edges={("3", "2", "blue"), ("3", "2", "green")}
+            ),
+            Graph({"1", "3"}, {("3", "1", "red")}),
+        )
+
     def test_visit_postorder_empty(self):
         "postorder visit of an empty graph is empty"
         self.assertEqual(list(Graph(set(), set()).visit_postorder()), [])

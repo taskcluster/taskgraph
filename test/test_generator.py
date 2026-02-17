@@ -414,3 +414,56 @@ def test_kind_graph_with_target_kinds(maketgg):
     # _fake3 and _other should not be included
     assert "_fake3" not in kind_graph.nodes
     assert "_other" not in kind_graph.nodes
+
+
+def test_if_dependencies_not_in_target_are_removed(maketgg):
+    "If-dependencies not in requested_tasks don't pull tasks into target graph"
+    tgg = maketgg(
+        target_tasks=["_other-t-2"],
+        kinds=[
+            ("_fake", {}),
+            (
+                "_other",
+                {
+                    "task-defaults": {
+                        "dependencies": {"if-dep": "_fake-t-0"},
+                        "if-dependencies": ["_fake-t-0"],
+                    }
+                },
+            ),
+        ],
+    )
+
+    full_task = tgg.full_task_set.tasks["_other-t-2"]
+    assert "_fake-t-0" in full_task.if_dependencies
+
+    target_graph = tgg.target_task_graph
+
+    assert "_other-t-2" in target_graph.tasks
+    assert "_other-t-1" in target_graph.tasks
+    assert "_other-t-0" in target_graph.tasks
+    assert "_fake-t-0" not in target_graph.tasks
+
+
+def test_if_dependencies_in_target_are_kept(maketgg):
+    "If-dependencies that are in requested_tasks are kept"
+    tgg = maketgg(
+        target_tasks=["_other-t-2", "_fake-t-0"],
+        kinds=[
+            ("_fake", {}),
+            (
+                "_other",
+                {
+                    "task-defaults": {
+                        "dependencies": {"if-dep": "_fake-t-0"},
+                        "if-dependencies": ["_fake-t-0"],
+                    }
+                },
+            ),
+        ],
+    )
+
+    target_graph = tgg.target_task_graph
+
+    assert "_other-t-2" in target_graph.tasks
+    assert "_fake-t-0" in target_graph.tasks
