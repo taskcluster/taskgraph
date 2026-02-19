@@ -1,5 +1,11 @@
 # Change Log
 
+## [19.2.1] - 2026-02-19
+
+### Fixed
+
+- Loosen `optionally_keyed_by` constraints for msgspec compatibility
+
 ## [19.2.0] - 2026-02-18
 
 ### Fixed

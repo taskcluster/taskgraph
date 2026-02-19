@@ -1,7 +1,7 @@
 ### Project
 [project]
 name = "taskcluster-taskgraph"
-version = "19.2.0"
+version = "19.2.1"
 description = "Build taskcluster taskgraphs"
 readme = "README.rst"
 authors = [
