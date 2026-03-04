@@ -569,6 +569,7 @@ class GenericWorkerPayloadSchema(Schema, forbid_unknown_fields=False, kw_only=Tr
     # feature for task to run as current OS user
     run_task_as_current_user: Optional[bool] = None
     taskcluster_proxy: Optional[bool] = None
+    hide_cmd_window: Optional[bool] = None
     # Whether any artifacts are assigned to this worker
     skip_artifacts: Optional[bool] = None
 
@@ -680,6 +681,9 @@ def build_generic_worker_payload(config, task, task_def):
         task_def["scopes"].append(
             "generic-worker:run-task-as-current-user:{}".format(task["worker-type"]),
         )
+
+    if worker.get("hide-cmd-window"):
+        features["hideCmdWindow"] = True
 
     if features:
         task_def["payload"]["features"] = features
