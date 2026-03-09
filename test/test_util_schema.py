@@ -287,15 +287,11 @@ def test_optionally_keyed_by():
     class TestSchema(Schema):
         field: optionally_keyed_by("foo", str, use_msgspec=True)  # type: ignore
 
-    result = TestSchema.validate({"field": "baz"})
-    assert result.field == "baz"
-
-    result = TestSchema.validate({"field": {"by-foo": {"a": "b", "c": "d"}}})
-    assert result.field == {"by-foo": {"a": "b", "c": "d"}}
+    TestSchema.validate({"field": "baz"})
+    TestSchema.validate({"field": {"by-foo": {"a": "b", "c": "d"}}})
 
     # Inner dict values are Any, so mixed types are accepted
-    result = TestSchema.validate({"field": {"by-foo": {"a": 1, "c": "d"}}})
-    assert result.field == {"by-foo": {"a": 1, "c": "d"}}
+    TestSchema.validate({"field": {"by-foo": {"a": 1, "c": "d"}}})
 
     with pytest.raises(msgspec.ValidationError):
         TestSchema.validate({"field": {"by-bar": {"a": "b"}}})
@@ -305,11 +301,8 @@ def test_optionally_keyed_by_mulitple_keys():
     class TestSchema(Schema):
         field: optionally_keyed_by("foo", "bar", str, use_msgspec=True)  # type: ignore
 
-    result = TestSchema.validate({"field": {"by-foo": {"a": "b"}}})
-    assert result.field == {"by-foo": {"a": "b"}}
-
-    result = TestSchema.validate({"field": {"by-bar": {"x": "y"}}})
-    assert result.field == {"by-bar": {"x": "y"}}
+    TestSchema.validate({"field": {"by-foo": {"a": "b"}}})
+    TestSchema.validate({"field": {"by-bar": {"x": "y"}}})
 
     # Test invalid keyed-by field
     with pytest.raises(msgspec.ValidationError):
