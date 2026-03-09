@@ -325,7 +325,7 @@ class Schema(
             return data
 
         try:
-            return msgspec.convert(data, cls)
+            msgspec.convert(data, cls)
         except (msgspec.ValidationError, msgspec.DecodeError) as e:
             raise msgspec.ValidationError(str(e))
 
