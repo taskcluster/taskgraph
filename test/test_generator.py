@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
+import os
 import platform
 from concurrent.futures import ProcessPoolExecutor
 
@@ -14,8 +15,12 @@ from taskgraph.generator import Kind, load_tasks_for_kind, load_tasks_for_kinds
 from taskgraph.loader.default import loader as default_loader
 
 linuxonly = pytest.mark.skipif(
-    platform.system() != "Linux",
+    platform.system() != "Linux" or os.environ.get("TASKGRAPH_USE_THREADS"),
     reason="requires Linux and 'fork' multiprocessing support",
+)
+threadsonly = pytest.mark.skipif(
+    not os.environ.get("TASKGRAPH_USE_THREADS"),
+    reason="requires multithreading to be enabled",
 )
 
 
@@ -27,8 +32,16 @@ class FakePPE(ProcessPoolExecutor):
         return super().submit(kind_load_tasks, *args)
 
 
+class FakeTPE(ProcessPoolExecutor):
+    loaded_kinds = []
+
+    def submit(self, kind_load_tasks, *args):
+        self.loaded_kinds.append(kind_load_tasks.__self__.name)
+        return super().submit(kind_load_tasks, *args)
+
+
 @linuxonly
-def test_kind_ordering(mocker, maketgg):
+def test_kind_ordering_multiprocess(mocker, maketgg):
     "When task kinds depend on each other, they are loaded in postorder"
     mocked_ppe = mocker.patch.object(generator, "ProcessPoolExecutor", new=FakePPE)
     tgg = maketgg(
@@ -40,6 +53,21 @@ def test_kind_ordering(mocker, maketgg):
     )
     tgg._run_until("full_task_set")
     assert mocked_ppe.loaded_kinds == ["_fake1", "_fake2", "_fake3"]
+
+
+@threadsonly
+def test_kind_ordering_multithread(mocker, maketgg):
+    "When task kinds depend on each other, they are loaded in postorder"
+    mocked_tpe = mocker.patch.object(generator, "ThreadPoolExecutor", new=FakeTPE)
+    tgg = maketgg(
+        kinds=[
+            ("_fake3", {"kind-dependencies": ["_fake2", "_fake1"]}),
+            ("_fake2", {"kind-dependencies": ["_fake1"]}),
+            ("_fake1", {"kind-dependencies": []}),
+        ]
+    )
+    tgg._run_until("full_task_set")
+    assert mocked_tpe.loaded_kinds == ["_fake1", "_fake2", "_fake3"]
 
 
 def test_full_task_set(maketgg):
