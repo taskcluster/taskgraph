@@ -325,3 +325,18 @@ def test_optionally_keyed_by_object_passthrough():
     assert msgspec.convert(42, typ) == 42
     assert msgspec.convert({"by-foo": {"a": "b"}}, typ) == {"by-foo": {"a": "b"}}
     assert msgspec.convert({"arbitrary": "dict"}, typ) == {"arbitrary": "dict"}
+
+
+@pytest.mark.xfail
+def test_optionally_keyed_by_dict():
+    class TestSchema(Schema):
+        field: optionally_keyed_by("foo", dict[str, str], use_msgspec=True)  # type: ignore
+
+    TestSchema.validate({"field": {"by-foo": {"a": {"x": "y"}}}})
+    TestSchema.validate({"field": {"a": "b"}})
+
+    with pytest.raises(msgspec.ValidationError):
+        TestSchema.validate({"field": {"by-foo": {"a": {"x": 1}}}})
+
+    with pytest.raises(msgspec.ValidationError):
+        TestSchema.validate({"field": {"by-foo": {"a": "b"}}})
