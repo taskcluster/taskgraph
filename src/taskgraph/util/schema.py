@@ -6,8 +6,7 @@ import pprint
 import re
 import threading
 from collections.abc import Mapping
-from functools import reduce
-from typing import Any, Literal, Optional, Union
+from typing import Annotated, Any, Literal, Optional, Union, get_args, get_origin
 
 import msgspec
 import voluptuous
@@ -70,11 +69,37 @@ def validate_schema(schema, obj, msg_prefix):
             raise Exception(f"{msg_prefix}\n{str(exc)}\n{pprint.pformat(obj)}")
 
 
-def UnionTypes(*types):
-    """Use `functools.reduce` to simulate `Union[*allowed_types]` on older
-    Python versions.
-    """
-    return reduce(lambda a, b: Union[a, b], types)
+class OptionallyKeyedBy:
+    """Metadata class for optionally_keyed_by fields in msgspec schemas."""
+
+    def __init__(self, *fields, wrapped_type):
+        self.fields = {f"by-{field}" for field in fields}
+        self.wrapped_type = wrapped_type
+
+    def uses_keyed_by(self, obj) -> bool:
+        if not isinstance(obj, dict) or len(obj) != 1:
+            return False
+
+        key = list(obj)[0]
+        if key not in self.fields:
+            return False
+
+        return True
+
+    def validate(self, obj) -> None:
+        if not self.uses_keyed_by(obj):
+            # Not using keyed by, validate directly against wrapped type
+            msgspec.convert(obj, self.wrapped_type)
+            return
+
+        # First validate the outer keyed-by dict
+        msgspec.convert(obj, dict[str, dict])
+
+        # Next validate each inner value. We call self.validate recursively to
+        # support nested `by-*` keys.
+        keyed_by_dict = list(obj.values())[0]
+        for value in keyed_by_dict.values():
+            self.validate(value)
 
 
 def optionally_keyed_by(*arguments, use_msgspec=False):
@@ -86,13 +111,15 @@ def optionally_keyed_by(*arguments, use_msgspec=False):
         use_msgspec: If True, return msgspec type hints; if False, return voluptuous validator
     """
     if use_msgspec:
-        # msgspec implementation - return type hints
+        # msgspec implementation - use Annotated[Any, OptionallyKeyedBy]
         _type = arguments[-1]
         if _type is object:
             return object
         fields = arguments[:-1]
-        bykeys = [Literal[f"by-{field}"] for field in fields]
-        return Union[_type, dict[UnionTypes(*bykeys), dict[str, Any]]]
+        wrapper = OptionallyKeyedBy(*fields, wrapped_type=_type)
+        # Annotating Any allows msgspec to accept any value without validation.
+        # The actual validation then happens in Schema.__post_init__
+        return Annotated[Any, wrapper]
     else:
         # voluptuous implementation - return validator function
         schema = arguments[-1]
@@ -317,6 +344,31 @@ class Schema(
         class MySchema(Schema, forbid_unknown_fields=False, kw_only=True):
             foo: str
     """
+
+    def __post_init__(self):
+        if taskgraph.fast:
+            return
+
+        # Validate fields that use optionally_keyed_by. We need to validate this
+        # manually because msgspec doesn't support union types with multiple
+        # dicts. Any fields that use `optionally_keyed_by("foo", dict)` would
+        # otherwise raise an exception.
+        for field_name, field_type in self.__class__.__annotations__.items():
+            origin = get_origin(field_type)
+            args = get_args(field_type)
+
+            if (
+                origin is not Annotated
+                or len(args) < 2
+                or not isinstance(args[1], OptionallyKeyedBy)
+            ):
+                # Not using `optionally_keyed_by`
+                continue
+
+            keyed_by = args[1]
+            obj = getattr(self, field_name)
+
+            keyed_by.validate(obj)
 
     @classmethod
     def validate(cls, data):
