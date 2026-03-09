@@ -290,23 +290,36 @@ def test_optionally_keyed_by():
     TestSchema.validate({"field": "baz"})
     TestSchema.validate({"field": {"by-foo": {"a": "b", "c": "d"}}})
 
-    # Inner dict values are Any, so mixed types are accepted
-    TestSchema.validate({"field": {"by-foo": {"a": 1, "c": "d"}}})
+    with pytest.raises(msgspec.ValidationError):
+        TestSchema.validate({"field": 1})
+
+    with pytest.raises(msgspec.ValidationError):
+        TestSchema.validate({"field": {"by-bar": "a"}})
+
+    with pytest.raises(msgspec.ValidationError):
+        TestSchema.validate({"field": {"by-bar": {1: "b"}}})
 
     with pytest.raises(msgspec.ValidationError):
         TestSchema.validate({"field": {"by-bar": {"a": "b"}}})
 
+    with pytest.raises(msgspec.ValidationError):
+        TestSchema.validate({"field": {"by-foo": {"a": 1, "c": "d"}}})
 
-def test_optionally_keyed_by_mulitple_keys():
+
+def test_optionally_keyed_by_multiple_keys():
     class TestSchema(Schema):
         field: optionally_keyed_by("foo", "bar", str, use_msgspec=True)  # type: ignore
 
     TestSchema.validate({"field": {"by-foo": {"a": "b"}}})
     TestSchema.validate({"field": {"by-bar": {"x": "y"}}})
+    TestSchema.validate({"field": {"by-foo": {"a": {"by-bar": {"x": "y"}}}}})
 
     # Test invalid keyed-by field
     with pytest.raises(msgspec.ValidationError):
         TestSchema.validate({"field": {"by-unknown": {"a": "b"}}})
+
+    with pytest.raises(msgspec.ValidationError):
+        TestSchema.validate({"field": {"by-foo": {"a": {"by-bar": {"x": 1}}}}})
 
 
 def test_optionally_keyed_by_object_passthrough():
@@ -320,13 +333,15 @@ def test_optionally_keyed_by_object_passthrough():
     assert msgspec.convert({"arbitrary": "dict"}, typ) == {"arbitrary": "dict"}
 
 
-@pytest.mark.xfail
 def test_optionally_keyed_by_dict():
     class TestSchema(Schema):
         field: optionally_keyed_by("foo", dict[str, str], use_msgspec=True)  # type: ignore
 
     TestSchema.validate({"field": {"by-foo": {"a": {"x": "y"}}}})
     TestSchema.validate({"field": {"a": "b"}})
+
+    with pytest.raises(msgspec.ValidationError):
+        TestSchema.validate({"field": {"a": 1}})
 
     with pytest.raises(msgspec.ValidationError):
         TestSchema.validate({"field": {"by-foo": {"a": {"x": 1}}}})
