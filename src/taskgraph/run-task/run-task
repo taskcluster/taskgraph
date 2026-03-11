@@ -1044,8 +1044,8 @@ def install_pip_requirements(repositories):
 
     # TODO: Stop using system Python (#381)
     if shutil.which("uv"):
-        user_site_dir = subprocess.run(
-            [sys.executable, "-msite", "--user-site"], capture_output=True, text=True
+        user_base_dir = subprocess.run(
+            [sys.executable, "-msite", "--user-base"], capture_output=True, text=True
         ).stdout.strip()
         cmd = [
             "uv",
@@ -1053,8 +1053,8 @@ def install_pip_requirements(repositories):
             "install",
             "--python",
             sys.executable,
-            "--target",
-            user_site_dir,
+            "--prefix",
+            user_base_dir,
         ]
     else:
         cmd = [sys.executable, "-mpip", "install", "--user", "--break-system-packages"]
