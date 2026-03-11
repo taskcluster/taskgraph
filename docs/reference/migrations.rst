@@ -3,6 +3,14 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+19.x -> 20.x
+------------
+
+* Tasks using ``if-dependencies`` will no longer pull these dependencies into
+  the graph during the target phase. If a desired dependency is no longer
+  showing up in the target graph, adjust your `target_tasks` logic to ensure
+  the dependency is explicitly selected.
+
 18.x -> 19.x
 ------------
 
