@@ -7,6 +7,10 @@
    :target: https://codecov.io/gh/taskcluster/taskgraph
    :alt: Code Coverage
 
+.. image:: https://img.shields.io/endpoint?url=https://codspeed.io/badge.json
+   :target: https://codspeed.io/taskcluster/taskgraph?utm_source=badge
+   :alt: CodSpeed Performance
+
 .. image:: https://badge.fury.io/py/taskcluster-taskgraph.svg
    :target: https://badge.fury.io/py/taskcluster-taskgraph
    :alt: Pypi Version
