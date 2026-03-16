@@ -505,6 +505,11 @@ class GitRepository(Repository):
                 cmd.append("--cached")
             elif mode == "all":
                 cmd.append("HEAD")
+        elif base == self.NULL_REVISION:
+            # When base is NULL_REVISION (e.g new branches on Github), diff
+            # from the empty tree to show all files present at rev. Use Git's
+            # well-known empty tree hash.
+            cmd = ["diff", "4b825dc642cb6eb9a060e54bf8d69288fbee4904", rev]
         elif self.is_shallow:
             # In shallow clones, `git log` won't have the history necessary to
             # determine the files changed. Using `git diff` finds the

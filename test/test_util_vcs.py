@@ -597,9 +597,6 @@ def test_get_changed_files_shallow_clone(git_repo, tmp_path, default_git_branch)
 
 
 def test_get_changed_files_with_null_base_revision(repo):
-    if repo.tool == "git":
-        pytest.xfail()
-
     second_file = os.path.join(repo.path, "second_file")
     with open(second_file, "w") as f:
         f.write("second file content")
@@ -614,3 +611,40 @@ def test_get_changed_files_with_null_base_revision(repo):
     )
 
     assert isinstance(changed_files, list)
+    # When base is NULL_REVISION, we should get all files from the beginning
+    # of history up to head_rev. This includes both the initial "first_file"
+    # and the newly added "second_file".
+    assert "first_file" in changed_files
+    assert "second_file" in changed_files
+
+
+def test_get_changed_files_with_null_base_revision_shallow_clone(
+    git_repo, tmp_path, default_git_branch
+):
+    tmp_repo = Path(git_repo)
+
+    (tmp_repo / "file1.txt").write_text("content 1")
+    (tmp_repo / "file2.txt").write_text("content 2")
+    subprocess.check_call(["git", "add", "."], cwd=tmp_repo)
+    subprocess.check_call(["git", "commit", "-m", "Add files"], cwd=tmp_repo)
+
+    commit_hash = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=tmp_repo, text=True
+    ).strip()
+
+    shallow_path = tmp_path / "shallow_null_test"
+    subprocess.check_call(
+        ["git", "clone", "--depth=1", f"file://{tmp_repo}", str(shallow_path)],
+        cwd=tmp_path,
+    )
+
+    shallow_repo = get_repository(str(shallow_path))
+    assert shallow_repo.is_shallow
+
+    changed_files = shallow_repo.get_changed_files(
+        "AMD", "all", rev=commit_hash, base=Repository.NULL_REVISION
+    )
+
+    assert "first_file" in changed_files
+    assert "file1.txt" in changed_files
+    assert "file2.txt" in changed_files
