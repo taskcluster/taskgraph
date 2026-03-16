@@ -594,3 +594,23 @@ def test_get_changed_files_shallow_clone(git_repo, tmp_path, default_git_branch)
 
     modified = shallow_repo.get_changed_files("M", "all", feature_commit, main_commit)
     assert "file_to_modify.txt" in modified
+
+
+def test_get_changed_files_with_null_base_revision(repo):
+    if repo.tool == "git":
+        pytest.xfail()
+
+    second_file = os.path.join(repo.path, "second_file")
+    with open(second_file, "w") as f:
+        f.write("second file content")
+
+    repo.run("add", second_file)
+    repo.run("commit", "-m", "Add second file")
+
+    head_rev = repo.head_rev
+
+    changed_files = repo.get_changed_files(
+        "AMD", "all", rev=head_rev, base=Repository.NULL_REVISION
+    )
+
+    assert isinstance(changed_files, list)
