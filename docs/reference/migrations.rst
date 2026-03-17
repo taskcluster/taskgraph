@@ -3,6 +3,14 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+19.x -> 20.x
+------------
+
+* Binaries belonging to packages that get installed by `run-task` as part of
+  the `PIP_REQUIREMENTS` variable, are now installed to `~/.local/bin` instead
+  of `~/.local/lib/<python>/site-packages/bin`. Update any task commands that hardcode
+  the binary path accordingly.
+
 18.x -> 19.x
 ------------
 

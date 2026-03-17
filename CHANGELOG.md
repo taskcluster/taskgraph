@@ -1,5 +1,18 @@
 # Change Log
 
+## [20.0.0] - 2026-03-17
+
+### Added
+
+- Support for generic-worker's `hide-cmd-window` feature
+- Ability to process kinds concurrently with threading
+
+### Fixed
+
+- BREAKING CHANGE: Binaries installed as part of `PIP_REQUIREMENTS` by `run-task` now end up in `~/.local/bin`
+- Exception when base revision is the null revision
+- Ability to use `optionally_keyed_by` with underlying dict using msgspec
+
 ## [19.2.1] - 2026-02-19
 
 ### Fixed
