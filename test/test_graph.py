@@ -134,6 +134,46 @@ class TestGraph(unittest.TestCase):
         "transitive closure of a loop is the whole loop"
         self.assertEqual(self.loopy.transitive_closure({"A"}), self.loopy)
 
+    def test_transitive_closure_reverse_tree(self):
+        "reverse transitive closure from leaf nodes finds ancestors"
+        self.assertEqual(
+            self.tree.transitive_closure({"d"}, reverse=True),
+            Graph(
+                {"a", "b", "d"},
+                {("a", "b", "L"), ("b", "d", "K")},
+            ),
+        )
+
+    def test_transitive_closure_reverse_root(self):
+        "reverse transitive closure from root has no ancestors"
+        self.assertEqual(
+            self.tree.transitive_closure({"a"}, reverse=True),
+            Graph({"a"}, set()),
+        )
+
+    def test_transitive_closure_unknown_nodes(self):
+        "transitive closure raises on nodes not in the graph"
+        with pytest.raises(Exception, match="Unknown nodes"):
+            self.tree.transitive_closure({"z"})
+
+    def test_transitive_closure_diamond(self):
+        "transitive closure on a diamond graph reaches shared descendants via convergent paths"
+        self.assertEqual(
+            self.diamonds.transitive_closure({"A"}),
+            Graph(
+                {"A", "D", "F", "G", "I", "J"},
+                {
+                    ("A", "F", "L"),
+                    ("A", "D", "L"),
+                    ("D", "F", "L"),
+                    ("D", "G", "L"),
+                    ("F", "I", "L"),
+                    ("G", "I", "L"),
+                    ("G", "J", "L"),
+                },
+            ),
+        )
+
     def test_visit_postorder_empty(self):
         "postorder visit of an empty graph is empty"
         self.assertEqual(list(Graph(set(), set()).visit_postorder()), [])
