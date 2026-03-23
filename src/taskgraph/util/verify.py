@@ -235,10 +235,14 @@ def verify_routes_notification_filters(
                 )
 
 
+# https://docs.taskcluster.net/docs/reference/core/index#valid-characters
+INDEX_NAMESPACE_RE = re.compile(r"^([a-zA-Z0-9_!~*'()%-]+\.)*[a-zA-Z0-9_!~*'()%-]+$")
+
+
 @verifications.add("full_task_graph")
 def verify_index_route(task, taskgraph, scratch_pad, graph_config, parameters):
     """
-    This function ensures that routes do not contain forward slashes.
+    This function ensures that index routes would create valid taskcluster index paths
     """
     if task is None:
         return
@@ -247,11 +251,13 @@ def verify_index_route(task, taskgraph, scratch_pad, graph_config, parameters):
     route_prefix = "index."
 
     for route in routes:
-        # Check for invalid / in the index route
-        if route.startswith(route_prefix) and "/" in route:
-            raise Exception(
-                f"{task.label} has invalid route with forward slash: {route}"
-            )
+        if route.startswith(route_prefix):
+            namespace = route[len(route_prefix) :]
+            if not INDEX_NAMESPACE_RE.match(namespace):
+                raise Exception(
+                    f"{task.label} has invalid index route namespace: {route}. "
+                    f"Namespace must match {INDEX_NAMESPACE_RE.pattern}"
+                )
 
 
 @verifications.add("full_task_graph")
