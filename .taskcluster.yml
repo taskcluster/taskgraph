@@ -226,6 +226,7 @@ tasks:
                               - $if: 'isPullRequest'
                                 then:
                                     TASKGRAPH_PULL_REQUEST_NUMBER: '${event.pull_request.number}'
+                                    TASKGRAPH_EXTRA_REFS: {$json: ["refs/notes/decision-parameters"]}
                               - $if: 'tasks_for == "action" || tasks_for == "pr-action"'
                                 then:
                                     ACTION_TASK_GROUP_ID: '${action.taskGroupId}'  # taskGroupId of the target task
@@ -251,7 +252,11 @@ tasks:
                           - bash
                           - -cx
                           - $let:
-                                extraArgs: {$if: 'tasks_for == "cron"', then: '${cron.quoted_args}', else: ''}
+                                extraArgs:
+                                    $switch:
+                                        'tasks_for == "cron"': '${cron.quoted_args}'
+                                        'tasks_for == "github-pull-request"': '--allow-parameter-override'
+                                        $default: ''
                             in:
                                 $if: 'tasks_for == "action" || tasks_for == "pr-action"'
                                 then: >
