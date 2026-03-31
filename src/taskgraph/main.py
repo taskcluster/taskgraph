@@ -933,6 +933,12 @@ def load_task(args):
 @argument(
     "--verbose", "-v", action="store_true", help="include debug-level logging output"
 )
+@argument(
+    "--allow-parameter-override",
+    default=False,
+    action="store_true",
+    help="Allow user to override computed decision task parameters.",
+)
 def decision(options):
     from taskgraph.decision import taskgraph_decision  # noqa: PLC0415
 

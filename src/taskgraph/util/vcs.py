@@ -215,6 +215,14 @@ class Repository(ABC):
         If this function returns an unexpected value, then make sure
         the revision was fetched from the remote repository."""
 
+    def get_note(self, note: str, revision: Optional[str] = None) -> Optional[str]:
+        """Read a note attached to the given revision (defaults to HEAD).
+
+        Returns the note content as a string, or ``None`` if no note exists.
+        Only supported by Git; returns ``None`` for all other VCS types.
+        """
+        return None
+
 
 class HgRepository(Repository):
     @property
@@ -584,6 +592,18 @@ class GitRepository(Repository):
             # "git cat-file: could not get object info"
             if e.returncode == 128:
                 return False
+            raise
+
+    def get_note(self, note: str, revision: Optional[str] = None) -> Optional[str]:
+        if not note.startswith("refs/notes/"):
+            note = f"refs/notes/{note}"
+
+        revision = revision or "HEAD"
+        try:
+            return self.run("notes", f"--ref={note}", "show", revision).strip()
+        except subprocess.CalledProcessError as e:
+            if e.returncode == 1:
+                return None
             raise
 
 

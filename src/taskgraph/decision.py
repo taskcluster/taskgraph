@@ -264,6 +264,20 @@ def get_decision_parameters(graph_config, options):
     ] == "github-pull-request":
         set_try_config(parameters, task_config_file)
 
+    # load extra parameters from vcs note if able
+    note_ref = "refs/notes/decision-parameters"
+    if options.get("allow_parameter_override") and (
+        note_params := repo.get_note(note_ref)
+    ):
+        try:
+            note_params = json.loads(note_params)
+            logger.info(
+                f"Overriding parameters from {note_ref}:\n{json.dumps(note_params, indent=2)}"
+            )
+            parameters.update(note_params)
+        except ValueError as e:
+            raise Exception(f"Failed to parse {note_ref} as JSON: {e}") from e
+
     result = Parameters(**parameters)
     result.check()
     return result

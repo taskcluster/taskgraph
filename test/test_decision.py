@@ -10,6 +10,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 from taskgraph import decision
 from taskgraph.util.vcs import GitRepository, HgRepository
 from taskgraph.util.yaml import load_yaml
@@ -137,3 +139,60 @@ class TestGetDecisionParameters(unittest.TestCase):
         self.options["tasks_for"] = "hg-push"
         params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, self.options)
         self.assertEqual(params["target_tasks_method"], "nothing")
+
+
+_BASE_OPTIONS = {
+    "base_repository": "https://hg.mozilla.org/mozilla-unified",
+    "base_rev": "aaaa",
+    "head_repository": "https://hg.mozilla.org/mozilla-central",
+    "head_rev": "bbbb",
+    "head_ref": "default",
+    "head_tag": "",
+    "project": "mozilla-central",
+    "pushlog_id": "1",
+    "pushdate": 0,
+    "repository_type": "git",
+    "owner": "nobody@mozilla.com",
+    "tasks_for": "github-push",
+    "level": "1",
+}
+
+
+@unittest.mock.patch.object(
+    GitRepository,
+    "get_note",
+    return_value=json.dumps({"build_number": 99}),
+)
+@unittest.mock.patch.object(GitRepository, "get_changed_files", return_value=[])
+def test_decision_parameters_note(mock_files_changed, mock_get_note):
+    options = {**_BASE_OPTIONS, "allow_parameter_override": True}
+    params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, options)
+    mock_get_note.assert_called_once_with("refs/notes/decision-parameters")
+    assert params["build_number"] == 99
+
+
+@unittest.mock.patch.object(
+    GitRepository,
+    "get_note",
+    return_value=json.dumps({"build_number": 99}),
+)
+@unittest.mock.patch.object(GitRepository, "get_changed_files", return_value=[])
+def test_decision_parameters_note_disallow_override(mock_files_changed, mock_get_note):
+    options = {**_BASE_OPTIONS, "allow_parameter_override": False}
+    params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, options)
+    mock_get_note.assert_not_called()
+    assert params["build_number"] == 1
+
+
+@unittest.mock.patch.object(
+    GitRepository,
+    "get_note",
+    return_value="not valid json {",
+)
+@unittest.mock.patch.object(GitRepository, "get_changed_files", return_value=[])
+def test_decision_parameters_note_invalid_json(mock_files_changed, mock_get_note):
+    options = {**_BASE_OPTIONS, "allow_parameter_override": True}
+    with pytest.raises(
+        Exception, match="Failed to parse refs/notes/decision-parameters as JSON"
+    ):
+        decision.get_decision_parameters(FAKE_GRAPH_CONFIG, options)
