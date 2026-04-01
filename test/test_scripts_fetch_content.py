@@ -1,3 +1,4 @@
+import json
 import os
 import pathlib
 import urllib.request
@@ -95,6 +96,85 @@ def test_stream_download(
     except fetch_content_mod.IntegrityError:
         if not raises:
             raise
+
+
+@pytest.mark.parametrize(
+    "artifact,expected_url_suffix",
+    (
+        pytest.param(
+            "public/foo.apworld",
+            "task/abc123/artifacts/public/foo.apworld",
+            id="simple artifact name",
+        ),
+        pytest.param(
+            "public/Twilight Princess-0.2.3.apworld",
+            "task/abc123/artifacts/public/Twilight%20Princess-0.2.3.apworld",
+            id="artifact name with space",
+        ),
+    ),
+)
+def test_command_task_artifacts_url_encoding(
+    monkeypatch,
+    tmp_path,
+    fetch_content_mod,
+    artifact,
+    expected_url_suffix,
+):
+    fetches = [{"task": "abc123", "artifact": artifact, "extract": False}]
+    monkeypatch.setenv("MOZ_FETCHES", json.dumps(fetches))
+    monkeypatch.setenv("TASKCLUSTER_ROOT_URL", "https://tc.example.com")
+
+    captured_urls = []
+
+    def mock_fetch_urls(downloads):
+        for url, dest_dir, extract, sha256 in downloads:
+            captured_urls.append(url)
+
+    monkeypatch.setattr(fetch_content_mod, "fetch_urls", mock_fetch_urls)
+
+    args = MagicMock()
+    args.dest = str(tmp_path)
+    fetch_content_mod.command_task_artifacts(args)
+
+    assert len(captured_urls) == 1
+    url = captured_urls[0]
+    assert url == f"https://tc.example.com/api/queue/v1/{expected_url_suffix}"
+
+
+@pytest.mark.parametrize(
+    "url,expected_dest_filename",
+    (
+        pytest.param(
+            "https://tc.example.com/api/queue/v1/task/abc/artifacts/public/foo.apworld",
+            "foo.apworld",
+            id="simple",
+        ),
+        pytest.param(
+            "https://tc.example.com/api/queue/v1/task/abc/artifacts/public/Twilight%20Princess-0.2.3.apworld",
+            "Twilight Princess-0.2.3.apworld",
+            id="url-encoded space",
+        ),
+    ),
+)
+def test_fetch_and_extract_dest_filename(
+    monkeypatch,
+    tmp_path,
+    fetch_content_mod,
+    url,
+    expected_dest_filename,
+):
+    downloaded_to = []
+
+    def mock_download_to_path(url, path, sha256=None, size=None):
+        downloaded_to.append(path)
+        path.touch()
+
+    monkeypatch.setattr(fetch_content_mod, "download_to_path", mock_download_to_path)
+
+    fetch_content_mod.fetch_and_extract(url, tmp_path, extract=False)
+
+    assert len(downloaded_to) == 1
+    assert downloaded_to[0].name == expected_dest_filename
 
 
 @pytest.mark.parametrize(
