@@ -44,13 +44,10 @@ class TaskGraph:
 
     def to_json(self):
         "Return a JSON-able object representing the task graph, as documented"
-        named_links_dict = self.graph.named_links_dict()
         # this dictionary may be keyed by label or by taskid, so let's just call it 'key'
         tasks = {}
         for key in self.graph.visit_postorder():
             tasks[key] = self.tasks[key].to_json()
-            # overwrite dependencies with the information in the taskgraph's edges.
-            tasks[key]["dependencies"] = named_links_dict.get(key, {})
         return tasks
 
     @classmethod
