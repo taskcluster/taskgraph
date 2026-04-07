@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import unittest
+from typing import Optional
 
 import msgspec
 import pytest
@@ -348,3 +349,53 @@ def test_optionally_keyed_by_dict():
 
     with pytest.raises(msgspec.ValidationError):
         TestSchema.validate({"field": {"by-foo": {"a": "b"}}})
+
+
+@pytest.mark.parametrize(
+    "fields_dict, data, attr, expected",
+    [
+        ({"name": str}, {"name": "foo"}, "name", "foo"),
+        ({"count": Optional[int]}, {}, "count", None),
+        ({"tags": (list, [])}, {}, "tags", []),
+        ({"my-field": str}, {"my-field": "bar"}, "my_field", "bar"),
+    ],
+)
+def test_from_dict_valid(fields_dict, data, attr, expected):
+    S = Schema.from_dict(fields_dict)
+    result = msgspec.convert(data, S)
+    assert getattr(result, attr) == expected
+
+
+@pytest.mark.parametrize(
+    "fields_dict, data",
+    [
+        ({"name": str}, {}),
+        ({"my-field": str}, {"my_field": "bar"}),
+    ],
+)
+def test_from_dict_invalid(fields_dict, data):
+    S = Schema.from_dict(fields_dict)
+    with pytest.raises(msgspec.ValidationError):
+        msgspec.convert(data, S)
+
+
+@pytest.mark.parametrize(
+    "data, raises",
+    [
+        ({"a": "x", "b": "y"}, True),
+        ({"a": "x"}, False),
+        ({}, False),
+    ],
+)
+def test_exclusive(data, raises):
+    S = Schema.from_dict(
+        {"a": Optional[str], "b": Optional[str]},
+        exclusive=[["a", "b"]],
+    )
+    if raises:
+        with pytest.raises(
+            (ValueError, msgspec.ValidationError), match="mutually exclusive"
+        ):
+            msgspec.convert(data, S)
+    else:
+        msgspec.convert(data, S)
