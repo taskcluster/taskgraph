@@ -22,46 +22,46 @@ from taskgraph.util.dependencies import GROUP_BY_MAP, get_dependencies
 from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.set_name import SET_NAME_MAP
 
-
-class FromDepsConfig(Schema):
-    # Limit dependencies to specified kinds (defaults to all kinds in
-    # `kind-dependencies`).
-    #
-    # The first kind in the list is the "primary" kind. The
-    # dependency of this kind will be used to derive the label
-    # and copy attributes (if `copy-attributes` is True).
-    kinds: Optional[list[str]] = None
-    # Set-name function (dynamic: validated at runtime against SET_NAME_MAP).
-    set_name: Optional[Union[bool, str, dict[str, object]]] = None
-    # Limit dependencies to tasks whose attributes match
-    # using :func:`~taskgraph.util.attributes.attrmatch`.
-    with_attributes: Optional[dict[str, Union[list, str]]] = None
-    # Group cross-kind dependencies using the given group-by
-    # function. One task will be created for each group. If not
-    # specified, the 'single' function will be used which creates
-    # a new task for each individual dependency.
-    group_by: Optional[Union[str, dict[str, object]]] = None
-    # If True, copy attributes from the dependency matching the
-    # first kind in the `kinds` list (whether specified explicitly
-    # or taken from `kind-dependencies`).
-    copy_attributes: Optional[bool] = None
-    # If true (the default), there must be only a single unique task
-    # for each kind in a dependency group. Setting this to false
-    # disables that requirement.
-    unique_kinds: Optional[bool] = None
-    # If present, a `fetches` entry will be added for each task
-    # dependency. Attributes of the upstream task may be used as
-    # substitution values in the `artifact` or `dest` values of the
-    # `fetches` entry.
-    fetches: Optional[dict[str, list[FetchesEntrySchema]]] = None
-
-
-#: Schema for from_deps transforms
-class FromDepsSchema(Schema, forbid_unknown_fields=False, kw_only=True):
-    from_deps: FromDepsConfig
-
-
-FROM_DEPS_SCHEMA = FromDepsSchema
+FROM_DEPS_SCHEMA = Schema.from_dict(
+    {
+        "from-deps": Schema.from_dict(
+            {
+                # Limit dependencies to specified kinds (defaults to all kinds in
+                # `kind-dependencies`).
+                #
+                # The first kind in the list is the "primary" kind. The
+                # dependency of this kind will be used to derive the label
+                # and copy attributes (if `copy-attributes` is True).
+                "kinds": Optional[list[str]],
+                # Set-name function (dynamic: validated at runtime against SET_NAME_MAP).
+                "set-name": Optional[Union[bool, str, dict[str, object]]],
+                # Limit dependencies to tasks whose attributes match
+                # using :func:`~taskgraph.util.attributes.attrmatch`.
+                "with-attributes": Optional[dict[str, Union[list, str]]],
+                # Group cross-kind dependencies using the given group-by
+                # function. One task will be created for each group. If not
+                # specified, the 'single' function will be used which creates
+                # a new task for each individual dependency.
+                "group-by": Optional[Union[str, dict[str, object]]],
+                # If True, copy attributes from the dependency matching the
+                # first kind in the `kinds` list (whether specified explicitly
+                # or taken from `kind-dependencies`).
+                "copy-attributes": Optional[bool],
+                # If true (the default), there must be only a single unique task
+                # for each kind in a dependency group. Setting this to false
+                # disables that requirement.
+                "unique-kinds": Optional[bool],
+                # If present, a `fetches` entry will be added for each task
+                # dependency. Attributes of the upstream task may be used as
+                # substitution values in the `artifact` or `dest` values of the
+                # `fetches` entry.
+                "fetches": Optional[dict[str, list[FetchesEntrySchema]]],
+            },
+        ),
+    },
+    name="FromDepsSchema",
+    forbid_unknown_fields=False,
+)
 
 transforms = TransformSequence()
 transforms.add_validate(FROM_DEPS_SCHEMA)
@@ -151,9 +151,9 @@ def from_deps(config, tasks):
             else:
                 raise Exception("Could not detect primary kind!")
 
-            new_task.setdefault("attributes", {})["primary-kind-dependency"] = (
-                primary_kind
-            )
+            new_task.setdefault("attributes", {})[
+                "primary-kind-dependency"
+            ] = primary_kind
 
             primary_dep = [dep for dep in group if dep.kind == primary_kind][0]
             new_task["attributes"]["primary-dependency-label"] = primary_dep.label
