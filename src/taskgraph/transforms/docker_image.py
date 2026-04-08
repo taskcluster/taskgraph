@@ -5,7 +5,6 @@
 import logging
 import os
 import re
-from typing import Optional
 
 import taskgraph
 from taskgraph.transforms.base import TransformSequence
@@ -27,31 +26,32 @@ IMAGE_BUILDER_IMAGE = (
 
 transforms = TransformSequence()
 
-
 #: Schema for docker_image transforms
-class DockerImageSchema(Schema):
-    # Name of the docker image.
-    name: str
-    # Name of the parent docker image.
-    parent: Optional[str] = None
-    # Treeherder symbol.
-    symbol: Optional[str] = None
-    # Relative path (from config.path) to the file the docker image was defined in.
-    task_from: Optional[str] = None
-    # Arguments to use for the Dockerfile.
-    args: Optional[dict[str, str]] = None
-    # Name of the docker image definition under taskcluster/docker, when
-    # different from the docker image name.
-    definition: Optional[str] = None
-    # List of package tasks this docker image depends on.
-    packages: Optional[list[str]] = None
-    # Information for indexing this build so its artifacts can be discovered.
-    index: Optional[IndexSchema] = None
-    # Whether this image should be cached based on inputs.
-    cache: Optional[bool] = None
+DOCKER_IMAGE_SCHEMA = Schema.from_dict(
+    {
+        # Name of the docker image.
+        "name": str,
+        # Name of the parent docker image.
+        "parent": (str, None),
+        # Treeherder symbol.
+        "symbol": (str, None),
+        # Relative path (from config.path) to the file the docker image was defined in.
+        "task-from": (str, None),
+        # Arguments to use for the Dockerfile.
+        "args": (dict[str, str], None),
+        # Name of the docker image definition under taskcluster/docker, when
+        # different from the docker image name.
+        "definition": (str, None),
+        # List of package tasks this docker image depends on.
+        "packages": (list[str], None),
+        # Information for indexing this build so its artifacts can be discovered.
+        "index": (IndexSchema, None),
+        # Whether this image should be cached based on inputs.
+        "cache": (bool, None),
+    },
+)
 
-
-docker_image_schema = DockerImageSchema
+docker_image_schema = DOCKER_IMAGE_SCHEMA
 
 
 transforms.add_validate(docker_image_schema)
