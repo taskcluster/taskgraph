@@ -33,25 +33,36 @@ logger = logging.getLogger(__name__)
 # Fetches may be accepted in other transforms and eventually passed along
 # to a `task` (eg: from_deps). Defining this here allows them to reuse
 # the schema and avoid duplication.
-class FetchesEntrySchema(Schema):
-    artifact: str
-    dest: Optional[str] = None
-    extract: Optional[bool] = None
-    verify_hash: Optional[bool] = None
+FetchesEntrySchema = Schema.from_dict(
+    {
+        "artifact": str,
+        "dest": Optional[str],
+        "extract": Optional[bool],
+        "verify-hash": Optional[bool],
+    },
+    name="FetchesEntrySchema",
+)
 
+WhenConfig = Schema.from_dict(
+    {
+        # This task only needs to be run if a file matching one of the given
+        # patterns has changed in the push. The patterns use the mozpack
+        # match function (python/mozbuild/mozpack/path.py).
+        "files-changed": Optional[list[str]],
+    },
+    name="WhenConfig",
+)
 
-class WhenConfig(Schema):
-    # This task only needs to be run if a file matching one of the given
-    # patterns has changed in the push. The patterns use the mozpack
-    # match function (python/mozbuild/mozpack/path.py).
-    files_changed: Optional[list[str]] = None
-
-
-class RunConfig(Schema, forbid_unknown_fields=False, kw_only=True):
-    # The key to a run implementation in a peer module to this one.
-    using: str
-    # Base work directory used to set up the task.
-    workdir: Optional[str] = None
+RunConfig = Schema.from_dict(
+    {
+        # The key to a run implementation in a peer module to this one.
+        "using": str,
+        # Base work directory used to set up the task.
+        "workdir": Optional[str],
+    },
+    name="RunConfig",
+    forbid_unknown_fields=False,
+)
 
 
 #: Schema for a run transforms
@@ -405,8 +416,10 @@ def run_task_using(worker_implementation, run_using, schema=None, defaults={}):
     return wrap
 
 
-class AlwaysOptimizedRunSchema(Schema):
-    using: Literal["always-optimized"]
+AlwaysOptimizedRunSchema = Schema.from_dict(
+    {"using": Literal["always-optimized"]},
+    name="AlwaysOptimizedRunSchema",
+)
 
 
 @run_task_using("always-optimized", "always-optimized", AlwaysOptimizedRunSchema)
