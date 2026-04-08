@@ -50,9 +50,13 @@ def run_task_suffix():
     return hash_path(RUN_TASK)[0:20]
 
 
-class WorkerSchema(Schema, forbid_unknown_fields=False, kw_only=True):
-    # The worker implementation type.
-    implementation: str
+WORKER_SCHEMA = Schema.from_dict(
+    {
+        # The worker implementation type.
+        "implementation": str,
+    },
+    forbid_unknown_fields=False,
+)
 
 
 #: Schema for the task transforms
@@ -134,7 +138,7 @@ class TaskDescriptionSchema(Schema):
     # the release promotion phase that this task belongs to.
     shipping_phase: Optional[Literal["build", "promote", "push", "ship"]] = None
     # Information specific to the worker implementation that will run this task.
-    worker: Optional[WorkerSchema] = None
+    worker: Optional[WORKER_SCHEMA] = None
 
     def __post_init__(self):
         if self.dependencies:
@@ -241,58 +245,66 @@ def verify_index(config, index):
 DockerImage = Union[str, dict[str, str]]
 
 
-class DockerWorkerCacheEntry(Schema):
-    # only one type is supported by any of the workers right now
-    type: Literal["persistent"] = "persistent"
-    # name of the cache, allowing reuse by subsequent tasks naming the same cache
-    name: Optional[str] = None
-    # location in the task image where the cache will be mounted
-    mount_point: Optional[str] = None
-    # Whether the cache is not used in untrusted environments (like the Try repo).
-    skip_untrusted: Optional[bool] = None
+DOCKER_WORKER_CACHE_ENTRY = Schema.from_dict(
+    {
+        # only one type is supported by any of the workers right now
+        "type": (Literal["persistent"], "persistent"),
+        # name of the cache, allowing reuse by subsequent tasks naming the same cache
+        "name": (str, None),
+        # location in the task image where the cache will be mounted
+        "mount-point": (str, None),
+        # Whether the cache is not used in untrusted environments (like the Try repo).
+        "skip-untrusted": (bool, None),
+    },
+)
 
+DOCKER_WORKER_ARTIFACT = Schema.from_dict(
+    {
+        # type of artifact -- simple file, or recursive directory, or a volume mounted directory.
+        "type": (Optional[Literal["file", "directory", "volume"]], None),
+        # task image path from which to read artifact
+        "path": (str, None),
+        # name of the produced artifact (root of the names for type=directory)
+        "name": (str, None),
+    },
+)
 
-class DockerWorkerArtifact(Schema):
-    # type of artifact -- simple file, or recursive directory, or a volume mounted directory.
-    type: Optional[Literal["file", "directory", "volume"]] = None
-    # task image path from which to read artifact
-    path: Optional[str] = None
-    # name of the produced artifact (root of the names for type=directory)
-    name: Optional[str] = None
-
-
-class DockerWorkerPayloadSchema(Schema, forbid_unknown_fields=False, kw_only=True):
-    implementation: Literal["docker-worker"]
-    os: Literal["linux"]
-    # For tasks that will run in docker-worker, this is the name of the docker
-    # image or in-tree docker image to run the task in.
-    docker_image: DockerImage
-    # worker features that should be enabled
-    relengapi_proxy: bool
-    chain_of_trust: bool
-    taskcluster_proxy: bool
-    allow_ptrace: bool
-    loopback_video: bool
-    # environment variables
-    env: dict[str, taskref_or_string_msgspec]
-    # the maximum time to run, in seconds
-    max_run_time: int
-    # Paths to Docker volumes.
-    volumes: Optional[list[str]] = None
-    # caches to set up for the task
-    caches: Optional[list[DockerWorkerCacheEntry]] = None
-    # artifacts to extract from the task image after completion
-    artifacts: Optional[list[DockerWorkerArtifact]] = None
-    # the command to run; if not given, docker-worker will default to the
-    # command in the docker image
-    command: Optional[list[taskref_or_string_msgspec]] = None
-    # the exit status code(s) that indicates the task should be retried
-    retry_exit_status: Optional[list[int]] = None
-    # the exit status code(s) that indicates the caches used by the task
-    # should be purged
-    purge_caches_exit_status: Optional[list[int]] = None
-    # Whether any artifacts are assigned to this worker
-    skip_artifacts: Optional[bool] = None
+DockerWorkerPayloadSchema = Schema.from_dict(
+    {
+        "implementation": Literal["docker-worker"],
+        "os": Literal["linux"],
+        # For tasks that will run in docker-worker, this is the name of the docker
+        # image or in-tree docker image to run the task in.
+        "docker-image": DockerImage,
+        # worker features that should be enabled
+        "relengapi-proxy": bool,
+        "chain-of-trust": bool,
+        "taskcluster-proxy": bool,
+        "allow-ptrace": bool,
+        "loopback-video": bool,
+        # environment variables
+        "env": dict[str, taskref_or_string_msgspec],
+        # the maximum time to run, in seconds
+        "max-run-time": int,
+        # Paths to Docker volumes.
+        "volumes": (list[str], None),
+        # caches to set up for the task
+        "caches": (list[DOCKER_WORKER_CACHE_ENTRY], None),
+        # artifacts to extract from the task image after completion
+        "artifacts": (list[DOCKER_WORKER_ARTIFACT], None),
+        # the command to run; if not given, docker-worker will default to the
+        # command in the docker image
+        "command": (list[taskref_or_string_msgspec], None),
+        # the exit status code(s) that indicates the task should be retried
+        "retry-exit-status": (list[int], None),
+        # the exit status code(s) that indicates the caches used by the task
+        # should be purged
+        "purge-caches-exit-status": (list[int], None),
+        # Whether any artifacts are assigned to this worker
+        "skip-artifacts": (bool, None),
+    },
+    forbid_unknown_fields=False,
+)
 
 
 @payload_builder("docker-worker", schema=DockerWorkerPayloadSchema)
@@ -497,69 +509,78 @@ def build_docker_worker_payload(config, task, task_def):
         payload["capabilities"] = capabilities
 
 
-class GenericWorkerArtifact(Schema):
-    # type of artifact -- simple file, or recursive directory
-    type: Literal["file", "directory"]
-    # filesystem path from which to read artifact
-    path: str
-    # if not specified, path is used for artifact name
-    name: Optional[str] = None
+GENERIC_WORKER_ARTIFACT = Schema.from_dict(
+    {
+        # type of artifact -- simple file, or recursive directory
+        "type": Literal["file", "directory"],
+        # filesystem path from which to read artifact
+        "path": str,
+        # if not specified, path is used for artifact name
+        "name": (str, None),
+    },
+)
 
+MOUNT_SCHEMA = Schema.from_dict(
+    {
+        # A unique name for the cache volume.
+        "cache-name": (str, None),
+        # Optional content for pre-loading cache, or mandatory content for
+        # read-only file or directory.
+        "content": Schema.from_dict(
+            {
+                # Artifact name that contains the content.
+                "artifact": (str, None),
+                # Task ID that has the artifact that contains the content.
+                "task-id": (taskref_or_string_msgspec, None),
+                # URL that supplies the content in response to an unauthenticated GET request.
+                "url": (str, None),
+            },
+            optional=True,
+        ),
+        # If mounting a cache or read-only directory.
+        "directory": (str, None),
+        # If mounting a file.
+        "file": (str, None),
+        # Archive format of the content.
+        "format": (Optional[Literal["rar", "tar.bz2", "tar.gz", "zip"]], None),
+    },
+)
 
-class MountContentSchema(Schema):
-    # Artifact name that contains the content.
-    artifact: Optional[str] = None
-    # Task ID that has the artifact that contains the content.
-    task_id: Optional[taskref_or_string_msgspec] = None
-    # URL that supplies the content in response to an unauthenticated GET request.
-    url: Optional[str] = None
-
-
-class MountSchema(Schema):
-    # A unique name for the cache volume.
-    cache_name: Optional[str] = None
-    # Optional content for pre-loading cache, or mandatory content for
-    # read-only file or directory.
-    content: Optional[MountContentSchema] = None
-    # If mounting a cache or read-only directory.
-    directory: Optional[str] = None
-    # If mounting a file.
-    file: Optional[str] = None
-    # Archive format of the content.
-    format: Optional[Literal["rar", "tar.bz2", "tar.gz", "zip"]] = None
-
-
-class GenericWorkerPayloadSchema(Schema, forbid_unknown_fields=False, kw_only=True):
-    implementation: Literal["generic-worker"]
-    os: Literal["windows", "macosx", "linux", "linux-bitbar"]
-    # command is a list of commands to run, sequentially
-    # On Windows, each command is a string; on Linux/OS X, each command is a string array
-    command: list
-    # environment variables
-    env: dict[str, taskref_or_string_msgspec]
-    # the maximum time to run, in seconds
-    max_run_time: int
-    # optional features
-    chain_of_trust: bool
-    # artifacts to extract from the task image after completion
-    artifacts: Optional[list[GenericWorkerArtifact]] = None
-    # Directories and/or files to be mounted.
-    mounts: Optional[list[MountSchema]] = None
-    # the exit status code(s) that indicates the task should be retried
-    retry_exit_status: Optional[list[int]] = None
-    # the exit status code(s) that indicates the caches used by the task
-    # should be purged
-    purge_caches_exit_status: Optional[list[int]] = None
-    # os user groups for test task workers
-    os_groups: Optional[list[str]] = None
-    # feature for test task to run as administrator
-    run_as_administrator: Optional[bool] = None
-    # feature for task to run as current OS user
-    run_task_as_current_user: Optional[bool] = None
-    taskcluster_proxy: Optional[bool] = None
-    hide_cmd_window: Optional[bool] = None
-    # Whether any artifacts are assigned to this worker
-    skip_artifacts: Optional[bool] = None
+GenericWorkerPayloadSchema = Schema.from_dict(
+    {
+        "implementation": Literal["generic-worker"],
+        "os": Literal["windows", "macosx", "linux", "linux-bitbar"],
+        # command is a list of commands to run, sequentially
+        # On Windows, each command is a string; on Linux/OS X, each command is a string array
+        "command": list,
+        # environment variables
+        "env": dict[str, taskref_or_string_msgspec],
+        # the maximum time to run, in seconds
+        "max-run-time": int,
+        # optional features
+        "chain-of-trust": bool,
+        # artifacts to extract from the task image after completion
+        "artifacts": (list[GENERIC_WORKER_ARTIFACT], None),
+        # Directories and/or files to be mounted.
+        "mounts": (list[MOUNT_SCHEMA], None),
+        # the exit status code(s) that indicates the task should be retried
+        "retry-exit-status": (list[int], None),
+        # the exit status code(s) that indicates the caches used by the task
+        # should be purged
+        "purge-caches-exit-status": (list[int], None),
+        # os user groups for test task workers
+        "os-groups": (list[str], None),
+        # feature for test task to run as administrator
+        "run-as-administrator": (bool, None),
+        # feature for task to run as current OS user
+        "run-task-as-current-user": (bool, None),
+        "taskcluster-proxy": (bool, None),
+        "hide-cmd-window": (bool, None),
+        # Whether any artifacts are assigned to this worker
+        "skip-artifacts": (bool, None),
+    },
+    forbid_unknown_fields=False,
+)
 
 
 @payload_builder("generic-worker", schema=GenericWorkerPayloadSchema)
@@ -677,13 +698,16 @@ def build_generic_worker_payload(config, task, task_def):
         task_def["payload"]["features"] = features
 
 
-class ReleaseProperties(Schema):
-    app_name: Optional[str] = None
-    app_version: Optional[str] = None
-    branch: Optional[str] = None
-    build_id: Optional[str] = None
-    hash_type: Optional[str] = None
-    platform: Optional[str] = None
+RELEASE_PROPERTIES = Schema.from_dict(
+    {
+        "app-name": (str, None),
+        "app-version": (str, None),
+        "branch": (str, None),
+        "build-id": (str, None),
+        "hash-type": (str, None),
+        "platform": (str, None),
+    },
+)
 
 
 class UpstreamArtifact(Schema, rename="camel"):
@@ -697,18 +721,22 @@ class UpstreamArtifact(Schema, rename="camel"):
     locale: str
 
 
-class BeetmoverPayloadSchema(Schema, forbid_unknown_fields=False, kw_only=True):
-    implementation: Literal["beetmover"]
-    # the maximum time to run, in seconds
-    max_run_time: int
-    # release properties
-    release_properties: ReleaseProperties
-    # list of artifact URLs for the artifacts that should be beetmoved
-    upstream_artifacts: list[UpstreamArtifact]
-    # locale key, if this is a locale beetmover task
-    locale: Optional[str] = None
-    partner_public: Optional[bool] = None
-    artifact_map: Optional[object] = None
+BeetmoverPayloadSchema = Schema.from_dict(
+    {
+        "implementation": Literal["beetmover"],
+        # the maximum time to run, in seconds
+        "max-run-time": int,
+        # release properties
+        "release-properties": RELEASE_PROPERTIES,
+        # list of artifact URLs for the artifacts that should be beetmoved
+        "upstream-artifacts": list[UpstreamArtifact],
+        # locale key, if this is a locale beetmover task
+        "locale": (str, None),
+        "partner-public": (bool, None),
+        "artifact-map": (object, None),
+    },
+    forbid_unknown_fields=False,
+)
 
 
 @payload_builder("beetmover", schema=BeetmoverPayloadSchema)
@@ -737,10 +765,14 @@ def build_beetmover_payload(config, task, task_def):
         task_def["payload"]["is_partner_repack_public"] = worker["partner-public"]
 
 
-class InvalidPayloadSchema(Schema, forbid_unknown_fields=False, kw_only=True):
-    # an invalid task is one which should never actually be created; this is used in
-    # release automation on branches where the task just doesn't make sense
-    implementation: Literal["invalid"]
+InvalidPayloadSchema = Schema.from_dict(
+    {
+        # an invalid task is one which should never actually be created; this is used in
+        # release automation on branches where the task just doesn't make sense
+        "implementation": Literal["invalid"],
+    },
+    forbid_unknown_fields=False,
+)
 
 
 @payload_builder("invalid", schema=InvalidPayloadSchema)
@@ -748,12 +780,18 @@ def build_invalid_payload(config, task, task_def):
     task_def["payload"] = "invalid task - should never be created"
 
 
-class AlwaysOptimizedPayloadSchema(Schema, forbid_unknown_fields=False, kw_only=True):
-    implementation: Literal["always-optimized"]
+AlwaysOptimizedPayloadSchema = Schema.from_dict(
+    {
+        "implementation": Literal["always-optimized"],
+    },
+    forbid_unknown_fields=False,
+)
 
-
-class SucceedPayloadSchema(Schema):
-    implementation: Literal["succeed"]
+SucceedPayloadSchema = Schema.from_dict(
+    {
+        "implementation": Literal["succeed"],
+    },
+)
 
 
 @payload_builder("always-optimized", schema=AlwaysOptimizedPayloadSchema)
