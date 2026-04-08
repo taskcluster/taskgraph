@@ -18,14 +18,15 @@ transforms = TransformSequence()
 
 
 #: Schema for run.using index-search
-class IndexSearchRunSchema(Schema):
-    using: Literal["index-search"]
-    # A list of indexes in decreasing order of priority at which to lookup for this
-    # task. This is interpolated with the graph parameters.
-    index_search: list[str]
-
-
-run_task_schema = IndexSearchRunSchema
+run_task_schema = Schema.from_dict(
+    {
+        "using": Literal["index-search"],
+        # A list of indexes in decreasing order of priority at which to lookup for this
+        # task. This is interpolated with the graph parameters.
+        "index-search": list[str],
+    },
+    name="IndexSearchRunSchema",
+)
 
 
 @run_task_using("always-optimized", "index-search", schema=run_task_schema)
