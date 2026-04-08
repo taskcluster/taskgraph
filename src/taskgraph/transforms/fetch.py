@@ -21,36 +21,38 @@ from .base import TransformSequence
 
 CACHE_TYPE = "content.v1"
 
-
-class FetchSubSchema(Schema, forbid_unknown_fields=False, kw_only=True):
-    # The fetch type
-    type: str
-
+_FETCH_SUB_SCHEMA = Schema.from_dict(
+    {
+        # The fetch type
+        "type": str,
+    },
+    forbid_unknown_fields=False,
+)
 
 #: Schema for fetch transforms
-class FetchSchema(Schema):
-    # Name of the task.
-    name: str
-    # Description of the task.
-    description: str
-    # The fetch configuration
-    fetch: FetchSubSchema
-    # Relative path (from config.path) to the file the task was defined
-    # in.
-    task_from: Optional[str] = None
-    expires_after: Optional[str] = None
-    docker_image: Optional[object] = None
-    # An alias that can be used instead of the real fetch task name in
-    # fetch stanzas for tasks.
-    fetch_alias: Optional[str] = None
-    # The prefix of the taskcluster artifact being uploaded.
-    # Defaults to `public/`; if it starts with something other than
-    # `public/` the artifact will require scopes to access.
-    artifact_prefix: Optional[str] = None
-    attributes: Optional[dict[str, object]] = None
-
-
-FETCH_SCHEMA = FetchSchema
+FETCH_SCHEMA = Schema.from_dict(
+    {
+        # Name of the task.
+        "name": str,
+        # Description of the task.
+        "description": str,
+        # The fetch configuration
+        "fetch": _FETCH_SUB_SCHEMA,
+        # Relative path (from config.path) to the file the task was defined
+        # in.
+        "task-from": (str, None),
+        "expires-after": (str, None),
+        "docker-image": (object, None),
+        # An alias that can be used instead of the real fetch task name in
+        # fetch stanzas for tasks.
+        "fetch-alias": (str, None),
+        # The prefix of the taskcluster artifact being uploaded.
+        # Defaults to `public/`; if it starts with something other than
+        # `public/` the artifact will require scopes to access.
+        "artifact-prefix": (str, None),
+        "attributes": (dict[str, object], None),
+    },
+)
 
 # define a collection of payload builders, depending on the worker implementation
 fetch_builders = {}
@@ -173,42 +175,48 @@ def make_task(config, tasks):
         yield task_desc
 
 
-class GpgSignatureConfig(Schema):
-    # URL where GPG signature document can be obtained. Can contain the
-    # value ``{url}``, which will be substituted with the value from
-    # ``url``.
-    sig_url: str
-    # Path to file containing GPG public key(s) used to validate
-    # download.
-    key_path: str
+_GPG_SIGNATURE_SCHEMA = Schema.from_dict(
+    {
+        # URL where GPG signature document can be obtained. Can contain the
+        # value ``{url}``, which will be substituted with the value from
+        # ``url``.
+        "sig-url": str,
+        # Path to file containing GPG public key(s) used to validate
+        # download.
+        "key-path": str,
+    },
+)
 
-
-class StaticUrlFetchSchema(Schema, forbid_unknown_fields=False, kw_only=True):
-    type: Literal["static-url"]
-    # The URL to download.
-    url: str
-    # The SHA-256 of the downloaded content.
-    sha256: str
-    # Size of the downloaded entity, in bytes.
-    size: int
-    # GPG signature verification.
-    gpg_signature: Optional[GpgSignatureConfig] = None
-    # The name to give to the generated artifact. Defaults to the file
-    # portion of the URL. Using a different extension converts the
-    # archive to the given type. Only conversion to .tar.zst is
-    # supported.
-    artifact_name: Optional[str] = None
-    # Strip the given number of path components at the beginning of
-    # each file entry in the archive.
-    # Requires an artifact-name ending with .tar.zst.
-    strip_components: Optional[int] = None
-    # Add the given prefix to each file entry in the archive.
-    # Requires an artifact-name ending with .tar.zst.
-    add_prefix: Optional[str] = None
-    # Headers to pass alongside the request.
-    headers: Optional[dict[str, str]] = None
-    # IMPORTANT: when adding anything that changes the behavior of the task,
-    # it is important to update the digest data used to compute cache hits.
+StaticUrlFetchSchema = Schema.from_dict(
+    {
+        "type": Literal["static-url"],
+        # The URL to download.
+        "url": str,
+        # The SHA-256 of the downloaded content.
+        "sha256": str,
+        # Size of the downloaded entity, in bytes.
+        "size": int,
+        # GPG signature verification.
+        "gpg-signature": (_GPG_SIGNATURE_SCHEMA, None),
+        # The name to give to the generated artifact. Defaults to the file
+        # portion of the URL. Using a different extension converts the
+        # archive to the given type. Only conversion to .tar.zst is
+        # supported.
+        "artifact-name": (str, None),
+        # Strip the given number of path components at the beginning of
+        # each file entry in the archive.
+        # Requires an artifact-name ending with .tar.zst.
+        "strip-components": (int, None),
+        # Add the given prefix to each file entry in the archive.
+        # Requires an artifact-name ending with .tar.zst.
+        "add-prefix": (str, None),
+        # Headers to pass alongside the request.
+        "headers": (dict[str, str], None),
+        # IMPORTANT: when adding anything that changes the behavior of the task,
+        # it is important to update the digest data used to compute cache hits.
+    },
+    forbid_unknown_fields=False,
+)
 
 
 @fetch_builder("static-url", schema=StaticUrlFetchSchema)
@@ -274,18 +282,22 @@ def create_fetch_url_task(config, name, fetch):
     }
 
 
-class GitFetchSchema(Schema, forbid_unknown_fields=False, kw_only=True):
-    type: Literal["git"]
-    repo: str
-    revision: str
-    include_dot_git: Optional[bool] = None
-    artifact_name: Optional[str] = None
-    path_prefix: Optional[str] = None
-    # ssh-key is a taskcluster secret path (e.g. project/civet/github-deploy-key)
-    # In the secret dictionary, the key should be specified as
-    #  "ssh_privkey": "-----BEGIN OPENSSH PRIVATE KEY-----\nkfksnb3jc..."
-    # n.b. The OpenSSH private key file format requires a newline at the end of the file.
-    ssh_key: Optional[str] = None
+GitFetchSchema = Schema.from_dict(
+    {
+        "type": Literal["git"],
+        "repo": str,
+        "revision": str,
+        "include-dot-git": (bool, None),
+        "artifact-name": (str, None),
+        "path-prefix": (str, None),
+        # ssh-key is a taskcluster secret path (e.g. project/civet/github-deploy-key)
+        # In the secret dictionary, the key should be specified as
+        #  "ssh_privkey": "-----BEGIN OPENSSH PRIVATE KEY-----\nkfksnb3jc..."
+        # n.b. The OpenSSH private key file format requires a newline at the end of the file.
+        "ssh-key": (str, None),
+    },
+    forbid_unknown_fields=False,
+)
 
 
 @fetch_builder("git", schema=GitFetchSchema)
