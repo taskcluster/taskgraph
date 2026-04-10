@@ -253,10 +253,12 @@ tasks:
                           - -cx
                           - $let:
                                 extraArgs:
-                                    $switch:
-                                        'tasks_for == "cron"': '${cron.quoted_args}'
-                                        'tasks_for == "github-pull-request"': '--allow-parameter-override'
-                                        $default: ''
+                                    $if: 'tasks_for == "cron"'
+                                    then: '${cron.quoted_args}'
+                                    else:
+                                        $if: 'tasks_for == "github-pull-request"'
+                                        then: '--allow-parameter-override'
+                                        else: ''
                             in:
                                 $if: 'tasks_for == "action" || tasks_for == "pr-action"'
                                 then: >
