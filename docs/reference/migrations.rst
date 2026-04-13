@@ -3,6 +3,15 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+20.x -> 21.x
+------------
+
+* If you have tasks using `docker-worker`'s `dind`, `privileged` or `loopback-audio`
+  features, they are no longer supported. Either avoid using these features or migrate
+  to a `generic-worker` pool with D2G payloads enabled.
+* Ensure any task's using the `run-task` or `decision` images work with the new
+  Debian 13 base.
+
 19.x -> 20.x
 ------------
 
