@@ -1,5 +1,24 @@
 # Change Log
 
+## [21.0.0] - 2026-04-13
+
+### Added
+
+- Ability for `run-task` to fetch arbitrary extra refs
+- Ability for Decision task to override params via Git notes
+
+### Fixed
+
+- Improved index route verification
+
+### Changed
+
+- BREAKING CHANGE: run-task and decision images now use Debian 13
+
+### Removed
+
+- BREAKING CHANGE: Removed docker-worker features: dind, privileged, loopback-audio
+
 ## [20.0.0] - 2026-03-17
 
 ### Added
