@@ -653,19 +653,21 @@ def test_get_changed_files_with_null_base_revision_shallow_clone(
 
 def test_get_note_git(git_repo, tmpdir):
     """get_note returns note content when present, None otherwise."""
-    repo_path = tmpdir.join("git")
-    shutil.copytree(git_repo, repo_path)
-    repo = get_repository(str(repo_path))
+    src_path = str(tmpdir.join("git-src"))
+    dst_path = str(tmpdir.join("git-dst"))
+    shutil.copytree(git_repo, src_path)
+    shutil.copytree(git_repo, dst_path)
+    repo = get_repository(dst_path)
 
-    # No note yet
-    assert repo.get_note("try-config") is None
+    # No note yet on the remote
+    assert repo.get_note("try-config", src_path) is None
 
     rev = repo.head_rev
     subprocess.check_call(
         ["git", "notes", "--ref=refs/notes/try-config", "add", "-m", "test note", rev],
-        cwd=repo.path,
+        cwd=src_path,
     )
 
-    assert repo.get_note("try-config") == "test note"
-    assert repo.get_note("try-config", rev) == "test note"
-    assert repo.get_note("other") is None
+    assert repo.get_note("try-config", src_path) == "test note"
+    assert repo.get_note("try-config", src_path, revision=rev) == "test note"
+    assert repo.get_note("other", src_path) is None

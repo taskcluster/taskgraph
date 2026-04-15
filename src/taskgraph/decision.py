@@ -267,7 +267,7 @@ def get_decision_parameters(graph_config, options):
     # load extra parameters from vcs note if able
     note_ref = "refs/notes/decision-parameters"
     if options.get("allow_parameter_override") and (
-        note_params := repo.get_note(note_ref)
+        note_params := repo.get_note(note_ref, parameters["head_repository"])
     ):
         try:
             note_params = json.loads(note_params)
