@@ -167,7 +167,9 @@ _BASE_OPTIONS = {
 def test_decision_parameters_note(mock_files_changed, mock_get_note):
     options = {**_BASE_OPTIONS, "allow_parameter_override": True}
     params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, options)
-    mock_get_note.assert_called_once_with("refs/notes/decision-parameters")
+    mock_get_note.assert_called_once_with(
+        "refs/notes/decision-parameters", _BASE_OPTIONS["head_repository"]
+    )
     assert params["build_number"] == 99
 
 

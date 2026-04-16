@@ -31,7 +31,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 SECRET_BASEURL_TPL = "{}/secrets/v1/secret/{{}}".format(
     os.environ.get("TASKCLUSTER_PROXY_URL", "http://taskcluster").rstrip("/")
@@ -640,7 +640,6 @@ def git_checkout(
     ssh_key_file: Optional[Path],
     ssh_known_hosts_file: Optional[Path],
     shallow: bool = False,
-    extra_refs: Optional[List[str]] = None,
 ):
     assert head_ref or head_rev
 
@@ -734,14 +733,6 @@ def git_checkout(
         shallow=shallow,
         env=env,
     )
-
-    if extra_refs:
-        git_fetch(
-            destination_path,
-            *[f"{ref}:{ref}" for ref in extra_refs],
-            remote=head_repo,
-            env=env,
-        )
 
     args = [
         "git",
@@ -941,8 +932,6 @@ def collect_vcs_options(args, project, name):
     head_rev = os.environ.get(f"{env_prefix}_HEAD_REV")
     pip_requirements = os.environ.get(f"{env_prefix}_PIP_REQUIREMENTS")
     private_key_secret = os.environ.get(f"{env_prefix}_SSH_SECRET_NAME")
-    if extra_refs := os.environ.get(f"{env_prefix}_EXTRA_REFS"):
-        extra_refs = json.loads(extra_refs)
 
     store_path = os.environ.get("HG_STORE_PATH")
 
@@ -976,7 +965,6 @@ def collect_vcs_options(args, project, name):
         "ssh-secret-name": private_key_secret,
         "pip-requirements": pip_requirements,
         "shallow-clone": shallow_clone,
-        "extra-refs": extra_refs,
     }
 
 
@@ -1026,7 +1014,6 @@ def vcs_checkout_from_args(options):
                 ssh_key_file,
                 ssh_known_hosts_file,
                 shallow=options.get("shallow-clone", False),
-                extra_refs=options.get("extra-refs"),
             )
         elif options["repo-type"] == "hg":
             revision = hg_checkout(

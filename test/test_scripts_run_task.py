@@ -1,5 +1,4 @@
 import functools
-import json
 import os
 import site
 import stat
@@ -180,17 +179,6 @@ def test_install_pip_requirements_with_uv(
             {"shallow-clone": True},
             id="git_with_shallow_clone",
         ),
-        pytest.param(
-            {},
-            {
-                "REPOSITORY_TYPE": "git",
-                "HEAD_REPOSITORY": "https://github.com/example/repo",
-                "HEAD_REV": "abc123",
-                "EXTRA_REFS": json.dumps(["refs/notes/taskgraph", "refs/notes/other"]),
-            },
-            {"extra-refs": ["refs/notes/taskgraph", "refs/notes/other"]},
-            id="git_with_extra_refs",
-        ),
     ],
 )
 def test_collect_vcs_options(
@@ -228,7 +216,6 @@ def test_collect_vcs_options(
         "shallow-clone": False,
         "ssh-secret-name": env.get("SSH_SECRET_NAME"),
         "store-path": env.get("HG_STORE_PATH"),
-        "extra-refs": None,
     }
     if "PIP_REQUIREMENTS" in env:
         expected["pip-requirements"] = os.path.join(
@@ -651,36 +638,3 @@ def test_main_abspath_environment(mocker, run_main):
     assert env.get("MOZ_UV_HOME") == "/builds/worker/dir/uv"
     for key in envvars:
         assert env[key] == "/builds/worker/file"
-
-
-def test_git_checkout_extra_refs(mock_stdin, run_task_mod, mock_git_repo, tmp_path):
-    """extra_refs are fetched into the local repo during checkout."""
-    # Add a notes ref to the source repo
-    rev = mock_git_repo["main"][-1]
-    subprocess.check_call(
-        ["git", "notes", "--ref=refs/notes/taskgraph", "add", "-m", "test", rev],
-        cwd=mock_git_repo["path"],
-    )
-
-    destination = tmp_path / "destination"
-    run_task_mod.git_checkout(
-        destination_path=str(destination),
-        head_repo=mock_git_repo["path"],
-        base_repo=mock_git_repo["path"],
-        base_rev=None,
-        head_ref="main",
-        head_rev=None,
-        ssh_key_file=None,
-        ssh_known_hosts_file=None,
-        extra_refs=["refs/notes/taskgraph"],
-    )
-
-    # Verify the notes ref is available locally
-    result = subprocess.run(
-        ["git", "notes", "--ref=refs/notes/taskgraph", "show", rev],
-        cwd=str(destination),
-        capture_output=True,
-        text=True,
-    )
-    assert result.returncode == 0
-    assert "test" in result.stdout

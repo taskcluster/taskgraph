@@ -215,8 +215,16 @@ class Repository(ABC):
         If this function returns an unexpected value, then make sure
         the revision was fetched from the remote repository."""
 
-    def get_note(self, note: str, revision: Optional[str] = None) -> Optional[str]:
+    def get_note(
+        self,
+        note: str,
+        remote: str,
+        revision: Optional[str] = None,
+    ) -> Optional[str]:
         """Read a note attached to the given revision (defaults to HEAD).
+
+        The notes ref is fetched from ``remote`` first; a missing ref on the
+        remote is tolerated while other fetch failures propagate.
 
         Returns the note content as a string, or ``None`` if no note exists.
         Only supported by Git; returns ``None`` for all other VCS types.
@@ -594,13 +602,32 @@ class GitRepository(Repository):
                 return False
             raise
 
-    def get_note(self, note: str, revision: Optional[str] = None) -> Optional[str]:
+    def get_note(
+        self,
+        note: str,
+        remote: str,
+        revision: Optional[str] = None,
+    ) -> Optional[str]:
         if not note.startswith("refs/notes/"):
             note = f"refs/notes/{note}"
 
-        revision = revision or "HEAD"
         try:
-            return self.run("notes", f"--ref={note}", "show", revision).strip()
+            self.run("fetch", remote, f"{note}:{note}")
+        except subprocess.CalledProcessError:
+            ls = subprocess.run(
+                ["git", "ls-remote", "--exit-code", remote, note],
+                cwd=self.path,
+                capture_output=True,
+            )
+            # If the note doesn't exist, ignore the fetch failure
+            if ls.returncode == 2:
+                return None
+            raise
+
+        try:
+            return self.run(
+                "notes", f"--ref={note}", "show", revision or "HEAD"
+            ).strip()
         except subprocess.CalledProcessError as e:
             if e.returncode == 1:
                 return None
