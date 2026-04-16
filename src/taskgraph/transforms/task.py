@@ -268,7 +268,6 @@ class DockerWorkerPayloadSchema(Schema, forbid_unknown_fields=False, kw_only=Tru
     # image or in-tree docker image to run the task in.
     docker_image: DockerImage
     # worker features that should be enabled
-    relengapi_proxy: bool
     chain_of_trust: bool
     taskcluster_proxy: bool
     allow_ptrace: bool
@@ -339,9 +338,6 @@ def build_docker_worker_payload(config, task, task_def):
             raise Exception("unknown docker image type")
 
     features = {}
-
-    if worker.get("relengapi-proxy"):
-        features["relengAPIProxy"] = True
 
     if worker.get("taskcluster-proxy"):
         features["taskclusterProxy"] = True
@@ -798,7 +794,6 @@ def set_defaults(config, tasks):
 
         worker = task["worker"]
         if worker["implementation"] in ("docker-worker",):
-            worker.setdefault("relengapi-proxy", False)
             worker.setdefault("chain-of-trust", False)
             worker.setdefault("taskcluster-proxy", False)
             worker.setdefault("allow-ptrace", False)
