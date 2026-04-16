@@ -1,5 +1,16 @@
 # Change Log
 
+## [22.0.0] - 2026-04-16
+
+### Fixed
+
+- Decision task now fetches `refs/notes/decision-parameters` itself
+
+### Removed
+
+- BREAKING CHANGE: Removed ability for `run-task` to fetch arbitrary extra refs
+- BREAKING CHANGE: Removed docker-worker feature: relengapi-proxy
+
 ## [21.0.0] - 2026-04-13
 
 ### Added

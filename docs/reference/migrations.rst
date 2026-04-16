@@ -3,6 +3,14 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+21.x -> 22.x
+------------
+
+* If you have tasks using `docker-worker`'s `relengapi-proxy` feature, it is no
+  longer supported. Remove all references to it in your task definitions.
+* Remove references to `<REPO>_EXTRA_REFS` in all `run-task` based tasks. These
+  refs must now be fetched as part of the task payload.
+
 20.x -> 21.x
 ------------
 
