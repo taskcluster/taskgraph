@@ -612,15 +612,20 @@ class GitRepository(Repository):
             note = f"refs/notes/{note}"
 
         try:
-            self.run("fetch", remote, f"{note}:{note}")
+            self.run("fetch", remote, f"{note}:{note}", stderr=subprocess.PIPE)
         except subprocess.CalledProcessError:
-            ls = subprocess.run(
-                ["git", "ls-remote", "--exit-code", remote, note],
-                cwd=self.path,
-                capture_output=True,
+            ls_output = self.run(
+                "ls-remote",
+                "--exit-code",
+                remote,
+                note,
+                return_codes=(2,),
+                stderr=subprocess.PIPE,
             )
-            # If the note doesn't exist, ignore the fetch failure
-            if ls.returncode == 2:
+            if not ls_output:
+                logger.info(
+                    "Failed to fetch %s but the remote doesn't have it. Ignoring.", note
+                )
                 return None
             raise
 
