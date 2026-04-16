@@ -48,6 +48,5 @@ exclude: |
   (?x)^(
     src/taskgraph/run-task/fetch-content |
     src/taskgraph/run-task/robustcheckout.py |
-    src/taskgraph/run-task/run-task |
-    taskcluster/scripts/external_tools
+    src/taskgraph/run-task/run-task
   )
