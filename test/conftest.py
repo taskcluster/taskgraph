@@ -1,5 +1,6 @@
 import os
 import platform
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -13,9 +14,21 @@ pytest_plugins = ("pytest-taskgraph",)
 # interference with tests.
 # This ignores ~/.hgrc
 os.environ["HGRCPATH"] = ""
-# This ignores system-level git config (eg: in /etc). There apperas to be
-# no way to ignore ~/.gitconfig other than overriding $HOME, which is overkill.
+# This ignores system-level git config (eg: in /etc).
 os.environ["GIT_CONFIG_NOSYSTEM"] = "1"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def git_global_config():
+    # run-task writes to the global git config, so point it at a real
+    # (writable) empty file instead of ~/.gitconfig.
+    fd, path = tempfile.mkstemp(prefix="taskgraph-gitconfig-")
+    os.close(fd)
+    os.environ["GIT_CONFIG_GLOBAL"] = path
+    yield
+    del os.environ["GIT_CONFIG_GLOBAL"]
+    os.unlink(path)
+
 
 # Some of the tests marked with this may be fixable on Windows; we should
 # look into these in more depth at some point.
