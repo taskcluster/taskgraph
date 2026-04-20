@@ -626,7 +626,7 @@ def fetch_and_extract(url, dest_dir, extract=True, sha256=None, size=None):
     the destination directory.
     """
 
-    basename = urllib.parse.urlparse(url).path.split("/")[-1]
+    basename = urllib.parse.unquote(urllib.parse.urlparse(url).path.split("/")[-1])
     dest_path = dest_dir / basename
 
     download_to_path(url, dest_path, sha256=sha256, size=size)
@@ -920,16 +920,17 @@ def command_task_artifacts(args):
         sha256 = None
         if fetch.get("verify-hash"):
             sha256 = get_hash(fetch, root_url)
+        encoded_artifact = urllib.parse.quote(fetch["artifact"])
         if fetch["artifact"].startswith("public/"):
             path = "task/{task}/artifacts/{artifact}".format(
-                task=fetch["task"], artifact=fetch["artifact"]
+                task=fetch["task"], artifact=encoded_artifact
             )
             url = api(root_url, "queue", "v1", path)
         else:
             url = ("{proxy_url}/api/queue/v1/task/{task}/artifacts/{artifact}").format(
                 proxy_url=os.environ["TASKCLUSTER_PROXY_URL"],
                 task=fetch["task"],
-                artifact=fetch["artifact"],
+                artifact=encoded_artifact,
             )
         downloads.append((url, extdir, fetch["extract"], sha256))
 
