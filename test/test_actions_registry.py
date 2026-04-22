@@ -4,6 +4,7 @@ import pytest
 from mozilla_repo_urls import InvalidRepoUrlError
 
 from taskgraph.actions import registry
+from taskgraph.parameters import Parameters
 from test import does_not_raise
 
 
@@ -126,3 +127,75 @@ def test_sanity_check_task_scope(
     )
     with expectation:
         registry.sanity_check_task_scope(callback, parameters, graph_config={})
+
+
+def _make_action(cb_name):
+    return registry.Action(
+        order=42,
+        cb_name=cb_name,
+        permission="generic",
+        action_builder=lambda parameters, graph_config, decision_task_id: {
+            "cb_name": cb_name,
+        },
+    )
+
+
+@pytest.fixture
+def fake_actions(monkeypatch):
+    fake = [
+        _make_action("retrigger"),
+        _make_action("retrigger-disabled"),
+        _make_action("rerun"),
+        _make_action("cancel"),
+    ]
+    monkeypatch.setattr(registry, "_get_actions", lambda graph_config: fake)
+    return fake
+
+
+def _graph_config(disabled_actions):
+    taskgraph = {}
+    if disabled_actions is not None:
+        taskgraph["disabled-actions"] = disabled_actions
+    return {"taskgraph": taskgraph}
+
+
+def test_render_actions_json_no_disabled(fake_actions):
+    result = registry.render_actions_json(
+        Parameters(strict=False), _graph_config(None), "DECISION-TASK"
+    )
+    assert [a["cb_name"] for a in result["actions"]] == [
+        "retrigger",
+        "retrigger-disabled",
+        "rerun",
+        "cancel",
+    ]
+
+
+def test_render_actions_json_filters_disabled(fake_actions):
+    result = registry.render_actions_json(
+        Parameters(strict=False),
+        _graph_config(["retrigger", "retrigger-disabled", "rerun"]),
+        "DECISION-TASK",
+    )
+    assert [a["cb_name"] for a in result["actions"]] == ["cancel"]
+
+
+def test_render_actions_json_empty_disabled(fake_actions):
+    result = registry.render_actions_json(
+        Parameters(strict=False), _graph_config([]), "DECISION-TASK"
+    )
+    assert [a["cb_name"] for a in result["actions"]] == [
+        "retrigger",
+        "retrigger-disabled",
+        "rerun",
+        "cancel",
+    ]
+
+
+def test_render_actions_json_unknown_disabled_raises(fake_actions):
+    with pytest.raises(ValueError, match="does-not-exist"):
+        registry.render_actions_json(
+            Parameters(strict=False),
+            _graph_config(["retrigger", "does-not-exist"]),
+            "DECISION-TASK",
+        )

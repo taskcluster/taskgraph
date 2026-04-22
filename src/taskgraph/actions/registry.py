@@ -273,12 +273,27 @@ def render_actions_json(parameters, graph_config, decision_task_id):
             artifact.
     """
     assert isinstance(parameters, Parameters), "requires instance of Parameters"
+
+    all_actions = _get_actions(graph_config)
+    disabled = set(graph_config["taskgraph"].get("disabled-actions") or [])
+    known_cb_names = {action.cb_name for action in all_actions}
+    unknown = disabled - known_cb_names
+    if unknown:
+        raise ValueError(
+            "Unknown action(s) in `taskgraph.disabled-actions`: "
+            f"{sorted(unknown)}. Known actions: {sorted(known_cb_names)}"
+        )
+
     actions = []
-    for action in sorted(_get_actions(graph_config), key=lambda action: action.order):
+    for action in sorted(all_actions, key=lambda action: action.order):
+        if action.cb_name in disabled:
+            continue
+
         action = action.action_builder(parameters, graph_config, decision_task_id)
         if action:
             assert is_json(action), "action must be a JSON compatible object"
             actions.append(action)
+
     return {
         "version": 1,
         "variables": {},
