@@ -7,11 +7,11 @@ import datetime
 import gzip
 import os
 from base64 import b64decode
+from typing import Optional
 from unittest import TestCase, mock
 
 import mozilla_repo_urls
 import pytest
-from voluptuous import Optional, Required, Schema
 
 import taskgraph  # noqa: F401
 from taskgraph import parameters
@@ -21,6 +21,7 @@ from taskgraph.parameters import (
     extend_parameters_schema,
     load_parameters_file,
 )
+from taskgraph.util.schema import Schema
 
 from .mockedopen import MockedOpen
 
@@ -274,20 +275,16 @@ def test_parameters_format_spec(spec, expected):
 
 
 def test_extend_parameters_schema(monkeypatch):
-    monkeypatch.setattr(
-        parameters,
-        "base_schema",
-        Schema(
-            {
-                Required("foo"): str,
-            }
-        ),
-    )
+    FooSchema = Schema.from_dict({"foo": str}, name="FooSchema")
+    BarSchema = Schema.from_dict({"bar": Optional[bool]}, name="BarSchema")
+
+    monkeypatch.setattr(parameters, "base_schema", FooSchema)
     monkeypatch.setattr(
         parameters,
         "defaults_functions",
         list(parameters.defaults_functions),
     )
+    monkeypatch.setattr(parameters, "_parameter_extensions", [])
 
     with pytest.raises(ParameterMismatch):
         Parameters(strict=False).check()
@@ -296,9 +293,7 @@ def test_extend_parameters_schema(monkeypatch):
         Parameters(foo="1", bar=True).check()
 
     extend_parameters_schema(
-        {
-            Optional("bar"): bool,
-        },
+        BarSchema,
         defaults_fn=lambda root: {"foo": "1", "bar": False},
     )
 
