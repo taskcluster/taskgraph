@@ -20,6 +20,7 @@ class TestTaskGraph(unittest.TestCase):
                 label="a",
                 attributes={"attr": "a-task"},
                 task={"taskdef": True},
+                dependencies={"edgelabel": "b"},
             ),
             "b": Task(
                 kind="test",
@@ -27,8 +28,6 @@ class TestTaskGraph(unittest.TestCase):
                 attributes={},
                 task={"task": "def"},
                 optimization={"seta": None},
-                # note that this dep is ignored, superseded by that
-                # from the taskgraph's edges
                 dependencies={"first": "a"},
             ),
         }
@@ -56,7 +55,7 @@ class TestTaskGraph(unittest.TestCase):
                     "label": "b",
                     "attributes": {"kind": "test"},
                     "task": {"task": "def"},
-                    "dependencies": {},
+                    "dependencies": {"first": "a"},
                     "description": "",
                     "soft_dependencies": [],
                     "if_dependencies": [],

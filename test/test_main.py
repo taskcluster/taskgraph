@@ -166,6 +166,26 @@ def test_output_file(run_taskgraph, tmpdir):
             id="no-op",
         ),
         pytest.param(
+            "^a",
+            None,
+            {
+                "a": {
+                    "attributes": {"kind": "task"},
+                    "dependencies": {"dep": "b"},
+                    "description": "",
+                    "kind": "task",
+                    "label": "a",
+                    "optimization": None,
+                    "soft_dependencies": [],
+                    "if_dependencies": [],
+                    "task": {
+                        "foo": {"bar": 1},
+                    },
+                },
+            },
+            id="regex-a-only",
+        ),
+        pytest.param(
             "^b",
             None,
             {
@@ -226,7 +246,13 @@ def test_output_file(run_taskgraph, tmpdir):
 )
 def test_get_filtered_taskgraph(regex, exclude, expected):
     tasks = {
-        "a": Task(kind="task", label="a", attributes={}, task={"foo": {"bar": 1}}),
+        "a": Task(
+            kind="task",
+            label="a",
+            attributes={},
+            dependencies={"dep": "b"},
+            task={"foo": {"bar": 1}},
+        ),
         "b": Task(
             kind="task",
             label="b",
