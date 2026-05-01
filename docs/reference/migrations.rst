@@ -3,6 +3,13 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+22.x -> 23.x
+------------
+
+* :func:`taskgraph.parameters.extend_parameters_schema` now requires a msgspec
+  ``Schema`` subclass instead of a voluptuous schema dict. Convert any custom
+  parameter schemas to msgspec.
+
 21.x -> 22.x
 ------------
 

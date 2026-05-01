@@ -2587,7 +2587,7 @@ wheels = [
 
 [[package]]
 name = "taskcluster-taskgraph"
-version = "22.0.0"
+version = "23.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "appdirs" },

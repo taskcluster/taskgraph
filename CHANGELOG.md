@@ -1,5 +1,21 @@
 # Change Log
 
+## [23.0.0] - 2026-05-04
+
+### Added
+
+- Support for defining schemas as dicts (in addition to the class-based approach)
+- New `disabled_actions` graph configuration to prevent specific actions from being generated
+
+### Changed
+
+- BREAKING CHANGE: Converted parameter schema from voluptuous to msgspec
+
+### Fixed
+
+- `taskgraph full -J --tasks <regex>` now displays full dependencies instead of a filtered subset
+- `fetch-content` now percent-encodes artifact names, fixing downloads of artifacts containing spaces or other special characters
+
 ## [22.0.0] - 2026-04-16
 
 ### Fixed
