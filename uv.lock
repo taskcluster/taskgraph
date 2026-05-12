@@ -864,7 +864,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
@@ -2815,7 +2815,7 @@ wheels = [
 
 [[package]]
 name = "taskcluster"
-version = "99.2.1"
+version = "100.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -2827,9 +2827,9 @@ dependencies = [
     { name = "slugid" },
     { name = "taskcluster-urls" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/93/a9/c641eeeae107301742ca2b04b279329c6d5b367da73aad17a5f8eaa1377d/taskcluster-99.2.1.tar.gz", hash = "sha256:5d1cda6142470e98ff3587e3762cf19dbcbad716c5455f9f9738825b07d42104", size = 254591, upload-time = "2026-04-29T14:11:01.885Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1e/49/84397a81ce0ee0106a4e42d74339c562b342e6a8c1c07d690f48ac454736/taskcluster-100.0.1.tar.gz", hash = "sha256:dcdae49cdd34c4fec1e053b79fd2cf99a36046a175d49d839004f0f141bce4d0", size = 254575, upload-time = "2026-05-06T16:55:24.801Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/32/db/6d96a0e36b2ea83747a08d5d2dab55a5691bfdfa8c4cb36eb439a5677257/taskcluster-99.2.1-py3-none-any.whl", hash = "sha256:31fe0db2d5f5e5144719885632965ed04c1321cc42b42c8e6ea72bafadcba2dd", size = 150880, upload-time = "2026-04-29T14:10:59.975Z" },
+    { url = "https://files.pythonhosted.org/packages/a6/af/7940e71ad6d4832597a56141f4ccbbcc441beff394e8dfd7f06895052cd3/taskcluster-100.0.1-py3-none-any.whl", hash = "sha256:e656af9d5e3c6185b1f1e6ad163a4f2bdec599e952128bf66b6da21c99e4fbdc", size = 150895, upload-time = "2026-05-06T16:55:22.883Z" },
 ]
 
 [[package]]
