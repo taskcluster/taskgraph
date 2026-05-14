@@ -63,6 +63,8 @@ class TaskGraph:
             if "task_id" in value:
                 tasks[key].task_id = value["task_id"]
             for depname, dep in value["dependencies"].items():
-                edges.add((key, dep, depname))
+                # Task filtering can cause dependencies to be removed from the graph.
+                if dep in tasks_dict:
+                    edges.add((key, dep, depname))
         task_graph = cls(tasks, Graph(frozenset(tasks), edges))
         return tasks, task_graph

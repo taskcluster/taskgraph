@@ -90,6 +90,42 @@ class TestTaskGraph(unittest.TestCase):
         tasks, new_graph = TaskGraph.from_json(graph.to_json())
         self.assertEqual(graph, new_graph)
 
+    def test_from_json_skips_external_dep_references(self):
+        # Optimized/morphed graphs may carry Task.dependencies entries
+        # pointing at taskIds of replaced or cached tasks that aren't part
+        # of the graph itself. from_json must keep those references on the
+        # Task while excluding them from the Graph's edge set.
+        tasks_dict = {
+            "a": {
+                "kind": "fancy",
+                "label": "a",
+                "attributes": {},
+                "task": {"task": "def"},
+                "dependencies": {"prereq": "b", "external": "EXT_TASKID"},
+                "soft_dependencies": [],
+                "if_dependencies": [],
+                "optimization": None,
+                "description": "",
+            },
+            "b": {
+                "kind": "pre",
+                "label": "b",
+                "attributes": {},
+                "task": {"task": "def2"},
+                "dependencies": {},
+                "soft_dependencies": [],
+                "if_dependencies": [],
+                "optimization": None,
+                "description": "",
+            },
+        }
+        tasks, new_graph = TaskGraph.from_json(tasks_dict)
+        self.assertEqual(new_graph.graph.nodes, frozenset({"a", "b"}))
+        self.assertEqual(new_graph.graph.edges, {("a", "b", "prereq")})
+        self.assertEqual(
+            tasks["a"].dependencies, {"prereq": "b", "external": "EXT_TASKID"}
+        )
+
     simple_graph = TaskGraph(
         tasks={
             "a": Task(
