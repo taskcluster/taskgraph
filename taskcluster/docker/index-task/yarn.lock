@@ -260,10 +260,10 @@ slugid@^4.0.0:
   dependencies:
     uuid "^9.0.0"
 
-taskcluster-client@^55.3:
-  version "55.3.4"
-  resolved "https://registry.yarnpkg.com/taskcluster-client/-/taskcluster-client-55.3.4.tgz#ce443307bb7875eba8dcf0e42d76f7af0f91c5e0"
-  integrity sha512-+JjZ4BrSFvNqnfN/nvnN9ZdHI7K05p3Y4FqcavYUPvG67h02L8iitB6sCxmp/FnvL7JT2LuzreFbzNFJva4OrA==
+taskcluster-client@55.3.2:
+  version "55.3.2"
+  resolved "https://registry.yarnpkg.com/taskcluster-client/-/taskcluster-client-55.3.2.tgz#1b518dee818a58ac3a325dfda3772449e5a331c8"
+  integrity sha512-EmPpIaNQsciBbitOC78QvV9MOjUnrDIShBjdJZOxn7NyHXeZIR3m4nZt9M/FeoyEOpm7EHYaij/lABF7GLMjWA==
   dependencies:
     debug "^4.1.1"
     got "^11.8.1"
