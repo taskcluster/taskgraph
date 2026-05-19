@@ -4,7 +4,7 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "taskcluster-client": "^55.3"
+    "taskcluster-client": "55.3.2"
   },
   "engines": {
     "node": "18"
