@@ -23,6 +23,14 @@ TaskPriority = Literal[
 ]
 
 
+class SchemaValidationError(Exception):
+    """Raised when user-supplied data fails schema validation.
+
+    Callers should display the message without a Python traceback, since
+    these reflect input errors rather than programmer bugs.
+    """
+
+
 def validate_schema(schema, obj, msg_prefix):
     """
     Validate that object satisfies schema.  If not, generate a useful exception
@@ -65,9 +73,13 @@ def validate_schema(schema, obj, msg_prefix):
             msg = [msg_prefix]
             for error in exc.errors:
                 msg.append(str(error))
-            raise Exception("\n".join(msg) + "\n" + pprint.pformat(obj))
+            raise SchemaValidationError(
+                "\n".join(msg) + "\n" + pprint.pformat(obj)
+            ) from None
         else:
-            raise Exception(f"{msg_prefix}\n{str(exc)}\n{pprint.pformat(obj)}")
+            raise SchemaValidationError(
+                f"{msg_prefix}\n{str(exc)}\n{pprint.pformat(obj)}"
+            ) from None
 
 
 class OptionallyKeyedBy:
@@ -456,11 +468,7 @@ class Schema(
         """Validate data against this schema."""
         if taskgraph.fast:
             return data
-
-        try:
-            msgspec.convert(data, cls)
-        except (msgspec.ValidationError, msgspec.DecodeError) as e:
-            raise msgspec.ValidationError(str(e))
+        msgspec.convert(data, cls)
 
 
 class IndexSchema(Schema):
