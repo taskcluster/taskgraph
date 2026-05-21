@@ -8,6 +8,7 @@ treeherder:
         'doc': 'Documentation tasks'
         'unit': 'Unit test tasks'
         'unit-multithread': 'Unit test tasks with multithreading enabled'
+        'unit-serial': 'Unit test tasks with serial enabled'
         'integration': 'Integration test tasks'
 
 index:
