@@ -16,11 +16,13 @@ from taskgraph.loader.default import loader as default_loader
 from taskgraph.util.schema import SchemaValidationError
 
 linuxonly = pytest.mark.skipif(
-    platform.system() != "Linux" or os.environ.get("TASKGRAPH_USE_THREADS"),
-    reason="requires Linux and 'fork' multiprocessing support",
+    platform.system() != "Linux"
+    or os.environ.get("TASKGRAPH_USE_THREADS")
+    or os.environ.get("TASKGRAPH_SERIAL"),
+    reason="requires Linux multiprocessing support",
 )
 threadsonly = pytest.mark.skipif(
-    not os.environ.get("TASKGRAPH_USE_THREADS"),
+    not os.environ.get("TASKGRAPH_USE_THREADS") or os.environ.get("TASKGRAPH_SERIAL"),
     reason="requires multithreading to be enabled",
 )
 
