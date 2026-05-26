@@ -1,5 +1,6 @@
 import os
 import platform
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -20,11 +21,26 @@ os.environ["GIT_CONFIG_NOSYSTEM"] = "1"
 
 @pytest.fixture(scope="session", autouse=True)
 def git_global_config():
-    # run-task writes to the global git config, so point it at a real
-    # (writable) empty file instead of ~/.gitconfig.
+    # Until https://github.com/taskcluster/taskcluster/issues/6561 we need to
+    # preserved the safe directories that `run-task` sets to keep tests
+    # working in CI when workers run subsequent tasks.
+    existing_safe_dirs = subprocess.run(
+        ["git", "config", "--global", "--get-all", "safe.directory"],
+        capture_output=True,
+        text=True,
+        check=False,
+    ).stdout.splitlines()
+
     fd, path = tempfile.mkstemp(prefix="taskgraph-gitconfig-")
     os.close(fd)
     os.environ["GIT_CONFIG_GLOBAL"] = path
+
+    for entry in existing_safe_dirs:
+        subprocess.run(
+            ["git", "config", "--global", "--add", "safe.directory", entry],
+            check=False,
+        )
+
     yield
     del os.environ["GIT_CONFIG_GLOBAL"]
     os.unlink(path)
