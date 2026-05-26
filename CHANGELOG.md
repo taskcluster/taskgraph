@@ -1,5 +1,18 @@
 # Change Log
 
+## [23.1.0] - 2026-05-26
+
+### Added
+
+- Updated worker types in the `.taskcluster.yml` template for the d2g migration
+
+### Fixed
+
+- `TaskGraph.from_json` now skips dependencies pointing at external taskIds (e.g. from replaced or cached tasks) when rebuilding edges, instead of producing edges to non-existent graph nodes
+- Schema validation errors now display a clean message instead of a noisy traceback
+- Pinned `taskcluster-client` to work around an upstream issue
+- `fetch_graph_and_labels` now handles `HTTPError` instances where `response` is `None`
+
 ## [23.0.0] - 2026-05-04
 
 ### Added
