@@ -9,6 +9,8 @@ reporting: checks-v1
 autoCancelPreviousChecks: true
 policy:
     pullRequests: public_restricted
+hooks:
+    - name: lint/pre-commit-v1
 tasks:
     # NOTE: support for actions in ci-admin requires that the `tasks` property be an array *before* JSON-e rendering
     # takes place.
