@@ -3,6 +3,12 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+23.x -> 24.x
+------------
+
+* You must now pass in `--allow-parameter-override` into Decision tasks that
+  need to load the `try_task_config.json` file at the root of the repo.
+
 22.x -> 23.x
 ------------
 
