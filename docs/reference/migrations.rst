@@ -8,6 +8,11 @@ This page can help when migrating Taskgraph across major versions.
 
 * You must now pass in `--allow-parameter-override` into Decision tasks that
   need to load the `try_task_config.json` file at the root of the repo.
+* `taskgraph.parameters.Parameters.is_try()` is removed. Either in-line the old
+  method to a utility or use alternative logic.
+* Level 1 artifacts' default expiry changed from "1 year" to "28 days". If
+  needed, set `task-expires-after` in `taskcluster/config.yml` to adjust the
+  default back.
 
 22.x -> 23.x
 ------------

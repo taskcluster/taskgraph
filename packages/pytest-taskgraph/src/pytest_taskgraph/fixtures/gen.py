@@ -123,9 +123,6 @@ def graph_config(datadir):
 class FakeParameters(dict):
     strict = True
 
-    def is_try(self):
-        return self["level"] != 3
-
     def file_url(self, path, pretty=False):
         return path
 

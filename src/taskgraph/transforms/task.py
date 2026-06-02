@@ -457,12 +457,10 @@ def build_docker_worker_payload(config, task, task_def):
         else:
             suffix = cache_version
 
-        skip_untrusted = config.params.is_try() or level == 1
-
         for cache in worker["caches"]:
             # Some caches aren't enabled in environments where we can't
             # guarantee certain behavior. Filter those out.
-            if cache.get("skip-untrusted") and skip_untrusted:
+            if cache.get("skip-untrusted") and level == 1:
                 continue
 
             name = "{trust_domain}-level-{level}-{name}-{suffix}".format(
@@ -484,7 +482,7 @@ def build_docker_worker_payload(config, task, task_def):
     if run_task and worker.get("volumes"):
         payload["env"]["TASKCLUSTER_VOLUMES"] = ";".join(sorted(worker["volumes"]))
 
-    if payload.get("cache") and skip_untrusted:  # type: ignore
+    if payload.get("cache") and level == 1:  # type: ignore
         payload["env"]["TASKCLUSTER_UNTRUSTED_CACHES"] = "1"
 
     if features:
@@ -999,7 +997,7 @@ def build_task(config, tasks):
         if "expires-after" not in task:
             task["expires-after"] = (
                 config.graph_config._config.get("task-expires-after", "28 days")
-                if config.params.is_try()
+                if config.params["level"] == "1"
                 else "1 year"
             )
 
