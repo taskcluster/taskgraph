@@ -4,8 +4,8 @@ Task Context Transforms
 =======================
 
 The :mod:`taskgraph.transforms.task_context` transform can be used to
-substitute values into any field in a task with data that is not known
-until ``taskgraph`` runs.
+resolve keys and/or substitute values into any field in a task with data
+that is not known until ``taskgraph`` runs.
 
 This data can be provided in a few ways, as described below.
 
@@ -37,7 +37,10 @@ Then create a ``task-context`` section in your task definition, e.g:
 
    tasks:
      build:
-       description: my description {foo}
+       description:
+        by-foo:
+          bar: super special description for bar tasks
+          default: my description of {foo}
        task-context:
          from-parameters:
            foo: foo
@@ -50,9 +53,30 @@ are used:
 
 .. code-block:: yaml
 
-   foo: with some extra
+   foo: bar
 
-...the description will end up with a value of "my description with some extra".
+...the description will end up with a value of "super special description for bar tasks".
+
+When ``foo`` is set to any other value (eg: ``bar``) the description will end with the
+``default`` value with the value of ``foo`` substituted in (eg: ``my description of bar``).
+
+This pattern is often used to configure things vary based on how tasks are created. For example, the following can be used to adjust the scopes a task is given depending on the GitHub event that created the decision task:
+
+.. code-block:: yaml
+
+   tasks:
+     build:
+       task-context:
+         from-parameters:
+           tasks_for: tasks_for
+         substitution-fields:
+           - scopes
+
+       scopes:
+         by-tasks-for:
+           github-push:
+             - secrets:get:project/foo/api_token
+           default: []
 
 When using ``from-parameters`` you may also provide an ordered list of keys to
 look for in the parameters, with the first one found being used. For example,
@@ -154,8 +178,11 @@ Finally, the name of the task is added to the context implicitly. For example:
 This will evaluate the description correctly, even though there are no
 ``task-context`` keys defined on the individual tasks.
 
-Precedence
-----------
+Order of Operations & Precedence
+--------------------------------
+
+Keys will be resolved on ``substitution-fields`` first, then substitution
+will be performed on the resolved value.
 
 If the same key is found in multiple places the order of precedence is as
 follows: ``from-parameters``, ``from-object`` keys, ``from-file`` and finally
