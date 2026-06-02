@@ -23,29 +23,31 @@ CACHE_TYPE = "toolchains.v3"
 
 
 #: Schema for run.using toolchain
-class ToolchainRunSchema(Schema, forbid_unknown_fields=False, kw_only=True):
-    # Specifies the run type. Must be "toolchain-script".
-    using: Literal["toolchain-script"]
-    # The script (in taskcluster/scripts/misc) to run.
-    script: str
-    # Path to the artifact produced by the toolchain task.
-    toolchain_artifact: str
-    # Base work directory used to set up the task.
-    workdir: str
-    # Arguments to pass to the script.
-    arguments: Optional[list[str]] = None
-    # Paths/patterns pointing to files that influence the outcome of
-    # a toolchain build.
-    resources: Optional[list[str]] = None
-    # An alias that can be used instead of the real toolchain task name in
-    # fetch stanzas for tasks.
-    toolchain_alias: Optional[Union[str, list[str]]] = None
-    # Additional env variables to add to the worker when using this
-    # toolchain.
-    toolchain_env: Optional[dict[str, object]] = None
-
-
-toolchain_run_schema = ToolchainRunSchema
+toolchain_run_schema = Schema.from_dict(
+    {
+        # Specifies the run type. Must be "toolchain-script".
+        "using": Literal["toolchain-script"],
+        # The script (in taskcluster/scripts/misc) to run.
+        "script": str,
+        # Path to the artifact produced by the toolchain task.
+        "toolchain-artifact": str,
+        # Base work directory used to set up the task.
+        "workdir": str,
+        # Arguments to pass to the script.
+        "arguments": Optional[list[str]],
+        # Paths/patterns pointing to files that influence the outcome of
+        # a toolchain build.
+        "resources": Optional[list[str]],
+        # An alias that can be used instead of the real toolchain task name in
+        # fetch stanzas for tasks.
+        "toolchain-alias": Optional[Union[str, list[str]]],
+        # Additional env variables to add to the worker when using this
+        # toolchain.
+        "toolchain-env": Optional[dict[str, object]],
+    },
+    name="ToolchainRunSchema",
+    forbid_unknown_fields=False,
+)
 
 
 def get_digest_data(config, run, taskdesc):

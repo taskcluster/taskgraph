@@ -23,32 +23,85 @@ StatusType = Literal[
     "on-running",
 ]
 
-
-class EmailRecipient(Schema, tag_field="type", tag="email", kw_only=True):
-    address: optionally_keyed_by("project", "level", str, use_msgspec=True)  # type: ignore
-    status_type: Optional[StatusType] = None
-
-
-class MatrixRoomRecipient(Schema, tag_field="type", tag="matrix-room", kw_only=True):
-    room_id: str
-    status_type: Optional[StatusType] = None
-
-
-class PulseRecipient(Schema, tag_field="type", tag="pulse", kw_only=True):
-    routing_key: str
-    status_type: Optional[StatusType] = None
-
-
-class SlackChannelRecipient(
-    Schema, tag_field="type", tag="slack-channel", kw_only=True
-):
-    channel_id: str
-    status_type: Optional[StatusType] = None
-
-
 Recipient = Union[
-    EmailRecipient, MatrixRoomRecipient, PulseRecipient, SlackChannelRecipient
+    Schema.from_dict(
+        {
+            "address": optionally_keyed_by("project", "level", str, use_msgspec=True),
+            "status-type": Optional[StatusType],
+        },
+        name="EmailRecipient",
+        tag_field="type",
+        tag="email",
+    ),  # type: ignore [invalid-type-form]
+    Schema.from_dict(
+        {
+            "room-id": str,
+            "status-type": Optional[StatusType],
+        },
+        name="MatrixRoomRecipient",
+        tag_field="type",
+        tag="matrix-room",
+    ),  # type: ignore [invalid-type-form]
+    Schema.from_dict(
+        {
+            "routing-key": str,
+            "status-type": Optional[StatusType],
+        },
+        name="PulseRecipient",
+        tag_field="type",
+        tag="pulse",
+    ),  # type: ignore [invalid-type-form]
+    Schema.from_dict(
+        {
+            "channel-id": str,
+            "status-type": Optional[StatusType],
+        },
+        name="SlackChannelRecipient",
+        tag_field="type",
+        tag="slack-channel",
+    ),  # type: ignore [invalid-type-form]
 ]
+
+Content = Schema.from_dict(
+    {
+        "email": Schema.from_dict(
+            {
+                "subject": Optional[str],
+                "content": Optional[str],
+                "link": Schema.from_dict(
+                    {
+                        "text": str,
+                        "href": str,
+                    },
+                    optional=True,
+                ),
+            },
+            name="EmailContent",
+            optional=True,
+        ),
+        "matrix": Schema.from_dict(
+            {
+                "body": Optional[str],
+                "formatted-body": Optional[str],
+                "format": Optional[str],
+                "msg-type": Optional[str],
+            },
+            name="MatrixContent",
+            optional=True,
+        ),
+        "slack": Schema.from_dict(
+            {
+                "text": Optional[str],
+                "blocks": Optional[list],
+                "attachments": Optional[list],
+            },
+            name="SlackContent",
+            optional=True,
+        ),
+    },
+    optional=True,
+    name="NotifyContentConfig",
+)
 
 
 _route_keys = {
@@ -60,60 +113,32 @@ _route_keys = {
 """Map each type to its primary key that will be used in the route."""
 
 
-class EmailLinkContent(Schema):
-    text: str
-    href: str
-
-
-class EmailContent(Schema):
-    subject: Optional[str] = None
-    content: Optional[str] = None
-    link: Optional[EmailLinkContent] = None
-
-
-class MatrixContent(Schema):
-    body: Optional[str] = None
-    formatted_body: Optional[str] = None
-    format: Optional[str] = None
-    msg_type: Optional[str] = None
-
-
-class SlackContent(Schema):
-    text: Optional[str] = None
-    blocks: Optional[list] = None
-    attachments: Optional[list] = None
-
-
-class NotifyContentConfig(Schema):
-    email: Optional[EmailContent] = None
-    matrix: Optional[MatrixContent] = None
-    slack: Optional[SlackContent] = None
-
-
-class NotifyConfig(Schema):
-    recipients: list[Recipient]
-    content: Optional[NotifyContentConfig] = None
-
-
-class LegacyNotificationsConfig(Schema):
-    # Continue supporting the legacy schema for backwards compat.
-    emails: optionally_keyed_by("project", "level", list[str], use_msgspec=True)  # type: ignore
-    subject: str
-    message: Optional[str] = None
-    status_types: Optional[list[StatusType]] = None
-
-
 #: Schema for notify transforms
-class NotifySchema(Schema, forbid_unknown_fields=False, kw_only=True):
-    notify: Optional[NotifyConfig] = None
-    notifications: Optional[LegacyNotificationsConfig] = None
-
-    def __post_init__(self):
-        if self.notify is not None and self.notifications is not None:
-            raise ValueError("'notify' and 'notifications' are mutually exclusive")
-
-
-NOTIFY_SCHEMA = NotifySchema
+NOTIFY_SCHEMA = Schema.from_dict(
+    {
+        "notify": Schema.from_dict(
+            {
+                "recipients": list[Recipient],
+                "content": Content,
+            },
+            optional=True,
+        ),
+        # Continue supporting the legacy schema for backwards compat.
+        "notifications": Schema.from_dict(
+            {
+                "emails": optionally_keyed_by(
+                    "project", "level", list[str], use_msgspec=True
+                ),
+                "subject": str,
+                "message": Optional[str],
+                "status-types": Optional[list[StatusType]],
+            },
+            optional=True,
+        ),
+    },
+    exclusive=[("notify", "notifications")],
+    forbid_unknown_fields=False,
+)
 
 transforms = TransformSequence()
 transforms.add_validate(NOTIFY_SCHEMA)
