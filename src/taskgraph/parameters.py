@@ -273,13 +273,6 @@ class Parameters(ReadOnlyDict):
         except KeyError:
             raise KeyError(f"taskgraph parameter {k!r} not found")
 
-    def is_try(self):
-        """
-        Determine whether this graph is being built on a try project or for
-        `mach try fuzzy`.
-        """
-        return "try" in self["project"] or self["tasks_for"] == "github-pull-request"
-
     @property
     def moz_build_date(self):
         # XXX self["moz_build_date"] is left as a string because:
