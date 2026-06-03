@@ -1,5 +1,16 @@
 # Change Log
 
+## [24.0.0] - 2026-06-03
+
+### Changed
+
+- BREAKING CHANGE: Must pass in `--allow-parameter-override` if using try_task_config
+- BREAKING CHANGE: Default level 1 artifact expiry changed from 1 year to 28 days
+
+### Removed
+
+- BREAKING CHANGE: Removed `Parameters.is_try()` helper method
+
 ## [23.2.0] - 2026-06-03
 
 ### Added
