@@ -1,5 +1,11 @@
 # Change Log
 
+## [23.2.0] - 2026-06-03
+
+### Added
+
+- `task-context` now calls `resolve_keyed_by` on `substitution-fields` (#968)
+
 ## [23.1.0] - 2026-05-26
 
 ### Added
