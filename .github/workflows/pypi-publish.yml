@@ -44,7 +44,8 @@ jobs:
           pip install build
           python -m build
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # v1.14.0
+        # deliberately pinned to release/v1 to be allowed by our action pinning requirements
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: packages/pytest-taskgraph/dist
   pypi-publish-sphinx-taskgraph:
@@ -67,6 +68,7 @@ jobs:
           pip install build
           python -m build
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # v1.14.0
+        # deliberately pinned to release/v1 to be allowed by our action pinning requirements
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: packages/sphinx-taskgraph/dist
