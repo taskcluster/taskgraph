@@ -1,5 +1,11 @@
 # Change Log
 
+## [24.1.0] - 2026-06-04
+
+### Added
+
+- support for custom context in task-context (#971)
+
 ## [24.0.0] - 2026-06-03
 
 ### Changed
