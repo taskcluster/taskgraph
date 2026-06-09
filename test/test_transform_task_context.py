@@ -11,6 +11,7 @@ from pytest_taskgraph import FakeParameters
 
 from taskgraph.transforms import task_context
 from taskgraph.transforms.base import TransformConfig
+from taskgraph.util.task_context import CUSTOM_CONTEXT_MAP, custom_context
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -48,14 +49,15 @@ def make_config(graph_config, extra_params=None):
 
 TASK_DEFAULTS = {
     "description": "fake description {object} {file} {param} {object_and_file} "
-    "{object_and_param} {file_and_param} {object_file_and_param} {param_fallback} {name}",
+    "{object_and_param} {file_and_param} {object_custom_file_and_param} {param_fallback} "
+    "{custom} {object_and_custom} {file_and_custom} {name}",
     "name": "fake-task-name",
     "task-context": {
         "from-parameters": {
             "param": "param",
             "object_and_param": "object_and_param",
             "file_and_param": "file_and_param",
-            "object_file_and_param": "object_file_and_param",
+            "object_custom_file_and_param": "object_file_and_param",
             "param_fallback": ["missing-param", "default"],
         },
         "from-file": f"{here}/data/task_context.yml",
@@ -63,47 +65,117 @@ TASK_DEFAULTS = {
             "object": "object",
             "object_and_param": "shouldn't be used",
             "object_and_file": "object-overrides-file",
-            "object_file_and_param": "shouldn't be used",
+            "object_custom_file_and_param": "shouldn't be used",
         },
+        "from-custom": [
+            "custom",
+            "object_and_custom",
+            "file_and_custom",
+            "object_custom_file_and_param",
+        ],
         "substitution-fields": [
             "description",
         ],
     },
 }
-EXPECTED_DESCRIPTION = (
-    "fake description object file param object-overrides-file "
-    "param-overrides-object param-overrides-file param-overrides-all default fake-task-name"
-)
-NO_CONTEXT = deepcopy(TASK_DEFAULTS)
-del NO_CONTEXT["task-context"]
 
 
-@pytest.mark.parametrize(
-    "task,description",
-    (
-        pytest.param(deepcopy(TASK_DEFAULTS), EXPECTED_DESCRIPTION, id="with-context"),
-        pytest.param(
-            deepcopy(NO_CONTEXT), TASK_DEFAULTS["description"], id="no-context"
-        ),
-    ),
-)
-def test_transforms(request, run_transform, graph_config, task, description):
-    config = make_config(
-        graph_config,
-        {
-            "param": "param",
-            "object_and_param": "param-overrides-object",
-            "file_and_param": "param-overrides-file",
-            "object_file_and_param": "param-overrides-all",
-            "default": "default",
-        },
+def test_transforms_with_context(run_transform, graph_config):
+    task = deepcopy(TASK_DEFAULTS)
+    description = (
+        "fake description object file param object-overrides-file "
+        "param-overrides-object param-overrides-file param-overrides-all default "
+        "custom object_and_custom file_and_custom fake-task-name"
     )
+    try:
 
-    task = run_transform(task_context.transforms, task, config=config)[0]
-    print("Dumping task:")
-    pprint(task, indent=2)
+        @custom_context("custom")
+        def _custom(config, task):
+            return {"custom": "custom"}
 
-    assert task["description"] == description
+        @custom_context("object_and_custom")
+        def _object_and_custom(config, task):
+            return {"object_and_custom": "object_and_custom"}
+
+        @custom_context("file_and_custom")
+        def _file_and_custom(config, task):
+            return {"file_and_custom": "file_and_custom"}
+
+        @custom_context("object_custom_file_and_param")
+        def _object_custom_file_and_param(config, task):
+            return {"object_custom_file_and_param": "object_custom_file_and_param"}
+
+        config = make_config(
+            graph_config,
+            {
+                "param": "param",
+                "object_and_param": "param-overrides-object",
+                "file_and_param": "param-overrides-file",
+                "object_file_and_param": "param-overrides-all",
+                "default": "default",
+            },
+        )
+
+        task = run_transform(task_context.transforms, task, config=config)[0]
+        print("Dumping task:")
+        pprint(task, indent=2)
+
+        assert task["description"] == description
+    finally:
+        # ensure `CUSTOM_CONTEXT_MAP` is reset at the end of the test
+        # regardless of result
+        CUSTOM_CONTEXT_MAP.pop("custom", None)
+        CUSTOM_CONTEXT_MAP.pop("object_and_custom", None)
+        CUSTOM_CONTEXT_MAP.pop("file_and_custom", None)
+        CUSTOM_CONTEXT_MAP.pop("object_custom_file_and_param", None)
+
+
+def test_transforms_no_context(run_transform, graph_config):
+    task = deepcopy(TASK_DEFAULTS)
+    del task["task-context"]
+    description = TASK_DEFAULTS["description"]
+
+    try:
+
+        @custom_context("custom")
+        def _custom(config, task):
+            return {"custom": "custom"}
+
+        @custom_context("object_and_custom")
+        def _object_and_custom(config, task):
+            return {"object_and_custom": "object_and_custom"}
+
+        @custom_context("file_and_custom")
+        def _file_and_custom(config, task):
+            return {"file_and_custom": "file_and_custom"}
+
+        @custom_context("object_custom_file_and_param")
+        def _object_custom_file_and_param(config, task):
+            return {"object_custom_file_and_param": "object_custom_file_and_param"}
+
+        config = make_config(
+            graph_config,
+            {
+                "param": "param",
+                "object_and_param": "param-overrides-object",
+                "file_and_param": "param-overrides-file",
+                "object_file_and_param": "param-overrides-all",
+                "default": "default",
+            },
+        )
+
+        task = run_transform(task_context.transforms, task, config=config)[0]
+        print("Dumping task:")
+        pprint(task, indent=2)
+
+        assert task["description"] == description
+    finally:
+        # ensure `CUSTOM_CONTEXT_MAP` is reset at the end of the test
+        # regardless of result
+        CUSTOM_CONTEXT_MAP.pop("custom", None)
+        CUSTOM_CONTEXT_MAP.pop("object_and_custom", None)
+        CUSTOM_CONTEXT_MAP.pop("file_and_custom", None)
+        CUSTOM_CONTEXT_MAP.pop("object_custom_file_and_param", None)
 
 
 def test_resolve_keyed_by_from_parameters(run_transform, graph_config):
@@ -220,3 +292,57 @@ def test_resolve_keyed_by_missing_context_with_defer(run_transform, graph_config
             "default": "also-should-not-resolve",
         },
     }
+
+
+def test_resolve_keyed_by_custom_context(run_transform, graph_config):
+    try:
+
+        @custom_context("colour")
+        def _colour(config, task):
+            return {"colour": "blue"}
+
+        task = {
+            "name": "fake-task-name",
+            "description": {
+                "by-colour": {
+                    "blue": "i am a blue task!",
+                    "default": " i am a default task",
+                },
+            },
+            "task-context": {
+                "from-custom": ["colour"],
+                "substitution-fields": ["description"],
+            },
+        }
+        config = make_config(graph_config)
+
+        task = run_transform(task_context.transforms, task, config=config)[0]
+        pprint(task, indent=2)
+
+        assert task["description"] == "i am a blue task!"
+    finally:
+        # ensure `CUSTOM_CONTEXT_MAP` is reset at the end of the test
+        # regardless of result
+        CUSTOM_CONTEXT_MAP.pop("colour", None)
+
+
+def test_resolve_keyed_by_custom_context_missing(run_transform, graph_config):
+    task = {
+        "name": "fake-task-name",
+        "description": {
+            "by-colour": {
+                "blue": "i am a blue task!",
+                "default": " i am a default task",
+            },
+        },
+        "task-context": {
+            "from-custom": ["colour"],
+            "substitution-fields": ["description"],
+        },
+    }
+    config = make_config(graph_config)
+
+    with pytest.raises(
+        ValueError, match="no provider found for custom context 'colour'"
+    ):
+        task = run_transform(task_context.transforms, task, config=config)

@@ -98,35 +98,6 @@ with the this ``kind``:
 ...the description will bring in the value ``foo`` from the parameters if
 present, or ``default`` otherwise.
 
-from-file
-~~~~~~~~~
-
-Context may also be provided from a defined yaml file. The provided file
-should usually only contain top level keys and values (eg: nested objects
-will not be interpolated - they will be substituted as text representations
-of the object).
-
-For example, with this kind definition:
-
-.. code-block:: yaml
-
-   tasks:
-     build:
-       description: my description {foo}
-       task-context:
-         from-file: some_file.yaml
-         substitution-fields:
-           - description
-
-And this in ``some_file.yaml``:
-
-.. code-block:: yaml
-
-   foo: from a file
-
-...description will end up with "my description from a file".
-
-
 from-object
 ~~~~~~~~~~~
 
@@ -158,6 +129,86 @@ For example:
 This will give build1 and build2 descriptions with their ``extra_desc``
 included while allowing them to share the rest of their task definition.
 
+from-custom
+~~~~~~~~~~~
+
+Context may be provided by custom providers, which must be registered prior
+to this transform being run. This allows the creation of context that is
+derived from parameters, code constants, or anything else accessible to
+taskgraph.
+
+For example, you may have a custom context handler set-up in
+``taskcluster/my_taskgraph/custom_context.py``:
+
+.. code-block:: python
+
+   NON_PRODUCTION_BRANCHES = ["maple", "pine"]
+
+   @custom_context("release-level")
+   def release_level_context(config, task):
+       # Despite being level 3, some branches are not truly considered "production"
+       # in the sense of creating releases that ship to users.
+       if config.params["level"] == "1" or config.params["project"] in NON_PRODUCTION_BRANCHES:
+           return "staging"
+       return "production"
+
+
+In your ``register`` function you will need to ensure you import this module.
+Eg: ``taskcluster/my_taskgraph/__init__.py``:
+
+.. code-block:: python
+
+   def register(graph_config):
+       from my_taskgraph import custom_contexts  # trigger custom task-context registration
+
+
+Now you can use ``release-level`` as context in a kind:
+
+.. code-block:: yaml
+
+   task-defaults:
+     task-context:
+       from-custom:
+         - release-level
+       substitution-fields:
+         - scopes
+
+     scopes:
+       by-release-level:
+         staging:
+           - secrets:get:staging_creds
+         production:
+           - secrets:get:production_creds
+
+
+from-file
+~~~~~~~~~
+
+Context may also be provided from a defined yaml file. The provided file
+should usually only contain top level keys and values (eg: nested objects
+will not be interpolated - they will be substituted as text representations
+of the object).
+
+For example, with this kind definition:
+
+.. code-block:: yaml
+
+   tasks:
+     build:
+       description: my description {foo}
+       task-context:
+         from-file: some_file.yaml
+         substitution-fields:
+           - description
+
+And this in ``some_file.yaml``:
+
+.. code-block:: yaml
+
+   foo: from a file
+
+...description will end up with "my description from a file".
+
 Implicit Context
 ~~~~~~~~~~~~~~~~
 
@@ -185,7 +236,7 @@ Keys will be resolved on ``substitution-fields`` first, then substitution
 will be performed on the resolved value.
 
 If the same key is found in multiple places the order of precedence is as
-follows: ``from-parameters``, ``from-object`` keys, ``from-file`` and finally
+follows: ``from-parameters``, ``from-object`` keys, ``from-custom`` providers, ``from-file`` and finally
 implicit context.
 
 That is to say: parameters will always override anything else.
