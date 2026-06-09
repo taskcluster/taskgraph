@@ -70,24 +70,39 @@ TASK_DEFAULTS = {
         ],
     },
 }
-EXPECTED_DESCRIPTION = (
-    "fake description object file param object-overrides-file "
-    "param-overrides-object param-overrides-file param-overrides-all default fake-task-name"
-)
-NO_CONTEXT = deepcopy(TASK_DEFAULTS)
-del NO_CONTEXT["task-context"]
 
 
-@pytest.mark.parametrize(
-    "task,description",
-    (
-        pytest.param(deepcopy(TASK_DEFAULTS), EXPECTED_DESCRIPTION, id="with-context"),
-        pytest.param(
-            deepcopy(NO_CONTEXT), TASK_DEFAULTS["description"], id="no-context"
-        ),
-    ),
-)
-def test_transforms(request, run_transform, graph_config, task, description):
+def test_transforms_with_context(run_transform, graph_config):
+    task = deepcopy(TASK_DEFAULTS)
+    description = (
+        "fake description object file param object-overrides-file "
+        "param-overrides-object param-overrides-file param-overrides-all default "
+        "fake-task-name"
+    )
+
+    config = make_config(
+        graph_config,
+        {
+            "param": "param",
+            "object_and_param": "param-overrides-object",
+            "file_and_param": "param-overrides-file",
+            "object_file_and_param": "param-overrides-all",
+            "default": "default",
+        },
+    )
+
+    task = run_transform(task_context.transforms, task, config=config)[0]
+    print("Dumping task:")
+    pprint(task, indent=2)
+
+    assert task["description"] == description
+
+
+def test_transforms_no_context(run_transform, graph_config):
+    task = deepcopy(TASK_DEFAULTS)
+    del task["task-context"]
+    description = TASK_DEFAULTS["description"]
+
     config = make_config(
         graph_config,
         {
