@@ -2,6 +2,7 @@ from typing import Optional, Union
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.schema import Schema, resolve_keyed_by
+from taskgraph.util.task_context import CUSTOM_CONTEXT_MAP
 from taskgraph.util.templates import deep_get, substitute_task_fields
 from taskgraph.util.yaml import load_yaml
 
@@ -28,6 +29,12 @@ class TaskContextConfig(Schema):
     from_file: Optional[str] = None
     # Key/value pairs to be used as task context
     from_object: Optional[object] = None
+    # Retrieve task context values from registered custom providers. Each
+    # entry is the name of a provider registered via
+    # ``taskgraph.util.task_context.custom_context``. Providers are called
+    # with the ``TransformConfig`` and the task being rendered, and must
+    # return a dict of key/value pairs to add to the context.
+    from_custom: Optional[list[str]] = None
     resolve_keyed_by_options: Optional[ResolveKeyedByConfigOptions] = None
 
 
@@ -51,6 +58,7 @@ class TaskContextSchema(Schema, forbid_unknown_fields=False, kw_only=True):
     # is as follows:
     #   - Parameters
     #   - `from-object` keys
+    #   - Custom providers (`from-custom`)
     #   - File
     #
     # That is to say: parameters will always override anything else.
@@ -89,10 +97,18 @@ def render_task(config, tasks):
         if from_file:
             file_context = load_yaml(from_file)
 
+        custom_context = {}
+        for name in sub_config.pop("from-custom", None) or []:
+            if name not in CUSTOM_CONTEXT_MAP:
+                raise ValueError(f"no provider found for custom context '{name}'")
+
+            custom_context.update(CUSTOM_CONTEXT_MAP[name](config, task))
+
         fields = sub_config.pop("substitution-fields")
 
         subs = {}
         subs.update(file_context)
+        subs.update(custom_context)
         # We've popped away the configuration; everything left in `sub_config` is
         # substitution key/value pairs.
         subs.update(sub_config.pop("from-object", {}))
