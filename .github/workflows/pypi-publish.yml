@@ -21,14 +21,9 @@ jobs:
         run: |
           pip install build
           python -m build
-      # NOTE: We deliberately pin this action to a commit SHA rather than the
-      #       mutable `@release/v1` ref that PyPA recommends. The pin stops the
-      #       action from being swapped out from under a workflow that holds PyPI
-      #       publish (OIDC) rights; the cost is losing automatic upstream patches.
-      #       Renovate offsets that by bumping the pinned SHA (tracked via the
-      #       trailing `# vX.Y.Z` comment), so merge those bump PRs promptly.
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # v1.14.0
+        # deliberately pinned to release/v1 to be allowed by our action pinning requirements
+        uses: pypa/gh-action-pypi-publish@release/v1
   pypi-publish-pytest-taskgraph:
     name: upload release to PyPI
     if: startsWith(github.ref, 'refs/tags/pytest-taskgraph')
