@@ -11,11 +11,13 @@ import pytest
 
 import taskgraph
 from taskgraph.actions import registry
+from taskgraph.generator import Kind
 from taskgraph.graph import Graph
 from taskgraph.main import format_kind_graph_mermaid, get_filtered_taskgraph
 from taskgraph.main import main as taskgraph_main
 from taskgraph.task import Task
 from taskgraph.taskgraph import TaskGraph
+from taskgraph.util.schema import SchemaValidationError
 from taskgraph.util.vcs import GitRepository, HgRepository
 from taskgraph.util.yaml import load_yaml
 
@@ -68,6 +70,44 @@ def test_show_taskgraph_parallel(run_taskgraph):
     # Test that parallel execution works correctly with valid parameters
     res = run_taskgraph(["full", "-p", "taskcluster/test/params"])
     assert res == 0
+
+
+def test_main_schema_validation_error_no_traceback(
+    mocker, run_taskgraph, capsys, caplog
+):
+    """main() exits 1 without printing a Python traceback when a kind raises
+    SchemaValidationError — the message was already logged."""
+
+    def fail_load_tasks(self, *args, **kwargs):
+        raise SchemaValidationError("bad task data")
+
+    mocker.patch.object(Kind, "load_tasks", fail_load_tasks)
+
+    with caplog.at_level("ERROR"):
+        res = run_taskgraph(["full"])
+
+    assert res == 1
+    captured = capsys.readouterr()
+    assert "Traceback" not in captured.err
+    assert "Traceback" not in captured.out
+    assert any("bad task data" in r.message for r in caplog.records)
+
+
+def test_main_other_exception_prints_traceback(mocker, run_taskgraph, capsys):
+    """main() still prints a traceback for unexpected exceptions —
+    schema-error suppression must not swallow real bugs."""
+
+    def fail_load_tasks(self, *args, **kwargs):
+        raise RuntimeError("real bug")
+
+    mocker.patch.object(Kind, "load_tasks", fail_load_tasks)
+
+    res = run_taskgraph(["full"])
+    assert res == 1
+
+    captured = capsys.readouterr()
+    assert "Traceback" in captured.err
+    assert "RuntimeError: real bug" in captured.err
 
 
 def test_show_taskgraph_parallel_bad_params(tmp_path):
@@ -166,6 +206,26 @@ def test_output_file(run_taskgraph, tmpdir):
             id="no-op",
         ),
         pytest.param(
+            "^a",
+            None,
+            {
+                "a": {
+                    "attributes": {"kind": "task"},
+                    "dependencies": {"dep": "b"},
+                    "description": "",
+                    "kind": "task",
+                    "label": "a",
+                    "optimization": None,
+                    "soft_dependencies": [],
+                    "if_dependencies": [],
+                    "task": {
+                        "foo": {"bar": 1},
+                    },
+                },
+            },
+            id="regex-a-only",
+        ),
+        pytest.param(
             "^b",
             None,
             {
@@ -226,7 +286,13 @@ def test_output_file(run_taskgraph, tmpdir):
 )
 def test_get_filtered_taskgraph(regex, exclude, expected):
     tasks = {
-        "a": Task(kind="task", label="a", attributes={}, task={"foo": {"bar": 1}}),
+        "a": Task(
+            kind="task",
+            label="a",
+            attributes={},
+            dependencies={"dep": "b"},
+            task={"foo": {"bar": 1}},
+        ),
         "b": Task(
             kind="task",
             label="b",

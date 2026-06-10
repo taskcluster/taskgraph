@@ -3,6 +3,41 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+23.x -> 24.x
+------------
+
+* You must now pass in `--allow-parameter-override` into Decision tasks that
+  need to load the `try_task_config.json` file at the root of the repo.
+* `taskgraph.parameters.Parameters.is_try()` is removed. Either in-line the old
+  method to a utility or use alternative logic.
+* Level 1 artifacts' default expiry changed from "1 year" to "28 days". If
+  needed, set `task-expires-after` in `taskcluster/config.yml` to adjust the
+  default back.
+
+22.x -> 23.x
+------------
+
+* :func:`taskgraph.parameters.extend_parameters_schema` now requires a msgspec
+  ``Schema`` subclass instead of a voluptuous schema dict. Convert any custom
+  parameter schemas to msgspec.
+
+21.x -> 22.x
+------------
+
+* If you have tasks using `docker-worker`'s `relengapi-proxy` feature, it is no
+  longer supported. Remove all references to it in your task definitions.
+* Remove references to `<REPO>_EXTRA_REFS` in all `run-task` based tasks. These
+  refs must now be fetched as part of the task payload.
+
+20.x -> 21.x
+------------
+
+* If you have tasks using `docker-worker`'s `dind`, `privileged` or `loopback-audio`
+  features, they are no longer supported. Either avoid using these features or migrate
+  to a `generic-worker` pool with D2G payloads enabled.
+* Ensure any task's using the `run-task` or `decision` images work with the new
+  Debian 13 base.
+
 19.x -> 20.x
 ------------
 

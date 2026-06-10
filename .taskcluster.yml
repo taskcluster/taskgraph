@@ -9,6 +9,8 @@ reporting: checks-v1
 autoCancelPreviousChecks: true
 policy:
     pullRequests: public_restricted
+hooks:
+    - name: lint/pre-commit-v1
 tasks:
     # NOTE: support for actions in ci-admin requires that the `tasks` property be an array *before* JSON-e rendering
     # takes place.
@@ -251,7 +253,13 @@ tasks:
                           - bash
                           - -cx
                           - $let:
-                                extraArgs: {$if: 'tasks_for == "cron"', then: '${cron.quoted_args}', else: ''}
+                                extraArgs:
+                                    $if: 'tasks_for == "cron"'
+                                    then: '${cron.quoted_args}'
+                                    else:
+                                        $if: 'tasks_for == "github-pull-request"'
+                                        then: '--allow-parameter-override'
+                                        else: ''
                             in:
                                 $if: 'tasks_for == "action" || tasks_for == "pr-action"'
                                 then: >

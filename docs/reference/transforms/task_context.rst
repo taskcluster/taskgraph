@@ -4,8 +4,8 @@ Task Context Transforms
 =======================
 
 The :mod:`taskgraph.transforms.task_context` transform can be used to
-substitute values into any field in a task with data that is not known
-until ``taskgraph`` runs.
+resolve keys and/or substitute values into any field in a task with data
+that is not known until ``taskgraph`` runs.
 
 This data can be provided in a few ways, as described below.
 
@@ -37,7 +37,10 @@ Then create a ``task-context`` section in your task definition, e.g:
 
    tasks:
      build:
-       description: my description {foo}
+       description:
+        by-foo:
+          bar: super special description for bar tasks
+          default: my description of {foo}
        task-context:
          from-parameters:
            foo: foo
@@ -50,9 +53,30 @@ are used:
 
 .. code-block:: yaml
 
-   foo: with some extra
+   foo: bar
 
-...the description will end up with a value of "my description with some extra".
+...the description will end up with a value of "super special description for bar tasks".
+
+When ``foo`` is set to any other value (eg: ``bar``) the description will end with the
+``default`` value with the value of ``foo`` substituted in (eg: ``my description of bar``).
+
+This pattern is often used to configure things vary based on how tasks are created. For example, the following can be used to adjust the scopes a task is given depending on the GitHub event that created the decision task:
+
+.. code-block:: yaml
+
+   tasks:
+     build:
+       task-context:
+         from-parameters:
+           tasks_for: tasks_for
+         substitution-fields:
+           - scopes
+
+       scopes:
+         by-tasks-for:
+           github-push:
+             - secrets:get:project/foo/api_token
+           default: []
 
 When using ``from-parameters`` you may also provide an ordered list of keys to
 look for in the parameters, with the first one found being used. For example,
@@ -73,35 +97,6 @@ with the this ``kind``:
 
 ...the description will bring in the value ``foo`` from the parameters if
 present, or ``default`` otherwise.
-
-from-file
-~~~~~~~~~
-
-Context may also be provided from a defined yaml file. The provided file
-should usually only contain top level keys and values (eg: nested objects
-will not be interpolated - they will be substituted as text representations
-of the object).
-
-For example, with this kind definition:
-
-.. code-block:: yaml
-
-   tasks:
-     build:
-       description: my description {foo}
-       task-context:
-         from-file: some_file.yaml
-         substitution-fields:
-           - description
-
-And this in ``some_file.yaml``:
-
-.. code-block:: yaml
-
-   foo: from a file
-
-...description will end up with "my description from a file".
-
 
 from-object
 ~~~~~~~~~~~
@@ -134,6 +129,86 @@ For example:
 This will give build1 and build2 descriptions with their ``extra_desc``
 included while allowing them to share the rest of their task definition.
 
+from-custom
+~~~~~~~~~~~
+
+Context may be provided by custom providers, which must be registered prior
+to this transform being run. This allows the creation of context that is
+derived from parameters, code constants, or anything else accessible to
+taskgraph.
+
+For example, you may have a custom context handler set-up in
+``taskcluster/my_taskgraph/custom_context.py``:
+
+.. code-block:: python
+
+   NON_PRODUCTION_BRANCHES = ["maple", "pine"]
+
+   @custom_context("release-level")
+   def release_level_context(config, task):
+       # Despite being level 3, some branches are not truly considered "production"
+       # in the sense of creating releases that ship to users.
+       if config.params["level"] == "1" or config.params["project"] in NON_PRODUCTION_BRANCHES:
+           return "staging"
+       return "production"
+
+
+In your ``register`` function you will need to ensure you import this module.
+Eg: ``taskcluster/my_taskgraph/__init__.py``:
+
+.. code-block:: python
+
+   def register(graph_config):
+       from my_taskgraph import custom_contexts  # trigger custom task-context registration
+
+
+Now you can use ``release-level`` as context in a kind:
+
+.. code-block:: yaml
+
+   task-defaults:
+     task-context:
+       from-custom:
+         - release-level
+       substitution-fields:
+         - scopes
+
+     scopes:
+       by-release-level:
+         staging:
+           - secrets:get:staging_creds
+         production:
+           - secrets:get:production_creds
+
+
+from-file
+~~~~~~~~~
+
+Context may also be provided from a defined yaml file. The provided file
+should usually only contain top level keys and values (eg: nested objects
+will not be interpolated - they will be substituted as text representations
+of the object).
+
+For example, with this kind definition:
+
+.. code-block:: yaml
+
+   tasks:
+     build:
+       description: my description {foo}
+       task-context:
+         from-file: some_file.yaml
+         substitution-fields:
+           - description
+
+And this in ``some_file.yaml``:
+
+.. code-block:: yaml
+
+   foo: from a file
+
+...description will end up with "my description from a file".
+
 Implicit Context
 ~~~~~~~~~~~~~~~~
 
@@ -154,11 +229,14 @@ Finally, the name of the task is added to the context implicitly. For example:
 This will evaluate the description correctly, even though there are no
 ``task-context`` keys defined on the individual tasks.
 
-Precedence
-----------
+Order of Operations & Precedence
+--------------------------------
+
+Keys will be resolved on ``substitution-fields`` first, then substitution
+will be performed on the resolved value.
 
 If the same key is found in multiple places the order of precedence is as
-follows: ``from-parameters``, ``from-object`` keys, ``from-file`` and finally
+follows: ``from-parameters``, ``from-object`` keys, ``from-custom`` providers, ``from-file`` and finally
 implicit context.
 
 That is to say: parameters will always override anything else.

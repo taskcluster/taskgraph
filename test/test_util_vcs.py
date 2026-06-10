@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import os
+import shutil
 import subprocess
 from pathlib import Path
 from textwrap import dedent
@@ -648,3 +649,25 @@ def test_get_changed_files_with_null_base_revision_shallow_clone(
     assert "first_file" in changed_files
     assert "file1.txt" in changed_files
     assert "file2.txt" in changed_files
+
+
+def test_get_note_git(git_repo, tmpdir):
+    """get_note returns note content when present, None otherwise."""
+    src_path = str(tmpdir.join("git-src"))
+    dst_path = str(tmpdir.join("git-dst"))
+    shutil.copytree(git_repo, src_path)
+    shutil.copytree(git_repo, dst_path)
+    repo = get_repository(dst_path)
+
+    # No note yet on the remote
+    assert repo.get_note("try-config", src_path) is None
+
+    rev = repo.head_rev
+    subprocess.check_call(
+        ["git", "notes", "--ref=refs/notes/try-config", "add", "-m", "test note", rev],
+        cwd=src_path,
+    )
+
+    assert repo.get_note("try-config", src_path) == "test note"
+    assert repo.get_note("try-config", src_path, revision=rev) == "test note"
+    assert repo.get_note("other", src_path) is None

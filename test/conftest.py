@@ -1,5 +1,7 @@
 import os
 import platform
+import subprocess
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -13,9 +15,36 @@ pytest_plugins = ("pytest-taskgraph",)
 # interference with tests.
 # This ignores ~/.hgrc
 os.environ["HGRCPATH"] = ""
-# This ignores system-level git config (eg: in /etc). There apperas to be
-# no way to ignore ~/.gitconfig other than overriding $HOME, which is overkill.
+# This ignores system-level git config (eg: in /etc).
 os.environ["GIT_CONFIG_NOSYSTEM"] = "1"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def git_global_config():
+    # Until https://github.com/taskcluster/taskcluster/issues/6561 we need to
+    # preserved the safe directories that `run-task` sets to keep tests
+    # working in CI when workers run subsequent tasks.
+    existing_safe_dirs = subprocess.run(
+        ["git", "config", "--global", "--get-all", "safe.directory"],
+        capture_output=True,
+        text=True,
+        check=False,
+    ).stdout.splitlines()
+
+    fd, path = tempfile.mkstemp(prefix="taskgraph-gitconfig-")
+    os.close(fd)
+    os.environ["GIT_CONFIG_GLOBAL"] = path
+
+    for entry in existing_safe_dirs:
+        subprocess.run(
+            ["git", "config", "--global", "--add", "safe.directory", entry],
+            check=False,
+        )
+
+    yield
+    del os.environ["GIT_CONFIG_GLOBAL"]
+    os.unlink(path)
+
 
 # Some of the tests marked with this may be fixable on Windows; we should
 # look into these in more depth at some point.

@@ -10,6 +10,7 @@ A collection of how-to guides.
    run-locally
    debugging
    bootstrap-taskgraph
+   define-schemas
    resolve-keyed-by
    use-fetches
    docker

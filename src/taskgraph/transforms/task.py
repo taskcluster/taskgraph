@@ -268,14 +268,10 @@ class DockerWorkerPayloadSchema(Schema, forbid_unknown_fields=False, kw_only=Tru
     # image or in-tree docker image to run the task in.
     docker_image: DockerImage
     # worker features that should be enabled
-    relengapi_proxy: bool
     chain_of_trust: bool
     taskcluster_proxy: bool
     allow_ptrace: bool
     loopback_video: bool
-    loopback_audio: bool
-    docker_in_docker: bool  # (aka 'dind')
-    privileged: bool
     # environment variables
     env: dict[str, taskref_or_string_msgspec]
     # the maximum time to run, in seconds
@@ -343,9 +339,6 @@ def build_docker_worker_payload(config, task, task_def):
 
     features = {}
 
-    if worker.get("relengapi-proxy"):
-        features["relengAPIProxy"] = True
-
     if worker.get("taskcluster-proxy"):
         features["taskclusterProxy"] = True
 
@@ -355,9 +348,6 @@ def build_docker_worker_payload(config, task, task_def):
 
     if worker.get("chain-of-trust"):
         features["chainOfTrust"] = True
-
-    if worker.get("docker-in-docker"):
-        features["dind"] = True
 
     if task.get("needs-sccache"):
         features["taskclusterProxy"] = True
@@ -375,16 +365,10 @@ def build_docker_worker_payload(config, task, task_def):
 
     capabilities = {}
 
-    for lo in "audio", "video":
-        if worker.get("loopback-" + lo):
-            capitalized = "loopback" + lo.capitalize()
-            devices = capabilities.setdefault("devices", {})
-            devices[capitalized] = True
-            task_def["scopes"].append("docker-worker:capability:device:" + capitalized)
-
-    if worker.get("privileged"):
-        capabilities["privileged"] = True
-        task_def["scopes"].append("docker-worker:capability:privileged")
+    if worker.get("loopback-video"):
+        devices = capabilities.setdefault("devices", {})
+        devices["loopbackVideo"] = True
+        task_def["scopes"].append("docker-worker:capability:device:loopbackVideo")
 
     task_def["payload"] = payload = {
         "image": image,
@@ -473,12 +457,10 @@ def build_docker_worker_payload(config, task, task_def):
         else:
             suffix = cache_version
 
-        skip_untrusted = config.params.is_try() or level == 1
-
         for cache in worker["caches"]:
             # Some caches aren't enabled in environments where we can't
             # guarantee certain behavior. Filter those out.
-            if cache.get("skip-untrusted") and skip_untrusted:
+            if cache.get("skip-untrusted") and level == 1:
                 continue
 
             name = "{trust_domain}-level-{level}-{name}-{suffix}".format(
@@ -500,7 +482,7 @@ def build_docker_worker_payload(config, task, task_def):
     if run_task and worker.get("volumes"):
         payload["env"]["TASKCLUSTER_VOLUMES"] = ";".join(sorted(worker["volumes"]))
 
-    if payload.get("cache") and skip_untrusted:  # type: ignore
+    if payload.get("cache") and level == 1:  # type: ignore
         payload["env"]["TASKCLUSTER_UNTRUSTED_CACHES"] = "1"
 
     if features:
@@ -810,14 +792,10 @@ def set_defaults(config, tasks):
 
         worker = task["worker"]
         if worker["implementation"] in ("docker-worker",):
-            worker.setdefault("relengapi-proxy", False)
             worker.setdefault("chain-of-trust", False)
             worker.setdefault("taskcluster-proxy", False)
             worker.setdefault("allow-ptrace", False)
             worker.setdefault("loopback-video", False)
-            worker.setdefault("loopback-audio", False)
-            worker.setdefault("docker-in-docker", False)
-            worker.setdefault("privileged", False)
             worker.setdefault("volumes", [])
             worker.setdefault("env", {})
             if "caches" in worker:
@@ -1019,7 +997,7 @@ def build_task(config, tasks):
         if "expires-after" not in task:
             task["expires-after"] = (
                 config.graph_config._config.get("task-expires-after", "28 days")
-                if config.params.is_try()
+                if config.params["level"] == "1"
                 else "1 year"
             )
 

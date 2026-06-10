@@ -22,6 +22,8 @@ from urllib.parse import urlparse
 import appdirs
 import yaml
 
+from taskgraph.util.schema import SchemaValidationError
+
 Command = namedtuple("Command", ["func", "args", "kwargs", "defaults"])
 commands = {}
 
@@ -933,6 +935,12 @@ def load_task(args):
 @argument(
     "--verbose", "-v", action="store_true", help="include debug-level logging output"
 )
+@argument(
+    "--allow-parameter-override",
+    default=False,
+    action="store_true",
+    help="Allow user to override computed decision task parameters.",
+)
 def decision(options):
     from taskgraph.decision import taskgraph_decision  # noqa: PLC0415
 
@@ -1201,6 +1209,9 @@ def main(args=sys.argv[1:]):
     args = parser.parse_args(args)
     try:
         return args.command(vars(args))
+    except SchemaValidationError:
+        # Message was already logged; skip the traceback for user input errors.
+        sys.exit(1)
     except Exception:
         traceback.print_exc()
         sys.exit(1)

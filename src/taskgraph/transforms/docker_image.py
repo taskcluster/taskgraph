@@ -130,7 +130,7 @@ def fill_template(config, tasks):
                 "artifact_prefix": "public",
             },
             "always-target": True,
-            "expires-after": expires if config.params.is_try() else "1 year",
+            "expires-after": expires if config.params["level"] == "1" else "1 year",
             "scopes": [],
             "run-on-projects": [],
             "worker-type": "images",

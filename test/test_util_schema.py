@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import unittest
+from typing import Optional
 
 import msgspec
 import pytest
@@ -11,6 +12,7 @@ import taskgraph
 from taskgraph.util.schema import (
     IndexSchema,
     Schema,
+    SchemaValidationError,
     optionally_keyed_by,
     resolve_keyed_by,
     validate_schema,
@@ -22,16 +24,50 @@ class SampleSchema(Schema):
     y: str
 
 
-class TestValidateSchema(unittest.TestCase):
+class TestSchemaValidationError(unittest.TestCase):
+    """Schema validation errors use a dedicated class so callers can display
+    the message without a full Python traceback."""
+
     def test_valid(self):
         validate_schema(SampleSchema, {"x": 10, "y": "foo"}, "pfx")
 
-    def test_invalid(self):
-        try:
+    def test_msgspec_schema_raises_schema_validation_error(self):
+        with self.assertRaises(SchemaValidationError):
             validate_schema(SampleSchema, {"x": "not-int"}, "pfx")
+
+    def test_dict_schema_raises_schema_validation_error(self):
+        with self.assertRaises(SchemaValidationError):
+            validate_schema({"name": str}, {"name": 123}, "pfx")
+
+    def test_exception_chain_suppressed(self):
+        """validate_schema uses `raise ... from None` so the underlying
+        msgspec/voluptuous error doesn't show up as 'During handling of ...'"""
+        try:
+            validate_schema(SampleSchema, {"x": 1, "y": "a", "extra": True}, "pfx")
+        except SchemaValidationError as exc:
+            self.assertIsNone(exc.__cause__)
+            self.assertTrue(exc.__suppress_context__)
+        else:
             self.fail("no exception raised")
-        except Exception as e:
-            self.assertTrue(str(e).startswith("pfx\n"))
+
+    def test_message_contains_prefix_and_object(self):
+        try:
+            validate_schema(SampleSchema, {"x": "not-int", "y": "a"}, "my-prefix")
+        except SchemaValidationError as exc:
+            msg = str(exc)
+            self.assertTrue(msg.startswith("my-prefix\n"))
+            self.assertIn("'x': 'not-int'", msg)
+        else:
+            self.fail("no exception raised")
+
+    def test_schema_validate_propagates_msgspec_error(self):
+        """Schema.validate raises msgspec.ValidationError directly without
+        wrapping in an extra try/except."""
+        with self.assertRaises(msgspec.ValidationError) as cm:
+            SampleSchema.validate({"x": 1, "y": "a", "extra": True})
+        # The redundant try/except that re-raised was removed, so there should
+        # be no chained context exception.
+        self.assertIsNone(cm.exception.__context__)
 
 
 class TestSchemaFeatures(unittest.TestCase):
@@ -348,3 +384,53 @@ def test_optionally_keyed_by_dict():
 
     with pytest.raises(msgspec.ValidationError):
         TestSchema.validate({"field": {"by-foo": {"a": "b"}}})
+
+
+@pytest.mark.parametrize(
+    "fields_dict, data, attr, expected",
+    [
+        ({"name": str}, {"name": "foo"}, "name", "foo"),
+        ({"count": Optional[int]}, {}, "count", None),
+        ({"tags": (list, [])}, {}, "tags", []),
+        ({"my-field": str}, {"my-field": "bar"}, "my_field", "bar"),
+    ],
+)
+def test_from_dict_valid(fields_dict, data, attr, expected):
+    S = Schema.from_dict(fields_dict)
+    result = msgspec.convert(data, S)
+    assert getattr(result, attr) == expected
+
+
+@pytest.mark.parametrize(
+    "fields_dict, data",
+    [
+        ({"name": str}, {}),
+        ({"my-field": str}, {"my_field": "bar"}),
+    ],
+)
+def test_from_dict_invalid(fields_dict, data):
+    S = Schema.from_dict(fields_dict)
+    with pytest.raises(msgspec.ValidationError):
+        msgspec.convert(data, S)
+
+
+@pytest.mark.parametrize(
+    "data, raises",
+    [
+        ({"a": "x", "b": "y"}, True),
+        ({"a": "x"}, False),
+        ({}, False),
+    ],
+)
+def test_exclusive(data, raises):
+    S = Schema.from_dict(
+        {"a": Optional[str], "b": Optional[str]},
+        exclusive=[["a", "b"]],
+    )
+    if raises:
+        with pytest.raises(
+            (ValueError, msgspec.ValidationError), match="mutually exclusive"
+        ):
+            msgspec.convert(data, S)
+    else:
+        msgspec.convert(data, S)

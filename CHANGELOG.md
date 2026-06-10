@@ -1,5 +1,87 @@
 # Change Log
 
+## [24.1.0] - 2026-06-04
+
+### Added
+
+- support for custom context in task-context (#971)
+
+## [24.0.0] - 2026-06-03
+
+### Changed
+
+- BREAKING CHANGE: Must pass in `--allow-parameter-override` if using try_task_config
+- BREAKING CHANGE: Default level 1 artifact expiry changed from 1 year to 28 days
+
+### Removed
+
+- BREAKING CHANGE: Removed `Parameters.is_try()` helper method
+
+## [23.2.0] - 2026-06-03
+
+### Added
+
+- `task-context` now calls `resolve_keyed_by` on `substitution-fields` (#968)
+
+## [23.1.0] - 2026-05-26
+
+### Added
+
+- Updated worker types in the `.taskcluster.yml` template for the d2g migration
+
+### Fixed
+
+- `TaskGraph.from_json` now skips dependencies pointing at external taskIds (e.g. from replaced or cached tasks) when rebuilding edges, instead of producing edges to non-existent graph nodes
+- Schema validation errors now display a clean message instead of a noisy traceback
+- Pinned `taskcluster-client` to work around an upstream issue
+- `fetch_graph_and_labels` now handles `HTTPError` instances where `response` is `None`
+
+## [23.0.0] - 2026-05-04
+
+### Added
+
+- Support for defining schemas as dicts (in addition to the class-based approach)
+- New `disabled_actions` graph configuration to prevent specific actions from being generated
+
+### Changed
+
+- BREAKING CHANGE: Converted parameter schema from voluptuous to msgspec
+
+### Fixed
+
+- `taskgraph full -J --tasks <regex>` now displays full dependencies instead of a filtered subset
+- `fetch-content` now percent-encodes artifact names, fixing downloads of artifacts containing spaces or other special characters
+
+## [22.0.0] - 2026-04-16
+
+### Fixed
+
+- Decision task now fetches `refs/notes/decision-parameters` itself
+
+### Removed
+
+- BREAKING CHANGE: Removed ability for `run-task` to fetch arbitrary extra refs
+- BREAKING CHANGE: Removed docker-worker feature: relengapi-proxy
+
+## [21.0.0] - 2026-04-13
+
+### Added
+
+- Ability for `run-task` to fetch arbitrary extra refs
+- Ability for Decision task to override params via Git notes
+
+### Fixed
+
+- Improved index route verification
+
+### Changed
+
+- BREAKING CHANGE: run-task and decision images now use Debian 13
+
+### Removed
+
+- BREAKING CHANGE: Removed docker-worker features: dind, privileged, loopback-audio
+
 ## [20.0.0] - 2026-03-17
 
 ### Added

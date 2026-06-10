@@ -85,7 +85,7 @@ def fetch_graph_and_labels(parameters, graph_config, task_group_id=None):
                 run_label_to_id = get_artifact(task_id, "public/label-to-taskid.json")
                 label_to_taskid.update(run_label_to_id)  # type: ignore
             except HTTPError as e:
-                if e.response.status_code != 404:
+                if e.response is None or e.response.status_code != 404:
                     raise
                 logger.debug(f"No label-to-taskid.json found for {task_id}: {e}")
 

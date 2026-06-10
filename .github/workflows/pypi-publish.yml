@@ -12,8 +12,8 @@ jobs:
       id-token: write
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -21,8 +21,14 @@ jobs:
         run: |
           pip install build
           python -m build
+      # NOTE: We deliberately pin this action to a commit SHA rather than the
+      #       mutable `@release/v1` ref that PyPA recommends. The pin stops the
+      #       action from being swapped out from under a workflow that holds PyPI
+      #       publish (OIDC) rights; the cost is losing automatic upstream patches.
+      #       Renovate offsets that by bumping the pinned SHA (tracked via the
+      #       trailing `# vX.Y.Z` comment), so merge those bump PRs promptly.
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # v1.14.0
   pypi-publish-pytest-taskgraph:
     name: upload release to PyPI
     if: startsWith(github.ref, 'refs/tags/pytest-taskgraph')
@@ -32,8 +38,8 @@ jobs:
       id-token: write
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -43,7 +49,7 @@ jobs:
           pip install build
           python -m build
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # v1.14.0
         with:
           packages-dir: packages/pytest-taskgraph/dist
   pypi-publish-sphinx-taskgraph:
@@ -55,8 +61,8 @@ jobs:
       id-token: write
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -66,6 +72,6 @@ jobs:
           pip install build
           python -m build
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # v1.14.0
         with:
           packages-dir: packages/sphinx-taskgraph/dist

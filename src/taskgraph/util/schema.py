@@ -2,6 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import inspect
 import pprint
 import re
 import threading
@@ -20,6 +21,14 @@ _schema_creation_lock = threading.RLock()
 TaskPriority = Literal[
     "highest", "very-high", "high", "medium", "low", "very-low", "lowest"
 ]
+
+
+class SchemaValidationError(Exception):
+    """Raised when user-supplied data fails schema validation.
+
+    Callers should display the message without a Python traceback, since
+    these reflect input errors rather than programmer bugs.
+    """
 
 
 def validate_schema(schema, obj, msg_prefix):
@@ -64,9 +73,13 @@ def validate_schema(schema, obj, msg_prefix):
             msg = [msg_prefix]
             for error in exc.errors:
                 msg.append(str(error))
-            raise Exception("\n".join(msg) + "\n" + pprint.pformat(obj))
+            raise SchemaValidationError(
+                "\n".join(msg) + "\n" + pprint.pformat(obj)
+            ) from None
         else:
-            raise Exception(f"{msg_prefix}\n{str(exc)}\n{pprint.pformat(obj)}")
+            raise SchemaValidationError(
+                f"{msg_prefix}\n{str(exc)}\n{pprint.pformat(obj)}"
+            ) from None
 
 
 class OptionallyKeyedBy:
@@ -318,6 +331,11 @@ class LegacySchema(voluptuous.Schema):
         return self.schema[item]  # type: ignore
 
 
+def _caller_module_name(depth=1):
+    frame = inspect.stack()[depth + 1].frame
+    return frame.f_globals.get("__name__", "schema")
+
+
 class Schema(
     msgspec.Struct,
     kw_only=True,
@@ -345,6 +363,11 @@ class Schema(
             foo: str
     """
 
+    def __init_subclass__(cls, exclusive=None, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if exclusive is not None:
+            cls.exclusive = exclusive
+
     def __post_init__(self):
         if taskgraph.fast:
             return
@@ -370,16 +393,82 @@ class Schema(
 
             keyed_by.validate(obj)
 
+        # Validate mutually exclusive field groups.
+        for group in getattr(self, "exclusive", []):
+            set_fields = [f for f in group if getattr(self, f) is not None]
+            if len(set_fields) > 1:
+                raise ValueError(
+                    f"{' and '.join(repr(f) for f in set_fields)} are mutually exclusive"
+                )
+
+    @classmethod
+    def from_dict(
+        cls,
+        fields_dict: dict[str, Any],
+        name: Optional[str] = None,
+        optional: bool = False,
+        **kwargs,
+    ) -> Union[type[msgspec.Struct], type[Optional[msgspec.Struct]]]:
+        """Create a Schema subclass dynamically from a dict of field definitions.
+
+        Each key is a field name and each value is either a type annotation or a
+        ``(type, default)`` tuple.  Fields typed as ``Optional[...]`` automatically
+        receive a default of ``None`` when no explicit default is provided.
+
+        Usage::
+
+            Schema.from_dict("MySchema", {
+                "required_field": str,
+                "optional_field": Optional[int],         # default None inferred
+                "explicit_default": (list[str], []),     # explicit default
+            })
+
+        Keyword arguments are forwarded to ``msgspec.defstruct`` (e.g.
+        ``forbid_unknown_fields=False``).
+        """
+        # Don't use `rename=kebab` by default as we can define kebab case
+        # properly in dicts.
+        kwargs.setdefault("rename", None)
+
+        # Ensure name and module are set correctly for error messages.
+        caller_module = _caller_module_name()
+        kwargs.setdefault("module", caller_module)
+        name = name or caller_module.rsplit(".", 1)[-1]
+
+        fields = []
+        for field_name, field_spec in fields_dict.items():
+            python_name = field_name.replace("-", "_")
+
+            if isinstance(field_spec, tuple):
+                typ, default = field_spec
+            else:
+                typ = field_spec
+                if get_origin(typ) is Union and type(None) in get_args(typ):
+                    default = None
+                else:
+                    default = msgspec.NODEFAULT
+
+            if field_name != python_name:
+                # Use msgspec.field to preserve the kebab-case encoded name.
+                # Explicit field names take priority over the struct-level rename.
+                fields.append(
+                    (python_name, typ, msgspec.field(name=field_name, default=default))
+                )
+            else:
+                fields.append((python_name, typ, default))
+
+        exclusive = kwargs.pop("exclusive", None)
+        result = msgspec.defstruct(name or "Schema", fields, bases=(cls,), **kwargs)
+        if exclusive:
+            result.exclusive = exclusive  # type: ignore[attr-defined]
+        return Optional[result] if optional else result  # type: ignore[valid-type]
+
     @classmethod
     def validate(cls, data):
         """Validate data against this schema."""
         if taskgraph.fast:
             return data
-
-        try:
-            msgspec.convert(data, cls)
-        except (msgspec.ValidationError, msgspec.DecodeError) as e:
-            raise msgspec.ValidationError(str(e))
+        msgspec.convert(data, cls)
 
 
 class IndexSchema(Schema):

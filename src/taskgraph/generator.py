@@ -27,6 +27,7 @@ from .task import Task
 from .taskgraph import TaskGraph
 from .transforms.base import TransformConfig, TransformSequence
 from .util.python_path import find_object
+from .util.schema import SchemaValidationError
 from .util.verify import verifications
 from .util.yaml import load_yaml
 
@@ -303,6 +304,9 @@ class TaskGraphGenerator:
                     },
                     self._write_artifacts,
                 )
+            except SchemaValidationError as exc:
+                logger.error(f"Error loading tasks for kind {kind_name}:\n{exc}")
+                raise
             except Exception:
                 logger.exception(f"Error loading tasks for kind {kind_name}:")
                 raise
@@ -358,6 +362,16 @@ class TaskGraphGenerator:
                 for future in done:
                     if exc := future.exception():
                         executor.shutdown(wait=False, cancel_futures=True)
+                        kind_name = futures_to_kind.get(future, "?")
+                        if isinstance(exc, SchemaValidationError):
+                            logger.error(
+                                f"Error loading tasks for kind {kind_name}:\n{exc}"
+                            )
+                        else:
+                            logger.error(
+                                f"Error loading tasks for kind {kind_name}:",
+                                exc_info=(type(exc), exc, exc.__traceback__),
+                            )
                         raise exc
                     kind = futures_to_kind.pop(future)
                     futures.remove(future)

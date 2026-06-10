@@ -215,6 +215,22 @@ class Repository(ABC):
         If this function returns an unexpected value, then make sure
         the revision was fetched from the remote repository."""
 
+    def get_note(
+        self,
+        note: str,
+        remote: str,
+        revision: Optional[str] = None,
+    ) -> Optional[str]:
+        """Read a note attached to the given revision (defaults to HEAD).
+
+        The notes ref is fetched from ``remote`` first; a missing ref on the
+        remote is tolerated while other fetch failures propagate.
+
+        Returns the note content as a string, or ``None`` if no note exists.
+        Only supported by Git; returns ``None`` for all other VCS types.
+        """
+        return None
+
 
 class HgRepository(Repository):
     @property
@@ -584,6 +600,42 @@ class GitRepository(Repository):
             # "git cat-file: could not get object info"
             if e.returncode == 128:
                 return False
+            raise
+
+    def get_note(
+        self,
+        note: str,
+        remote: str,
+        revision: Optional[str] = None,
+    ) -> Optional[str]:
+        if not note.startswith("refs/notes/"):
+            note = f"refs/notes/{note}"
+
+        try:
+            self.run("fetch", remote, f"{note}:{note}", stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError:
+            ls_output = self.run(
+                "ls-remote",
+                "--exit-code",
+                remote,
+                note,
+                return_codes=(2,),
+                stderr=subprocess.PIPE,
+            )
+            if not ls_output:
+                logger.info(
+                    "Failed to fetch %s but the remote doesn't have it. Ignoring.", note
+                )
+                return None
+            raise
+
+        try:
+            return self.run(
+                "notes", f"--ref={note}", "show", revision or "HEAD"
+            ).strip()
+        except subprocess.CalledProcessError as e:
+            if e.returncode == 1:
+                return None
             raise
 
 

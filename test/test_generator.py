@@ -13,13 +13,16 @@ from pytest_taskgraph import WithFakeKind, fake_load_graph_config
 from taskgraph import generator, graph
 from taskgraph.generator import Kind, load_tasks_for_kind, load_tasks_for_kinds
 from taskgraph.loader.default import loader as default_loader
+from taskgraph.util.schema import SchemaValidationError
 
 linuxonly = pytest.mark.skipif(
-    platform.system() != "Linux" or os.environ.get("TASKGRAPH_USE_THREADS"),
-    reason="requires Linux and 'fork' multiprocessing support",
+    platform.system() != "Linux"
+    or os.environ.get("TASKGRAPH_USE_THREADS")
+    or os.environ.get("TASKGRAPH_SERIAL"),
+    reason="requires Linux multiprocessing support",
 )
 threadsonly = pytest.mark.skipif(
-    not os.environ.get("TASKGRAPH_USE_THREADS"),
+    not os.environ.get("TASKGRAPH_USE_THREADS") or os.environ.get("TASKGRAPH_SERIAL"),
     reason="requires multithreading to be enabled",
 )
 
@@ -68,6 +71,46 @@ def test_kind_ordering_multithread(mocker, maketgg):
     )
     tgg._run_until("full_task_set")
     assert mocked_tpe.loaded_kinds == ["_fake1", "_fake2", "_fake3"]
+
+
+def test_schema_validation_error_logged_without_traceback(mocker, caplog, maketgg):
+    """SchemaValidationError from a kind is logged at ERROR level with no
+    traceback attached (it's user input, not a programmer bug)."""
+
+    def fail_load_tasks(self, *args, **kwargs):
+        raise SchemaValidationError("bad task data")
+
+    mocker.patch.object(Kind, "load_tasks", fail_load_tasks)
+    tgg = maketgg()
+
+    with caplog.at_level("ERROR"):
+        with pytest.raises(SchemaValidationError):
+            tgg._run_until("full_task_set")
+
+    schema_records = [r for r in caplog.records if "Error loading tasks" in r.message]
+    assert len(schema_records) == 1
+    # logger.error attaches no exc_info — that's the whole point.
+    assert schema_records[0].exc_info is None
+    assert "bad task data" in schema_records[0].message
+
+
+def test_other_exceptions_still_log_traceback(mocker, caplog, maketgg):
+    """Non-SchemaValidationError exceptions still go through logger.exception
+    so real programmer bugs surface their traceback."""
+
+    def fail_load_tasks(self, *args, **kwargs):
+        raise RuntimeError("unexpected bug")
+
+    mocker.patch.object(Kind, "load_tasks", fail_load_tasks)
+    tgg = maketgg()
+
+    with caplog.at_level("ERROR"):
+        with pytest.raises(RuntimeError):
+            tgg._run_until("full_task_set")
+
+    records = [r for r in caplog.records if "Error loading tasks" in r.message]
+    assert len(records) == 1
+    assert records[0].exc_info is not None
 
 
 def test_full_task_set(maketgg):

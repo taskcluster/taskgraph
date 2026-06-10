@@ -215,6 +215,17 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
             "verify_index_route",
             make_graph(
                 make_task(
+                    "valid_route",
+                    task_def={"routes": ["index.example.v2.latest.taskgraph.decision"]},
+                ),
+            ),
+            does_not_raise(),
+            id="verify_index_route: valid route",
+        ),
+        pytest.param(
+            "verify_index_route",
+            make_graph(
+                make_task(
                     "invalid_slash",
                     task_def={
                         "routes": [
@@ -225,6 +236,28 @@ def make_task_treeherder(label, symbol, platform="linux/opt"):
             ),
             pytest.raises(Exception),
             id="verify_index_route: invalid slash in route",
+        ),
+        pytest.param(
+            "verify_index_route",
+            make_graph(
+                make_task(
+                    "invalid_plus",
+                    task_def={"routes": ["index.example.1.0+hotfix1.latest"]},
+                ),
+            ),
+            pytest.raises(Exception),
+            id="verify_index_route: invalid plus in route",
+        ),
+        pytest.param(
+            "verify_index_route",
+            make_graph(
+                make_task(
+                    "invalid_space",
+                    task_def={"routes": ["index.example.some namespace.latest"]},
+                ),
+            ),
+            pytest.raises(Exception),
+            id="verify_index_route: invalid space in route",
         ),
         pytest.param(
             "verify_task_dependencies",

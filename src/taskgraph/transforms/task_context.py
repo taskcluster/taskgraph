@@ -1,14 +1,21 @@
 from typing import Optional, Union
 
 from taskgraph.transforms.base import TransformSequence
-from taskgraph.util.schema import Schema
+from taskgraph.util.schema import Schema, resolve_keyed_by
+from taskgraph.util.task_context import CUSTOM_CONTEXT_MAP
 from taskgraph.util.templates import deep_get, substitute_task_fields
 from taskgraph.util.yaml import load_yaml
 
 
+class ResolveKeyedByConfigOptions(Schema):
+    # forwarded to `resolve_keyed_by`; see that function for details
+    defer: Optional[list[str]] = None
+    enforce_single_match: Optional[bool] = None
+
+
 class TaskContextConfig(Schema):
     # A list of fields in the task to substitute the provided values
-    # into.
+    # into and/or resolve keys in.
     substitution_fields: list[str]
     # Retrieve task context values from parameters. A single
     # parameter may be provided or a list of parameters in
@@ -22,13 +29,21 @@ class TaskContextConfig(Schema):
     from_file: Optional[str] = None
     # Key/value pairs to be used as task context
     from_object: Optional[object] = None
+    # Retrieve task context values from registered custom providers. Each
+    # entry is the name of a provider registered via
+    # ``taskgraph.util.task_context.custom_context``. Providers are called
+    # with the ``TransformConfig`` and the task being rendered, and must
+    # return a dict of key/value pairs to add to the context.
+    from_custom: Optional[list[str]] = None
+    resolve_keyed_by_options: Optional[ResolveKeyedByConfigOptions] = None
 
 
 #: Schema for the task_context transforms
 class TaskContextSchema(Schema, forbid_unknown_fields=False, kw_only=True):
     name: Optional[str] = None
-    # `task-context` can be used to substitute values into any field in a
-    # task with data that is not known until `taskgraph` runs.
+    # `task-context` can be used to substitute values into any field or resolve
+    # keys in a field in a task with data that is not known until `taskgraph`
+    # runs.
     #
     # This data can be provided via `from-parameters` or `from-file`,
     # which can pull in values from parameters and a defined yml file
@@ -43,9 +58,13 @@ class TaskContextSchema(Schema, forbid_unknown_fields=False, kw_only=True):
     # is as follows:
     #   - Parameters
     #   - `from-object` keys
+    #   - Custom providers (`from-custom`)
     #   - File
     #
     # That is to say: parameters will always override anything else.
+    #
+    # Each entry in `substitution-fields` will first have `resolved_keyed_by`
+    # called on it, and then substitutions will be performed.
     task_context: Optional[TaskContextConfig] = None
 
 
@@ -78,10 +97,18 @@ def render_task(config, tasks):
         if from_file:
             file_context = load_yaml(from_file)
 
+        custom_context = {}
+        for name in sub_config.pop("from-custom", None) or []:
+            if name not in CUSTOM_CONTEXT_MAP:
+                raise ValueError(f"no provider found for custom context '{name}'")
+
+            custom_context.update(CUSTOM_CONTEXT_MAP[name](config, task))
+
         fields = sub_config.pop("substitution-fields")
 
         subs = {}
         subs.update(file_context)
+        subs.update(custom_context)
         # We've popped away the configuration; everything left in `sub_config` is
         # substitution key/value pairs.
         subs.update(sub_config.pop("from-object", {}))
@@ -89,6 +116,10 @@ def render_task(config, tasks):
         if "name" in task:
             subs.setdefault("name", task["name"])
 
-        # Now that we have our combined context, we can substitute.
+        # Now that we have our combined context, we can resolve keys and substitute.
+        task_name = task.get("name", task.get("label", "?"))
+        resolve_keyed_by_options = sub_config.get("resolve-keyed-by-options") or {}
+        for field in fields:
+            resolve_keyed_by(task, field, task_name, **resolve_keyed_by_options, **subs)
         substitute_task_fields(task, fields, **subs)
         yield task

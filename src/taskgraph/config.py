@@ -57,6 +57,9 @@ class TaskgraphConfig(Schema):
     index_path_regexes: Optional[list[str]] = None
     # Configuration related to the 'run' transforms.
     run: Optional[RunConfig] = None
+    # List of action `cb_name`s to omit from `actions.json`,
+    # e.g. `["retrigger", "retrigger-disabled", "rerun"]`.
+    disabled_actions: Optional[list[str]] = None
 
     def __post_init__(self):
         # Validate repositories has at least 1 entry (was All(..., Length(min=1)))

@@ -252,17 +252,27 @@ def get_decision_parameters(graph_config, options):
         assert callable(decision_params)
         decision_params(graph_config, parameters)
 
-    if options.get("try_task_config_file"):
-        task_config_file = os.path.abspath(options.get("try_task_config_file"))
-    else:
-        # if try_task_config.json is present, load it
-        task_config_file = os.path.join(os.getcwd(), "try_task_config.json")
+    # load extra parameters from file or vcs note if able
+    if options.get("allow_parameter_override"):
+        note_ref = "refs/notes/decision-parameters"
+        if options.get("try_task_config_file"):
+            task_config_file = os.path.abspath(options.get("try_task_config_file"))
+        else:
+            # if try_task_config.json is present, load it
+            task_config_file = os.path.join(os.getcwd(), "try_task_config.json")
 
-    # load try settings
-    if ("try" in project and options["tasks_for"] == "hg-push") or options[
-        "tasks_for"
-    ] == "github-pull-request":
-        set_try_config(parameters, task_config_file)
+        if os.path.isfile(task_config_file):
+            set_try_config(parameters, task_config_file)
+
+        elif note_params := repo.get_note(note_ref, parameters["head_repository"]):
+            try:
+                note_params = json.loads(note_params)
+                logger.info(
+                    f"Overriding parameters from {note_ref}:\n{json.dumps(note_params, indent=2)}"
+                )
+                parameters.update(note_params)
+            except ValueError as e:
+                raise Exception(f"Failed to parse {note_ref} as JSON: {e}") from e
 
     result = Parameters(**parameters)
     result.check()
@@ -270,23 +280,22 @@ def get_decision_parameters(graph_config, options):
 
 
 def set_try_config(parameters, task_config_file):
-    if os.path.isfile(task_config_file):
-        logger.info(f"using try tasks from {task_config_file}")
-        with open(task_config_file) as fh:
-            task_config = json.load(fh)
-        task_config_version = task_config.pop("version")
-        if task_config_version == 2:
-            validate_schema(
-                try_task_config_schema_v2,
-                task_config,
-                "Invalid v2 `try_task_config.json`.",
-            )
-            parameters.update(task_config["parameters"])
-            return
-        else:
-            raise Exception(
-                f"Unknown `try_task_config.json` version: {task_config_version}"
-            )
+    logger.info(f"using try tasks from {task_config_file}")
+    with open(task_config_file) as fh:
+        task_config = json.load(fh)
+    task_config_version = task_config.pop("version")
+    if task_config_version == 2:
+        validate_schema(
+            try_task_config_schema_v2,
+            task_config,
+            "Invalid v2 `try_task_config.json`.",
+        )
+        parameters.update(task_config["parameters"])
+        return
+    else:
+        raise Exception(
+            f"Unknown `try_task_config.json` version: {task_config_version}"
+        )
 
 
 def write_artifact(filename, data):

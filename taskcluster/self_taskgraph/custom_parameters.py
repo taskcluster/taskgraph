@@ -3,10 +3,12 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import os
+from typing import Annotated, Optional
 
-from voluptuous import All, Any, Range, Required
+import msgspec
 
 from taskgraph.parameters import extend_parameters_schema
+from taskgraph.util.schema import Schema
 
 
 def get_defaults(repo_root):
@@ -15,12 +17,13 @@ def get_defaults(repo_root):
     }
 
 
-extend_parameters_schema(
-    {
-        Required("pull_request_number"): Any(All(int, Range(min=1)), None),
-    },
-    defaults_fn=get_defaults,
+CustomParametersSchema = Schema.from_dict(
+    {"pull_request_number": Optional[Annotated[int, msgspec.Meta(ge=1)]]},
+    name="CustomParametersSchema",
 )
+
+
+extend_parameters_schema(CustomParametersSchema, defaults_fn=get_defaults)
 
 
 def decision_parameters(graph_config, parameters):
