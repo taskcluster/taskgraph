@@ -916,11 +916,17 @@ def add_vcs_arguments(parser, project, name):
         action="store_true",
         help=f"Use shallow clone for {name}",
     )
+    parser.add_argument(
+        f"--{project}-checkout-bundle",
+        help=f"If set, write a .tar.zst archive of the {name} checkout "
+        f"(excluding .git/.hg) to this path after checkout",
+    )
 
 
 def collect_vcs_options(args, project, name):
     checkout = getattr(args, f"{project}_checkout")
     shallow_clone = getattr(args, f"{project}_shallow_clone")
+    checkout_bundle = getattr(args, f"{project}_checkout_bundle")
 
     env_prefix = project.upper()
 
@@ -938,6 +944,8 @@ def collect_vcs_options(args, project, name):
     # Expand ~ in some paths.
     if checkout:
         checkout = os.path.abspath(os.path.expanduser(checkout))
+    if checkout_bundle:
+        checkout_bundle = os.path.abspath(os.path.expanduser(checkout_bundle))
     if store_path:
         store_path = os.path.abspath(os.path.expanduser(store_path))
 
@@ -956,6 +964,7 @@ def collect_vcs_options(args, project, name):
         "name": name,
         "env-prefix": env_prefix,
         "checkout": checkout,
+        "checkout-bundle": checkout_bundle,
         "base-repo": base_repo,
         "base-rev": base_rev,
         "head-repo": head_repo,
@@ -1032,6 +1041,79 @@ def vcs_checkout_from_args(options):
             pass
 
     os.environ["{}_HEAD_REV".format(options["env-prefix"])] = revision
+
+
+def create_checkout_bundle(checkout_dir, dest_path):
+    """Write a compressed archive of a checkout's working tree.
+
+    Produces a ``.tar.zst`` archive of the files in ``checkout_dir``, excluding
+    the ``.git`` and ``.hg`` vcs metadata directories (i.e. no history). The
+    basename of ``checkout_dir`` is used as the archive's top-level prefix.
+
+    This matches the ``.tar.zst`` format produced by fetch-content's
+    ``git_checkout_archive``, so the resulting artifact is consumable downstream
+    via the standard ``fetches:`` mechanism. Raises on failure so a broken
+    artifact is never left behind.
+    """
+    import zstandard  # noqa: PLC0415
+
+    checkout_dir = Path(checkout_dir)
+    dest_path = Path(dest_path)
+
+    if dest_path.suffixes[-2:] != [".tar", ".zst"]:
+        raise ValueError(
+            f"checkout bundle destination must end in .tar.zst, got: {dest_path}"
+        )
+
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+
+    prefix = checkout_dir.name
+    print_line(
+        b"bundle",
+        b"creating checkout bundle of %s at %s\n"
+        % (str(checkout_dir).encode("utf-8"), str(dest_path).encode("utf-8")),
+    )
+
+    # Archive the checkout from its parent so the top-level entry is the
+    # checkout's basename, excluding vcs metadata so no history is included.
+    proc = subprocess.Popen(
+        [
+            "tar",
+            "cf",
+            "-",
+            "--exclude=.git",
+            "--exclude=.hg",
+            "-C",
+            str(checkout_dir.parent),
+            prefix,
+        ],
+        stdout=subprocess.PIPE,
+    )
+
+    # Write to a temporary path and rename on success so a partial or broken
+    # archive is never left at dest_path.
+    tmp_path = dest_path.with_name(f"{dest_path.name}.tmp")
+    try:
+        with tmp_path.open("wb") as out:
+            zstandard.ZstdCompressor().copy_stream(proc.stdout, out)
+    except BaseException:
+        proc.kill()
+        proc.wait()
+        tmp_path.unlink(missing_ok=True)
+        raise
+    finally:
+        proc.stdout.close()
+
+    ret = proc.wait()
+    if ret != 0:
+        tmp_path.unlink(missing_ok=True)
+        raise RuntimeError(f"tar exited with code {ret} while creating checkout bundle")
+
+    tmp_path.rename(dest_path)
+    print_line(
+        b"bundle",
+        b"finished creating checkout bundle at %s\n" % str(dest_path).encode("utf-8"),
+    )
 
 
 def install_pip_requirements(repositories):
@@ -1316,6 +1398,13 @@ def main(args):
 
     for repo in repositories:
         vcs_checkout_from_args(repo)
+
+    # Optionally publish each checkout as a compressed bundle so a decision
+    # task can expose it as an artifact for downstream tasks to fetch instead
+    # of re-cloning. Runs as the worker user, before the task command.
+    for repo in repositories:
+        if repo.get("checkout") and repo.get("checkout-bundle"):
+            create_checkout_bundle(repo["checkout"], repo["checkout-bundle"])
 
     # Convert certain well known environment variables to absolute paths.
     for k in [

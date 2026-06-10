@@ -1,5 +1,11 @@
 # Change Log
 
+## [Unreleased]
+
+### Added
+
+- `run-task` now accepts an opt-in `--{project}-checkout-bundle=<dest>` option to write a `.tar.zst` archive of a checkout (excluding `.git`/`.hg`) after checkout, so a decision task can publish its checkout as an artifact consumable downstream via `fetches:`
+
 ## [24.1.0] - 2026-06-04
 
 ### Added

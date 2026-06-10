@@ -105,3 +105,47 @@ There are a few differences from the earlier ``build`` examples here:
 
    It is not possible to configure the ``dest`` or ``extract`` values when using
    ``fetch`` or ``toolchain`` kinds.
+
+Publishing a Checkout as a Fetch
+--------------------------------
+
+Re-cloning a large repository in every task can be slow. To avoid this, a task
+that already performs a checkout (such as the decision task) can publish a
+compressed snapshot of its checkout as an artifact, which downstream tasks then
+consume via the ``fetches`` mechanism described above.
+
+The ``run-task`` script accepts an opt-in ``--{project}-checkout-bundle=<dest>``
+option (one per repository, mirroring ``--{project}-checkout=<path>``). When
+set, ``run-task`` writes a ``.tar.zst`` archive of the checkout to ``<dest>``
+immediately after the checkout completes. The archive contains only the
+working-tree files: the ``.git`` and ``.hg`` metadata directories are excluded,
+so no history is included. The checkout directory's basename is used as the
+archive's top-level prefix. If archiving fails, ``run-task`` exits non-zero
+rather than producing a broken artifact.
+
+For example, point the bundle at a path inside the directory the worker exposes
+as artifacts (commonly ``UPLOAD_DIR``). The producing task must also declare a
+matching artifact in its payload; writing the file alone does not publish it:
+
+.. code-block:: text
+
+   run-task --vcs-checkout=/builds/worker/checkouts/src \
+       --vcs-checkout-bundle=$UPLOAD_DIR/src.tar.zst -- ...
+
+Because the artifact is a ``.tar.zst`` (the same format produced by
+``fetch-content``'s ``git-checkout-archive``), a downstream task can fetch and
+extract it like any other artifact. As with the ``build.zip`` example above, the
+artifact path is relative to the producing task's artifact prefix (which
+defaults to ``public/build``):
+
+.. code-block:: yaml
+
+   test:
+     dependencies:
+       decision: decision
+     fetches:
+       decision:
+         - artifact: src.tar.zst
+           extract: true
+
+The checkout will be extracted into the ``$TASK_WORKDIR/fetches`` directory.

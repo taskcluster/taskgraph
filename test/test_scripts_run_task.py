@@ -1,9 +1,11 @@
 import functools
+import io
 import os
 import site
 import stat
 import subprocess
 import sys
+import tarfile
 import tempfile
 from argparse import Namespace
 from importlib.machinery import SourceFileLoader
@@ -11,6 +13,7 @@ from importlib.util import module_from_spec, spec_from_loader
 from unittest.mock import Mock
 
 import pytest
+import zstandard
 
 import taskgraph
 from taskgraph.util.caches import CACHES
@@ -179,6 +182,16 @@ def test_install_pip_requirements_with_uv(
             {"shallow-clone": True},
             id="git_with_shallow_clone",
         ),
+        pytest.param(
+            {"myrepo_checkout_bundle": "checkout.tar.zst"},
+            {
+                "REPOSITORY_TYPE": "git",
+                "HEAD_REPOSITORY": "https://github.com/test/repo.git",
+                "HEAD_REV": "abc123",
+            },
+            {},
+            id="git_with_checkout_bundle",
+        ),
     ],
 )
 def test_collect_vcs_options(
@@ -197,6 +210,7 @@ def test_collect_vcs_options(
 
     args.setdefault(f"{name}_checkout", checkout)
     args.setdefault(f"{name}_shallow_clone", False)
+    args.setdefault(f"{name}_checkout_bundle", None)
     args = Namespace(**args)
 
     result = run_task_mod.collect_vcs_options(args, name, name)
@@ -205,6 +219,7 @@ def test_collect_vcs_options(
         "base-repo": env.get("BASE_REPOSITORY"),
         "base-rev": env.get("BASE_REV"),
         "checkout": os.path.join(os.getcwd(), "checkout"),
+        "checkout-bundle": None,
         "env-prefix": name.upper(),
         "head-repo": env.get("HEAD_REPOSITORY"),
         "name": name,
@@ -222,8 +237,78 @@ def test_collect_vcs_options(
             expected["checkout"], env.get("PIP_REQUIREMENTS")
         )
 
+    bundle = getattr(args, f"{name}_checkout_bundle")
+    if bundle:
+        # Derived independently (like the ``checkout`` expectation above) so the
+        # abspath handling in collect_vcs_options is load-bearing, not mirrored.
+        expected["checkout-bundle"] = os.path.join(os.getcwd(), bundle)
+
     expected.update(extra_expected)
     assert result == expected
+
+
+def test_create_checkout_bundle(run_task_mod, tmp_path):
+    # Build a fake checkout containing vcs metadata (including a nested .git, as
+    # produced by submodules/sub-checkouts) plus real working files.
+    checkout = tmp_path / "myco"
+    (checkout / ".git").mkdir(parents=True)
+    (checkout / ".git" / "config").write_text("[core]\n")
+    (checkout / ".hg").mkdir()
+    (checkout / ".hg" / "hgrc").write_text("[paths]\n")
+    (checkout / "sub" / ".git").mkdir(parents=True)
+    (checkout / "sub" / ".git" / "config").write_text("[core]\n")
+    (checkout / "file1.txt").write_text("hello")
+    (checkout / "sub" / "file2.txt").write_text("world")
+    (checkout / ".gitignore").write_text("*.pyc\n")
+
+    dest = tmp_path / "out.tar.zst"
+    run_task_mod.create_checkout_bundle(str(checkout), str(dest))
+
+    assert dest.exists()
+    # No leftover temporary file.
+    assert not dest.with_name(f"{dest.name}.tmp").exists()
+
+    # The archive should be valid zstd + tar. Decompress fully so it can be read
+    # in random-access mode (to also verify file contents survive intact).
+    dctx = zstandard.ZstdDecompressor()
+    with dest.open("rb") as fh:
+        tar_bytes = dctx.stream_reader(fh).read()
+    with tarfile.open(fileobj=io.BytesIO(tar_bytes), mode="r:") as tf:
+        members = tf.getnames()
+        assert tf.extractfile("myco/file1.txt").read() == b"hello"
+        assert tf.extractfile("myco/sub/file2.txt").read() == b"world"
+
+    # Regular files are present under the checkout's basename prefix.
+    assert "myco/file1.txt" in members
+    assert "myco/sub/file2.txt" in members
+    # A dotfile that merely starts with ".git" is not excluded.
+    assert "myco/.gitignore" in members
+    # vcs metadata directories are excluded at any depth (no history).
+    assert not any(".git" in m.split("/") or ".hg" in m.split("/") for m in members), (
+        members
+    )
+
+
+def test_create_checkout_bundle_rejects_bad_suffix(run_task_mod, tmp_path):
+    checkout = tmp_path / "myco"
+    checkout.mkdir()
+    (checkout / "file1.txt").write_text("hello")
+
+    with pytest.raises(ValueError):
+        run_task_mod.create_checkout_bundle(str(checkout), str(tmp_path / "out.tar.gz"))
+
+
+def test_create_checkout_bundle_fails_fast(run_task_mod, tmp_path):
+    # tar exits nonzero for a checkout dir that does not exist; the helper must
+    # raise and leave neither the destination nor the temporary file behind.
+    dest = tmp_path / "out.tar.zst"
+    missing = tmp_path / "does-not-exist"
+
+    with pytest.raises(RuntimeError):
+        run_task_mod.create_checkout_bundle(str(missing), str(dest))
+
+    assert not dest.exists()
+    assert not dest.with_name(f"{dest.name}.tmp").exists()
 
 
 def test_remove_directory(monkeypatch, run_task_mod):
@@ -638,3 +723,36 @@ def test_main_abspath_environment(mocker, run_main):
     assert env.get("MOZ_UV_HOME") == "/builds/worker/dir/uv"
     for key in envvars:
         assert env[key] == "/builds/worker/file"
+
+
+@nowin
+def test_main_runs_checkout_bundle(mocker, run_main, run_task_mod, tmp_path):
+    # Drive main() to verify the bundle step is opt-in (default OFF) and wired to
+    # create_checkout_bundle once per eligible repo. Stub out the real checkout
+    # and archiving; just record the bundle invocations.
+    mocker.patch.object(run_task_mod, "vcs_checkout_from_args", lambda repo: None)
+
+    calls = []
+    mocker.patch.object(
+        run_task_mod,
+        "create_checkout_bundle",
+        lambda checkout_dir, dest_path: calls.append((checkout_dir, dest_path)),
+    )
+
+    checkout = tmp_path / "checkouts" / "vcs"
+    bundle = tmp_path / "artifacts" / "src.tar.zst"
+
+    # Default OFF: without --vcs-checkout-bundle, the bundle step is skipped.
+    result, _ = run_main(extra_args=[f"--vcs-checkout={checkout}"])
+    assert result == 0
+    assert calls == []
+
+    # Opt-in: the bundle step runs once with the (abspath'd) checkout and dest.
+    result, _ = run_main(
+        extra_args=[
+            f"--vcs-checkout={checkout}",
+            f"--vcs-checkout-bundle={bundle}",
+        ]
+    )
+    assert result == 0
+    assert calls == [(os.path.abspath(str(checkout)), os.path.abspath(str(bundle)))]
