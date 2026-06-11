@@ -17,7 +17,7 @@ from taskgraph.transforms.base import TransformSequence
 # Graph builders – each returns (tasks_dict, Graph, TaskGraph) for 1000 nodes
 # ---------------------------------------------------------------------------
 
-N = 1000
+N = 20000
 
 
 def _make_task(i):
