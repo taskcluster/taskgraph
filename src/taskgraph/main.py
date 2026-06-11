@@ -941,6 +941,13 @@ def load_task(args):
     action="store_true",
     help="Allow user to override computed decision task parameters.",
 )
+@argument(
+    "--vcs-bundle",
+    action="store_true",
+    default=False,
+    help="Write a native git/hg bundle of the checkout to public/vcs.bundle, so "
+    "downstream tasks can seed a checkout from it instead of cloning.",
+)
 def decision(options):
     from taskgraph.decision import taskgraph_decision  # noqa: PLC0415
 

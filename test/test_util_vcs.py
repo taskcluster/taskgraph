@@ -515,6 +515,22 @@ def test_does_revision_exist_locally(repo):
     assert not repo.does_revision_exist_locally("deadbeef")
 
 
+def test_create_bundle(repo, tmp_path):
+    dest = tmp_path / "vcs.bundle"
+    repo.create_bundle(dest)
+
+    assert dest.exists()
+    assert dest.stat().st_size > 0
+
+    # Round-trip: a fresh clone seeded from the bundle must land on the same
+    # head revision, proving the bundle carries the full history and refs.
+    out = tmp_path / "out"
+    subprocess.check_call([repo.tool, "clone", str(dest), str(out)])
+
+    cloned = get_repository(str(out))
+    assert cloned.head_rev == repo.head_rev
+
+
 def test_get_changed_files_shallow_clone(git_repo, tmp_path, default_git_branch):
     tmp_repo = Path(git_repo)
 

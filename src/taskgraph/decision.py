@@ -98,6 +98,16 @@ def taskgraph_decision(options, parameters=None):
         opt_handler.setFormatter(logging.root.handlers[0].formatter)
     opt_log.addHandler(opt_handler)
 
+    # If requested, write a native VCS bundle of the checkout as a public
+    # artifact so downstream tasks can seed a checkout from it instead of
+    # cloning from the remote.
+    if options.get("vcs_bundle"):
+        repo = get_repository(os.getcwd())
+        ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+        bundle_path = ARTIFACTS_DIR / "vcs.bundle"
+        logger.info(f"creating vcs bundle at {bundle_path}")
+        repo.create_bundle(bundle_path)
+
     parameters = parameters or (
         lambda graph_config: get_decision_parameters(graph_config, options)
     )
