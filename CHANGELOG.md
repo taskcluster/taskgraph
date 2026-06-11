@@ -1,5 +1,11 @@
 # Change Log
 
+## [24.1.1] - 2026-06-11
+
+### Fixed
+
+- Use proper `comm` parameters in Git repos as well
+
 ## [24.1.0] - 2026-06-04
 
 ### Added
