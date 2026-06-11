@@ -291,30 +291,33 @@ class Parameters(ReadOnlyDict):
 
         :return str: The URL displaying the given path.
         """
+        if "comm/" in path:
+            path = path.split("comm/")[1]
+            repo_key = "comm_head_repository"
+            rev_key = "comm_head_rev"
+        else:
+            repo_key = "head_repository"
+            rev_key = "head_rev"
+
         if self["repository_type"] == "hg":
-            if "comm/" in path:
-                path = path.split("comm/")[1]
-                repo = self["comm_head_repository"]
-                rev = self["comm_head_rev"]
-            else:
-                repo = self["head_repository"]
-                rev = self["head_rev"]
+            repo = self[repo_key]
+            rev = self[rev_key]
             endpoint = "file" if pretty else "raw-file"
             return f"{repo}/{endpoint}/{rev}/{path}"
         elif self["repository_type"] == "git":
             # For getting the file URL for git repositories, we only support a Github HTTPS remote
-            repo = self["head_repository"]
+            repo = self[repo_key]
             if repo.startswith("https://github.com/"):
                 if repo.endswith("/"):
                     repo = repo[:-1]
 
-                rev = self["head_rev"]
+                rev = self[rev_key]
                 endpoint = "blob" if pretty else "raw"
                 return f"{repo}/{endpoint}/{rev}/{path}"
             elif repo.startswith("git@github.com:"):
                 if repo.endswith(".git"):
                     repo = repo[:-4]
-                rev = self["head_rev"]
+                rev = self[rev_key]
                 endpoint = "blob" if pretty else "raw"
                 return "{}/{}/{}/{}".format(
                     repo.replace("git@github.com:", "https://github.com/"),
