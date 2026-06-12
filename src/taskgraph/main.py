@@ -222,6 +222,7 @@ def generate_taskgraph(options, parameters, overrides, logdir):
         return 0
 
     futures = {}
+    returncode = 0
     with ProcessPoolExecutor(max_workers=options["max_workers"]) as executor:
         for spec in parameters:
             f = executor.submit(
@@ -229,25 +230,24 @@ def generate_taskgraph(options, parameters, overrides, logdir):
             )
             futures[f] = spec
 
-    returncode = 0
-    for future in as_completed(futures):
-        output_file = options["output_file"]
-        spec = futures[future]
-        e = future.exception()
-        if e:
-            returncode = 1
-            out = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            if options["diff"]:
-                # Dump to console so we don't accidentally diff the tracebacks.
-                output_file = None
-        else:
-            out = future.result()
+        for future in as_completed(futures):
+            output_file = options["output_file"]
+            spec = futures.pop(future)
+            e = future.exception()
+            if e:
+                returncode = 1
+                out = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+                if options["diff"]:
+                    # Dump to console so we don't accidentally diff the tracebacks.
+                    output_file = None
+            else:
+                out = future.result()
 
-        dump_output(
-            out,
-            path=output_file,
-            params_spec=spec if len(parameters) > 1 else None,
-        )
+            dump_output(
+                out,
+                path=output_file,
+                params_spec=spec if len(parameters) > 1 else None,
+            )
 
     return returncode
 
