@@ -20,9 +20,9 @@ CONTEXTS_DIR = "docker-contexts"
 DIGEST_RE = re.compile("^[0-9a-f]{64}$")
 
 IMAGE_BUILDER_IMAGE = (
-    "mozillareleases/image_builder:6.1.0"
+    "mozillareleases/image_builder:6.2.0"
     "@sha256:"
-    "10c614e928500a7d5138773fb58941a24a17948e1a8193768e9ba762ba3e9c7e"
+    "f7df722770d6caadea79b2de458e072d8b3d93e59675b34dffb32c3e7e30f5b9"
 )
 
 transforms = TransformSequence()
