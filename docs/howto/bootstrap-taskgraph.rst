@@ -73,22 +73,15 @@ This section outlines the recommended way to do that.
 Define Requirements
 ~~~~~~~~~~~~~~~~~~~
 
-We'll use a tool called `pip-compile`_ to help generate the
-``requirements.txt`` that will contain our Decision task dependencies,
-including Taskgraph itself.
+We'll use `uv`_ to help generate the ``requirements.txt`` that will contain our
+Decision task dependencies, including Taskgraph itself.
 
 .. note::
 
    You may use other tools to create the ``requirements.txt``, such as
-   `hashin`_. As long as package hashes are included.
+   `pip-compile`_ or `hashin`_. As long as package hashes are included.
 
-First make sure you have ``pip-compile`` installed:
-
-.. code-block:: bash
-
-   pip install pip-tools
-
-Next, create the ``requirements.in`` file. For this example, let's pretend that
+First make sure you `install uv`_. Next, create the ``requirements.in`` file. For this example, let's pretend that
 in addition to ``taskcluster-taskgraph`` we also want to depend on
 ``requests``:
 
@@ -100,9 +93,7 @@ in addition to ``taskcluster-taskgraph`` we also want to depend on
    requests
    EOF
 
-   # This works best if you use the same Python as the one used in the Decision
-   # image (currently 3.13).
-   pip-compile --generate-hashes --output-file requirements.txt requirements.in
+   uv pip compile --universal --generate-hashes --output-file requirements.txt requirements.in
 
 .. note::
 
@@ -113,6 +104,8 @@ in addition to ``taskcluster-taskgraph`` we also want to depend on
 If you end up creating transforms that require additional packages, add them to
 ``requirements.in`` and re-generate the lock file.
 
+.. _uv: https://docs.astral.sh/uv/
+.. _install uv: https://docs.astral.sh/uv/getting-started/installation/
 .. _pip-compile: https://github.com/jazzband/pip-tools
 .. _hashin: https://github.com/peterbe/hashin
 .. _version specifiers: https://pip.pypa.io/en/stable/cli/pip_install/#requirement-specifiers
@@ -186,7 +179,7 @@ file:
 .. code-block:: shell
 
    cd taskcluster
-   pip-compile --generate-hashes --output-file requirements.txt requirements.in
+   uv pip compile --universal --generate-hashes --output-file requirements.txt requirements.in
 
 If you pinned the package to a specific version don't forget to update
 ``requirements.in`` first.
@@ -209,7 +202,7 @@ accomplished using `pip's version control support`_:
 
    cd taskcluster
    echo "taskcluster-taskgraph@git+https://github.com/taskcluster/taskgraph@refs/pull/123/head" > requirements.in
-   pip-compile --output-file requirements.txt requirements.in
+   uv pip compile --universal --output-file requirements.txt requirements.in
 
 Next edit your ``.taskcluster.yml`` to disable hashing since pip does not
 support `hashes with url requirements`_:
@@ -222,7 +215,7 @@ support `hashes with url requirements`_:
 
 .. note::
 
-   Be sure to omit the ``--generate-hashes`` argument to ``pip-compile``
+   Be sure to omit the ``--generate-hashes`` argument to ``uv pip compile``
    otherwise ``pip`` will implicitly turn hashing back on.
 
 This way you can push an experimental change to a PR and then install it in
