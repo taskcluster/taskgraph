@@ -65,7 +65,8 @@ def test_stream_download(
         assert req._full_url == url
         assert timeout is not None
         if headers:
-            assert len(req.headers) == len(headers)
+            # stream_download adds accept-encoding
+            assert len(req.headers) == len(headers) + 1
             for header in headers:
                 k, v = header.split(":")
                 k = k.lower().capitalize().strip()

@@ -181,7 +181,7 @@ def stream_download(url, sha256=None, size=None, headers=None):
     length = 0
 
     t0 = time.time()
-    req_headers = {}
+    req_headers = {"Accept-Encoding": "gzip"}
     for header in headers:
         key, val = header.split(":")
         req_headers[key.strip()] = val.strip()
