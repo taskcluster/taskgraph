@@ -142,6 +142,19 @@ FORMAT_METHODS = {
 }
 
 
+def parse_format_spec(value):
+    """Parse a format specifier like 'json' or 'json:path/to/file.json'."""
+    parts = value.split(":", 1)
+    fmt = parts[0]
+    if fmt not in FORMAT_METHODS:
+        valid = ", ".join(sorted(FORMAT_METHODS))
+        raise argparse.ArgumentTypeError(
+            f"unknown format '{fmt}'; must be one of: {valid}"
+        )
+    path = parts[1] if len(parts) > 1 else None
+    return fmt, path
+
+
 def get_taskgraph_generator(root, parameters):
     """Helper function to make testing a little easier."""
     from taskgraph.generator import TaskGraphGenerator  # noqa: PLC0415
@@ -175,8 +188,12 @@ def format_taskgraph(options, parameters, overrides, logfile=None):
 
     tg = getattr(tgg, options["graph_attr"])
     tg = get_filtered_taskgraph(tg, options["tasks_regex"], options["exclude_keys"])
-    format_method = FORMAT_METHODS[options["format"] or "labels"]
-    return format_method(tg)
+    formats = options.get("formats") or [("labels", None)]
+    results = {}
+    for fmt, _ in formats:
+        if fmt not in results:
+            results[fmt] = FORMAT_METHODS[fmt](tg)
+    return results
 
 
 def dump_output(out, path=None, params_spec=None):
@@ -201,8 +218,15 @@ def dump_output(out, path=None, params_spec=None):
     print(out + "\n", file=fh)
 
 
+def dump_outputs(results, formats, params_spec=None):
+    for fmt, path in formats:
+        dump_output(results[fmt], path, params_spec)
+
+
 def generate_taskgraph(options, parameters, overrides, logdir):
     from taskgraph.parameters import Parameters  # noqa: PLC0415
+
+    formats = options.get("formats") or [("labels", None)]
 
     def logfile(spec):
         """Determine logfile given a parameters specification."""
@@ -217,8 +241,8 @@ def generate_taskgraph(options, parameters, overrides, logdir):
     # tracebacks a little more readable and avoids additional process overhead.
     if len(parameters) == 1:
         spec = parameters[0]
-        out = format_taskgraph(options, spec, overrides, logfile(spec))
-        dump_output(out, options["output_file"])
+        results = format_taskgraph(options, spec, overrides, logfile(spec))
+        dump_outputs(results, formats)
         return 0
 
     futures = {}
@@ -231,23 +255,23 @@ def generate_taskgraph(options, parameters, overrides, logdir):
             futures[f] = spec
 
         for future in as_completed(futures):
-            output_file = options["output_file"]
             spec = futures.pop(future)
+            params_spec = spec if len(parameters) > 1 else None
             e = future.exception()
             if e:
                 returncode = 1
-                out = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+                error_out = "".join(
+                    traceback.format_exception(type(e), e, e.__traceback__)
+                )
                 if options["diff"]:
                     # Dump to console so we don't accidentally diff the tracebacks.
-                    output_file = None
+                    dump_output(error_out, path=None, params_spec=params_spec)
+                else:
+                    _, error_path = formats[0]
+                    dump_output(error_out, path=error_path, params_spec=params_spec)
             else:
-                out = future.result()
-
-            dump_output(
-                out,
-                path=output_file,
-                params_spec=spec if len(parameters) > 1 else None,
-            )
+                results = future.result()
+                dump_outputs(results, formats, params_spec=params_spec)
 
     return returncode
 
@@ -351,28 +375,41 @@ def show_kind_graph(options):
     "--verbose", "-v", action="store_true", help="include debug-level logging output"
 )
 @argument(
+    "--format",
+    "--fmt",
+    action="append",
+    dest="formats",
+    type=parse_format_spec,
+    default=None,
+    metavar="FORMAT[:PATH]",
+    help="Output format and optional destination. FORMAT is one of: labels, json, yaml. "
+    "If PATH is omitted, output goes to stdout. Can be specified multiple times to "
+    "produce multiple outputs (e.g. --format json:out.json --format labels). "
+    "Default: labels (to stdout).",
+)
+@argument(
     "--json",
     "-J",
     action="store_const",
-    dest="format",
+    dest="format_compat",
     const="json",
-    help="Output task graph as a JSON object",
+    help=argparse.SUPPRESS,
 )
 @argument(
     "--yaml",
     "-Y",
     action="store_const",
-    dest="format",
+    dest="format_compat",
     const="yaml",
-    help="Output task graph as a YAML object",
+    help=argparse.SUPPRESS,
 )
 @argument(
     "--labels",
     "-L",
     action="store_const",
-    dest="format",
+    dest="format_compat",
     const="labels",
-    help="Output the label for each task in the task graph (default)",
+    help=argparse.SUPPRESS,
 )
 @argument(
     "--parameters",
@@ -408,8 +445,9 @@ def show_kind_graph(options):
 @argument(
     "-o",
     "--output-file",
+    dest="output_file_compat",
     default=None,
-    help="file path to store generated output.",
+    help=argparse.SUPPRESS,
 )
 @argument(
     "--tasks-regex",
@@ -466,10 +504,19 @@ def show_taskgraph(options):
     if options.pop("verbose", False):
         logging.root.setLevel(logging.DEBUG)
 
+    format_compat = options.pop("format_compat", None)
+    output_file_compat = options.pop("output_file_compat", None)
+    if format_compat is not None or output_file_compat is not None:
+        logging.warning(
+            "--json/--yaml/--labels/--output-file are deprecated; use --format instead"
+        )
+        if not options.get("formats"):
+            options["formats"] = [(format_compat or "labels", output_file_compat)]
+
     repo = None
     cur_rev = None
     diffdir = None
-    output_file = options["output_file"]
+    formats = options.get("formats") or [("labels", None)]
 
     if options["diff"] or options["force_local_files_changed"]:
         repo = get_repository(os.getcwd())
@@ -494,9 +541,13 @@ def show_taskgraph(options):
         atexit.register(
             shutil.rmtree, diffdir
         )  # make sure the directory gets cleaned up
-        options["output_file"] = os.path.join(
-            diffdir, f"{options['graph_attr']}_{cur_rev_file}"
-        )
+        options["formats"] = [
+            (
+                fmt,
+                os.path.join(diffdir, f"{options['graph_attr']}_{cur_rev_file}_{fmt}"),
+            )
+            for fmt, _ in formats
+        ]
         print(f"Generating {options['graph_attr']} @ {cur_rev}", file=sys.stderr)
 
     overrides = {
@@ -560,9 +611,15 @@ def show_taskgraph(options):
         try:
             repo.update(base_rev)
             base_rev = repo.head_rev[:12]
-            options["output_file"] = os.path.join(
-                diffdir, f"{options['graph_attr']}_{base_rev_file}"
-            )
+            options["formats"] = [
+                (
+                    fmt,
+                    os.path.join(
+                        diffdir, f"{options['graph_attr']}_{base_rev_file}_{fmt}"
+                    ),
+                )
+                for fmt, _ in formats
+            ]
             print(f"Generating {options['graph_attr']} @ {base_rev}", file=sys.stderr)
             ret |= generate_taskgraph(options, parameters, overrides, logdir)
         finally:
@@ -570,65 +627,68 @@ def show_taskgraph(options):
             repo.update(cur_rev)
 
         # Generate diff(s)
-        diffcmd = [
-            "diff",
-            "-U20",
-            "--report-identical-files",
-            f"--label={options['graph_attr']}@{base_rev}",
-            f"--label={options['graph_attr']}@{cur_rev}",
-        ]
-
         non_fatal_failures = []
 
         for spec in parameters:
-            base_path = os.path.join(
-                diffdir, f"{options['graph_attr']}_{base_rev_file}"
-            )
-            cur_path = os.path.join(diffdir, f"{options['graph_attr']}_{cur_rev_file}")  # type: ignore
+            params_name = Parameters.format_spec(spec) if len(parameters) > 1 else None
 
-            params_name = None
-            if len(parameters) > 1:
-                params_name = Parameters.format_spec(spec)
-                base_path += f"_{params_name}"
-                cur_path += f"_{params_name}"
-
-            # If the base or cur files are missing it means that generation
-            # failed. If one of them failed but not the other, the failure is
-            # likely due to the patch making changes to taskgraph in modules
-            # that don't get reloaded (safe to ignore). If both generations
-            # failed, there's likely a real issue.
-            base_missing = not os.path.isfile(base_path)
-            cur_missing = not os.path.isfile(cur_path)
-            if base_missing != cur_missing:  # != is equivalent to XOR for booleans
-                non_fatal_failures.append(os.path.basename(base_path))
-                continue
-
-            try:
-                # If the output file(s) are missing, this command will raise
-                # CalledProcessError with a returncode > 1.
-                proc = subprocess.run(
-                    diffcmd + [base_path, cur_path],
-                    capture_output=True,
-                    text=True,
-                    check=True,
+            for fmt, output_path in formats:
+                base_path = os.path.join(
+                    diffdir, f"{options['graph_attr']}_{base_rev_file}_{fmt}"
                 )
-                diff_output = proc.stdout
-                returncode = 0
-            except subprocess.CalledProcessError as e:
-                # returncode 1 simply means diffs were found
-                if e.returncode != 1:
-                    print(e.stderr, file=sys.stderr)
-                    raise
-                diff_output = e.output
-                returncode = e.returncode
+                cur_path = os.path.join(  # type: ignore
+                    diffdir, f"{options['graph_attr']}_{cur_rev_file}_{fmt}"
+                )
 
-            dump_output(
-                diff_output,
-                # Don't bother saving file if no diffs were found. Log to
-                # console in this case instead.
-                path=None if returncode == 0 else output_file,
-                params_spec=spec if len(parameters) > 1 else None,
-            )
+                if params_name:
+                    base_path += f"_{params_name}"
+                    cur_path += f"_{params_name}"
+
+                # If the base or cur files are missing it means that generation
+                # failed. If one of them failed but not the other, the failure is
+                # likely due to the patch making changes to taskgraph in modules
+                # that don't get reloaded (safe to ignore). If both generations
+                # failed, there's likely a real issue.
+                base_missing = not os.path.isfile(base_path)
+                cur_missing = not os.path.isfile(cur_path)
+                if base_missing != cur_missing:  # != is equivalent to XOR for booleans
+                    non_fatal_failures.append(os.path.basename(base_path))
+                    continue
+
+                diffcmd = [
+                    "diff",
+                    "-U20",
+                    "--report-identical-files",
+                    f"--label={options['graph_attr']}:{fmt}@{base_rev}",
+                    f"--label={options['graph_attr']}:{fmt}@{cur_rev}",
+                ]
+
+                try:
+                    # If the output file(s) are missing, this command will raise
+                    # CalledProcessError with a returncode > 1.
+                    proc = subprocess.run(
+                        diffcmd + [base_path, cur_path],
+                        capture_output=True,
+                        text=True,
+                        check=True,
+                    )
+                    diff_output = proc.stdout
+                    diff_returncode = 0
+                except subprocess.CalledProcessError as e:
+                    # returncode 1 simply means diffs were found
+                    if e.returncode != 1:
+                        print(e.stderr, file=sys.stderr)
+                        raise
+                    diff_output = e.output
+                    diff_returncode = e.returncode
+
+                dump_output(
+                    diff_output,
+                    # Don't bother saving file if no diffs were found. Log to
+                    # console in this case instead.
+                    path=None if diff_returncode == 0 else output_path,
+                    params_spec=spec if len(parameters) > 1 else None,
+                )
 
         if non_fatal_failures:
             failstr = "\n  ".join(sorted(non_fatal_failures))
@@ -640,10 +700,10 @@ def show_taskgraph(options):
                 file=sys.stderr,
             )
 
-        if options["format"] != "json":
+        if not any(fmt == "json" for fmt, _ in formats):
             print(
                 "If you were expecting differences in task bodies "
-                'you should pass "-J"\n',
+                'you should pass "--format json"\n',
                 file=sys.stderr,
             )
 
