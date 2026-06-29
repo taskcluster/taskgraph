@@ -4,7 +4,9 @@
 
 import json
 import re
+import time
 import unittest
+from concurrent import futures
 from unittest import mock
 
 import responses
@@ -202,3 +204,43 @@ class TestCreate(unittest.TestCase):
         exception_message = str(cm.exception)
         self.assertIn("Could not create 'a'", exception_message)
         self.assertIn("Could not create 'b'", exception_message)
+
+    @responses.activate
+    @mock.patch.dict(
+        "os.environ",
+        {"TASKCLUSTER_ROOT_URL": "https://tc.example.com"},
+        clear=True,
+    )
+    def test_create_tasks_fails_if_done_callback_is_slow(self):
+        "create_tasks fails even if done-callbacks run after futures.wait() returns"
+        mock_taskcluster_api(error_status=403, error_message="oh no!")
+
+        tasks = {
+            "tid-a": Task(
+                kind="test", label="a", attributes={}, task={"payload": "hello world"}
+            ),
+        }
+        label_to_taskid = {"a": "tid-a"}
+        graph = Graph(nodes={"tid-a"}, edges=set())
+        taskgraph = TaskGraph(tasks, graph)
+
+        real_add_done_callback = futures.Future.add_done_callback
+
+        def slow_add_done_callback(self, fn):
+            def wrapper(fut):
+                time.sleep(0.1)
+                fn(fut)
+
+            return real_add_done_callback(self, wrapper)
+
+        with mock.patch.object(
+            futures.Future, "add_done_callback", slow_add_done_callback
+        ):
+            with self.assertRaises(CreateTasksException):
+                create.create_tasks(
+                    GRAPH_CONFIG,
+                    taskgraph,
+                    label_to_taskid,
+                    {"level": "4"},
+                    decision_task_id="decisiontask",
+                )
