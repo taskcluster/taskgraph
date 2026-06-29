@@ -11,6 +11,14 @@ here = Path(__file__).parent
 
 pytest_plugins = ("pytest-taskgraph",)
 
+
+def pytest_ignore_collect(collection_path, config):
+    if collection_path.name == "test_graph_perf.py" and not config.getoption(
+        "codspeed"
+    ):
+        return True
+
+
 # Disable as much system/user level configuration as we can to avoid
 # interference with tests.
 # This ignores ~/.hgrc
