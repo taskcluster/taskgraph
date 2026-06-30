@@ -64,19 +64,12 @@ def create_tasks(graph_config, taskgraph, label_to_taskid, params, decision_task
         fs = {}
         fs_to_task = {}
         skipped = set()
-        errors = {}
 
         # We can't submit a task until its dependencies have been submitted.
         # So our strategy is to walk the graph and submit tasks once all
         # their dependencies have been submitted.
         tasklist = set(taskgraph.graph.visit_postorder())
         alltasks = tasklist.copy()
-
-        def handle_exception(fut):
-            if exc := fut.exception():
-                task_id, label = fs_to_task[fut]
-                skipped.add(task_id)
-                errors[label] = exc
 
         def schedule_tasks():
             to_remove = set()
@@ -87,7 +80,13 @@ def create_tasks(graph_config, taskgraph, label_to_taskid, params, decision_task
                 new.add(fut)
                 fs[task_id] = fut
                 fs_to_task[fut] = (task_id, label)
-                fut.add_done_callback(handle_exception)
+
+                def mark_failed_as_skipped(fut):
+                    if fut.exception():
+                        task_id, _ = fs_to_task[fut]
+                        skipped.add(task_id)
+
+                fut.add_done_callback(mark_failed_as_skipped)
 
             for task_id in tasklist:
                 task_def = taskgraph.tasks[task_id].task
@@ -126,6 +125,12 @@ def create_tasks(graph_config, taskgraph, label_to_taskid, params, decision_task
 
         # Wait for all futures to complete.
         futures.wait(fs.values())
+
+        # Collect errors.
+        errors = {}
+        for fut, (task_id, label) in fs_to_task.items():
+            if exc := fut.exception():
+                errors[label] = exc
 
         if errors:
             raise CreateTasksException(errors)
