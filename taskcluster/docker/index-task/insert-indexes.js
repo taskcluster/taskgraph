@@ -1,4 +1,4 @@
-let taskcluster = require("taskcluster-client");
+import taskcluster from "@taskcluster/client";
 
 // Create instance of index client
 let index = new taskcluster.Index({
