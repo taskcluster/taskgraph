@@ -1,12 +1,13 @@
 {
   "private": true,
+  "type": "module",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "taskcluster-client": "55.3.2"
+    "@taskcluster/client": "101.0.0"
   },
   "engines": {
-    "node": "18"
+    "node": "^24"
   }
 }
