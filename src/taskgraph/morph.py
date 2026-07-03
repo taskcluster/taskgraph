@@ -30,7 +30,7 @@ from .util.workertypes import get_worker_type
 
 here = os.path.abspath(os.path.dirname(__file__))
 logger = logging.getLogger(__name__)
-MAX_ROUTES = 64
+MAX_ROUTES = 3
 
 registered_morphs = []
 

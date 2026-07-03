@@ -19,5 +19,7 @@ ENV PATH=/builds/worker/bin:$PATH \
 # %ARG UV_VERSION
 COPY --from=ghcr.io/astral-sh/uv:$UV_VERSION /uv /bin/uv
 
+# dummy
+
 # Set a default command useful for debugging
 CMD ["/bin/bash", "--login"]
