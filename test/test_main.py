@@ -158,6 +158,62 @@ def test_tasks_regex(run_taskgraph, capsys):
     assert out.strip() == "_fake-t-1"
 
 
+def test_target_kind_implies_tasks_regex(run_taskgraph, capsys):
+    kinds = [
+        ("_fake", {"kind-dependencies": ["_dep"]}),
+        ("_dep", {"kind-dependencies": []}),
+        ("docker-image", {"kind-dependencies": []}),
+    ]
+    res = run_taskgraph(
+        ["full", "-Y", "-k", "_fake"],
+        kinds=kinds,
+        params={"target-kinds": ["_fake"]},
+    )
+    assert res == 0
+
+    out, err = capsys.readouterr()
+    assert "implied --tasks-regex '^(_fake)'" in err
+    assert "_fake-t-0" in out
+    assert "_dep-t-0" not in out
+
+
+def test_target_kind_no_implied_regex_for_labels(run_taskgraph, capsys):
+    kinds = [
+        ("_fake", {"kind-dependencies": ["_dep"]}),
+        ("_dep", {"kind-dependencies": []}),
+        ("docker-image", {"kind-dependencies": []}),
+    ]
+    res = run_taskgraph(
+        ["full", "-k", "_fake"],
+        kinds=kinds,
+        params={"target-kinds": ["_fake"]},
+    )
+    assert res == 0
+
+    out, err = capsys.readouterr()
+    assert "implied --tasks-regex" not in err
+    assert "_dep-t-0" in out
+
+
+def test_target_kind_explicit_regex_not_overridden(run_taskgraph, capsys):
+    kinds = [
+        ("_fake", {"kind-dependencies": ["_dep"]}),
+        ("_dep", {"kind-dependencies": []}),
+        ("docker-image", {"kind-dependencies": []}),
+    ]
+    res = run_taskgraph(
+        ["full", "-Y", "-k", "_fake", "--tasks-regex", "_dep-t-0"],
+        kinds=kinds,
+        params={"target-kinds": ["_fake"]},
+    )
+    assert res == 0
+
+    out, err = capsys.readouterr()
+    assert "implied --tasks-regex" not in err
+    assert "_dep-t-0" in out
+    assert "_fake-t-1" not in out
+
+
 def test_output_file(run_taskgraph, tmpdir):
     output_file = tmpdir.join("out.txt")
     assert not output_file.check()

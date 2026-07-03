@@ -415,7 +415,10 @@ def show_kind_graph(options):
     "--tasks-regex",
     "--tasks",
     default=None,
-    help="only return tasks with labels matching this regular expression.",
+    help="only return tasks with labels matching this regular expression. "
+    "When --target-kind is given with --json/--yaml and this is omitted, it "
+    "defaults to a regex matching labels that begin with one of the target "
+    "kinds.",
 )
 @argument(
     "--exclude-key",
@@ -499,8 +502,25 @@ def show_taskgraph(options):
         )
         print(f"Generating {options['graph_attr']} @ {cur_rev}", file=sys.stderr)
 
+    target_kinds = options.get("target_kinds")
+    if (
+        target_kinds
+        and options.get("tasks_regex") is None
+        and options.get("format") in ("yaml", "json")
+    ):
+        options["tasks_regex"] = "^({})".format(
+            "|".join(re.escape(kind) for kind in target_kinds)
+        )
+        print(
+            "Filtering tasks with implied --tasks-regex "
+            f"'{options['tasks_regex']}' (derived from --target-kind). "
+            "Pass --tasks-regex explicitly to override, or '--tasks-regex .' "
+            "to disable filtering.",
+            file=sys.stderr,
+        )
+
     overrides = {
-        "target-kinds": options.get("target_kinds"),
+        "target-kinds": target_kinds,
     }
     parameters: list[Any[str, Parameters]] = options.pop("parameters")
     if not parameters:
