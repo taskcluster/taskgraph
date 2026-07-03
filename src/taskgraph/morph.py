@@ -147,7 +147,9 @@ def make_index_task(parent_task, taskgraph, label_to_taskid, parameters, graph_c
     task.task["payload"]["command"] = ["insert-indexes.js"] + index_paths
     task.task["payload"]["env"] = {
         "TARGET_TASKID": parent_task.task_id,
-        "INDEX_RANK": parent_task.task.get("extra", {}).get("index", {}).get("rank", 0),
+        "INDEX_RANK": str(
+            parent_task.task.get("extra", {}).get("index", {}).get("rank", 0)
+        ),
     }
     return task, taskgraph, label_to_taskid
 
