@@ -1,5 +1,11 @@
 # Change Log
 
+## [Unreleased]
+
+### Added
+
+- `taskgraph decision --vcs-bundle` writes a native git/hg bundle of the checkout to `public/vcs.bundle`, letting downstream tasks seed a checkout from it instead of cloning from the remote
+
 ## [24.1.1] - 2026-06-11
 
 ### Fixed

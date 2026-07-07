@@ -198,3 +198,37 @@ def test_decision_parameters_note_invalid_json(mock_files_changed, mock_get_note
         Exception, match="Failed to parse refs/notes/decision-parameters as JSON"
     ):
         decision.get_decision_parameters(FAKE_GRAPH_CONFIG, options)
+
+
+class _StopDecision(Exception):
+    """Sentinel raised by the mocked generator to halt taskgraph_decision early."""
+
+
+@pytest.mark.parametrize(
+    "vcs_bundle, expect_bundle",
+    [
+        pytest.param(True, True, id="flag-set"),
+        pytest.param(False, False, id="flag-absent"),
+    ],
+)
+@unittest.mock.patch.object(decision, "TaskGraphGenerator", side_effect=_StopDecision)
+@unittest.mock.patch.object(decision, "get_repository")
+def test_taskgraph_decision_vcs_bundle(
+    mock_get_repository, mock_tgg, vcs_bundle, expect_bundle, monkeypatch, tmp_path
+):
+    monkeypatch.setenv("TASK_ID", "decision-task-id")
+    monkeypatch.setattr(decision, "ARTIFACTS_DIR", tmp_path / "artifacts")
+    mock_repo = mock_get_repository.return_value
+
+    # The (mocked) generator raises, halting the decision right after the point
+    # where the VCS bundle would have been created. We only care about whether
+    # the bundle was written beforehand, not the rest of graph generation.
+    with pytest.raises(_StopDecision):
+        decision.taskgraph_decision({"vcs_bundle": vcs_bundle}, parameters=object())
+
+    if expect_bundle:
+        mock_repo.create_bundle.assert_called_once_with(
+            tmp_path / "artifacts" / "vcs.bundle"
+        )
+    else:
+        mock_repo.create_bundle.assert_not_called()

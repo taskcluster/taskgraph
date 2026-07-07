@@ -215,6 +215,14 @@ class Repository(ABC):
         If this function returns an unexpected value, then make sure
         the revision was fetched from the remote repository."""
 
+    @abstractmethod
+    def create_bundle(self, dest_path) -> None:
+        """Write a native VCS bundle of the local checkout to ``dest_path``.
+
+        The bundle captures the full history and all refs so a downstream
+        task can seed a checkout from it (e.g. ``git clone``/``hg clone``)
+        instead of cloning from the remote."""
+
     def get_note(
         self,
         note: str,
@@ -383,6 +391,11 @@ class HgRepository(Repository):
             if e.returncode == 255:
                 return False
             raise
+
+    def create_bundle(self, dest_path):
+        # `--all` bundles every changeset (full history) so a downstream
+        # `hg clone <dest_path>` can seed a checkout offline.
+        self.run("bundle", "--all", str(dest_path))
 
 
 class GitRepository(Repository):
@@ -601,6 +614,16 @@ class GitRepository(Repository):
             if e.returncode == 128:
                 return False
             raise
+
+    def create_bundle(self, dest_path):
+        if self.is_shallow:
+            raise RuntimeError(
+                "Cannot create a git bundle from a shallow clone; a full "
+                "checkout is required to capture the complete history."
+            )
+        # `--all` includes every ref (and HEAD) so a downstream
+        # `git clone <dest_path>` can resolve a branch and seed offline.
+        self.run("bundle", "create", str(dest_path), "--all")
 
     def get_note(
         self,
