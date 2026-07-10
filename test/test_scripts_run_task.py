@@ -1,4 +1,5 @@
 import functools
+import json
 import os
 import site
 import stat
@@ -617,6 +618,77 @@ def run_main(tmp_path, mocker, mock_stdin, run_task_mod):
         return result, env
 
     return inner
+
+
+@pytest.fixture
+def perf(run_task_mod):
+    return run_task_mod.PerfRecorder("vcs")
+
+
+def test_perfrecorder_record(perf):
+    with perf.record("op"):
+        pass
+    assert len(perf.optimes) == 1
+    name, duration = perf.optimes[0]
+    assert name == "op"
+    assert duration >= 0
+
+
+def test_perfrecorder_record_multiple(perf):
+    with perf.record("overall", "overall_clone"):
+        pass
+    assert len(perf.optimes) == 2
+    assert perf.optimes[0][0] == "overall"
+    assert perf.optimes[1][0] == "overall_clone"
+    assert perf.optimes[0][1] == perf.optimes[1][1]
+
+
+def test_perfrecorder_record_errored(perf):
+    with pytest.raises(ValueError):
+        with perf.record("op"):
+            raise ValueError("boom")
+    assert perf.optimes[0][0] == "op_errored"
+
+
+def test_perfrecorder_start_stop(perf):
+    perf.start("op")
+    perf.stop()
+    assert len(perf.optimes) == 1
+    name, duration = perf.optimes[0]
+    assert name == "op"
+    assert duration >= 0
+
+
+def test_perfrecorder_emit_no_instance_type(monkeypatch, perf, capsys):
+    monkeypatch.delenv("TASKCLUSTER_INSTANCE_TYPE", raising=False)
+    perf.optimes.extend([("overall", 1.5)])
+    perf.emit()
+    assert capsys.readouterr().out == ""
+
+
+def test_perfrecorder_emit(monkeypatch, perf, capsys):
+    monkeypatch.setenv("TASKCLUSTER_INSTANCE_TYPE", "m5.4xlarge")
+    perf.optimes.extend([("overall_clone", 42.0), ("clone", 10.0)])
+    perf.emit()
+
+    out = capsys.readouterr().out
+    assert out.startswith("PERFHERDER_DATA: ")
+    data = json.loads(out[len("PERFHERDER_DATA: ") :])
+
+    assert data["framework"] == {"name": "vcs"}
+    assert len(data["suites"]) == 2
+
+    overall, clone = data["suites"]
+    assert overall == {
+        "name": "overall_clone",
+        "value": 42.0,
+        "lowerIsBetter": True,
+        "shouldAlert": False,
+        "extraOptions": ["m5.4xlarge"],
+        "subtests": [],
+    }
+    assert clone["name"] == "clone"
+    assert clone["value"] == 10.0
 
 
 @nowin
