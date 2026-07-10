@@ -14,6 +14,7 @@ current time to improve log usefulness.
 """
 
 import argparse
+import contextlib
 import datetime
 import errno
 import io
@@ -567,6 +568,61 @@ def configure_volume_posix(volume, user, group, running_as_root):
         set_dir_permissions(volume, user.pw_uid, group.gr_gid)
 
 
+class PerfRecorder:
+    """Collects operation timings and emits them as PERFHERDER_DATA."""
+
+    def __init__(self, framework: str):
+        self.framework = framework
+        self.optimes = []
+        self._stack = []
+
+    def start(self, *names: str):
+        self._stack.append((time.time(), names))
+
+    def stop(self, errored: bool = False):
+        start, names = self._stack.pop()
+        elapsed = time.time() - start
+        suffix = "_errored" if errored else ""
+        for name in names:
+            self.optimes.append((name + suffix, elapsed))
+
+    @contextlib.contextmanager
+    def record(self, *names: str):
+        self.start(*names)
+        try:
+            yield
+        except BaseException:
+            self.stop(errored=True)
+            raise
+        else:
+            self.stop()
+
+    def emit(self):
+        instance_type = os.environ.get("TASKCLUSTER_INSTANCE_TYPE")
+        if not instance_type or not self.optimes:
+            return
+
+        suites = []
+        for op, duration in self.optimes:
+            suites.append(
+                {
+                    "name": op,
+                    "value": duration,
+                    "lowerIsBetter": True,
+                    "shouldAlert": False,
+                    "extraOptions": [instance_type],
+                    "subtests": [],
+                }
+            )
+
+        perfherder = {"framework": {"name": self.framework}, "suites": suites}
+        sys.stdout.write(
+            "PERFHERDER_DATA: {}\n".format(json.dumps(perfherder, sort_keys=True))
+        )
+        sys.stdout.flush()
+        self.optimes = []
+
+
 def git_fetch(
     destination_path: str,
     *targets: str,
@@ -668,105 +724,114 @@ def git_checkout(
             "Must specify both ssh_key_file and ssh_known_hosts_file, if either are specified",
         )
 
-    # Bypass Git's "safe directory" feature as the destination could be
-    # coming from a cache and therefore cloned by a different user.
-    args = [
-        "git",
-        "config",
-        "--global",
-        "--add",
-        "safe.directory",
-        Path(destination_path).as_posix(),
-    ]
-    retry_required_command(b"vcs", args, extra_env=env)
-
-    if not os.path.exists(destination_path):
-        # Repository doesn't already exist, needs to be cloned
+    has_repo = os.path.exists(destination_path)
+    perf = PerfRecorder("vcs")
+    with perf.record("overall", "overall_pull" if has_repo else "overall_clone"):
+        # Bypass Git's "safe directory" feature as the destination could be
+        # coming from a cache and therefore cloned by a different user.
         args = [
             "git",
-            "clone",
+            "config",
+            "--global",
+            "--add",
+            "safe.directory",
+            Path(destination_path).as_posix(),
         ]
-
-        if shallow:
-            args.extend(["--depth=1", "--no-checkout"])
-
-        args.extend(
-            [
-                base_repo if base_repo else head_repo,
-                destination_path,
-            ]
-        )
-
         retry_required_command(b"vcs", args, extra_env=env)
 
-    # For Github based repos, base_rev often doesn't refer to an ancestor of
-    # head_rev simply due to Github not providing that information in their
-    # webhook events. Therefore we fetch it independently from `head_rev` so
-    # that consumers can compute the merge-base or files modified between the
-    # two as needed.
-    if base_rev and base_rev != NULL_REVISION:
-        git_fetch(destination_path, base_rev, shallow=shallow, env=env)
+        if not has_repo:
+            # Repository doesn't already exist, needs to be cloned
+            args = [
+                "git",
+                "clone",
+            ]
 
-    # If a head_ref was provided, it might be tag, so we need to make sure we fetch
-    # those. This is explicitly only done when base and head repo match,
-    # because it is the only scenario where tags could be present. (PRs, for
-    # example, always include an explicit rev.) Failure to do this could result
-    # in not having a tag, or worse: having an outdated version of one.
-    tags = False
-    if head_ref and not head_ref.startswith("refs/heads/") and base_repo == head_repo:
-        tags = True
+            if shallow:
+                args.extend(["--depth=1", "--no-checkout"])
 
-    # Fetch head_ref and/or head_rev
-    targets = []
-    if head_ref:
-        targets.append(head_ref)
-    if not head_ref or (shallow and head_rev):
-        # If head_ref wasn't provided, we fallback to head_rev. If we have a
-        # shallow clone, head_rev needs to be fetched independently regardless.
-        targets.append(head_rev)
+            args.extend(
+                [
+                    base_repo if base_repo else head_repo,
+                    destination_path,
+                ]
+            )
 
-    git_fetch(
-        destination_path,
-        *targets,
-        remote=head_repo,
-        tags=tags,
-        shallow=shallow,
-        env=env,
-    )
+            with perf.record("clone"):
+                retry_required_command(b"vcs", args, extra_env=env)
 
-    args = [
-        "git",
-        "checkout",
-        "-f",
-    ]
+        # For Github based repos, base_rev often doesn't refer to an ancestor of
+        # head_rev simply due to Github not providing that information in their
+        # webhook events. Therefore we fetch it independently from `head_rev` so
+        # that consumers can compute the merge-base or files modified between the
+        # two as needed.
+        if base_rev and base_rev != NULL_REVISION:
+            with perf.record("fetch_base"):
+                git_fetch(destination_path, base_rev, shallow=shallow, env=env)
 
-    if head_ref:
-        args.extend(["-B", shortref(head_ref)])
+        # If a head_ref was provided, it might be tag, so we need to make sure we fetch
+        # those. This is explicitly only done when base and head repo match,
+        # because it is the only scenario where tags could be present. (PRs, for
+        # example, always include an explicit rev.) Failure to do this could result
+        # in not having a tag, or worse: having an outdated version of one.
+        tags = False
+        if head_ref and not head_ref.startswith("refs/heads/") and base_repo == head_repo:
+            tags = True
 
-    # `git fetch` set `FETCH_HEAD` reference to the last commit of the desired branch
-    args.append(head_rev if head_rev else "FETCH_HEAD")
+        # Fetch head_ref and/or head_rev
+        targets = []
+        if head_ref:
+            targets.append(head_ref)
+        if not head_ref or (shallow and head_rev):
+            # If head_ref wasn't provided, we fallback to head_rev. If we have a
+            # shallow clone, head_rev needs to be fetched independently regardless.
+            targets.append(head_rev)
 
-    run_required_command(b"vcs", args, cwd=destination_path)
+        with perf.record("pull"):
+            git_fetch(
+                destination_path,
+                *targets,
+                remote=head_repo,
+                tags=tags,
+                shallow=shallow,
+                env=env,
+            )
 
-    if os.path.exists(os.path.join(destination_path, ".gitmodules")):
         args = [
             "git",
-            "submodule",
-            "init",
+            "checkout",
+            "-f",
         ]
 
-        run_required_command(b"vcs", args, cwd=destination_path)
+        if head_ref:
+            args.extend(["-B", shortref(head_ref)])
 
-        args = [
-            "git",
-            "submodule",
-            "update",
-            "--force",  # Overrides any potential local changes
-        ]
+        # `git fetch` set `FETCH_HEAD` reference to the last commit of the desired branch
+        args.append(head_rev if head_rev else "FETCH_HEAD")
 
-        run_required_command(b"vcs", args, cwd=destination_path)
+        with perf.record("update"):
+            run_required_command(b"vcs", args, cwd=destination_path)
 
-    _clean_git_checkout(destination_path)
+        if os.path.exists(os.path.join(destination_path, ".gitmodules")):
+            args = [
+                "git",
+                "submodule",
+                "init",
+            ]
+
+            run_required_command(b"vcs", args, cwd=destination_path)
+
+            args = [
+                "git",
+                "submodule",
+                "update",
+                "--force",  # Overrides any potential local changes
+            ]
+
+            with perf.record("submodule_update"):
+                run_required_command(b"vcs", args, cwd=destination_path)
+
+        with perf.record("purge"):
+            _clean_git_checkout(destination_path)
 
     args = ["git", "rev-parse", "--verify", "HEAD"]
 
@@ -792,6 +857,8 @@ def git_checkout(
     )
 
     print_line(b"vcs", msg.encode("utf-8"))
+
+    perf.emit()
 
     return commit_hash
 
