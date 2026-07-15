@@ -1,5 +1,18 @@
 # Change Log
 
+## [24.2.0] - 2026-07-15
+
+### Added
+
+- Included profile data for `run-task` VCS operations in the log
+
+### Fixed
+
+- Ensure `INDEX_RANK` env is cast to a string for index tasks
+- Properly capture all exceptions in `taskgraph.create.create_tasks`
+- Send `Accept-Encoding` header in `fetch-content` script
+- Release graphs from memory upon completion when using `taskgraph <phase> --diff`
+
 ## [24.1.1] - 2026-06-11
 
 ### Fixed
