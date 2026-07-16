@@ -179,6 +179,16 @@ def format_taskgraph(options, parameters, overrides, logfile=None):
     return format_method(tg)
 
 
+def format_taskgraph_multiple(*args, **kwargs):
+    """Thin wrapper around format_taskgraph to avoid the taskgraph generator
+    that it runs using multiple processes. (This function is intended to be
+    called by something that is already using a ProcessPoolExecutor, so
+    there's no advantage to spawning additional processes in the subprocesses.)"""
+
+    os.environ["TASKGRAPH_SERIAL"] = "1"
+    return format_taskgraph(*args, **kwargs)
+
+
 def dump_output(out, path=None, params_spec=None):
     from taskgraph.parameters import Parameters  # noqa: PLC0415
 
@@ -226,7 +236,7 @@ def generate_taskgraph(options, parameters, overrides, logdir):
     with ProcessPoolExecutor(max_workers=options["max_workers"]) as executor:
         for spec in parameters:
             f = executor.submit(
-                format_taskgraph, options, spec, overrides, logfile(spec)
+                format_taskgraph_multiple, options, spec, overrides, logfile(spec)
             )
             futures[f] = spec
 
