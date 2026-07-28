@@ -1,5 +1,11 @@
 # Change Log
 
+## [24.2.2] - 2026-07-28
+
+### Fixed
+
+- Only write cached tasks to index for `github-pull-request` tasks_for
+
 ## [24.2.1] - 2026-07-27
 
 ### Fixed
