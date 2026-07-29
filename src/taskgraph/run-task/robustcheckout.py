@@ -18,6 +18,7 @@ import random
 import re
 import socket
 import ssl
+import stat
 import time
 
 from mercurial.i18n import _
@@ -37,6 +38,22 @@ from mercurial import (
     util,
     vfs,
 )
+
+# TRACKING hg72 - `hg.repository`/`hg.peer` moved to `mercurial.repo.factory`.
+try:
+    from mercurial.repo import factory as _repofactory
+
+    _repository = _repofactory.repository
+    _peer = _repofactory.peer
+except ImportError:
+    _repository = hg.repository
+    _peer = hg.peer
+
+# TRACKING hg72 - `hg.clone` moved to `mercurial.cmd_impls.clone.clone`.
+try:
+    from mercurial.cmd_impls.clone import clone as _clone
+except ImportError:
+    _clone = hg.clone
 
 # Causes worker to purge caches on process exit and for task to retry.
 EXIT_PURGE_CACHE = 72
@@ -65,6 +82,57 @@ def getsparse():
 def peerlookup(remote, v):
     with remote.commandexecutor() as e:
         return e.callcommand(b"lookup", {b"key": v}).result()
+
+
+def remove_dangling_links(ui, path):
+    """On Windows, remove dangling symlinks and junctions under ``path``.
+
+    npm's ``file:`` protocol dependencies create directory junctions in
+    ``node_modules/`` with absolute targets.  When a Taskcluster cache
+    is restored to a different task directory those targets no longer
+    exist, and Mercurial's purge crashes in ``vfs.listdir()`` with
+    ``FileNotFoundError``.  Removing them first lets purge proceed.
+    """
+    if os.name != "nt":
+        return
+
+    ui.write(b"windows detected, removing dangling links\n")
+
+    stack = [path]
+    while stack:
+        dirpath = stack.pop()
+        try:
+            entries = os.scandir(dirpath)
+        except OSError:
+            continue
+
+        with entries:
+            for entry in entries:
+                p = entry.path
+                try:
+                    attrs = entry.stat(follow_symlinks=False).st_file_attributes
+                except OSError:
+                    continue
+
+                if attrs & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+                    if not os.path.exists(p):
+                        ui.write(
+                            b"(removing dangling link %s)\n"
+                            % os.fsencode(os.path.relpath(p, path))
+                        )
+                        try:
+                            os.rmdir(p)
+                        except OSError:
+                            os.remove(p)
+                    continue
+
+                try:
+                    is_dir = entry.is_dir(follow_symlinks=False)
+                except OSError:
+                    continue
+
+                if is_dir:
+                    stack.append(p)
 
 
 @command(
@@ -427,7 +495,7 @@ def _docheckout(
     def handlerepoerror(e):
         if pycompat.bytestr(e) == _(b"abandoned transaction found"):
             ui.warn(b"(abandoned transaction found; trying to recover)\n")
-            repo = hg.repository(ui, dest)
+            repo = _repository(ui, dest)
             if not repo.recover():
                 ui.warn(b"(could not recover repo state; deleting shared store)\n")
                 with timeit("remove_unrecovered_shared_store", "remove-store"):
@@ -535,7 +603,7 @@ def _docheckout(
     cloneurl = upstream or url
 
     try:
-        clonepeer = hg.peer(ui, {}, cloneurl)
+        clonepeer = _peer(ui, {}, cloneurl)
         rootnode = peerlookup(clonepeer, b"0")
     except error.RepoLookupError:
         raise error.Abort(b"unable to resolve root revision from clone source")
@@ -623,12 +691,12 @@ def _docheckout(
             ui.write(b"(cloning from upstream repo %s)\n" % upstream)
 
         if not storevfs.exists():
-            behaviors.add(b"create-store")
+            behaviors.add("create-store")
 
         try:
             with timeit("clone", "clone"):
                 shareopts = {b"pool": sharebase, b"mode": b"identity"}
-                res = hg.clone(
+                res = _clone(
                     ui,
                     {},
                     clonepeer,
@@ -667,7 +735,7 @@ def _docheckout(
     # The destination .hg directory should exist. Now make sure we have the
     # wanted revision.
 
-    repo = hg.repository(ui, dest)
+    repo = _repository(ui, dest)
 
     # We only pull if we are using symbolic names or the requested revision
     # doesn't exist.
@@ -694,7 +762,7 @@ def _docheckout(
 
         remote = None
         try:
-            remote = hg.peer(repo, {}, url)
+            remote = _peer(repo, {}, url)
             pullrevs = [peerlookup(remote, revision or branch)]
             checkoutrevision = hex(pullrevs[0])
             if branch:
@@ -741,6 +809,10 @@ def _docheckout(
     # guaranteed to not have conflicts on `hg update`.
     if purge and not created:
         ui.write(b"(purging working directory)\n")
+
+        with timeit("purge", "dangling_link_remove"):
+            remove_dangling_links(ui, dest)
+
         purge = getattr(commands, "purge", None)
         if not purge:
             purge = extensions.find(b"purge").purge
