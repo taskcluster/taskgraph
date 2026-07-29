@@ -95,6 +95,21 @@ class TestGraph(unittest.TestCase):
             ),
         )
 
+    def test_transitive_closure_trees_reverse(self):
+        "reverse transitive closure of a tree, at two leaves, is their ancestors"
+        self.assertEqual(
+            self.tree.transitive_closure({"d", "f"}, reverse=True),
+            Graph(
+                {"a", "b", "c", "d", "f"},
+                {
+                    ("a", "b", "L"),
+                    ("a", "c", "L"),
+                    ("b", "d", "K"),
+                    ("c", "f", "N"),
+                },
+            ),
+        )
+
     def test_transitive_closure_multi_edges(self):
         "transitive closure of a tree with multiple edges between nodes keeps those edges"
         self.assertEqual(
@@ -107,6 +122,23 @@ class TestGraph(unittest.TestCase):
                     ("3", "1", "red"),
                     ("3", "2", "blue"),
                     ("3", "2", "green"),
+                },
+            ),
+        )
+
+    def test_transitive_closure_multi_edges_reverse(self):
+        "reverse transitive closure of a tree with multiple edges between nodes keeps those edges"
+        self.assertEqual(
+            self.multi_edges.transitive_closure({"1"}, reverse=True),
+            Graph(
+                {"1", "2", "3", "4"},
+                {
+                    ("2", "1", "red"),
+                    ("2", "1", "blue"),
+                    ("3", "1", "red"),
+                    ("3", "2", "blue"),
+                    ("3", "2", "green"),
+                    ("4", "3", "green"),
                 },
             ),
         )
@@ -126,13 +158,41 @@ class TestGraph(unittest.TestCase):
             ),
         )
 
+    def test_transitive_closure_disjoint_edges_reverse(self):
+        "reverse transitive closure of a disjoint graph keeps those edges"
+        self.assertEqual(
+            self.disjoint.transitive_closure({"1", "γ"}, reverse=True),
+            Graph(
+                {"1", "2", "3", "4", "α", "β", "γ"},
+                {
+                    ("2", "1", "red"),
+                    ("3", "1", "red"),
+                    ("4", "3", "green"),
+                    ("3", "2", "green"),
+                    ("α", "β", "πράσινο"),
+                    ("β", "γ", "κόκκινο"),
+                    ("α", "γ", "μπλε"),
+                },
+            ),
+        )
+
     def test_transitive_closure_linear(self):
         "transitive closure of a linear graph includes all nodes in the line"
         self.assertEqual(self.linear.transitive_closure({"1"}), self.linear)
 
+    def test_transitive_closure_linear_reverse(self):
+        "reverse transitive closure of a linear graph includes all nodes in the line"
+        self.assertEqual(
+            self.linear.transitive_closure({"4"}, reverse=True), self.linear
+        )
+
     def test_transitive_closure_loopy(self):
         "transitive closure of a loop is the whole loop"
         self.assertEqual(self.loopy.transitive_closure({"A"}), self.loopy)
+
+    def test_transitive_closure_loopy_reverse(self):
+        "reverse transitive closure of a loop is the whole loop"
+        self.assertEqual(self.loopy.transitive_closure({"A"}, reverse=True), self.loopy)
 
     def test_visit_postorder_empty(self):
         "postorder visit of an empty graph is empty"
