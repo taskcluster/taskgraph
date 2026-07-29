@@ -1,5 +1,11 @@
 # Change Log
 
+## [24.2.3] - 2026-07-29
+
+### Fixed
+
+- Vendor latest robustcheckout
+
 ## [24.2.2] - 2026-07-28
 
 ### Fixed
