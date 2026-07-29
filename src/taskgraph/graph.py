@@ -61,20 +61,24 @@ class Graph(_Graph):
                 f"Unknown nodes in transitive closure: {nodes - self.nodes}"
             )
 
-        # generate a new graph by expanding along edges until reaching a fixed
-        # point
-        new_nodes, new_edges = nodes, set()
-        nodes, edges = set(), set()
-        while (new_nodes, new_edges) != (nodes, edges):
-            nodes, edges = new_nodes, new_edges
-            add_edges = {
-                (left, right, name)
-                for (left, right, name) in self.edges
-                if (right if reverse else left) in nodes
-            }
-            add_nodes = {(left if reverse else right) for (left, right, _) in add_edges}
-            new_nodes = nodes | add_nodes
-            new_edges = edges | add_edges
+        # Build an adjacency map keyed by the node to expand from. This reduces
+        # traversal below from O(V·E) -> O(V+E).
+        adjacency = collections.defaultdict(list)
+        for edge in self.edges:
+            left, right, _ = edge
+            adjacency[right if reverse else left].append(edge)
+
+        new_nodes = set(nodes)
+        new_edges = set()
+        queue = collections.deque(nodes)
+        while queue:
+            node = queue.popleft()
+            for edge in adjacency.get(node, ()):
+                new_edges.add(edge)
+                neighbor = edge[0] if reverse else edge[1]
+                if neighbor not in new_nodes:
+                    new_nodes.add(neighbor)
+                    queue.append(neighbor)
         return Graph(new_nodes, new_edges)
 
     def _visit(self, reverse):
