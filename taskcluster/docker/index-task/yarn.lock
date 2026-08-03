@@ -43,10 +43,10 @@
   resolved "https://registry.yarnpkg.com/@sindresorhus/is/-/is-8.1.0.tgz#00d7b9dc92664550fe933cdcfaa8665bc4111202"
   integrity sha512-2SX/1jW6CIMAiebvVv5ZInoCEuWQmMyBoJXXGC6Vjakjp/fpxP5eHs7/V6WKuPEIbuK06+VpjH+vjLQhr98rDQ==
 
-"@taskcluster/client@101.0.0":
-  version "101.0.0"
-  resolved "https://registry.yarnpkg.com/@taskcluster/client/-/client-101.0.0.tgz#4450cef0a3ca90cc70c3286123d074d387db75d0"
-  integrity sha512-vAY7uJGc2yFVfBZYd4f0bohPfHOwY1fw1SfJykV7EkXyUw9xtH/9Z7ae6WNWMxZeSJQs9exDEyBypY/1R+Fl0w==
+"@taskcluster/client@101.1.0":
+  version "101.1.0"
+  resolved "https://registry.yarnpkg.com/@taskcluster/client/-/client-101.1.0.tgz#e42bddc30f4b22912a4d8243da73e5387c695983"
+  integrity sha512-Xr86swn6huYiMYLqHkvucAYnIE9KdJbAQzl4sEoWMXGMLQPfji02OYUf/+FjrHbTFasbivDqHn+Gu7LxYdy8/A==
   dependencies:
     debug "^4.1.1"
     got "^15.0.3"
