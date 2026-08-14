@@ -870,6 +870,8 @@ def add_generic_index_routes(config, task):
 
 @transforms.add
 def process_treeherder_metadata(config, tasks):
+    group_names = config.graph_config.get("treeherder", {}).get("group-names", {})
+
     for task in tasks:
         routes = task.get("routes", [])
         extra = task.get("extra", {})
@@ -891,7 +893,6 @@ def process_treeherder_metadata(config, tasks):
             treeherder["machine"] = {"platform": machine_platform}
             treeherder["collection"] = {collection: True}
 
-            group_names = config.graph_config["treeherder"]["group-names"]
             groupSymbol, symbol = split_symbol(merged_th["symbol"])
             if groupSymbol != "?":
                 treeherder["groupSymbol"] = groupSymbol
