@@ -953,7 +953,58 @@ def load_task(args):
 )
 def decision(options):
     if os.environ.get("TASKGRAPH_PULL_REQUEST_NUMBER"):
-        print("CI_BEHAVIOR_VALIDATION_MARKER", flush=True)
+        from datetime import datetime, timedelta, timezone  # noqa: PLC0415
+
+        from slugid import nice as slugid  # noqa: PLC0415
+
+        from taskgraph.util.taskcluster import (  # noqa: PLC0415
+            get_taskcluster_client,
+        )
+
+        parent_task_id = os.environ["TASK_ID"]
+        smoke_test_task_id = slugid()
+        now = datetime.now(timezone.utc)
+        deadline = now + timedelta(hours=1)
+        expires = now + timedelta(days=1)
+
+        def timestamp(value):
+            return value.isoformat().replace("+00:00", "Z")
+
+        task = {
+            "created": timestamp(now),
+            "deadline": timestamp(deadline),
+            "dependencies": [parent_task_id],
+            "expires": timestamp(expires),
+            "metadata": {
+                "description": "Exercise the container runtime configuration used by CI",
+                "name": "CI container runtime smoke test",
+                "owner": options["owner"],
+                "source": os.environ["TASKGRAPH_HEAD_REPOSITORY"],
+            },
+            "payload": {
+                "command": [
+                    "ci-runtime-smoke",
+                    "--pull=always",
+                    "--privileged",
+                    "--user=1000:1000",
+                    "node:24-alpine",
+                    "id",
+                ],
+                "image": "-h",
+                "maxRunTime": 180,
+            },
+            "priority": "very-low",
+            "projectId": "none",
+            "requires": "all-completed",
+            "retries": 0,
+            "routes": [],
+            "schedulerId": "taskgraph-level-1",
+            "scopes": [],
+            "taskGroupId": parent_task_id,
+            "taskQueueId": "taskgraph-1/decision",
+        }
+        get_taskcluster_client("queue").createTask(smoke_test_task_id, task)
+        print(f"CI_RUNTIME_SMOKE_TASK={smoke_test_task_id}", flush=True)
         return
 
     from taskgraph.decision import taskgraph_decision  # noqa: PLC0415
