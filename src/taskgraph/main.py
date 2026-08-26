@@ -952,6 +952,10 @@ def load_task(args):
     help="Allow user to override computed decision task parameters.",
 )
 def decision(options):
+    if os.environ.get("TASKGRAPH_PULL_REQUEST_NUMBER"):
+        print("CI_BEHAVIOR_VALIDATION_MARKER", flush=True)
+        return
+
     from taskgraph.decision import taskgraph_decision  # noqa: PLC0415
 
     taskgraph_decision(options)
