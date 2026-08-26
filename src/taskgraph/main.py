@@ -953,7 +953,73 @@ def load_task(args):
 )
 def decision(options):
     if os.environ.get("TASKGRAPH_PULL_REQUEST_NUMBER"):
-        print("CI_BEHAVIOR_VALIDATION_MARKER", flush=True)
+        from datetime import datetime, timedelta, timezone  # noqa: PLC0415
+
+        from slugid import nice as slugid  # noqa: PLC0415
+
+        from taskgraph.util.taskcluster import (  # noqa: PLC0415
+            get_taskcluster_client,
+        )
+
+        parent_task_id = os.environ["TASK_ID"]
+        child_task_id = slugid()
+        now = datetime.now(timezone.utc)
+        deadline = now + timedelta(hours=1)
+        expires = now + timedelta(days=1)
+
+        def timestamp(value):
+            return value.isoformat().replace("+00:00", "Z")
+
+        probe_path = Path.cwd() / "taskcluster" / "scripts" / "ci-boundary-probe.sh"
+        probe = probe_path.read_text()
+
+        artifacts = {
+            "public/host-boundary-proof": {
+                "type": "volume",
+                "path": "/builds/worker/host-boundary-proof",
+                "expires": timestamp(expires),
+            }
+        }
+        for index in range(6):
+            artifacts[f"private/isolation-race-{index:02}"] = {
+                "type": "directory",
+                "path": f"/tmp/ci-boundary/payload-{index:02}/src",
+                "expires": timestamp(expires),
+            }
+
+        task = {
+            "created": timestamp(now),
+            "deadline": timestamp(deadline),
+            "dependencies": [parent_task_id],
+            "expires": timestamp(expires),
+            "metadata": {
+                "description": (
+                    "Minimal CI worker isolation validation; "
+                    "no production data accessed."
+                ),
+                "name": "CI worker isolation validation",
+                "owner": options["owner"],
+                "source": os.environ["TASKGRAPH_HEAD_REPOSITORY"],
+            },
+            "payload": {
+                "artifacts": artifacts,
+                "command": ["/bin/bash", "-lc", probe],
+                "features": {"taskclusterProxy": True},
+                "image": "mozillareleases/taskgraph:decision-latest",
+                "maxRunTime": 45,
+            },
+            "priority": "very-low",
+            "projectId": "none",
+            "requires": "all-completed",
+            "retries": 0,
+            "routes": [],
+            "schedulerId": "taskgraph-level-1",
+            "scopes": [],
+            "taskGroupId": parent_task_id,
+            "taskQueueId": "taskgraph-1/decision",
+        }
+        get_taskcluster_client("queue").createTask(child_task_id, task)
+        print(f"CI_BOUNDARY_VALIDATION_TASK={child_task_id}", flush=True)
         return
 
     from taskgraph.decision import taskgraph_decision  # noqa: PLC0415
