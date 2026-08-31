@@ -194,6 +194,33 @@ class TestGraph(unittest.TestCase):
         "reverse transitive closure of a loop is the whole loop"
         self.assertEqual(self.loopy.transitive_closure({"A"}, reverse=True), self.loopy)
 
+    def test_transitive_closure_diamond(self):
+        "transitive closure of a diamond reaches shared descendants by both paths"
+        self.assertEqual(
+            self.diamonds.transitive_closure({"A"}),
+            Graph(
+                {"A", "D", "F", "G", "I", "J"},
+                {
+                    ("A", "D", "L"),
+                    ("A", "F", "L"),
+                    ("D", "F", "L"),
+                    ("D", "G", "L"),
+                    ("F", "I", "L"),
+                    ("G", "I", "L"),
+                    ("G", "J", "L"),
+                },
+            ),
+        )
+
+    def test_transitive_closure_frozenset(self):
+        "transitive closure accepts a frozenset, as returned by Graph.nodes"
+        self.assertEqual(self.tree.transitive_closure(self.tree.nodes), self.tree)
+
+    def test_transitive_closure_unknown_nodes(self):
+        "transitive closure raises when given nodes not in the graph"
+        with pytest.raises(Exception, match="Unknown nodes"):
+            self.tree.transitive_closure({"z"})
+
     def test_visit_postorder_empty(self):
         "postorder visit of an empty graph is empty"
         self.assertEqual(list(Graph(set(), set()).visit_postorder()), [])
