@@ -162,7 +162,7 @@ def test_output_file(run_taskgraph, tmpdir):
     output_file = tmpdir.join("out.txt")
     assert not output_file.check()
 
-    run_taskgraph(["full", f"--output-file={output_file.strpath}"])
+    run_taskgraph(["full", f"--format=labels:{output_file.strpath}"])
     assert output_file.check()
     assert output_file.read_text("utf-8").strip() == "\n".join(
         ["_fake-t-0", "_fake-t-1", "_fake-t-2"]

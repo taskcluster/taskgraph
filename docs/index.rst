@@ -75,7 +75,7 @@ already, namely ``docker-image-linux`` and ``hello-world``.
 .. note::
 
    By default the ``taskgraph`` command will only output task labels. Try
-   adding ``--json`` to the command to see the actual definitions.
+   adding ``--format json`` to the command to see the actual definitions.
 
 See if you can create a new task by editing ``taskcluster/kinds/hello/kind.yml``,
 and re-run ``taskgraph full`` to verify.
