@@ -27,7 +27,7 @@ RUN ["/usr/local/go/bin/go", "build", \
     "./cmd/umoci"]
 
 
-FROM debian:12-slim@sha256:abd67ffcfa541b485a3dff59865ab629aa048a6c613e639d36e7456b0b229241
+FROM debian:13-slim@sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc4017c709b6259bc132
 MAINTAINER Release Engineering <release@mozilla.com>
 
 # %include-run-task
