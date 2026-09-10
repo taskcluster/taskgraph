@@ -864,3 +864,54 @@ def test_vcs_checkout_from_args_sparse_validation(
         )
         run_task_mod.vcs_checkout_from_args(options)
 
+
+def test_git_checkout_sparse_widens_on_full_task(
+    mock_stdin, run_task_mod, sparse_git_repo, tmp_path
+):
+    destination = tmp_path / "destination"
+    sparse_git_checkout(run_task_mod, sparse_git_repo, destination, ["/b", "*.md"])
+    sparse_git_checkout(run_task_mod, sparse_git_repo, destination)
+
+    assert git_config(destination, "core.sparseCheckout") != "true"
+    assert materialized_files(destination) == SPARSE_REPO_FILES
+
+
+def test_git_checkout_sparse_widens_over_modified_files(
+    mock_stdin, run_task_mod, sparse_git_repo, tmp_path
+):
+    destination = tmp_path / "destination"
+    sparse_git_checkout(run_task_mod, sparse_git_repo, destination, ["/b", "*.md"])
+    (destination / "b" / "three.txt").write_text("modified")
+    sparse_git_checkout(run_task_mod, sparse_git_repo, destination)
+
+    assert git_config(destination, "core.sparseCheckout") != "true"
+    assert materialized_files(destination) == SPARSE_REPO_FILES
+    assert (destination / "b" / "three.txt").read_text() == "b/three.txt"
+
+
+def test_git_checkout_sparse_on_full_cache_stays_full(
+    mock_stdin, run_task_mod, sparse_git_repo, tmp_path
+):
+    destination = tmp_path / "destination"
+    sparse_git_checkout(run_task_mod, sparse_git_repo, destination)
+    sparse_git_checkout(run_task_mod, sparse_git_repo, destination, ["/b", "*.md"])
+
+    assert git_config(destination, "core.sparseCheckout") is None
+    assert materialized_files(destination) == SPARSE_REPO_FILES
+
+
+def test_git_checkout_sparse_adds_second_profile(
+    mock_stdin, run_task_mod, sparse_git_repo, tmp_path
+):
+    destination = tmp_path / "destination"
+    sparse_git_checkout(run_task_mod, sparse_git_repo, destination, ["/b", "*.md"])
+    sparse_git_checkout(
+        run_task_mod, sparse_git_repo, destination, ["/a/one.txt", "*.md"]
+    )
+
+    assert materialized_files(destination) == ["a/one.txt", "b/three.txt", "c/four.md"]
+    patterns = subprocess.check_output(
+        ["git", "sparse-checkout", "list"], cwd=str(destination), text=True
+    ).split()
+    assert set(patterns) == {"/b", "*.md", "/a/one.txt"}
+

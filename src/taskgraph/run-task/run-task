@@ -700,16 +700,24 @@ def _git_config(repo_path: str, key: str) -> Optional[str]:
     return p.stdout.strip()
 
 
+def _git_lines(repo_path: str, *args: str) -> List[str]:
+    return subprocess.check_output(
+        ["git", *args], cwd=repo_path, env=os.environ, encoding="utf-8"
+    ).splitlines()
+
+
 class SparsePlan(NamedTuple):
     """The one `git sparse-checkout` command a checkout needs, if any."""
 
-    op: Optional[Literal["sparse_set", "sparse_disable"]]
+    op: Optional[Literal["sparse_set", "sparse_add", "sparse_disable"]]
     args: List[str]
     entries: List[str]
     message: str
 
 
 def _plan_sparse_checkout(
+    repo_path: str,
+    has_repo: bool,
     is_sparse: bool,
     sparse_profile: Optional[str],
     sparse_patterns: Optional[List[str]],
@@ -725,9 +733,26 @@ def _plan_sparse_checkout(
             )
         return SparsePlan(None, [], [], "")
 
-    args = ["git", "sparse-checkout", "set", "--no-cone", "--stdin"]
-    message = f"sparse_set: sparse profile {profile}, {len(sparse_patterns)} entries"
-    return SparsePlan("sparse_set", args, sparse_patterns, message)
+    if has_repo and not is_sparse:
+        message = (
+            f"the cached checkout is a full checkout, sparse profile "
+            f"{profile} is not applied"
+        )
+        return SparsePlan(None, [], [], message)
+
+    if not has_repo:
+        args = ["git", "sparse-checkout", "set", "--no-cone", "--stdin"]
+        op, entries = "sparse_set", sparse_patterns
+    else:
+        current = _git_lines(repo_path, "sparse-checkout", "list")
+        args = ["git", "sparse-checkout", "add", "--stdin"]
+        op = "sparse_add"
+        entries = [p for p in sparse_patterns if p not in set(current)]
+        if not entries:
+            return SparsePlan(None, [], [], f"sparse profile {profile} already applied")
+
+    message = f"{op}: sparse profile {profile}, {len(entries)} entries"
+    return SparsePlan(op, args, entries, message)
 
 
 def shortref(ref: str) -> str:
@@ -800,7 +825,7 @@ def git_checkout(
     is_sparse = (
         has_repo and _git_config(destination_path, "core.sparseCheckout") == "true"
     )
-    sparse = bool(sparse_patterns)
+    sparse = bool(sparse_patterns) and (not has_repo or is_sparse)
 
     action = "pull" if has_repo else "clone"
     mode = "sparsecheckout" if sparse else "fullcheckout"
@@ -882,7 +907,9 @@ def git_checkout(
         # `git fetch` set `FETCH_HEAD` reference to the last commit of the desired branch
         rev = head_rev if head_rev else "FETCH_HEAD"
 
-        plan = _plan_sparse_checkout(is_sparse, sparse_profile, sparse_patterns)
+        plan = _plan_sparse_checkout(
+            destination_path, has_repo, is_sparse, sparse_profile, sparse_patterns
+        )
         if sparse and sparse_profile:
             perf.extra_options.append(os.path.basename(sparse_profile))
         if plan.message:
