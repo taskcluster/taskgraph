@@ -706,10 +706,58 @@ def _git_lines(repo_path: str, *args: str) -> List[str]:
     ).splitlines()
 
 
+_PATTERN_METACHARS_RE = re.compile(r"([*?\[\\])")
+
+
+def _escape_pattern(path: str) -> str:
+    escaped = _PATTERN_METACHARS_RE.sub(r"\\\1", path)
+    if escaped.endswith(" "):
+        escaped = escaped[:-1] + "\\ "
+    return escaped
+
+
+def _cone_ancestor_files(
+    repo_path: str, rev: str, directories: List[str]
+) -> List[str]:
+    patterns = []
+    seen = set()
+    for directory in directories:
+        parts = directory.split("/")
+        for depth in range(len(parts)):
+            ancestor = "/".join(parts[:depth])
+            if ancestor in seen:
+                continue
+            seen.add(ancestor)
+            args = ["ls-tree", "-z", rev]
+            if ancestor:
+                args.append(f"{ancestor}/")
+            out = subprocess.check_output(
+                ["git", *args], cwd=repo_path, env=os.environ, encoding="utf-8"
+            )
+            for entry in out.split("\0"):
+                if not entry:
+                    continue
+                meta, path = entry.split("\t", 1)
+                if meta.split(" ")[1] == "blob" and "\n" not in path and "\r" not in path:
+                    patterns.append(f"/{_escape_pattern(path)}")
+    return patterns
+
+
+def _cone_directories(patterns: List[str]) -> Optional[List[str]]:
+    directories = []
+    for pattern in patterns:
+        body = pattern[1:].rstrip("/")
+        if not pattern.startswith("/") or not body or _PATTERN_METACHARS_RE.search(body):
+            return None
+        directories.append(body)
+    return directories
+
+
 class SparsePlan(NamedTuple):
     """The one `git sparse-checkout` command a checkout needs, if any."""
 
-    op: Optional[Literal["sparse_set", "sparse_add", "sparse_disable"]]
+    cone: bool
+    op: Optional[Literal["sparse_set", "sparse_add", "sparse_convert", "sparse_disable"]]
     args: List[str]
     entries: List[str]
     message: str
@@ -721,38 +769,78 @@ def _plan_sparse_checkout(
     is_sparse: bool,
     sparse_profile: Optional[str],
     sparse_patterns: Optional[List[str]],
+    rev: str,
 ) -> SparsePlan:
     profile = sparse_profile or ""
     if not sparse_patterns:
         if is_sparse:
             return SparsePlan(
+                False,
                 "sparse_disable",
                 ["git", "sparse-checkout", "disable"],
                 [],
                 "widening the sparse checkout to the full tree",
             )
-        return SparsePlan(None, [], [], "")
+        return SparsePlan(False, None, [], [], "")
 
     if has_repo and not is_sparse:
         message = (
             f"the cached checkout is a full checkout, sparse profile "
             f"{profile} is not applied"
         )
-        return SparsePlan(None, [], [], message)
+        return SparsePlan(False, None, [], [], message)
 
+    cone_directories = _cone_directories(sparse_patterns)
     if not has_repo:
-        args = ["git", "sparse-checkout", "set", "--no-cone", "--stdin"]
-        op, entries = "sparse_set", sparse_patterns
+        if cone_directories is not None:
+            args = [
+                "git",
+                "sparse-checkout",
+                "set",
+                "--cone",
+                "--sparse-index",
+                "--stdin",
+            ]
+            cone, entries = True, cone_directories
+        else:
+            args = ["git", "sparse-checkout", "set", "--no-cone", "--stdin"]
+            cone, entries = False, sparse_patterns
+        op = "sparse_set"
     else:
+        is_cone = _git_config(repo_path, "core.sparseCheckoutCone") == "true"
         current = _git_lines(repo_path, "sparse-checkout", "list")
-        args = ["git", "sparse-checkout", "add", "--stdin"]
-        op = "sparse_add"
-        entries = [p for p in sparse_patterns if p not in set(current)]
+        if cone_directories is not None and is_cone:
+            args = ["git", "sparse-checkout", "add", "--stdin"]
+            cone, op = True, "sparse_add"
+            entries = [d for d in cone_directories if d not in set(current)]
+        elif is_cone:
+            args = [
+                "git",
+                "sparse-checkout",
+                "set",
+                "--no-cone",
+                "--no-sparse-index",
+                "--stdin",
+            ]
+            cone, op = False, "sparse_convert"
+            entries = list(
+                dict.fromkeys(
+                    [f"/{_escape_pattern(d)}" for d in current]
+                    + _cone_ancestor_files(repo_path, rev, current)
+                    + sparse_patterns
+                )
+            )
+        else:
+            args = ["git", "sparse-checkout", "add", "--stdin"]
+            cone, op = False, "sparse_add"
+            entries = [p for p in sparse_patterns if p not in set(current)]
         if not entries:
-            return SparsePlan(None, [], [], f"sparse profile {profile} already applied")
+            return SparsePlan(
+                cone, None, [], [], f"sparse profile {profile} already applied"
+            )
 
     message = f"{op}: sparse profile {profile}, {len(entries)} entries"
-    return SparsePlan(op, args, entries, message)
+    return SparsePlan(cone, op, args, entries, message)
 
 
 def shortref(ref: str) -> str:
@@ -908,10 +996,12 @@ def git_checkout(
         rev = head_rev if head_rev else "FETCH_HEAD"
 
         plan = _plan_sparse_checkout(
-            destination_path, has_repo, is_sparse, sparse_profile, sparse_patterns
+            destination_path, has_repo, is_sparse, sparse_profile, sparse_patterns, rev
         )
-        if sparse and sparse_profile:
-            perf.extra_options.append(os.path.basename(sparse_profile))
+        if sparse:
+            perf.extra_options.append("cone" if plan.cone else "no-cone")
+            if sparse_profile:
+                perf.extra_options.append(os.path.basename(sparse_profile))
         if plan.message:
             print_line(b"vcs", f"{plan.message}\n".encode("utf-8"))
         if plan.op:

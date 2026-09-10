@@ -889,6 +889,23 @@ def test_git_checkout_sparse_widens_over_modified_files(
     assert (destination / "b" / "three.txt").read_text() == "b/three.txt"
 
 
+def test_git_checkout_sparse_adds_over_modified_files(
+    mock_stdin, run_task_mod, sparse_git_repo, tmp_path
+):
+    destination = tmp_path / "destination"
+    sparse_git_checkout(run_task_mod, sparse_git_repo, destination, ["/b"])
+    (destination / "b" / "three.txt").write_text("modified")
+    sparse_git_checkout(run_task_mod, sparse_git_repo, destination, ["/a/deep"])
+
+    assert materialized_files(destination) == [
+        "a/deep/two.txt",
+        "a/one.txt",
+        "b/three.txt",
+        "root.txt",
+    ]
+    assert (destination / "b" / "three.txt").read_text() == "b/three.txt"
+
+
 def test_git_checkout_sparse_on_full_cache_stays_full(
     mock_stdin, run_task_mod, sparse_git_repo, tmp_path
 ):
@@ -915,3 +932,46 @@ def test_git_checkout_sparse_adds_second_profile(
     ).split()
     assert set(patterns) == {"/b", "*.md", "/a/one.txt"}
 
+
+def test_git_checkout_sparse_cone(mock_stdin, run_task_mod, sparse_git_repo, tmp_path):
+    destination = tmp_path / "destination"
+    sparse_git_checkout(run_task_mod, sparse_git_repo, destination, ["/a/deep", "/b"])
+
+    assert git_config(destination, "core.sparseCheckoutCone") == "true"
+    assert git_config(destination, "index.sparse") == "true"
+    assert materialized_files(destination) == [
+        "a/deep/two.txt",
+        "a/one.txt",
+        "b/three.txt",
+        "root.txt",
+    ]
+
+
+def test_git_checkout_sparse_cone_adds_directories(
+    mock_stdin, run_task_mod, sparse_git_repo, tmp_path
+):
+    destination = tmp_path / "destination"
+    sparse_git_checkout(run_task_mod, sparse_git_repo, destination, ["/b"])
+    sparse_git_checkout(run_task_mod, sparse_git_repo, destination, ["/a/deep"])
+
+    assert git_config(destination, "core.sparseCheckoutCone") == "true"
+    assert materialized_files(destination) == [
+        "a/deep/two.txt",
+        "a/one.txt",
+        "b/three.txt",
+        "root.txt",
+    ]
+
+
+def test_git_checkout_sparse_cone_converts_for_globs(
+    mock_stdin, run_task_mod, sparse_git_repo, tmp_path
+):
+    destination = tmp_path / "destination"
+    sparse_git_checkout(run_task_mod, sparse_git_repo, destination, ["/b"])
+    before = materialized_files(destination)
+    sparse_git_checkout(run_task_mod, sparse_git_repo, destination, ["*.md"])
+
+    assert git_config(destination, "core.sparseCheckoutCone") == "false"
+    after = materialized_files(destination)
+    assert set(before) <= set(after)
+    assert "c/four.md" in after
