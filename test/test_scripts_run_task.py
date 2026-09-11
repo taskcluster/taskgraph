@@ -449,6 +449,42 @@ def test_git_checkout(
 
 
 @pytest.mark.parametrize(
+    "env_value,expected",
+    (
+        pytest.param(None, "0", id="default"),
+        pytest.param("1", "1", id="disabled"),
+        pytest.param("4", "4", id="pinned"),
+    ),
+)
+def test_git_checkout_enables_parallel_checkout(
+    monkeypatch, mock_stdin, run_task_mod, mock_git_repo, tmp_path, env_value, expected
+):
+    monkeypatch.delenv("RUN_TASK_GIT_CHECKOUT_WORKERS", raising=False)
+    if env_value is not None:
+        monkeypatch.setenv("RUN_TASK_GIT_CHECKOUT_WORKERS", env_value)
+    destination = tmp_path / "destination"
+    run_task_mod.git_checkout(
+        destination_path=destination,
+        head_repo=mock_git_repo["path"],
+        base_repo=mock_git_repo["path"],
+        base_rev=None,
+        head_ref="main",
+        head_rev=None,
+        ssh_key_file=None,
+        ssh_known_hosts_file=None,
+    )
+
+    workers = subprocess.check_output(
+        ["git", "config", "--global", "--get", "checkout.workers"],
+        cwd=destination,
+        universal_newlines=True,
+    ).strip()
+    # 0 means one worker per logical core, see
+    # https://git-scm.com/docs/git-config#Documentation/git-config.txt-checkoutworkers
+    assert workers == expected
+
+
+@pytest.mark.parametrize(
     "head_ref,head_rev_index",
     (
         pytest.param("mybranch", 1, id="head"),
