@@ -27,12 +27,13 @@ import socket
 import stat
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Literal, NamedTuple, Optional
 
 SECRET_BASEURL_TPL = "{}/secrets/v1/secret/{{}}".format(
     os.environ.get("TASKCLUSTER_PROXY_URL", "http://taskcluster").rstrip("/")
@@ -234,8 +235,8 @@ def remove(path):
         _call_windows_retry(shutil.rmtree, (path,))
 
 
-def run_required_command(prefix, args, *, extra_env=None, cwd=None):
-    res = run_command(prefix, args, extra_env=extra_env, cwd=cwd)
+def run_required_command(prefix, args, *, extra_env=None, cwd=None, stdin_data=None):
+    res = run_command(prefix, args, extra_env=extra_env, cwd=cwd, stdin_data=stdin_data)
     if res:
         sys.exit(res)
 
@@ -253,7 +254,7 @@ def retry_required_command(prefix, args, *, extra_env=None, cwd=None, retries=2)
         time.sleep(backoff)
 
 
-def run_command(prefix, args, *, extra_env=None, cwd=None):
+def run_command(prefix, args, *, extra_env=None, cwd=None, stdin_data=None):
     """Runs a process and prefixes its output with the time.
 
     Returns the process exit code.
@@ -274,6 +275,12 @@ def run_command(prefix, args, *, extra_env=None, cwd=None):
     # we manually install a latin1 stream wrapper. This allows us to readline()
     # and preserves bytes, without losing any data.
 
+    stdin_file = None
+    if stdin_data is not None:
+        stdin_file = tempfile.TemporaryFile()
+        stdin_file.write(stdin_data)
+        stdin_file.seek(0)
+
     p = subprocess.Popen(
         args,
         # Disable buffering because we want to receive output
@@ -282,10 +289,13 @@ def run_command(prefix, args, *, extra_env=None, cwd=None):
         bufsize=0,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        stdin=sys.stdin.fileno(),
+        stdin=stdin_file if stdin_file is not None else sys.stdin.fileno(),
         cwd=cwd,
         env=env,
     )
+
+    if stdin_file is not None:
+        stdin_file.close()
 
     stdout = io.TextIOWrapper(p.stdout, encoding="latin1")
 
@@ -571,8 +581,9 @@ def configure_volume_posix(volume, user, group, running_as_root):
 class PerfRecorder:
     """Collects operation timings and emits them as PERFHERDER_DATA."""
 
-    def __init__(self, framework: str):
+    def __init__(self, framework: str, extra_options: Optional[List[str]] = None):
         self.framework = framework
+        self.extra_options = list(extra_options or [])
         self.optimes = []
         self._stack = []
 
@@ -610,7 +621,7 @@ class PerfRecorder:
                     "value": duration,
                     "lowerIsBetter": True,
                     "shouldAlert": False,
-                    "extraOptions": [instance_type],
+                    "extraOptions": [instance_type, *self.extra_options],
                     "subtests": [],
                 }
             )
@@ -673,6 +684,165 @@ def _clean_git_checkout(destination_path):
     print_line(b"vcs", b"successfully cleaned git checkout!\n")
 
 
+def _git_config(repo_path: str, key: str) -> Optional[str]:
+    p = subprocess.run(
+        ["git", "config", "--get", key],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        cwd=repo_path,
+        env=os.environ,
+        encoding="utf-8",
+    )
+    if p.returncode == 1:
+        return None
+    if p.returncode != 0:
+        raise RuntimeError(f"git config --get {key} failed: {p.stderr.strip()}")
+    return p.stdout.strip()
+
+
+def _git_lines(repo_path: str, *args: str) -> List[str]:
+    return subprocess.check_output(
+        ["git", *args], cwd=repo_path, env=os.environ, encoding="utf-8"
+    ).splitlines()
+
+
+_PATTERN_METACHARS_RE = re.compile(r"([*?\[\\])")
+
+
+def _escape_pattern(path: str) -> str:
+    escaped = _PATTERN_METACHARS_RE.sub(r"\\\1", path)
+    if escaped.endswith(" "):
+        escaped = escaped[:-1] + "\\ "
+    return escaped
+
+
+def _cone_ancestor_files(
+    repo_path: str, rev: str, directories: List[str]
+) -> List[str]:
+    patterns = []
+    seen = set()
+    for directory in directories:
+        parts = directory.split("/")
+        for depth in range(len(parts)):
+            ancestor = "/".join(parts[:depth])
+            if ancestor in seen:
+                continue
+            seen.add(ancestor)
+            args = ["ls-tree", "-z", rev]
+            if ancestor:
+                args.append(f"{ancestor}/")
+            out = subprocess.check_output(
+                ["git", *args], cwd=repo_path, env=os.environ, encoding="utf-8"
+            )
+            for entry in out.split("\0"):
+                if not entry:
+                    continue
+                meta, path = entry.split("\t", 1)
+                if meta.split(" ")[1] == "blob" and "\n" not in path and "\r" not in path:
+                    patterns.append(f"/{_escape_pattern(path)}")
+    return patterns
+
+
+def _cone_directories(patterns: List[str]) -> Optional[List[str]]:
+    directories = []
+    for pattern in patterns:
+        body = pattern[1:].rstrip("/")
+        if not pattern.startswith("/") or not body or _PATTERN_METACHARS_RE.search(body):
+            return None
+        directories.append(body)
+    return directories
+
+
+class SparsePlan(NamedTuple):
+    """The one `git sparse-checkout` command a checkout needs, if any."""
+
+    cone: bool
+    op: Optional[Literal["sparse_set", "sparse_add", "sparse_convert", "sparse_disable"]]
+    args: List[str]
+    entries: List[str]
+    message: str
+
+
+def _plan_sparse_checkout(
+    repo_path: str,
+    has_repo: bool,
+    is_sparse: bool,
+    sparse_profile: Optional[str],
+    sparse_patterns: Optional[List[str]],
+    rev: str,
+) -> SparsePlan:
+    profile = sparse_profile or ""
+    if not sparse_patterns:
+        if is_sparse:
+            return SparsePlan(
+                False,
+                "sparse_disable",
+                ["git", "sparse-checkout", "disable"],
+                [],
+                "widening the sparse checkout to the full tree",
+            )
+        return SparsePlan(False, None, [], [], "")
+
+    if has_repo and not is_sparse:
+        message = (
+            f"the cached checkout is a full checkout, sparse profile "
+            f"{profile} is not applied"
+        )
+        return SparsePlan(False, None, [], [], message)
+
+    cone_directories = _cone_directories(sparse_patterns)
+    if not has_repo:
+        if cone_directories is not None:
+            args = [
+                "git",
+                "sparse-checkout",
+                "set",
+                "--cone",
+                "--sparse-index",
+                "--stdin",
+            ]
+            cone, entries = True, cone_directories
+        else:
+            args = ["git", "sparse-checkout", "set", "--no-cone", "--stdin"]
+            cone, entries = False, sparse_patterns
+        op = "sparse_set"
+    else:
+        is_cone = _git_config(repo_path, "core.sparseCheckoutCone") == "true"
+        current = _git_lines(repo_path, "sparse-checkout", "list")
+        if cone_directories is not None and is_cone:
+            args = ["git", "sparse-checkout", "add", "--stdin"]
+            cone, op = True, "sparse_add"
+            entries = [d for d in cone_directories if d not in set(current)]
+        elif is_cone:
+            args = [
+                "git",
+                "sparse-checkout",
+                "set",
+                "--no-cone",
+                "--no-sparse-index",
+                "--stdin",
+            ]
+            cone, op = False, "sparse_convert"
+            entries = list(
+                dict.fromkeys(
+                    [f"/{_escape_pattern(d)}" for d in current]
+                    + _cone_ancestor_files(repo_path, rev, current)
+                    + sparse_patterns
+                )
+            )
+        else:
+            args = ["git", "sparse-checkout", "add", "--stdin"]
+            cone, op = False, "sparse_add"
+            entries = [p for p in sparse_patterns if p not in set(current)]
+        if not entries:
+            return SparsePlan(
+                cone, None, [], [], f"sparse profile {profile} already applied"
+            )
+
+    message = f"{op}: sparse profile {profile}, {len(entries)} entries"
+    return SparsePlan(cone, op, args, entries, message)
+
+
 def shortref(ref: str) -> str:
     """Normalize a git ref to its short form.
 
@@ -696,6 +866,8 @@ def git_checkout(
     ssh_key_file: Optional[Path],
     ssh_known_hosts_file: Optional[Path],
     shallow: bool = False,
+    sparse_profile: Optional[str] = None,
+    sparse_patterns: Optional[List[str]] = None,
 ):
     assert head_ref or head_rev
 
@@ -725,20 +897,28 @@ def git_checkout(
         )
 
     has_repo = os.path.exists(destination_path)
-    perf = PerfRecorder("vcs")
-    with perf.record("overall", "overall_pull" if has_repo else "overall_clone"):
-        # Bypass Git's "safe directory" feature as the destination could be
-        # coming from a cache and therefore cloned by a different user.
-        args = [
-            "git",
-            "config",
-            "--global",
-            "--add",
-            "safe.directory",
-            Path(destination_path).as_posix(),
-        ]
-        retry_required_command(b"vcs", args, extra_env=env)
 
+    # Bypass Git's "safe directory" feature as the destination could be
+    # coming from a cache and therefore cloned by a different user.
+    args = [
+        "git",
+        "config",
+        "--global",
+        "--add",
+        "safe.directory",
+        Path(destination_path).as_posix(),
+    ]
+    retry_required_command(b"vcs", args, extra_env=env)
+
+    is_sparse = (
+        has_repo and _git_config(destination_path, "core.sparseCheckout") == "true"
+    )
+    sparse = bool(sparse_patterns) and (not has_repo or is_sparse)
+
+    action = "pull" if has_repo else "clone"
+    mode = "sparsecheckout" if sparse else "fullcheckout"
+    perf = PerfRecorder("vcs")
+    with perf.record("overall", f"overall_{action}", f"overall_{action}_{mode}"):
         if not has_repo:
             # Repository doesn't already exist, needs to be cloned
             args = [
@@ -747,7 +927,13 @@ def git_checkout(
             ]
 
             if shallow:
-                args.extend(["--depth=1", "--no-checkout"])
+                args.append("--depth=1")
+
+            if sparse:
+                args.append("--filter=blob:none")
+
+            if shallow or sparse:
+                args.append("--no-checkout")
 
             args.extend(
                 [
@@ -758,6 +944,11 @@ def git_checkout(
 
             with perf.record("clone"):
                 retry_required_command(b"vcs", args, extra_env=env)
+        else:
+            # Fetches go through origin by name, so a cached clone has to
+            # point origin at the repository this task wants.
+            args = ["git", "remote", "set-url", "origin", base_repo or head_repo]
+            run_required_command(b"vcs", args, cwd=destination_path)
 
         # For Github based repos, base_rev often doesn't refer to an ancestor of
         # head_rev simply due to Github not providing that information in their
@@ -786,15 +977,41 @@ def git_checkout(
             # shallow clone, head_rev needs to be fetched independently regardless.
             targets.append(head_rev)
 
+        # A partial clone keeps its blob filter on the origin remote, and a
+        # fetch only inherits the filter when it names that remote. Fetching
+        # the same repository by URL would download every blob of the commit.
+        remote = "origin" if head_repo == (base_repo or head_repo) else head_repo
+
         with perf.record("pull"):
             git_fetch(
                 destination_path,
                 *targets,
-                remote=head_repo,
+                remote=remote,
                 tags=tags,
                 shallow=shallow,
                 env=env,
             )
+
+        # `git fetch` set `FETCH_HEAD` reference to the last commit of the desired branch
+        rev = head_rev if head_rev else "FETCH_HEAD"
+
+        plan = _plan_sparse_checkout(
+            destination_path, has_repo, is_sparse, sparse_profile, sparse_patterns, rev
+        )
+        if sparse:
+            perf.extra_options.append("cone" if plan.cone else "no-cone")
+            if sparse_profile:
+                perf.extra_options.append(os.path.basename(sparse_profile))
+        if plan.message:
+            print_line(b"vcs", f"{plan.message}\n".encode("utf-8"))
+        if plan.op:
+            stdin_data = None
+            if plan.entries:
+                stdin_data = ("\n".join(plan.entries) + "\n").encode("utf-8")
+            with perf.record(plan.op):
+                run_required_command(
+                    b"vcs", plan.args, cwd=destination_path, stdin_data=stdin_data
+                )
 
         args = [
             "git",
@@ -805,8 +1022,7 @@ def git_checkout(
         if head_ref:
             args.extend(["-B", shortref(head_ref)])
 
-        # `git fetch` set `FETCH_HEAD` reference to the last commit of the desired branch
-        args.append(head_rev if head_rev else "FETCH_HEAD")
+        args.append(rev)
 
         with perf.record("update"):
             run_required_command(b"vcs", args, cwd=destination_path)
@@ -893,6 +1109,7 @@ def hg_checkout(
     store_path: str,
     branch: Optional[str],
     revision: Optional[str],
+    sparse_profile: Optional[str] = None,
 ):
     if IS_MACOSX or IS_POSIX:
         hg_bin = "hg"
@@ -915,6 +1132,9 @@ def hg_checkout(
 
     if base_repo:
         args.extend(["--upstream", base_repo])
+
+    if sparse_profile:
+        args.extend(["--sparseprofile", sparse_profile])
 
     # Specify method to checkout a revision. This defaults to revisions as
     # SHA-1 strings, but also supports symbolic revisions like `tip` via the
@@ -983,13 +1203,35 @@ def add_vcs_arguments(parser, project, name):
         action="store_true",
         help=f"Use shallow clone for {name}",
     )
+    parser.add_argument(
+        f"--{project}-sparse-profile",
+        help=f"Path to sparse profile for {name} checkout. For git checkouts "
+        f"the patterns come from the {project.upper()}_SPARSE_PATTERNS "
+        "environment variable, a JSON list of git sparse-checkout patterns.",
+    )
 
 
 def collect_vcs_options(args, project, name):
     checkout = getattr(args, f"{project}_checkout")
     shallow_clone = getattr(args, f"{project}_shallow_clone")
+    sparse_profile = getattr(args, f"{project}_sparse_profile", None)
 
     env_prefix = project.upper()
+    sparse_patterns = None
+    if f"{env_prefix}_SPARSE_PATTERNS" in os.environ:
+        try:
+            sparse_patterns = json.loads(os.environ[f"{env_prefix}_SPARSE_PATTERNS"])
+        except ValueError as e:
+            raise RuntimeError(
+                f"{env_prefix}_SPARSE_PATTERNS is not a JSON list of patterns: {e}"
+            ) from None
+        if not isinstance(sparse_patterns, list) or not all(
+            isinstance(p, str) and p.strip() for p in sparse_patterns
+        ):
+            raise RuntimeError(
+                f"{env_prefix}_SPARSE_PATTERNS must be a JSON list of non-empty "
+                "pattern strings"
+            )
 
     repo_type = os.environ.get(f"{env_prefix}_REPOSITORY_TYPE")
     base_repo = os.environ.get(f"{env_prefix}_BASE_REPOSITORY")
@@ -1032,6 +1274,8 @@ def collect_vcs_options(args, project, name):
         "ssh-secret-name": private_key_secret,
         "pip-requirements": pip_requirements,
         "shallow-clone": shallow_clone,
+        "sparse-profile": sparse_profile,
+        "sparse-patterns": sparse_patterns,
     }
 
 
@@ -1040,6 +1284,10 @@ def vcs_checkout_from_args(options):
         if options["head-ref"] and not options["head-rev"]:
             print("task should be defined in terms of non-symbolic revision")
             sys.exit(1)
+        if options["sparse-profile"] or options["sparse-patterns"] is not None:
+            raise RuntimeError(
+                f"--{options['project']}-sparse-profile needs --{options['project']}-checkout"
+            )
         return
 
     head_ref = options["head-ref"]
@@ -1071,6 +1319,17 @@ def vcs_checkout_from_args(options):
             if not head_ref:
                 print("Providing a ref will improve the performance of this checkout")
 
+            if bool(options["sparse-profile"]) != (options["sparse-patterns"] is not None):
+                raise RuntimeError(
+                    f"--{options['project']}-sparse-profile and the "
+                    f"{options['env-prefix']}_SPARSE_PATTERNS environment variable "
+                    "must be given together for a git checkout"
+                )
+            if options["sparse-patterns"] is not None and not options["sparse-patterns"]:
+                raise RuntimeError(
+                    f"{options['env-prefix']}_SPARSE_PATTERNS holds no patterns"
+                )
+
             revision = git_checkout(
                 options["checkout"],
                 options["head-repo"],
@@ -1081,6 +1340,8 @@ def vcs_checkout_from_args(options):
                 ssh_key_file,
                 ssh_known_hosts_file,
                 shallow=options.get("shallow-clone", False),
+                sparse_profile=options["sparse-profile"],
+                sparse_patterns=options["sparse-patterns"],
             )
         elif options["repo-type"] == "hg":
             revision = hg_checkout(
@@ -1090,6 +1351,7 @@ def vcs_checkout_from_args(options):
                 options["store-path"],
                 head_ref,
                 head_rev,
+                sparse_profile=options["sparse-profile"],
             )
         else:
             raise RuntimeError('Type of VCS must be either "git" or "hg"')
