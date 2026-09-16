@@ -18,6 +18,7 @@ import os
 import pathlib
 import random
 import re
+import shutil
 import ssl
 import stat
 import subprocess
@@ -377,6 +378,70 @@ def archive_type(path: pathlib.Path):
         return None
 
 
+class TarFile(tarfile.TarFile):
+    # When a tarball contains symbolic links, the python tarfile module ends up
+    # trying to seek in the tar, which doesn't quite work when the tar is a
+    # stream (which it is when decompressing at the same time). We wrap TarFile
+    # so as to handle the symbolic link situation ourselves, and when we can't
+    # create symbolic links (e.g. on Windows), we instead create a copy of the
+    # file the link points to.
+    def _do_extract(
+        self, extract, member, path="", set_attrs=True, numeric_owner=False, **kwargs
+    ):
+        deferred_links = getattr(self, "_deferred_links", None)
+        if not isinstance(member, tarfile.TarInfo):
+            member = self.getmember(member)
+        targetpath = os.path.normcase(os.path.join(path, member.name))
+
+        if deferred_links is not None and member.issym():
+            if os.path.lexists(targetpath):
+                # Avoid FileExistsError on following os.symlink.
+                os.unlink(targetpath)
+            try:
+                os.symlink(member.linkname, targetpath)
+            except (NotImplementedError, OSError):
+                # On Windows, os.symlink can fail, in this case fallback to
+                # creating a copy. If the destination was not already created,
+                # defer the link creation.
+                source = os.path.normcase(
+                    os.path.join(os.path.dirname(targetpath), member.linkname)
+                )
+
+                if source in self._extracted_members:
+                    shutil.copy(source, targetpath)
+                    self.chown(member, targetpath, numeric_owner)
+                else:
+                    deferred_links.setdefault(source, []).append(
+                        (member, targetpath, numeric_owner)
+                    )
+            return
+
+        extract(member, path, set_attrs, numeric_owner=numeric_owner, **kwargs)
+        if deferred_links is not None:
+            for tarinfo, linkpath, numeric_owner in deferred_links.pop(targetpath, []):
+                shutil.copy(targetpath, linkpath)
+                self.chown(tarinfo, linkpath, numeric_owner)
+            self._extracted_members.add(targetpath)
+
+    def extract(self, *args, **kwargs):
+        self._do_extract(super(TarFile, self).extract, *args, **kwargs)
+
+    # extractall in versions for cpython that implement PEP 706 call _extract_one
+    # instead of extract.
+    def _extract_one(self, *args, **kwargs):
+        self._do_extract(super(TarFile, self)._extract_one, *args, **kwargs)
+
+    def extractall(self, *args, **kwargs):
+        self._deferred_links = {}
+        self._extracted_members = set()
+        super(TarFile, self).extractall(*args, **kwargs)
+        for links in self._deferred_links.values():
+            for tarinfo, linkpath, numeric_owner in links:
+                log(f"Cannot create dangling symbolic link: {linkpath}")
+        delattr(self, "_deferred_links")
+        delattr(self, "_extracted_members")
+
+
 def extract_archive(path, dest_dir):
     """Extract an archive to a destination directory."""
 
@@ -398,7 +463,7 @@ def extract_archive(path, dest_dir):
         # also not much slower on Windows, presumably because of the
         # notoriously bad I/O).
         if sys.platform == "win32":
-            tar = tarfile.open(fileobj=ifh, mode="r|")
+            tar = TarFile.open(fileobj=ifh, mode="r|")
             tar.extractall(str(dest_dir))
             args = []
         else:
