@@ -809,10 +809,18 @@ def _plan_sparse_checkout(
     else:
         is_cone = _git_config(repo_path, "core.sparseCheckoutCone") == "true"
         current = _git_lines(repo_path, "sparse-checkout", "list")
+        # Newly checked out patterns are compatible with a `cone` sparse
+        # checkout and the existing sparse checkout is `cone`: simply add the
+        # new directories to it.
         if cone_directories is not None and is_cone:
             args = ["git", "sparse-checkout", "add", "--stdin"]
             cone, op = True, "sparse_add"
             entries = [d for d in cone_directories if d not in set(current)]
+        # Newly checked out patterns are not compatible with a `cone` sparse
+        # checkout and the existing sparse checkout is `cone`: perform a new
+        # sparse checkout with `cone` disabled, including the existing
+        # directories, the parent directory files that `cone` mode included
+        # implicitly, and the new patterns.
         elif is_cone:
             args = [
                 "git",
@@ -830,6 +838,9 @@ def _plan_sparse_checkout(
                     + sparse_patterns
                 )
             )
+        # Newly checked out patterns are not compatible with a `cone` sparse
+        # checkout and the existing sparse checkout is not `cone`: simply add the
+        # new patterns to it.
         else:
             args = ["git", "sparse-checkout", "add", "--stdin"]
             cone, op = False, "sparse_add"
