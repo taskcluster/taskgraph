@@ -223,14 +223,14 @@ tagged-tag@^1.0.0:
   integrity sha512-yEFYrVhod+hdNyx7g5Bnkkb0G6si8HJurOoOEgC8B/O0uXLHlaey/65KRv6cuWBNhBgHKAROVpc7QyYqE5gFng==
 
 taskcluster-lib-urls@^13.0.0:
-  version "13.0.2"
-  resolved "https://registry.yarnpkg.com/taskcluster-lib-urls/-/taskcluster-lib-urls-13.0.2.tgz#27b1ad7bdc1b7bc96b700d876c4e0d5021ee0fa1"
-  integrity sha512-onspRpWupIjB15vkvvSAXdtpvgWsKNOCRhcjg1p9GrxodJeW45Os7BK7azMlX7aNqi8uOj4zqB6cokxsLp2uFw==
+  version "13.1.0"
+  resolved "https://registry.yarnpkg.com/taskcluster-lib-urls/-/taskcluster-lib-urls-13.1.0.tgz#4b199cc738db4162546cbd62d98d1c7394208bee"
+  integrity sha512-IehEsRYfvTx8lvSEq7TaCn296+gSIf/3bOTHcm8gQ3ljna0OUvc/FEqMcCOPBG5gus9nh+L/ZOGCpXJi8tYf9w==
 
 type-fest@^5.6.0:
-  version "5.7.0"
-  resolved "https://registry.yarnpkg.com/type-fest/-/type-fest-5.7.0.tgz#bae586d3b7c2596bd9c7e62195f33c7fcada1c91"
-  integrity sha512-1URUxUqfHFM1c+zfSPsa3gnkO7Aq21qyH75SIduNYz4SzY964rn1X2vCMQaHSHhktiw+0kPa2iyb6PUpXqB6Vg==
+  version "5.9.0"
+  resolved "https://registry.yarnpkg.com/type-fest/-/type-fest-5.9.0.tgz#0a4dd554d397f1a44447477eaeb3d1f4d8c7680f"
+  integrity sha512-yANm3Jr3GiJ1qgJlxGAVxTOIcEOk1rhQHamlXtnrCK7EHP4HeM9OGxtMg/W7HFdrVzw/ZWJKGVIJusVH85sLtw==
   dependencies:
     tagged-tag "^1.0.0"
 
