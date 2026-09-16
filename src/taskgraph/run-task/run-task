@@ -921,6 +921,10 @@ def git_checkout(
     ]
     retry_required_command(b"vcs", args, extra_env=env)
 
+    workers = os.environ.get("RUN_TASK_GIT_CHECKOUT_WORKERS", "0")
+    args = ["git", "config", "--global", "checkout.workers", workers]
+    retry_required_command(b"vcs", args, extra_env=env)
+
     is_sparse = (
         has_repo and _git_config(destination_path, "core.sparseCheckout") == "true"
     )
