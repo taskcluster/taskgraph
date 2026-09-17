@@ -22,6 +22,7 @@ import json
 import os
 import platform
 import re
+import runpy
 import shutil
 import socket
 import stat
@@ -30,6 +31,7 @@ import sys
 import tempfile
 import threading
 import time
+import traceback
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -317,6 +319,23 @@ def run_command(prefix, args, *, extra_env=None, cwd=None, stdin_data=None):
     if reaper_thread:
         reaper_thread.join()
     return p.wait()
+
+
+def run_python_script(path):
+    """Execute a Python script in-process."""
+    print_line(
+        b"setup",
+        b"running python script: %s\n" % path.encode("utf-8"),
+    )
+    try:
+        runpy.run_path(path)
+    except Exception:
+        print_line(
+            b"setup",
+            b"script %s failed:\n%s"
+            % (path.encode("utf-8"), traceback.format_exc().encode("utf-8")),
+        )
+        sys.exit(1)
 
 
 def get_posix_user_group(user, group):
@@ -1668,6 +1687,7 @@ def main(args):
         "MOZ_FETCHES_DIR",
         "MOZ_PYTHON_HOME",
         "MOZ_UV_HOME",
+        "RUN_TASK_PRE_COMMAND_HOOK",
         "PIP_CACHE_DIR",
         "UPLOAD_DIR",
         "UV_CACHE_DIR",
@@ -1690,6 +1710,9 @@ def main(args):
     # Install Python requirements after fetches in case tasks want to use
     # fetches to grab dependencies.
     install_pip_requirements(repositories)
+
+    if hook_path := os.environ.get("RUN_TASK_PRE_COMMAND_HOOK"):
+        run_python_script(hook_path)
 
     return run_command(b"task", task_args, cwd=args.task_cwd)
 

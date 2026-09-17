@@ -761,6 +761,40 @@ def test_main_abspath_environment(mocker, run_main):
         assert env[key] == "/builds/worker/file"
 
 
+def test_pre_task_run_hook_sets_env(run_main, tmp_path):
+    hook = tmp_path / "hook.py"
+    hook.write_text("import os\nos.environ['HOOK_RAN'] = '1'\n")
+
+    result, env = run_main(env={"RUN_TASK_PRE_COMMAND_HOOK": str(hook)})
+
+    assert result == 0
+    assert env.get("HOOK_RAN") == "1"
+
+
+def test_pre_task_run_hook_failure_aborts_before_task(
+    run_main, patch_run_command, tmp_path, capsys
+):
+    called_with = patch_run_command()
+    hook = tmp_path / "hook.py"
+    hook.write_text("raise RuntimeError('boom')")
+
+    with pytest.raises(SystemExit) as excinfo:
+        run_main(env={"RUN_TASK_PRE_COMMAND_HOOK": str(hook)})
+
+    assert excinfo.value.code == 1
+    assert called_with == []
+
+    output = capsys.readouterr().out
+    assert "pre-task-run hook" in output
+    assert "RuntimeError: boom" in output
+    assert "hook.py" in output and "line 1" in output
+
+
+def test_no_pre_task_run_hook_is_noop(run_main):
+    result, env = run_main(env={})
+    assert result == 0
+
+
 SPARSE_REPO_FILES = [
     "a/deep/two.txt",
     "a/one.txt",
