@@ -1,5 +1,18 @@
 # Change Log
 
+## [24.3.0] - 2026-09-17
+
+### Added
+
+- Git sparse checkout support (#1039)
+- Support for checking out git trees in parallel (#1041)
+
+### Fixed
+
+- Improve performance of Graph.transitive_closure (#1014)
+- Don't assume treeherder.group-names exists in graph config (#1024)
+- Avoid seeking during tarball extraction on Windows in fetch-content (#1042)
+
 ## [24.2.3] - 2026-07-29
 
 ### Fixed
