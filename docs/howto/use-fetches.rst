@@ -105,3 +105,35 @@ There are a few differences from the earlier ``build`` examples here:
 
    It is not possible to configure the ``dest`` or ``extract`` values when using
    ``fetch`` or ``toolchain`` kinds.
+
+Tuning Download Performance
+---------------------------
+
+``fetch-content`` already downloads the artifacts of a task concurrently, but
+each one is fetched over a single connection, which can leave a fast worker's
+network idle when a task depends on one or two large artifacts. The following
+environment variables tune this. Both are off by default, because whether
+either helps depends on where a worker sits relative to the artifact storage;
+measure with the ``fetch_content`` Perfherder suite before turning them on for
+a worker pool.
+
+``TASKGRAPH_FETCH_SLICES``
+   Number of concurrent HTTP range requests to split a single download into.
+   Defaults to ``1``, which disables slicing. Servers that don't support range
+   requests fall back to a single stream automatically.
+
+``TASKGRAPH_FETCH_SLICE_MIN_BYTES``
+   Downloads smaller than this are never sliced. Defaults to 64MB.
+
+``TASKGRAPH_SKIP_CDN``
+   Set to ``1`` to send the ``x-taskcluster-skip-cdn`` header when fetching
+   task artifacts, which asks the queue to redirect to the bucket backing the
+   artifact rather than to the CDN in front of it. The queue does this
+   automatically when it recognises the caller as running in the same region
+   as the bucket, but it can only recognise EC2 instances, so workers running
+   anywhere else have to opt in.
+
+   This is a trade off rather than a clear win. Going direct can be quicker
+   for a worker close to the bucket, but it gives up the CDN cache that every
+   other worker is sharing, and it is markedly slower for a worker that isn't
+   nearby.
