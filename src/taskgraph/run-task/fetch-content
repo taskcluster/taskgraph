@@ -754,6 +754,35 @@ def _github_submodule_required(repo: str, commit: str):
         return True
 
 
+GIT_FETCH_MODES = ("clone", "init_and_fetch")
+
+
+def _populate_git_dir(git_dir, repo, commit, fetch_mode, env):
+    if fetch_mode == "clone":
+        log(f"cloning {repo} to {git_dir}")
+        subprocess.run(["git", "clone", "-n", repo, str(git_dir)], check=True, env=env)
+        return commit
+
+    if fetch_mode == "init_and_fetch":
+        # https://bugzilla.mozilla.org/show_bug.cgi?id=2047876
+        log(f"initializing empty repository in {git_dir}")
+        git_dir.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["git", "init", "--quiet", str(git_dir)], check=True)
+
+        log(f"adding remote origin {repo}")
+        subprocess.run(
+            ["git", "remote", "add", "origin", repo], cwd=str(git_dir), check=True
+        )
+
+        log(f"fetching {commit} from {repo}")
+        subprocess.run(
+            ["git", "fetch", "origin", commit], cwd=str(git_dir), check=True, env=env
+        )
+        return "FETCH_HEAD"
+
+    raise ValueError(f"unknown fetch mode: {fetch_mode}")
+
+
 def git_checkout_archive(
     dest_path: pathlib.Path,
     repo: str,
@@ -761,6 +790,7 @@ def git_checkout_archive(
     prefix=None,
     ssh_key=None,
     include_dot_git=False,
+    fetch_mode="clone",
 ):
     """Produce an archive of the files comprising a Git checkout."""
     dest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -790,11 +820,6 @@ def git_checkout_archive(
 
         git_dir = temp_dir / prefix
 
-        # This could be faster with a shallow clone. However, Git requires a ref
-        # to initiate a clone. Since the commit-ish may not refer to a ref, we
-        # simply perform a full clone followed by a checkout.
-        print(f"cloning {repo} to {git_dir}")
-
         env = os.environ.copy()
         keypath = ""
         if ssh_key:
@@ -814,11 +839,11 @@ def git_checkout_archive(
 
             env = {"GIT_SSH_COMMAND": f"ssh -o 'StrictHostKeyChecking no' -i {keypath}"}
 
-        subprocess.run(["git", "clone", "-n", repo, str(git_dir)], check=True, env=env)
+        revision = _populate_git_dir(git_dir, repo, commit, fetch_mode, env)
 
         # Always use a detached head so that git prints out what it checked out.
         subprocess.run(
-            ["git", "checkout", "--detach", commit], cwd=str(git_dir), check=True
+            ["git", "checkout", "--detach", revision], cwd=str(git_dir), check=True
         )
 
         # When including the .git, we want --depth 1, but a direct clone would not
@@ -890,6 +915,7 @@ def command_git_checkout_archive(args):
             prefix=args.path_prefix,
             ssh_key=args.ssh_key_secret,
             include_dot_git=args.include_dot_git,
+            fetch_mode=args.fetch_mode,
         )
     except Exception:
         try:
@@ -1043,6 +1069,13 @@ def main():
     )
     git_checkout.add_argument(
         "--include-dot-git", action="store_true", help="Include the .git directory"
+    )
+    git_checkout.add_argument(
+        "--fetch-mode",
+        choices=GIT_FETCH_MODES,
+        default="clone",
+        help="How to populate the checkout: clone the repository, or init an "
+        "empty one and fetch only the requested commit",
     )
 
     url = subparsers.add_parser("static-url", help="Download a static URL")
