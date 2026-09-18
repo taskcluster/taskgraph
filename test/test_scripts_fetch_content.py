@@ -4,6 +4,7 @@ import os
 import pathlib
 import shutil
 import stat
+import subprocess
 import sys
 import tarfile
 import urllib.request
@@ -14,6 +15,8 @@ from unittest.mock import MagicMock
 import pytest
 
 import taskgraph
+
+from .conftest import nowin
 
 
 @pytest.fixture(scope="module")
@@ -379,3 +382,138 @@ def test_merge_tree_readonly_dir_from_later_fetch(tmp_path, fetch_content_mod):
     assert (dest / "tests" / "a.txt").read_text() == "a"
     assert (dest / "tests" / "b.txt").read_text() == "b"
     assert stat.S_IMODE((dest / "tests").stat().st_mode) == 0o555
+
+
+@pytest.fixture
+def local_git_repo(tmp_path):
+    repo = tmp_path / "upstream"
+    repo.mkdir()
+
+    def run(*args):
+        subprocess.run(
+            ["git", "-C", str(repo), *args],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    run("init", "--quiet", "--initial-branch", "main")
+    run("config", "user.name", "Test")
+    run("config", "user.email", "test@example.com")
+
+    (repo / "first.txt").write_text("first\n")
+    run("add", "first.txt")
+    run("commit", "--quiet", "-m", "first")
+    first = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    run("tag", "v1")
+
+    (repo / "second.txt").write_text("second\n")
+    run("add", "second.txt")
+    run("commit", "--quiet", "-m", "second")
+
+    return repo, first
+
+
+def archive_names(fetch_content_mod, path):
+    with path.open("rb") as fh:
+        with fetch_content_mod.ZstdDecompressor().stream_reader(fh) as reader:
+            with tarfile.open(fileobj=reader, mode="r|") as tf:
+                return sorted(member.name for member in tf)
+
+
+@nowin
+def test_populate_git_dir_init_and_fetch(
+    fetch_content_mod, local_git_repo, tmp_path, mocker
+):
+    repo, first = local_git_repo
+    spy = mocker.spy(fetch_content_mod.subprocess, "run")
+    git_dir = tmp_path / "checkout"
+
+    revision = fetch_content_mod._populate_git_dir(
+        git_dir, f"file://{repo}", first, "init_and_fetch", os.environ.copy()
+    )
+
+    assert revision == "FETCH_HEAD"
+
+    argvs = [call.args[0] for call in spy.call_args_list]
+    assert ["git", "fetch", "origin", first] in argvs
+    assert not any(argv[:2] == ["git", "clone"] for argv in argvs)
+
+    assert (
+        subprocess.run(
+            ["git", "-C", str(git_dir), "cat-file", "-t", first],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        == "commit"
+    )
+
+
+@nowin
+def test_populate_git_dir_clone(fetch_content_mod, local_git_repo, tmp_path, mocker):
+    repo, first = local_git_repo
+    spy = mocker.spy(fetch_content_mod.subprocess, "run")
+    git_dir = tmp_path / "checkout"
+
+    revision = fetch_content_mod._populate_git_dir(
+        git_dir, f"file://{repo}", first, "clone", os.environ.copy()
+    )
+
+    assert revision == first
+    assert [call.args[0] for call in spy.call_args_list] == [
+        ["git", "clone", "-n", f"file://{repo}", str(git_dir)]
+    ]
+
+
+def test_populate_git_dir_unknown_mode(fetch_content_mod, tmp_path):
+    with pytest.raises(ValueError):
+        fetch_content_mod._populate_git_dir(
+            tmp_path / "checkout", "file:///nonexistent", "abcdef", "nope", {}
+        )
+
+
+@nowin
+def test_git_checkout_archive_fetch_modes_agree(
+    fetch_content_mod, local_git_repo, tmp_path
+):
+    repo, first = local_git_repo
+    names = {}
+
+    for fetch_mode in fetch_content_mod.GIT_FETCH_MODES:
+        dest = tmp_path / f"{fetch_mode}.tar.zst"
+        fetch_content_mod.git_checkout_archive(
+            dest, f"file://{repo}", first, prefix="checkout", fetch_mode=fetch_mode
+        )
+        assert dest.exists()
+        names[fetch_mode] = archive_names(fetch_content_mod, dest)
+
+    assert names["clone"] == names["init_and_fetch"]
+    assert "checkout/first.txt" in names["clone"]
+    assert "checkout/second.txt" not in names["clone"]
+
+
+@nowin
+def test_git_checkout_archive_init_and_fetch_include_dot_git(
+    fetch_content_mod, local_git_repo, tmp_path
+):
+    repo, first = local_git_repo
+    dest = tmp_path / "with-dot-git.tar.zst"
+
+    fetch_content_mod.git_checkout_archive(
+        dest,
+        f"file://{repo}",
+        first,
+        prefix="checkout",
+        include_dot_git=True,
+        fetch_mode="init_and_fetch",
+    )
+
+    names = archive_names(fetch_content_mod, dest)
+    assert any(name.startswith("checkout/.git/") for name in names)
+    assert "checkout/first.txt" in names
