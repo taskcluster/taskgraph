@@ -683,6 +683,36 @@ def repack_archive(
             )
 
 
+def merge_tree(src, dest):
+    """Move the contents of the src directory into dest and remove src.
+
+    Directories present on both sides are merged entry by entry and take
+    the mode from src. Any other path present on both sides is replaced by
+    the one from src.
+    """
+    dest.mkdir(parents=True, exist_ok=True)
+    os.chmod(src, stat.S_IMODE(os.stat(src).st_mode) | stat.S_IWUSR)
+    for entry in os.scandir(src):
+        target = dest / entry.name
+        if (
+            entry.is_dir(follow_symlinks=False)
+            and target.is_dir()
+            and not target.is_symlink()
+        ):
+            mode = stat.S_IMODE(entry.stat(follow_symlinks=False).st_mode)
+            merge_tree(pathlib.Path(entry.path), target)
+            os.chmod(target, mode)
+            continue
+        if target.is_symlink() or target.exists():
+            log(f"{target} is provided by more than one fetch, replacing it")
+            if target.is_dir() and not target.is_symlink():
+                shutil.rmtree(target)
+            else:
+                target.unlink()
+        os.replace(entry.path, target)
+    src.rmdir()
+
+
 def fetch_and_extract(url, dest_dir, extract=True, sha256=None, size=None):
     """Fetch a URL and extract it to a destination path.
 
@@ -708,15 +738,25 @@ def fetch_and_extract(url, dest_dir, extract=True, sha256=None, size=None):
 
 
 def fetch_urls(downloads):
-    """Fetch URLs pairs to a pathlib.Path."""
+    """Fetch URLs pairs to a pathlib.Path.
+
+    Each fetch is downloaded and extracted into a staging directory under
+    its destination, all in parallel. The staging directories are then
+    merged into the destinations sequentially, in the order the fetches
+    were given. Two archives never write to the same directory at the
+    same time, and when they contain the same path the later fetch wins.
+    """
     with concurrent.futures.ThreadPoolExecutor(CONCURRENCY) as e:
-        fs = []
+        extractions = []
+        for url, dest_dir, *rest in downloads:
+            staging_dir = pathlib.Path(tempfile.mkdtemp(prefix=".fetch.", dir=dest_dir))
+            future = e.submit(fetch_and_extract, url, staging_dir, *rest)
+            extractions.append((future, staging_dir, dest_dir))
 
-        for download in downloads:
-            fs.append(e.submit(fetch_and_extract, *download))
-
-        for f in fs:
-            f.result()
+        for future, staging_dir, dest_dir in extractions:
+            future.result()
+            log(f"Merging {staging_dir} into {dest_dir}")
+            merge_tree(staging_dir, dest_dir)
 
 
 def _git_checkout_github_archive(

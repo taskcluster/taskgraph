@@ -1,6 +1,11 @@
+import io
 import json
 import os
 import pathlib
+import shutil
+import stat
+import sys
+import tarfile
 import urllib.request
 from importlib.machinery import SourceFileLoader
 from importlib.util import module_from_spec, spec_from_loader
@@ -259,3 +264,118 @@ def test_should_repack_archive(
     ), (
         f"Failed for orig: {orig}, dest: {dest}, strip_components: {strip_components}, add_prefix: {add_prefix}, expected {expected} but received {not expected}"
     )
+
+
+def _make_tar(path, files):
+    with tarfile.open(path, "w") as tar:
+        for name, content in files.items():
+            data = content.encode("utf-8")
+            info = tarfile.TarInfo(name)
+            info.size = len(data)
+            tar.addfile(info, io.BytesIO(data))
+
+
+def test_fetch_urls_merges_staged_extractions(monkeypatch, tmp_path, fetch_content_mod):
+    archives = tmp_path / "archives"
+    archives.mkdir()
+    _make_tar(
+        archives / "common.tar",
+        {"tests/common/a.txt": "a", "tests/shared.txt": "first"},
+    )
+    _make_tar(
+        archives / "suite.tar",
+        {"tests/suite/b.txt": "b", "tests/shared.txt": "second"},
+    )
+    dest = tmp_path / "fetches"
+    dest.mkdir()
+
+    def mock_download_to_path(url, path, sha256=None, size=None):
+        shutil.copy(archives / path.name, path)
+
+    monkeypatch.setattr(fetch_content_mod, "download_to_path", mock_download_to_path)
+
+    fetch_content_mod.fetch_urls(
+        [
+            ("https://example.com/common.tar", dest, True, None),
+            ("https://example.com/suite.tar", dest, True, None),
+        ]
+    )
+
+    assert sorted(p.relative_to(dest).as_posix() for p in dest.rglob("*")) == [
+        "tests",
+        "tests/common",
+        "tests/common/a.txt",
+        "tests/shared.txt",
+        "tests/suite",
+        "tests/suite/b.txt",
+    ]
+    assert (dest / "tests" / "shared.txt").read_text() == "second"
+
+
+def test_fetch_urls_places_unextracted_files(monkeypatch, tmp_path, fetch_content_mod):
+    archives = tmp_path / "archives"
+    archives.mkdir()
+    _make_tar(archives / "tool.tar", {"tool/bin/tool": "t"})
+    dest = tmp_path / "fetches"
+    dest.mkdir()
+
+    def mock_download_to_path(url, path, sha256=None, size=None):
+        if path.name.endswith(".tar"):
+            shutil.copy(archives / path.name, path)
+        else:
+            path.write_text("plain")
+
+    monkeypatch.setattr(fetch_content_mod, "download_to_path", mock_download_to_path)
+
+    fetch_content_mod.fetch_urls(
+        [
+            ("https://example.com/tool.tar", dest, True, None),
+            ("https://example.com/plain.txt", dest, False, None),
+            ("https://example.com/notatar.txt", dest, True, None),
+        ]
+    )
+
+    assert sorted(p.name for p in dest.iterdir()) == [
+        "notatar.txt",
+        "plain.txt",
+        "tool",
+    ]
+    assert (dest / "tool" / "bin" / "tool").read_text() == "t"
+    assert (dest / "notatar.txt").read_text() == "plain"
+
+
+def test_merge_tree_replaces_conflicting_entries(tmp_path, fetch_content_mod):
+    src = tmp_path / "src"
+    dest = tmp_path / "dest"
+    (src / "dir").mkdir(parents=True)
+    (src / "dir" / "new.txt").write_text("new")
+    (src / "file").write_text("file")
+    (dest / "dir" / "kept").mkdir(parents=True)
+    (dest / "dir" / "new.txt").write_text("old")
+    (dest / "file").mkdir()
+
+    fetch_content_mod.merge_tree(src, dest)
+
+    assert not src.exists()
+    assert (dest / "dir" / "new.txt").read_text() == "new"
+    assert (dest / "dir" / "kept").is_dir()
+    assert (dest / "file").is_file()
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32" or os.getuid() == 0, reason="needs POSIX directory modes"
+)
+def test_merge_tree_readonly_dir_from_later_fetch(tmp_path, fetch_content_mod):
+    src = tmp_path / "src"
+    dest = tmp_path / "dest"
+    (src / "tests").mkdir(parents=True)
+    (src / "tests" / "b.txt").write_text("b")
+    (dest / "tests").mkdir(parents=True)
+    (dest / "tests" / "a.txt").write_text("a")
+    (src / "tests").chmod(0o555)
+
+    fetch_content_mod.merge_tree(src, dest)
+
+    assert (dest / "tests" / "a.txt").read_text() == "a"
+    assert (dest / "tests" / "b.txt").read_text() == "b"
+    assert stat.S_IMODE((dest / "tests").stat().st_mode) == 0o555
