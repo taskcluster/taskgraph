@@ -53,7 +53,7 @@ def filter_for_git_branch(task, parameters):
         return True
 
     # Pull requests usually have arbitrary names, let's not filter git branches on them.
-    if parameters["tasks_for"] == "github-pull-request":
+    if parameters["tasks_for"].startswith("github-pull-request"):
         return True
 
     run_on_git_branches = set(task.attributes.get("run_on_git_branches", ["all"]))
