@@ -19,6 +19,16 @@ from taskgraph.util.yaml import load_yaml
 FAKE_GRAPH_CONFIG = {"product-dir": "browser", "taskgraph": {}}
 
 
+@pytest.fixture(autouse=True)
+def keep_reported_base_rev(monkeypatch):
+    """The tests run against this checkout, so deriving a base would fetch
+    from the fake repositories."""
+    monkeypatch.setattr(GitRepository, "derive_base_rev", lambda self, *args: None)
+    monkeypatch.setattr(
+        GitRepository, "derive_pull_request_base_rev", lambda self, *args: None
+    )
+
+
 class TestDecision(unittest.TestCase):
     def test_write_artifact_json(self):
         data = [{"some": "data"}]
@@ -198,3 +208,62 @@ def test_decision_parameters_note_invalid_json(mock_files_changed, mock_get_note
         Exception, match="Failed to parse refs/notes/decision-parameters as JSON"
     ):
         decision.get_decision_parameters(FAKE_GRAPH_CONFIG, options)
+
+
+@unittest.mock.patch.object(GitRepository, "derive_base_rev", return_value="cccc")
+@unittest.mock.patch.object(GitRepository, "get_changed_files", return_value=[])
+def test_decision_parameters_github_push_derives_base_rev(
+    mock_files_changed, mock_derive_base_rev
+):
+    params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, _BASE_OPTIONS)
+    mock_derive_base_rev.assert_called_once_with(
+        _BASE_OPTIONS["head_repository"], "bbbb", "default", "aaaa"
+    )
+    mock_files_changed.assert_called_once_with(rev="bbbb", base="cccc")
+    assert params["base_rev"] == "cccc"
+
+
+@unittest.mock.patch.object(GitRepository, "derive_base_rev", return_value=None)
+@unittest.mock.patch.object(GitRepository, "get_changed_files", return_value=[])
+def test_decision_parameters_github_push_keeps_reported_base_rev(
+    mock_files_changed, mock_derive_base_rev
+):
+    params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, _BASE_OPTIONS)
+    mock_derive_base_rev.assert_called_once()
+    mock_files_changed.assert_called_once_with(rev="bbbb", base="aaaa")
+    assert params["base_rev"] == "aaaa"
+
+
+@pytest.mark.parametrize(
+    "tasks_for", ("github-pull-request", "github-pull-request-untrusted")
+)
+@unittest.mock.patch.object(
+    GitRepository, "derive_pull_request_base_rev", return_value="cccc"
+)
+@unittest.mock.patch.object(GitRepository, "derive_base_rev", return_value="dddd")
+@unittest.mock.patch.object(GitRepository, "get_changed_files", return_value=[])
+def test_decision_parameters_pull_request_derives_base_rev(
+    mock_files_changed, mock_derive_base_rev, mock_derive_pr_base_rev, tasks_for
+):
+    options = {**_BASE_OPTIONS, "tasks_for": tasks_for, "base_ref": "main"}
+    params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, options)
+    mock_derive_base_rev.assert_not_called()
+    mock_derive_pr_base_rev.assert_called_once_with(
+        _BASE_OPTIONS["base_repository"], "bbbb", "main"
+    )
+    mock_files_changed.assert_called_once_with(rev="bbbb", base="cccc")
+    assert params["base_rev"] == "cccc"
+
+
+@unittest.mock.patch.object(
+    GitRepository, "derive_pull_request_base_rev", return_value=None
+)
+@unittest.mock.patch.object(GitRepository, "get_changed_files", return_value=[])
+def test_decision_parameters_pull_request_keeps_reported_base_rev(
+    mock_files_changed, mock_derive_pr_base_rev
+):
+    options = {**_BASE_OPTIONS, "tasks_for": "github-pull-request", "base_ref": "main"}
+    params = decision.get_decision_parameters(FAKE_GRAPH_CONFIG, options)
+    mock_derive_pr_base_rev.assert_called_once()
+    mock_files_changed.assert_called_once_with(rev="bbbb", base="aaaa")
+    assert params["base_rev"] == "aaaa"

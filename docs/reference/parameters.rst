@@ -28,6 +28,17 @@ base_rev
 ~~~~~~~~
    The previous revision before ``head_rev`` got merged into. This can be a short revision string.
 
+   For a ``github-push`` of a branch and for ``github-pull-request``, the
+   :term:`Decision Task` replaces the reported base with the merge base of
+   ``head_rev`` and the target branch, so ``files_changed`` covers only the
+   new commits. The target is ``base_ref`` for a pull request and the default
+   branch for a push. A push that only adds commits keeps its reported base,
+   and a force push to the default branch uses the merge base of its previous
+   and new tips. When no merge base can be found, the reported base is kept.
+
+   Set the ``GITHUB_TOKEN`` environment variable in the :term:`Decision Task`
+   to raise the rate limit of the GitHub API requests this makes.
+
 head_rev
 ~~~~~~~~
    The revision to check out, this can be a short revision string.

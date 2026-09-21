@@ -153,6 +153,28 @@ def taskgraph_decision(options, parameters=None):
     )
 
 
+def derive_base_rev(repo, parameters):
+    """Return the base to use for a GitHub push or pull request, or ``None``
+    to keep ``parameters["base_rev"]`` as reported."""
+    tasks_for = parameters.get("tasks_for", "")
+    if tasks_for == "github-push":
+        # GitHub's event.before is not the base of a new or force pushed
+        # branch, see GitRepository.derive_base_rev.
+        return repo.derive_base_rev(
+            parameters["head_repository"],
+            parameters["head_rev"],
+            parameters["head_ref"],
+            parameters["base_rev"],
+        )
+    if tasks_for.startswith("github-pull-request"):
+        return repo.derive_pull_request_base_rev(
+            parameters["base_repository"],
+            parameters["head_rev"],
+            parameters.get("base_ref"),
+        )
+    return None
+
+
 def get_decision_parameters(graph_config, options):
     """
     Load parameters from the command-line options for 'taskgraph decision'.
@@ -187,6 +209,10 @@ def get_decision_parameters(graph_config, options):
         commit_message = repo.get_commit_message()
     except UnicodeDecodeError:
         commit_message = ""
+
+    if base_rev := derive_base_rev(repo, parameters):
+        logger.info(f"Using {base_rev} as base_rev for {parameters['head_ref']}")
+        parameters["base_rev"] = base_rev
 
     # Define default filter list, as most configurations shouldn't need
     # custom filters.

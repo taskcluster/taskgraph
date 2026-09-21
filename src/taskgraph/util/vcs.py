@@ -7,15 +7,24 @@ import logging
 import os
 import re
 import subprocess
+import time
 from abc import ABC, abstractmethod
+from pathlib import Path
 from shutil import which
 from typing import Optional
+from urllib.parse import quote
+
+import requests
 
 from taskgraph.util.path import ancestors
 
 PUSHLOG_TMPL = "{}/json-pushes?version=2&changeset={}&tipsonly=1&full=1"
 
 logger = logging.getLogger(__name__)
+
+
+class _GitHubCompareError(Exception):
+    pass
 
 
 class Repository(ABC):
@@ -215,6 +224,29 @@ class Repository(ABC):
         If this function returns an unexpected value, then make sure
         the revision was fetched from the remote repository."""
 
+    def derive_base_rev(
+        self,
+        head_repository: str,
+        head_rev: str,
+        head_ref: str,
+        base_rev: str,
+    ) -> Optional[str]:
+        """Return the base to use for a push of ``head_rev`` to ``head_ref``
+        when the reported ``base_rev`` is not it, or ``None`` to keep
+        ``base_rev`` as reported.
+
+        Only supported by Git; returns ``None`` for all other VCS types.
+        """
+        return None
+
+    def derive_pull_request_base_rev(
+        self,
+        base_repository: str,
+        head_rev: str,
+        base_ref: str,
+    ) -> Optional[str]:
+        return None
+
     def get_note(
         self,
         note: str,
@@ -395,6 +427,28 @@ class GitRepository(Repository):
         return "origin"
 
     _LS_REMOTE_PATTERN = re.compile(r"ref:\s+refs/heads/(?P<branch_name>\S+)\s+HEAD")
+
+    # A fetch against GitHub takes a few seconds here. A failed derivation only
+    # falls back to the reported base, so a stalled transfer must not eat the
+    # decision task's time budget.
+    FETCH_TIMEOUT = 120
+    DERIVE_TIMEOUT = 300
+    # Enough history to find the reported base under a normal push without
+    # fetching the whole branch. The check is repeated with more history when
+    # this misses, so this depth only saves a fetch.
+    PROBE_DEPTH = 50
+    MERGE_BASE_DEPTHS = (200, 800, 3200, 12800)
+    _GITHUB_URL = re.compile(r"https://github\.com/(?P<repo>[^/]+/[^/]+?)(?:\.git)?/?$")
+    # Each network call gets FETCH_TIMEOUT or what is left of the
+    # DERIVE_TIMEOUT budget, whichever is shorter. Outside a derivation the
+    # deadline is infinite, so only FETCH_TIMEOUT applies.
+    _deadline = float("inf")
+
+    def _timeout(self):
+        remaining = self._deadline - time.monotonic()
+        if remaining <= 0:
+            raise subprocess.TimeoutExpired("derive base_rev", self.DERIVE_TIMEOUT)
+        return min(self.FETCH_TIMEOUT, remaining)
 
     @property
     def is_shallow(self):
@@ -601,6 +655,320 @@ class GitRepository(Repository):
             if e.returncode == 128:
                 return False
             raise
+
+    def _default_branch(self, repository):
+        output = self.run(
+            "ls-remote", "--symref", repository, "HEAD", timeout=self._timeout()
+        )
+        if not (matches := self._LS_REMOTE_PATTERN.search(output)):
+            return None, None
+        tip = next(
+            (
+                line.split()[0]
+                for line in output.splitlines()
+                if not line.startswith("ref:")
+            ),
+            None,
+        )
+        return f"refs/heads/{matches['branch_name']}", tip
+
+    def _github_compare(self, repository, base, head):
+        if not (match := self._GITHUB_URL.match(repository)):
+            raise _GitHubCompareError(f"{repository} is not on GitHub")
+        headers = {"Accept": "application/vnd.github+json"}
+        if token := os.environ.get("GITHUB_TOKEN"):
+            headers["Authorization"] = f"Bearer {token}"
+        try:
+            response = requests.get(
+                f"https://api.github.com/repos/{match['repo']}/compare/{quote(base)}...{head}",
+                params={"per_page": 1},
+                headers=headers,
+                timeout=self._timeout(),
+            )
+            response.raise_for_status()
+            compare = response.json()
+            if not (compare["status"] and compare["merge_base_commit"]["sha"]):
+                raise ValueError("no status or merge base")
+            return compare
+        except (requests.RequestException, KeyError, TypeError, ValueError) as e:
+            raise _GitHubCompareError(
+                f"GitHub compare of {base}...{head} failed: {e}"
+            ) from e
+
+    def _github_base_rev(self, repository, head_rev, head_ref, base_rev, branch_ref):
+        # A push has no target of its own, so it targets the default branch.
+        if branch_ref is None:
+            compare = None
+            if base_rev:
+                compare = self._github_compare(repository, base_rev, head_rev)
+                # The push only added commits on top of the reported base, which
+                # is then the right base.
+                if compare["status"] in ("ahead", "identical"):
+                    self._ensure_commit(repository, base_rev)
+                    return None
+            branch_ref, _ = self._default_branch(repository)
+            if not branch_ref:
+                return None
+            # A push to the default branch that rewrote it uses the merge base of
+            # its old and new tips. A new default branch keeps the reported base.
+            if head_ref == branch_ref:
+                return compare and self._ensure_commit(
+                    repository, compare["merge_base_commit"]["sha"]
+                )
+        # Otherwise the base is the merge base of the head and the target branch.
+        branch = branch_ref.removeprefix("refs/heads/")
+        compare = self._github_compare(repository, branch, head_rev)
+        return self._ensure_commit(repository, compare["merge_base_commit"]["sha"])
+
+    def _ensure_commit(self, repository, rev):
+        if not self._has_commit(rev):
+            self._fetch(repository, rev, "--depth=1")
+        return rev
+
+    def _has_commit(self, rev):
+        return bool(
+            self.run(
+                "cat-file", "-t", rev, return_codes=[128], stderr=subprocess.DEVNULL
+            )
+        )
+
+    def _resolve(self, rev):
+        return (
+            self.run(
+                "rev-parse",
+                "--verify",
+                "--quiet",
+                f"{rev}^{{commit}}",
+                return_codes=[1],
+            ).strip()
+            or rev
+        )
+
+    def _remote_tip(self, repository, ref):
+        output = self.run("ls-remote", repository, ref, timeout=self._timeout()).split()
+        return output[0] if output else None
+
+    def _is_ancestor(self, rev, descendant):
+        # merge-base exits 1 without shared history and 128 when rev is
+        # unknown locally. Both mean rev is not an ancestor we can see.
+        merge_base = self.run(
+            "merge-base",
+            rev,
+            descendant,
+            return_codes=[1, 128],
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        return merge_base.startswith(rev)
+
+    def _fetch(self, repository, refspec, *options):
+        remote = self.default_remote_name
+        if (
+            self.run(
+                "remote", "get-url", remote, return_codes=[2], stderr=subprocess.DEVNULL
+            ).strip()
+            == repository
+        ):
+            repository = remote
+        timeout = self._timeout()
+        try:
+            self.run("fetch", *options, repository, refspec, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            lock = self.run("rev-parse", "--git-path", "shallow.lock").strip()
+            Path(self.path, lock).unlink(missing_ok=True)
+            raise
+
+    def _shallow_commits(self):
+        shallow = Path(
+            self.path, self.run("rev-parse", "--git-path", "shallow").strip()
+        )
+        return shallow.read_text().split() if shallow.exists() else []
+
+    def _fetch_missing_shallow_commits(self, repository):
+        if not (commits := self._shallow_commits()):
+            return
+        found = self.run("cat-file", "--batch-check", input="\n".join(commits) + "\n")
+        for line in found.splitlines():
+            if line.endswith(" missing"):
+                self._fetch(repository, line.split()[0], "--depth=1")
+
+    def _fetch_excluding(self, repository, rev, ref):
+        try:
+            self._fetch(repository, rev, f"--shallow-exclude={ref}")
+        except subprocess.CalledProcessError:
+            return None
+        tip = self.run("rev-parse", "FETCH_HEAD").strip()
+        self._fetch_missing_shallow_commits(repository)
+        return tip
+
+    def _graft_root_parents(self, rev):
+        """Return the parents recorded in the raw commit objects of the graft
+        roots below ``rev``.
+
+        After an excluding fetch, a single parent is the fork point. Several
+        mean the fetched history crosses the shallow boundary through more
+        than one parent, as after a merge from the excluded branch."""
+        parents = set()
+        for root in self.run("rev-list", "--max-parents=0", rev).split():
+            for line in self.run("cat-file", "-p", root, errors="replace").splitlines():
+                if not line:
+                    break
+                if line.startswith("parent "):
+                    parents.add(line.split()[1])
+        return parents
+
+    def _merge_base(self, repository, head_rev, target):
+        if not self.is_shallow:
+            if target.startswith("refs/") or not self._has_commit(target):
+                self._fetch(repository, target)
+                target = "FETCH_HEAD"
+            return (
+                self.run("merge-base", target, head_rev, return_codes=[1]).strip()
+                or None
+            )
+        for depth in self.MERGE_BASE_DEPTHS:
+            self._fetch(repository, head_rev, f"--depth={depth}")
+            self._fetch(repository, target, f"--depth={depth}")
+            tip = self.run("rev-parse", "FETCH_HEAD").strip()
+            merge_base = self.run("merge-base", tip, head_rev, return_codes=[1]).strip()
+            if merge_base and not set(self._shallow_commits()).intersection(
+                self.run("rev-list", tip, head_rev, "--not", merge_base).split()
+            ):
+                return merge_base
+            if not merge_base and not self.is_shallow:
+                break
+        logger.warning(f"No merge base of {head_rev} and {target} found")
+        return None
+
+    def _contains(self, repository, head_rev, rev, branch_ref, complete):
+        """Return True when ``rev`` is an ancestor of ``head_rev``, False when
+        it is not, and None when a shallow clone cannot tell."""
+        if self._is_ancestor(rev, head_rev):
+            return True
+        if not self.is_shallow:
+            return False
+        if complete and self._fetch_excluding(repository, rev, branch_ref):
+            return False
+        if merge_base := self._merge_base(repository, head_rev, rev):
+            return merge_base.startswith(rev)
+        return None if self.is_shallow else False
+
+    def derive_base_rev(self, head_repository, head_rev, head_ref, base_rev):
+        """Return the base to use for a push of ``head_rev`` to ``head_ref``, or
+        ``None`` to keep ``base_rev`` as reported.
+
+        A fast forward push keeps ``base_rev``. A push to the default branch keeps
+        it unless the push rewrote the branch, which makes the base the merge base
+        of ``base_rev`` and ``head_rev``. Otherwise the base is the merge base of
+        ``head_rev`` and the default branch. GitHub's compare API answers when it
+        can, and Git finds the merge base when it cannot."""
+        if not head_ref.startswith("refs/heads/"):
+            return None
+        return self._try_derive_base_rev(
+            head_repository, head_rev, head_ref=head_ref, base_rev=base_rev
+        )
+
+    def derive_pull_request_base_rev(self, base_repository, head_rev, base_ref):
+        """Return the merge base of ``head_rev`` and the target branch
+        ``base_ref``, or ``None`` to keep the reported base."""
+        if not base_ref:
+            return None
+        branch_ref = f"refs/heads/{base_ref.removeprefix('refs/heads/')}"
+        return self._try_derive_base_rev(
+            base_repository, head_rev, branch_ref=branch_ref
+        )
+
+    def _try_derive_base_rev(
+        self, repository, head_rev, head_ref=None, base_rev=None, branch_ref=None
+    ):
+        self._deadline = time.monotonic() + self.DERIVE_TIMEOUT
+        try:
+            return self._derive_base_rev(
+                repository,
+                head_rev,
+                head_ref=head_ref,
+                base_rev=base_rev,
+                branch_ref=branch_ref,
+            )
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+            logger.warning(f"Cannot derive base_rev for {head_rev}: {e}")
+            return None
+        finally:
+            del self._deadline
+
+    def _derive_base_rev(
+        self, repository, head_rev, head_ref=None, base_rev=None, branch_ref=None
+    ):
+        shallow = self.is_shallow
+        head_rev = self._resolve(head_rev)
+        if base_rev == self.NULL_REVISION:
+            base_rev = None
+        if base_rev:
+            base_rev = self._resolve(base_rev)
+
+        if self._GITHUB_URL.match(repository):
+            try:
+                return self._github_base_rev(
+                    repository, head_rev, head_ref, base_rev, branch_ref
+                )
+            except _GitHubCompareError as e:
+                logger.info(f"{e}, using git")
+
+        # A normal push adds commits on top of the reported base. Look for it
+        # in recent history first, which is cheap.
+        if base_rev:
+            if shallow:
+                self._fetch(repository, head_rev, f"--depth={self.PROBE_DEPTH}")
+            if self._is_ancestor(base_rev, head_rev):
+                return None
+
+        branch_tip = None
+        if branch_ref is None:
+            branch_ref, branch_tip = self._default_branch(repository)
+            if not branch_ref:
+                return None
+
+        if head_ref == branch_ref:
+            # A push to the default branch reports its previous tip, which is
+            # the right base unless the push rewrote it.
+            if not base_rev:
+                return None
+            return self._merge_base(repository, head_rev, base_rev)
+
+        fork_point = None
+        unrelated = False
+        if shallow:
+            # Fetch the pushed commits and nothing else. This fails when
+            # head_rev is already on the branch.
+            if self._fetch_excluding(repository, head_rev, branch_ref):
+                parents = self._graft_root_parents(head_rev)
+                unrelated = not parents
+                if len(parents) == 1:
+                    (fork_point,) = parents
+            elif (branch_tip or self._remote_tip(repository, branch_ref)) == head_rev:
+                fork_point = head_rev
+            elif (
+                head_ref
+                and (tip := self._fetch_excluding(repository, branch_ref, head_ref))
+                and head_rev in self._graft_root_parents(tip)
+            ):
+                fork_point = head_rev
+            complete = fork_point is not None
+        else:
+            complete = False
+
+        if unrelated:
+            return None
+
+        # A normal push of more than PROBE_DEPTH commits ends here.
+        if base_rev and (
+            self._contains(repository, head_rev, base_rev, branch_ref, complete)
+            is not False
+        ):
+            return None
+
+        if fork_point is None:
+            return self._merge_base(repository, head_rev, branch_ref)
+        return self._ensure_commit(repository, fork_point)
 
     def get_note(
         self,
