@@ -96,9 +96,17 @@ project
 
 level
 ~~~~~
-   The `SCM level`_ associated with this tree.
+   The trust level associated with this task group. Trust levels provide a
+   convenient way to segregate resources such as worker-pools, secrets and
+   caches based on how the task group was triggered. This creates security
+   boundaries between various degrees of trust.
 
-.. _SCM level: https://www.mozilla.org/en-US/about/governance/policies/commit/access-policy/
+   The meaning of a trust level can vary from project to project, but typically
+   level 1 is the lowest trust and corresponds to pull requests from external
+   contributors. Level 2 is a degree higher and denotes pull requests from repo
+   collaborators or pushes to unprotected branches. Level 3 is the highest
+   degree of trust and is reserved for pushes to protected branches and
+   releases.
 
 Target Set
 ----------

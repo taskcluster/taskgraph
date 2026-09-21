@@ -79,7 +79,7 @@ here is the recommended method:
     version: 1
     reporting: checks-v1
     policy:
-        pullRequests: collaborators
+        pullRequests: public_restricted
     tasks:
         -
 
@@ -109,7 +109,7 @@ here is the recommended method:
                   $if: 'tasks_for == "github-push"'
                   then: '${event.pusher.email}'
                   else:
-                      $if: 'tasks_for == "github-pull-request"'
+                      $if: 'tasks_for[:19] == "github-pull-request"'
                       then: '${event.pull_request.user.login}@users.noreply.github.com'
                       else:
                           $if: 'tasks_for == "github-release"'
@@ -118,22 +118,22 @@ here is the recommended method:
                   $if: 'tasks_for == "github-push"'
                   then: '${event.repository.html_url}'
                   else:
-                      $if: 'tasks_for == "github-pull-request"'
+                      $if: 'tasks_for[:19] == "github-pull-request"'
                       then: '${event.pull_request.base.repo.html_url}'
               repoUrl:
                   $if: 'tasks_for == "github-push"'
                   then: '${event.repository.html_url}'
                   else:
-                      $if: 'tasks_for == "github-pull-request"'
+                      $if: 'tasks_for[:19] == "github-pull-request"'
                       then: '${event.pull_request.head.repo.html_url}'
               project:
                   $if: 'tasks_for == "github-push"'
                   then: '${event.repository.name}'
                   else:
-                      $if: 'tasks_for == "github-pull-request"'
+                      $if: 'tasks_for[:19] == "github-pull-request"'
                       then: '${event.pull_request.head.repo.name}'
               headBranch:
-                  $if: 'tasks_for == "github-pull-request"'
+                  $if: 'tasks_for[:19] == "github-pull-request"'
                   then: ${event.pull_request.head.ref}
                   else:
                       $if: 'tasks_for == "github-push"'
@@ -142,7 +142,7 @@ here is the recommended method:
                   $if: 'tasks_for == "github-push"'
                   then: '${event.after}'
                   else:
-                      $if: 'tasks_for == "github-pull-request"'
+                      $if: 'tasks_for[:19] == "github-pull-request"'
                       then: '${event.pull_request.head.sha}'
 
    This isn't strictly necessary, but the format of the various Github events
@@ -165,7 +165,7 @@ here is the recommended method:
           in:
               $if: >
                   tasks_for == "github-push" && headBranch == "main"
-                  || (tasks_for == "github-pull-request" && ${event.action} in ["opened", "reopened", "synchronize"])
+                  || (tasks_for[:19] == "github-pull-request" && ${event.action} in ["opened", "reopened", "synchronize"])
               then:
                   # Task definition goes here. Since there is no "else" clause, if
                   # the above if statement evaluates to false, there will be no
@@ -236,15 +236,28 @@ here is the recommended method:
                    # while ${headBranch[11:]} strips out 'refs/heads/'
                    - 'assume:repo:${repoUrl[8:]}:branch:${headBranch[11:]}'
                else:
-                   $if: 'tasks_for == "github-pull-request"'
+                   $if: 'tasks_for[:19] == "github-pull-request"'
                    then:
-                       - 'assume:repo:github.com/${event.pull_request.base.repo.full_name}:pull-request'
+                       # ${tasks_for[7:]} strips the 'github-' prefix, leaving
+                       # either 'pull-request' or 'pull-request-untrusted'.
+                       - 'assume:repo:github.com/${event.pull_request.base.repo.full_name}:${tasks_for[7:]}'
 
       Notice how we assume different roles depending on whether the task is
       coming from a push or a pull request. This is useful when you have tasks
       that handle releases or other sensitive operations. You don't want those
       accidentally running on a pull request! By using different scopes, you can
       ensure it won't ever happen.
+
+      With the ``public_restricted`` policy set above, Github reports pull
+      requests from repository collaborators with ``tasks_for ==
+      "github-pull-request"`` and pull requests from everyone else with
+      ``tasks_for == "github-pull-request-untrusted"``. Slicing ``tasks_for[7:]``
+      turns those into the role names ``pull-request`` and
+      ``pull-request-untrusted``, so you can grant non-collaborator pull
+      requests a more restricted set of scopes than collaborator ones. This
+      matters because collapsing that distinction (e.g. by using the ``public``
+      policy) means any external contributor's pull request gets the same
+      scopes as a trusted collaborator's.
 
       The roles assumed above may vary depending on the Taskcluster
       configuration.
@@ -310,7 +323,7 @@ here is the recommended method:
                          # running your command
                          MYREPO_PIP_REQUIREMENTS: taskcluster/requirements.txt
                          REPOSITORIES: {$json: {myrepo: "MyRepo"}}
-                       - $if: 'tasks_for in ["github-pull-request"]'
+                       - $if: 'tasks_for[:19] == "github-pull-request"'
                          then:
                              MYREPO_PULL_REQUEST_NUMBER: '${event.pull_request.number}'
                command:
