@@ -114,14 +114,56 @@ IS_WINDOWS = os.name == "nt"
 NULL_REVISION = "0000000000000000000000000000000000000000"
 
 
-def print_line(prefix, m):
+def format_line(prefix, m):
     now = (
         datetime.datetime.now(tz=datetime.timezone.utc)
         .isoformat(timespec="milliseconds")
         .encode("utf-8")
     )
-    sys.stdout.buffer.write(b"[%s %s] %s" % (prefix, now, m))
+    return b"[%s %s] %s" % (prefix, now, m)
+
+
+def print_line(prefix, m):
+    sys.stdout.buffer.write(format_line(prefix, m))
     sys.stdout.buffer.flush()
+
+
+class _PrefixedLineWriter:
+    """File-like object that prefixes each complete line written to it
+    with the current time, before forwarding it to the given buffer."""
+
+    def __init__(self, prefix, buffer):
+        self.prefix = prefix
+        self.buffer = buffer
+        self._pending = ""
+
+    def write(self, s):
+        self._pending += s
+        *lines, self._pending = self._pending.split("\n")
+        for line in lines:
+            self.buffer.write(format_line(self.prefix, b"%s\n" % line.encode("utf-8")))
+        self.buffer.flush()
+        return len(s)
+
+    def flush(self):
+        if self._pending:
+            self.buffer.write(format_line(self.prefix, self._pending.encode("utf-8")))
+            self._pending = ""
+        self.buffer.flush()
+
+
+@contextlib.contextmanager
+def prefix_output(prefix):
+    """Redirect stdout/stderr so each line written is prefixed with the
+    current time, like output from `run_command`."""
+    writer = _PrefixedLineWriter(prefix, sys.stdout.buffer)
+    old_stdout, old_stderr = sys.stdout, sys.stderr
+    sys.stdout = sys.stderr = writer
+    try:
+        yield
+    finally:
+        writer.flush()
+        sys.stdout, sys.stderr = old_stdout, old_stderr
 
 
 def reap_zombies(main_subprocess):
@@ -328,7 +370,8 @@ def run_python_script(path):
         b"running python script: %s\n" % path.encode("utf-8"),
     )
     try:
-        runpy.run_path(path)
+        with prefix_output(b"script"):
+            runpy.run_path(path)
     except Exception:
         print_line(
             b"setup",

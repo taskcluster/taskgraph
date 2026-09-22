@@ -790,6 +790,21 @@ def test_pre_task_run_hook_failure_aborts_before_task(
     assert "hook.py" in output and "line 1" in output
 
 
+def test_pre_task_run_hook_output_is_prefixed(run_main, tmp_path, capsys):
+    hook = tmp_path / "hook.py"
+    hook.write_text("print('hello')\nprint('world')\n")
+
+    result, env = run_main(env={"RUN_TASK_PRE_COMMAND_HOOK": str(hook)})
+    assert result == 0
+
+    lines = [
+        line
+        for line in capsys.readouterr().out.splitlines()
+        if line.startswith("[script ") and line.endswith(("] hello", "] world"))
+    ]
+    assert len(lines) == 2
+
+
 def test_no_pre_task_run_hook_is_noop(run_main):
     result, env = run_main(env={})
     assert result == 0
