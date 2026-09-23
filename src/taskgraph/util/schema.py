@@ -6,7 +6,6 @@ import inspect
 import pprint
 import re
 import threading
-import weakref
 from collections.abc import Mapping
 from typing import Annotated, Any, Literal, Optional, Union, get_args, get_origin
 
@@ -337,36 +336,6 @@ def _caller_module_name(depth=1):
     return frame.f_globals.get("__name__", "schema")
 
 
-_keyed_by_fields_cache = weakref.WeakKeyDictionary()
-
-
-def _keyed_by_fields(cls):
-    """Return the (field name, OptionallyKeyedBy) pairs of the fields of `cls`
-    that use `optionally_keyed_by`.
-
-    This only depends on the class, so it is computed once per class rather
-    than every time an instance is validated.
-    """
-    try:
-        return _keyed_by_fields_cache[cls]
-    except KeyError:
-        pass
-
-    fields = []
-    for field_name, field_type in cls.__annotations__.items():
-        args = get_args(field_type)
-        if (
-            get_origin(field_type) is Annotated
-            and len(args) >= 2
-            and isinstance(args[1], OptionallyKeyedBy)
-        ):
-            fields.append((field_name, args[1]))
-
-    result = tuple(fields)
-    _keyed_by_fields_cache[cls] = result
-    return result
-
-
 class Schema(
     msgspec.Struct,
     kw_only=True,
@@ -394,10 +363,25 @@ class Schema(
             foo: str
     """
 
+    _keyed_by_fields = ()
+
     def __init_subclass__(cls, exclusive=None, **kwargs):
         super().__init_subclass__(**kwargs)
         if exclusive is not None:
             cls.exclusive = exclusive
+
+        # Find the fields that use `optionally_keyed_by` once per class, rather
+        # than every time an instance is validated.
+        keyed_by_fields = []
+        for field_name, field_type in cls.__annotations__.items():
+            args = get_args(field_type)
+            if (
+                get_origin(field_type) is Annotated
+                and len(args) >= 2
+                and isinstance(args[1], OptionallyKeyedBy)
+            ):
+                keyed_by_fields.append((field_name, args[1]))
+        cls._keyed_by_fields = tuple(keyed_by_fields)
 
     def __post_init__(self):
         if taskgraph.fast:
@@ -407,7 +391,7 @@ class Schema(
         # manually because msgspec doesn't support union types with multiple
         # dicts. Any fields that use `optionally_keyed_by("foo", dict)` would
         # otherwise raise an exception.
-        for field_name, keyed_by in _keyed_by_fields(type(self)):
+        for field_name, keyed_by in self._keyed_by_fields:
             keyed_by.validate(getattr(self, field_name))
 
         # Validate mutually exclusive field groups.

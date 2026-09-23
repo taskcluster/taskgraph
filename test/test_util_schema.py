@@ -2,9 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import gc
 import unittest
-import weakref
 from typing import Optional
 
 import msgspec
@@ -414,17 +412,6 @@ def test_optionally_keyed_by_from_dict():
 
     with pytest.raises(msgspec.ValidationError):
         S.validate({"field": {"by-foo": {"a": 1}}})
-
-
-def test_keyed_by_fields_cache_does_not_keep_classes_alive():
-    S = Schema.from_dict({"field": optionally_keyed_by("foo", str, use_msgspec=True)})
-    S.validate({"field": "a"})
-    ref = weakref.ref(S)
-
-    del S
-    gc.collect()
-
-    assert ref() is None
 
 
 @pytest.mark.parametrize(
