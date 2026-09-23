@@ -2,7 +2,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import gc
 import unittest
+import weakref
 from typing import Optional
 
 import msgspec
@@ -384,6 +386,45 @@ def test_optionally_keyed_by_dict():
 
     with pytest.raises(msgspec.ValidationError):
         TestSchema.validate({"field": {"by-foo": {"a": "b"}}})
+
+
+def test_optionally_keyed_by_per_class():
+    class StrSchema(Schema):
+        field: optionally_keyed_by("foo", str, use_msgspec=True)  # type: ignore
+
+    class IntSchema(Schema):
+        field: optionally_keyed_by("bar", int, use_msgspec=True)  # type: ignore
+        other: Optional[str] = None
+
+    for _ in range(2):
+        StrSchema.validate({"field": {"by-foo": {"a": "b"}}})
+        IntSchema.validate({"field": {"by-bar": {"a": 1}}})
+
+        with pytest.raises(msgspec.ValidationError):
+            StrSchema.validate({"field": {"by-foo": {"a": 1}}})
+
+        with pytest.raises(msgspec.ValidationError):
+            IntSchema.validate({"field": {"by-foo": {"a": 1}}})
+
+
+def test_optionally_keyed_by_from_dict():
+    S = Schema.from_dict({"field": optionally_keyed_by("foo", str, use_msgspec=True)})
+
+    S.validate({"field": {"by-foo": {"a": "b"}}})
+
+    with pytest.raises(msgspec.ValidationError):
+        S.validate({"field": {"by-foo": {"a": 1}}})
+
+
+def test_keyed_by_fields_cache_does_not_keep_classes_alive():
+    S = Schema.from_dict({"field": optionally_keyed_by("foo", str, use_msgspec=True)})
+    S.validate({"field": "a"})
+    ref = weakref.ref(S)
+
+    del S
+    gc.collect()
+
+    assert ref() is None
 
 
 @pytest.mark.parametrize(
