@@ -386,6 +386,52 @@ def test_optionally_keyed_by_dict():
         TestSchema.validate({"field": {"by-foo": {"a": "b"}}})
 
 
+def test_optionally_keyed_by_per_class():
+    class StrSchema(Schema):
+        field: optionally_keyed_by("foo", str, use_msgspec=True)  # type: ignore
+
+    class IntSchema(Schema):
+        field: optionally_keyed_by("bar", int, use_msgspec=True)  # type: ignore
+        other: Optional[str] = None
+
+    for _ in range(2):
+        StrSchema.validate({"field": {"by-foo": {"a": "b"}}})
+        IntSchema.validate({"field": {"by-bar": {"a": 1}}})
+
+        with pytest.raises(msgspec.ValidationError):
+            StrSchema.validate({"field": {"by-foo": {"a": 1}}})
+
+        with pytest.raises(msgspec.ValidationError):
+            IntSchema.validate({"field": {"by-foo": {"a": 1}}})
+
+
+def test_optionally_keyed_by_subclass():
+    class BaseSchema(Schema, forbid_unknown_fields=False):
+        base: optionally_keyed_by("foo", str, use_msgspec=True)  # type: ignore
+
+    class SubSchema(BaseSchema):
+        sub: optionally_keyed_by("bar", int, use_msgspec=True)  # type: ignore
+
+    SubSchema.validate({"base": {"by-foo": {"a": "b"}}, "sub": {"by-bar": {"a": 1}}})
+
+    with pytest.raises(msgspec.ValidationError):
+        SubSchema.validate({"base": {"by-foo": {"a": 1}}, "sub": {"by-bar": {"a": 1}}})
+
+    with pytest.raises(msgspec.ValidationError):
+        SubSchema.validate(
+            {"base": {"by-foo": {"a": "b"}}, "sub": {"by-bar": {"a": "b"}}}
+        )
+
+
+def test_optionally_keyed_by_from_dict():
+    S = Schema.from_dict({"field": optionally_keyed_by("foo", str, use_msgspec=True)})
+
+    S.validate({"field": {"by-foo": {"a": "b"}}})
+
+    with pytest.raises(msgspec.ValidationError):
+        S.validate({"field": {"by-foo": {"a": 1}}})
+
+
 @pytest.mark.parametrize(
     "fields_dict, data, attr, expected",
     [

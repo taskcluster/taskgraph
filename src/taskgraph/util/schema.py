@@ -363,10 +363,27 @@ class Schema(
             foo: str
     """
 
+    _keyed_by_fields = ()
+
     def __init_subclass__(cls, exclusive=None, **kwargs):
         super().__init_subclass__(**kwargs)
         if exclusive is not None:
             cls.exclusive = exclusive
+
+        keyed_by_fields = {}
+        for base in reversed(cls.__bases__):
+            keyed_by_fields.update(getattr(base, "_keyed_by_fields", ()))
+        for field_name, field_type in cls.__annotations__.items():
+            args = get_args(field_type)
+            if (
+                get_origin(field_type) is Annotated
+                and len(args) >= 2
+                and isinstance(args[1], OptionallyKeyedBy)
+            ):
+                keyed_by_fields[field_name] = args[1]
+            else:
+                keyed_by_fields.pop(field_name, None)
+        cls._keyed_by_fields = tuple(keyed_by_fields.items())
 
     def __post_init__(self):
         if taskgraph.fast:
@@ -376,22 +393,8 @@ class Schema(
         # manually because msgspec doesn't support union types with multiple
         # dicts. Any fields that use `optionally_keyed_by("foo", dict)` would
         # otherwise raise an exception.
-        for field_name, field_type in self.__class__.__annotations__.items():
-            origin = get_origin(field_type)
-            args = get_args(field_type)
-
-            if (
-                origin is not Annotated
-                or len(args) < 2
-                or not isinstance(args[1], OptionallyKeyedBy)
-            ):
-                # Not using `optionally_keyed_by`
-                continue
-
-            keyed_by = args[1]
-            obj = getattr(self, field_name)
-
-            keyed_by.validate(obj)
+        for field_name, keyed_by in self._keyed_by_fields:
+            keyed_by.validate(getattr(self, field_name))
 
         # Validate mutually exclusive field groups.
         for group in getattr(self, "exclusive", []):
