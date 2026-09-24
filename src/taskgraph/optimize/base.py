@@ -78,7 +78,7 @@ def optimize_task_graph(
 
     # Gather each relevant task's index
     indexes = set()
-    for label in target_task_graph.graph.visit_postorder():
+    for label in target_task_graph.tasks:
         if label in do_not_optimize:
             continue
         _, strategy, arg = optimizations(label)
@@ -157,7 +157,7 @@ def remove_tasks(
     opt_counts = defaultdict(int)
     opt_reasons = {}
     removed = set()
-    dependents_of = target_task_graph.graph.reverse_links_dict()
+    _, dependents_of = target_task_graph.graph.links_and_reverse_links_dict()
     tasks = target_task_graph.tasks
     prune_candidates = set()
 
