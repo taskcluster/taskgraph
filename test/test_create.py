@@ -9,6 +9,7 @@ import unittest
 from concurrent import futures
 from unittest import mock
 
+import pytest
 import responses
 
 from taskgraph import create
@@ -244,3 +245,87 @@ class TestCreate(unittest.TestCase):
                     {"level": "4"},
                     decision_task_id="decisiontask",
                 )
+
+
+def _chain_taskgraph(n):
+    """Build a taskgraph where tid-i depends on tid-(i-1)."""
+    tasks = {}
+    for i in range(n):
+        deps = [f"tid-{i - 1}"] if i else []
+        tasks[f"tid-{i}"] = Task(
+            kind="test", label=f"t{i}", attributes={}, task={"dependencies": deps}
+        )
+    edges = {(f"tid-{i}", f"tid-{i - 1}", "dep") for i in range(1, n)}
+    taskgraph = TaskGraph(tasks, Graph(nodes=set(tasks), edges=edges))
+    label_to_taskid = {t.label: tid for tid, t in tasks.items()}
+    return taskgraph, label_to_taskid
+
+
+def test_create_tasks_long_chain(mocker):
+    "tasks are created after their dependencies, even in very deep graphs"
+    mocker.patch.object(create, "get_session")
+    created = []
+    mocker.patch.object(
+        create,
+        "create_task",
+        side_effect=lambda session, task_id, label, task_def: created.append(task_id),
+    )
+
+    n = 3000
+    taskgraph, label_to_taskid = _chain_taskgraph(n)
+    create.create_tasks(
+        GRAPH_CONFIG, taskgraph, label_to_taskid, {"level": "4"}, "decisiontask"
+    )
+
+    assert created == [f"tid-{i}" for i in range(n)]
+    assert taskgraph.tasks["tid-0"].task["dependencies"] == ["decisiontask"]
+    assert taskgraph.tasks["tid-1"].task["dependencies"] == ["tid-0"]
+
+
+def test_create_tasks_skips_dependents_of_failed_tasks(mocker):
+    "tasks depending on a task that failed to be created are not submitted"
+    mocker.patch.object(create, "get_session")
+    created = []
+
+    def fake_create_task(session, task_id, label, task_def):
+        if task_id == "tid-1":
+            raise Exception("oh no!")
+        created.append(task_id)
+
+    mocker.patch.object(create, "create_task", side_effect=fake_create_task)
+
+    taskgraph, label_to_taskid = _chain_taskgraph(4)
+    with pytest.raises(CreateTasksException) as excinfo:
+        create.create_tasks(
+            GRAPH_CONFIG, taskgraph, label_to_taskid, {"level": "4"}, "decisiontask"
+        )
+
+    assert created == ["tid-0"]
+    assert "Could not create 't1'" in str(excinfo.value)
+    assert "'t2'" not in str(excinfo.value)
+
+
+def test_create_tasks_duplicates(mocker):
+    "tasks with the task_duplicates attribute are created multiple times"
+    mocker.patch.object(create, "get_session")
+    created = []
+    mocker.patch.object(
+        create,
+        "create_task",
+        side_effect=lambda session, task_id, label, task_def: created.append(
+            (task_id, label)
+        ),
+    )
+
+    taskgraph, label_to_taskid = _chain_taskgraph(2)
+    taskgraph.tasks["tid-0"].attributes["task_duplicates"] = 3
+    create.create_tasks(
+        GRAPH_CONFIG, taskgraph, label_to_taskid, {"level": "4"}, "decisiontask"
+    )
+
+    labels = [label for _, label in created]
+    assert labels.count("t0") == 3
+    assert labels.count("t1") == 1
+    assert len({task_id for task_id, _ in created}) == 4
+    # t1 is only created once the primary t0 task was created.
+    assert labels.index("t1") > created.index(("tid-0", "t0"))
