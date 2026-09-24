@@ -107,6 +107,15 @@ class Graph(_Graph):
                 f"Dependency loop detected involving the following nodes: {loopy_nodes}"
             )
 
+    @functools.cache
+    def _visit_order(self, reverse):
+        """
+        Return the order in which `_visit` yields nodes as a tuple. The graph
+        is immutable, so this is cached to avoid sorting it again every time
+        it is visited.
+        """
+        return tuple(self._visit(reverse))
+
     def visit_postorder(self):
         """
         Generate a sequence of nodes in postorder, such that every node is
@@ -114,14 +123,14 @@ class Graph(_Graph):
 
         Raises an exception if the graph contains a cycle.
         """
-        return self._visit(False)
+        return iter(self._visit_order(False))
 
     def visit_preorder(self):
         """
         Like visit_postorder, but in reverse: evrey node is visited *before*
         any nodes it links to.
         """
-        return self._visit(True)
+        return iter(self._visit_order(True))
 
     @functools.cache
     def links_and_reverse_links_dict(self):
