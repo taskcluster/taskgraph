@@ -15,20 +15,18 @@ ARTIFACT_REFERENCE_PATTERN = re.compile("<([^/]+)/([^>]+)>")
 
 def _recurse(val, param_fns):
     def recurse(val):
-        if isinstance(val, list):
-            return [recurse(v) for v in val]
-        elif isinstance(val, dict):
+        if isinstance(val, dict):
             if len(val) == 1:
-                for param_key, param_fn in param_fns.items():
-                    if set(val.keys()) == {param_key}:
-                        if isinstance(val[param_key], dict):
-                            # handle `{"task-reference": {"<foo>": "bar"}}`
-                            return {
-                                param_fn(key): recurse(v)
-                                for key, v in val[param_key].items()
-                            }
-                        return param_fn(val[param_key])
+                ((key, value),) = val.items()
+                param_fn = param_fns.get(key)
+                if param_fn is not None:
+                    if isinstance(value, dict):
+                        # handle `{"task-reference": {"<foo>": "bar"}}`
+                        return {param_fn(k): recurse(v) for k, v in value.items()}
+                    return param_fn(value)
             return {k: recurse(v) for k, v in val.items()}
+        elif isinstance(val, list):
+            return [recurse(v) for v in val]
         else:
             return val
 

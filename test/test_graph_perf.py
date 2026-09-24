@@ -13,6 +13,11 @@ from taskgraph.graph import Graph
 from taskgraph.task import Task
 from taskgraph.taskgraph import TaskGraph
 from taskgraph.transforms.base import TransformSequence
+from taskgraph.util.parameterization import (
+    resolve_task_references,
+    resolve_timestamps,
+)
+from taskgraph.util.time import current_json_time
 
 # ---------------------------------------------------------------------------
 # Graph builders – each returns (tasks_dict, Graph, TaskGraph) for 1000 nodes
@@ -227,6 +232,48 @@ def test_create_tasks(benchmark, mocker, geometry):
 
     benchmark.pedantic(create.create_tasks, setup=setup)
     assert len(created) == N
+
+
+# ---------------------------------------------------------------------------
+# Benchmarks – task definition parameterization
+# ---------------------------------------------------------------------------
+
+
+def _make_task_def(i):
+    return {
+        "created": {"relative-datestamp": "0 seconds"},
+        "deadline": {"relative-datestamp": "1 day"},
+        "expires": {"relative-datestamp": "28 days"},
+        "metadata": {"name": f"task-{i}", "description": "d", "owner": "o"},
+        "routes": [f"index.domain.v2.project.task-{i}"],
+        "payload": {
+            "command": ["run-task", "--", "bash", "-c", f"echo {i}"],
+            "env": {
+                "BUILD": {"task-reference": "<build>"},
+                "ARTIFACT": {"artifact-reference": "<build/public/target.zip>"},
+                **{f"VAR{j}": f"value-{j}" for j in range(20)},
+            },
+            "artifacts": [{"name": f"public/a{j}", "path": "/x"} for j in range(5)],
+        },
+    }
+
+
+TASK_DEFS = [_make_task_def(i) for i in range(N)]
+
+
+@pytest.mark.benchmark
+def test_resolve_task_references():
+    for task_def in TASK_DEFS:
+        resolve_task_references(
+            "label", task_def, "task-id", "decision-id", {"build": "build-id"}
+        )
+
+
+@pytest.mark.benchmark
+def test_resolve_timestamps():
+    now = current_json_time(datetime_format=True)
+    for task_def in TASK_DEFS:
+        resolve_timestamps(now, task_def)
 
 
 # ---------------------------------------------------------------------------
