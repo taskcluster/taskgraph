@@ -405,6 +405,24 @@ def test_optionally_keyed_by_per_class():
             IntSchema.validate({"field": {"by-foo": {"a": 1}}})
 
 
+def test_optionally_keyed_by_subclass():
+    class BaseSchema(Schema, forbid_unknown_fields=False):
+        base: optionally_keyed_by("foo", str, use_msgspec=True)  # type: ignore
+
+    class SubSchema(BaseSchema):
+        sub: optionally_keyed_by("bar", int, use_msgspec=True)  # type: ignore
+
+    SubSchema.validate({"base": {"by-foo": {"a": "b"}}, "sub": {"by-bar": {"a": 1}}})
+
+    with pytest.raises(msgspec.ValidationError):
+        SubSchema.validate({"base": {"by-foo": {"a": 1}}, "sub": {"by-bar": {"a": 1}}})
+
+    with pytest.raises(msgspec.ValidationError):
+        SubSchema.validate(
+            {"base": {"by-foo": {"a": "b"}}, "sub": {"by-bar": {"a": "b"}}}
+        )
+
+
 def test_optionally_keyed_by_from_dict():
     S = Schema.from_dict({"field": optionally_keyed_by("foo", str, use_msgspec=True)})
 

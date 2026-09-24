@@ -370,9 +370,9 @@ class Schema(
         if exclusive is not None:
             cls.exclusive = exclusive
 
-        # Find the fields that use `optionally_keyed_by` once per class, rather
-        # than every time an instance is validated.
-        keyed_by_fields = []
+        keyed_by_fields = {}
+        for base in reversed(cls.__bases__):
+            keyed_by_fields.update(getattr(base, "_keyed_by_fields", ()))
         for field_name, field_type in cls.__annotations__.items():
             args = get_args(field_type)
             if (
@@ -380,8 +380,10 @@ class Schema(
                 and len(args) >= 2
                 and isinstance(args[1], OptionallyKeyedBy)
             ):
-                keyed_by_fields.append((field_name, args[1]))
-        cls._keyed_by_fields = tuple(keyed_by_fields)
+                keyed_by_fields[field_name] = args[1]
+            else:
+                keyed_by_fields.pop(field_name, None)
+        cls._keyed_by_fields = tuple(keyed_by_fields.items())
 
     def __post_init__(self):
         if taskgraph.fast:
