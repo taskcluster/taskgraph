@@ -7,6 +7,7 @@
 
 
 import datetime
+import functools
 import re
 
 PATTERN = re.compile(r"((?:\d+)?\.?\d+) *([a-z]+)")
@@ -57,6 +58,7 @@ class UnknownTimeMeasurement(Exception):
     pass
 
 
+@functools.cache
 def value_of(input_str):
     """
     Convert a string to a json date in the future
