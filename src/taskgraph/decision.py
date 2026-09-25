@@ -17,7 +17,6 @@ from taskgraph.actions import render_actions_json
 from taskgraph.create import create_tasks
 from taskgraph.generator import TaskGraphGenerator
 from taskgraph.parameters import Parameters, get_version
-from taskgraph.taskgraph import TaskGraph
 from taskgraph.util import json
 from taskgraph.util.python_path import find_object
 from taskgraph.util.schema import Schema, validate_schema
@@ -130,9 +129,6 @@ def taskgraph_decision(options, parameters=None):
     write_artifact(
         "runnable-jobs.json", full_task_graph_to_runnable_tasks(full_task_json)
     )
-
-    # this is just a test to check whether the from_json() function is working
-    _, _ = TaskGraph.from_json(full_task_json)
 
     # write out the target task set to allow reproducing this as input
     write_artifact("target-tasks.json", list(tgg.target_task_set.tasks.keys()))

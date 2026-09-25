@@ -78,7 +78,7 @@ def optimize_task_graph(
 
     # Gather each relevant task's index
     indexes = set()
-    for label in target_task_graph.graph.visit_postorder():
+    for label in target_task_graph.tasks:
         if label in do_not_optimize:
             continue
         _, strategy, arg = optimizations(label)
@@ -157,7 +157,7 @@ def remove_tasks(
     opt_counts = defaultdict(int)
     opt_reasons = {}
     removed = set()
-    dependents_of = target_task_graph.graph.reverse_links_dict()
+    _, dependents_of = target_task_graph.graph.links_and_reverse_links_dict()
     tasks = target_task_graph.tasks
     prune_candidates = set()
 
@@ -301,6 +301,18 @@ def replace_tasks(
         target_task_graph.graph.links_and_reverse_links_dict()
     )
 
+    # Many tasks share dependents (e.g. docker images or toolchains), so
+    # resolve the deadline of each dependent only once.
+    now = datetime.datetime.now(datetime.timezone.utc)
+    deadlines = {}
+
+    def get_deadline(label):
+        if label not in deadlines:
+            deadlines[label] = resolve_timestamps(
+                now, target_task_graph.tasks[label].task["deadline"]
+            )
+        return deadlines[label]
+
     for label in target_task_graph.graph.visit_postorder():
         logger.debug(f"replace_tasks: {label}")
         # if we're not allowed to optimize, that's easy..
@@ -331,14 +343,9 @@ def replace_tasks(
         opt_by, opt, arg = optimizations(label)
 
         # compute latest deadline of dependents (if any)
-        dependents = [target_task_graph.tasks[l] for l in dependents_of[label]]
         deadline = None
-        if dependents:
-            now = datetime.datetime.now(datetime.timezone.utc)
-            deadline = max(
-                resolve_timestamps(now, task.task["deadline"])
-                for task in dependents  # type: ignore
-            )
+        if dependents_of[label]:
+            deadline = max(get_deadline(l) for l in dependents_of[label])
 
         if isinstance(opt, IndexSearch):
             arg = arg, index_to_taskid, taskid_to_status

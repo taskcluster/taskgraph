@@ -8,10 +8,16 @@ import copy
 
 import pytest
 
+from taskgraph import create
 from taskgraph.graph import Graph
 from taskgraph.task import Task
 from taskgraph.taskgraph import TaskGraph
 from taskgraph.transforms.base import TransformSequence
+from taskgraph.util.parameterization import (
+    resolve_task_references,
+    resolve_timestamps,
+)
+from taskgraph.util.time import current_json_time
 
 # ---------------------------------------------------------------------------
 # Graph builders – each returns (tasks_dict, Graph, TaskGraph) for 1000 nodes
@@ -124,6 +130,8 @@ def test_transitive_closure(geometry):
 @pytest.mark.parametrize("geometry", ["linear", "fan", "btree", "diamond"])
 def test_visit_postorder(geometry):
     _, graph, _ = GEOMETRIES[geometry]
+    # Clear the functools.cache to measure actual computation each time
+    graph._visit_order.cache_clear()
     order = list(graph.visit_postorder())
     assert len(order) == N
 
@@ -132,6 +140,8 @@ def test_visit_postorder(geometry):
 @pytest.mark.parametrize("geometry", ["linear", "fan", "btree", "diamond"])
 def test_visit_preorder(geometry):
     _, graph, _ = GEOMETRIES[geometry]
+    # Clear the functools.cache to measure actual computation each time
+    graph._visit_order.cache_clear()
     order = list(graph.visit_preorder())
     assert len(order) == N
 
@@ -177,6 +187,97 @@ def test_taskgraph_to_json(geometry):
     _, _, tg = GEOMETRIES[geometry]
     data = tg.to_json()
     assert len(data) == N
+
+
+# ---------------------------------------------------------------------------
+# Benchmarks – create_tasks scheduling
+# ---------------------------------------------------------------------------
+
+
+def _create_tasks_args(geometry):
+    """Copy a geometry into a fresh taskgraph (keyed by taskId) whose task
+    definitions list their dependencies, as `create_tasks` mutates them."""
+    _, graph, tg = GEOMETRIES[geometry]
+    deps = graph.links_dict()
+    tasks = {
+        label: Task(
+            kind=task.kind,
+            label=label,
+            attributes={},
+            task={"dependencies": sorted(deps[label])},
+        )
+        for label, task in tg.tasks.items()
+    }
+    taskgraph = TaskGraph(tasks, graph)
+    label_to_taskid = {label: label for label in tasks}
+    return (
+        {"trust-domain": "domain"},
+        taskgraph,
+        label_to_taskid,
+        {"level": "1"},
+        "decision",
+    ), {}
+
+
+@pytest.mark.benchmark
+@pytest.mark.parametrize("geometry", ["fan", "btree"])
+def test_create_tasks(benchmark, mocker, geometry):
+    created = []
+    mocker.patch.object(create, "get_session")
+    # list.append is atomic, unlike incrementing a Mock's call_count.
+    mocker.patch.object(
+        create, "create_task", side_effect=lambda *args: created.append(args[1])
+    )
+
+    def setup():
+        # The benchmark may run multiple rounds.
+        created.clear()
+        return _create_tasks_args(geometry)
+
+    benchmark.pedantic(create.create_tasks, setup=setup)
+    assert len(created) == N
+
+
+# ---------------------------------------------------------------------------
+# Benchmarks – task definition parameterization
+# ---------------------------------------------------------------------------
+
+
+def _make_task_def(i):
+    return {
+        "created": {"relative-datestamp": "0 seconds"},
+        "deadline": {"relative-datestamp": "1 day"},
+        "expires": {"relative-datestamp": "28 days"},
+        "metadata": {"name": f"task-{i}", "description": "d", "owner": "o"},
+        "routes": [f"index.domain.v2.project.task-{i}"],
+        "payload": {
+            "command": ["run-task", "--", "bash", "-c", f"echo {i}"],
+            "env": {
+                "BUILD": {"task-reference": "<build>"},
+                "ARTIFACT": {"artifact-reference": "<build/public/target.zip>"},
+                **{f"VAR{j}": f"value-{j}" for j in range(20)},
+            },
+            "artifacts": [{"name": f"public/a{j}", "path": "/x"} for j in range(5)],
+        },
+    }
+
+
+TASK_DEFS = [_make_task_def(i) for i in range(N)]
+
+
+@pytest.mark.benchmark
+def test_resolve_task_references():
+    for task_def in TASK_DEFS:
+        resolve_task_references(
+            "label", task_def, "task-id", "decision-id", {"build": "build-id"}
+        )
+
+
+@pytest.mark.benchmark
+def test_resolve_timestamps():
+    now = current_json_time(datetime_format=True)
+    for task_def in TASK_DEFS:
+        resolve_timestamps(now, task_def)
 
 
 # ---------------------------------------------------------------------------
