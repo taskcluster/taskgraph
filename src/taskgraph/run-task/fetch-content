@@ -368,6 +368,11 @@ def open_stream(path: pathlib.Path):
     raise ArchiveTypeNotSupported(path)
 
 
+def is_zstd(path: pathlib.Path):
+    with path.open(mode="rb") as fh:
+        return fh.read(4) == b"\x28\xb5\x2f\xfd"
+
+
 def archive_type(path: pathlib.Path):
     """Attempt to identify a path as an extractable archive."""
     if path.suffixes[-2:-1] == [".tar"] or path.suffixes[-1:] == [".tgz"]:
@@ -466,6 +471,13 @@ def extract_archive(path, dest_dir):
             tar = TarFile.open(fileobj=ifh, mode="r|")
             tar.extractall(str(dest_dir))
             args = []
+        elif is_zstd(path) and shutil.which("zstd"):
+            # Decompressing in a separate process keeps it from competing
+            # with concurrent downloads for the GIL.
+            ifh.close()
+            ifh = open(os.devnull, "rb")
+            args = ["tar", "--use-compress-program=zstd", "-xf", str(path)]
+            pipe_stdin = False
         else:
             args = ["tar", "xf", "-"]
             pipe_stdin = True

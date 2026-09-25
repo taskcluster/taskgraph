@@ -1,5 +1,6 @@
 import io
 import json
+import lzma
 import os
 import pathlib
 import shutil
@@ -379,3 +380,95 @@ def test_merge_tree_readonly_dir_from_later_fetch(tmp_path, fetch_content_mod):
     assert (dest / "tests" / "a.txt").read_text() == "a"
     assert (dest / "tests" / "b.txt").read_text() == "b"
     assert stat.S_IMODE((dest / "tests").stat().st_mode) == 0o555
+
+
+@pytest.fixture
+def popen_calls(monkeypatch, fetch_content_mod):
+    """Record the arguments of every subprocess.Popen call, letting them run."""
+    calls = []
+    real_popen = fetch_content_mod.subprocess.Popen
+
+    def recording_popen(args, *a, **kw):
+        calls.append(args)
+        return real_popen(args, *a, **kw)
+
+    monkeypatch.setattr(fetch_content_mod.subprocess, "Popen", recording_popen)
+    return calls
+
+
+def _tar_bytes(tmp_path, files):
+    _make_tar(tmp_path / "raw.tar", files)
+    return (tmp_path / "raw.tar").read_bytes()
+
+
+def _make_tar_zst(path, files):
+    zstandard = pytest.importorskip("zstandard")
+    path.write_bytes(
+        zstandard.ZstdCompressor().compress(_tar_bytes(path.parent, files))
+    )
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows extracts with tarfile")
+@pytest.mark.skipif(not shutil.which("zstd"), reason="needs the zstd program")
+def test_extract_archive_zstd_with_tar(tmp_path, fetch_content_mod, popen_calls):
+    archive = tmp_path / "archive.tar.zst"
+    _make_tar_zst(archive, {"dir/a.txt": "a", "b.txt": "b"})
+    dest = tmp_path / "dest"
+    dest.mkdir()
+
+    fetch_content_mod.extract_archive(archive, dest)
+
+    assert popen_calls == [
+        ["tar", "--use-compress-program=zstd", "-xf", str(archive.resolve())]
+    ]
+    assert (dest / "dir" / "a.txt").read_text() == "a"
+    assert (dest / "b.txt").read_text() == "b"
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows extracts with tarfile")
+def test_extract_archive_zstd_without_zstd_program(
+    tmp_path, fetch_content_mod, popen_calls, monkeypatch
+):
+    """Without a zstd program, decompress in Python and pipe to tar."""
+    archive = tmp_path / "archive.tar.zst"
+    _make_tar_zst(archive, {"dir/a.txt": "a"})
+    dest = tmp_path / "dest"
+    dest.mkdir()
+    monkeypatch.setattr(fetch_content_mod.shutil, "which", lambda name: None)
+
+    fetch_content_mod.extract_archive(archive, dest)
+
+    assert popen_calls == [["tar", "xf", "-"]]
+    assert (dest / "dir" / "a.txt").read_text() == "a"
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows extracts with tarfile")
+def test_extract_archive_other_compression_pipes_to_tar(
+    tmp_path, fetch_content_mod, popen_calls
+):
+    """Only zstd is handed to tar; other formats still go through the pipe."""
+    archive = tmp_path / "archive.tar.xz"
+    archive.write_bytes(lzma.compress(_tar_bytes(tmp_path, {"dir/a.txt": "a"})))
+    dest = tmp_path / "dest"
+    dest.mkdir()
+
+    fetch_content_mod.extract_archive(archive, dest)
+
+    assert popen_calls == [["tar", "xf", "-"]]
+    assert (dest / "dir" / "a.txt").read_text() == "a"
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows extracts with tarfile")
+@pytest.mark.skipif(not shutil.which("zstd"), reason="needs the zstd program")
+def test_extract_archive_zstd_tar_failure(tmp_path, fetch_content_mod):
+    """A corrupt archive makes tar exit non-zero, which must be reported."""
+    archive = tmp_path / "archive.tar.zst"
+    # Incompressible, so that the tar header survives the truncation.
+    _make_tar_zst(archive, {"a.txt": os.urandom(1000000).hex()})
+    data = archive.read_bytes()
+    archive.write_bytes(data[: len(data) // 2])
+    dest = tmp_path / "dest"
+    dest.mkdir()
+
+    with pytest.raises(Exception, match="exited"):
+        fetch_content_mod.extract_archive(archive, dest)
