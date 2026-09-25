@@ -105,3 +105,16 @@ There are a few differences from the earlier ``build`` examples here:
 
    It is not possible to configure the ``dest`` or ``extract`` values when using
    ``fetch`` or ``toolchain`` kinds.
+
+Tuning Download Performance
+---------------------------
+
+The following environment variable tunes how ``fetch-content`` downloads
+artifacts.
+
+``TASKGRAPH_FETCH_STREAM``
+   Tar archives that are extracted are extracted while they download, rather
+   than written to disk and read back, into a staging directory that is only
+   merged into place once the download is complete and verified. This is on
+   by default; set to ``0`` to download to a file first. Zip archives, and
+   fetches that aren't extracted, always go through a file.
