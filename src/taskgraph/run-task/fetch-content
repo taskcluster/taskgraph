@@ -43,6 +43,8 @@ except ImportError:
 
 CONCURRENCY = multiprocessing.cpu_count()
 
+CHUNK_SIZE = 1024 * 1024
+
 
 def log(msg):
     print(msg, file=sys.stderr)
@@ -219,7 +221,7 @@ def stream_download(url, sha256=None, size=None, headers=None):
                     size = content_length
 
         while True:
-            chunk = fh.read(65536)
+            chunk = fh.read(CHUNK_SIZE)
             if not chunk:
                 break
 
