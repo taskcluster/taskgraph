@@ -5,7 +5,7 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "@taskcluster/client": "107.0.0"
+    "@taskcluster/client": "110.1.0"
   },
   "engines": {
     "node": "^24"
