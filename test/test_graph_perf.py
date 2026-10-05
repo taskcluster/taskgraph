@@ -129,6 +129,8 @@ def test_transitive_closure(geometry):
 @pytest.mark.parametrize("geometry", ["linear", "fan", "btree", "diamond"])
 def test_visit_postorder(geometry):
     _, graph, _ = GEOMETRIES[geometry]
+    # Clear the functools.cache to measure actual computation each time
+    graph._visit_order.cache_clear()
     order = list(graph.visit_postorder())
     assert len(order) == N
 
@@ -137,6 +139,8 @@ def test_visit_postorder(geometry):
 @pytest.mark.parametrize("geometry", ["linear", "fan", "btree", "diamond"])
 def test_visit_preorder(geometry):
     _, graph, _ = GEOMETRIES[geometry]
+    # Clear the functools.cache to measure actual computation each time
+    graph._visit_order.cache_clear()
     order = list(graph.visit_preorder())
     assert len(order) == N
 
@@ -166,9 +170,24 @@ def test_links_dict(geometry):
 @pytest.mark.parametrize("geometry", ["linear", "fan", "btree", "diamond"])
 def test_for_each_task(geometry):
     _, _, tg = GEOMETRIES[geometry]
+    # Clear the functools.cache to measure actual computation each time
+    tg.graph._visit_order.cache_clear()
     visited = []
     tg.for_each_task(lambda task, _tg: visited.append(task.label))
     assert len(visited) == N
+
+
+@pytest.mark.benchmark
+@pytest.mark.parametrize("geometry", ["linear", "fan", "btree", "diamond"])
+def test_for_each_task_repeated(geometry):
+    """Visit the same graph several times, like the verifications do."""
+    _, _, tg = GEOMETRIES[geometry]
+    # Clear the functools.cache to measure actual computation each time
+    tg.graph._visit_order.cache_clear()
+    visited = []
+    for _ in range(10):
+        tg.for_each_task(lambda task, _tg: visited.append(task.label))
+    assert len(visited) == 10 * N
 
 
 # ---------------------------------------------------------------------------
@@ -180,6 +199,8 @@ def test_for_each_task(geometry):
 @pytest.mark.parametrize("geometry", ["linear", "fan", "btree"])
 def test_taskgraph_to_json(geometry):
     _, _, tg = GEOMETRIES[geometry]
+    # Clear the functools.cache to measure actual computation each time
+    tg.graph._visit_order.cache_clear()
     data = tg.to_json()
     assert len(data) == N
 
