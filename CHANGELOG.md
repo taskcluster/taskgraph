@@ -1,5 +1,27 @@
 # Change Log
 
+## [24.4.0] - 2026-10-05
+
+### Added
+
+- Merge concurrently extracted fetches in a fixed order in `fetch-content`
+- Hook point in `run-task` before the task payload
+- Prefix `run_python_script` output in `run-task` with `[script <timestamp>]`
+
+### Changed
+
+- `taskgraph init` template and tutorial docs now default to the `public_restricted` PR policy
+
+### Fixed
+
+- `filter_for_git_branch` target task filter now works with untrusted PRs
+- Update `@taskcluster/client` dependency to v110 (#1060)
+- perf: compute `optionally_keyed_by` fields once per Schema class (#1049)
+- perf: speed up resolving task definition references (#1051)
+- perf: cache parsed relative time strings (#1052)
+- perf: cache the visit order of graphs (#1053)
+- perf: stop re-parsing the full task graph in the decision task (#1055)
+
 ## [24.3.0] - 2026-09-17
 
 ### Added
