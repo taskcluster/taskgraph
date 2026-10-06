@@ -282,8 +282,21 @@ class TaskGraphGenerator:
                 except KindNotFound:
                     continue
 
+    @staticmethod
+    def _get_kind_dependencies_tasks(kind, tasks_by_kind):
+        """Return the tasks of the kinds `kind` depends on, in the order in
+        which they were loaded."""
+        kind_dependencies = kind.config.get("kind-dependencies", [])
+        return {
+            label: task
+            for kind_name, tasks in tasks_by_kind.items()
+            if kind_name in kind_dependencies
+            for label, task in tasks.items()
+        }
+
     def _load_tasks_serial(self, kinds, kind_graph, parameters):
         all_tasks = {}
+        tasks_by_kind = {}
         for kind_name in kind_graph.visit_postorder():
             logger.debug(f"Loading tasks for kind {kind_name}")
 
@@ -297,11 +310,7 @@ class TaskGraphGenerator:
             try:
                 new_tasks = kind.load_tasks(
                     parameters,
-                    {
-                        k: t
-                        for k, t in all_tasks.items()
-                        if t.kind in kind.config.get("kind-dependencies", [])
-                    },
+                    self._get_kind_dependencies_tasks(kind, tasks_by_kind),
                     self._write_artifacts,
                 )
             except SchemaValidationError as exc:
@@ -310,15 +319,18 @@ class TaskGraphGenerator:
             except Exception:
                 logger.exception(f"Error loading tasks for kind {kind_name}:")
                 raise
+            kind_tasks = tasks_by_kind.setdefault(kind_name, {})
             for task in new_tasks:
                 if task.label in all_tasks:
                     raise Exception("duplicate tasks with label " + task.label)
                 all_tasks[task.label] = task
+                kind_tasks[task.label] = task
 
         return all_tasks
 
     def _load_tasks_parallel(self, kinds, kind_graph, parameters, executor):
         all_tasks = {}
+        tasks_by_kind = {}
         futures_to_kind = {}
         futures = set()
         edges = set(kind_graph.edges)
@@ -328,7 +340,6 @@ class TaskGraphGenerator:
             def submit_ready_kinds():
                 """Create the next batch of tasks for kinds without dependencies."""
                 nonlocal kinds, edges, futures
-                loaded_tasks = all_tasks.copy()
                 kinds_with_deps = {edge[0] for edge in edges}
                 ready_kinds = (
                     set(kinds) - kinds_with_deps - set(futures_to_kind.values())
@@ -346,11 +357,7 @@ class TaskGraphGenerator:
                     future = executor.submit(
                         kind.load_tasks,
                         dict(parameters),
-                        {
-                            k: t
-                            for k, t in loaded_tasks.items()
-                            if t.kind in kind.config.get("kind-dependencies", [])
-                        },
+                        self._get_kind_dependencies_tasks(kind, tasks_by_kind),
                         self._write_artifacts,
                     )
                     futures.add(future)
@@ -376,10 +383,12 @@ class TaskGraphGenerator:
                     kind = futures_to_kind.pop(future)
                     futures.remove(future)
 
+                    kind_tasks = tasks_by_kind.setdefault(kind, {})
                     for task in future.result():
                         if task.label in all_tasks:
                             raise Exception("duplicate tasks with label " + task.label)
                         all_tasks[task.label] = task
+                        kind_tasks[task.label] = task
 
                     # Update state for next batch of futures.
                     del kinds[kind]
