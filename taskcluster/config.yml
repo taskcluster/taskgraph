@@ -45,4 +45,4 @@ workers:
             provisioner: 'taskgraph-t'
             implementation: generic-worker
             os: windows
-            worker-type: win11-64-24h2
+            worker-type: win11-64-25h2
