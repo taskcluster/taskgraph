@@ -39,3 +39,15 @@ tasks:
         run:
             command: >-
                 uv run --all-extras pyright
+    scripts-min-python:
+        description: >-
+            Verify that the standalone scripts consumers run inside tasks
+            still support the oldest Python they're used with
+        treeherder:
+            symbol: check(scripts-min-python)
+        run:
+            command: >-
+                uv run vermin --target=3.8- --violations --eval-annotations --no-tips
+                src/taskgraph/run-task/run-task src/taskgraph/run-task/fetch-content &&
+                uv run --no-project --python 3.8 python src/taskgraph/run-task/run-task --help > /dev/null &&
+                uv run --no-project --python 3.8 python src/taskgraph/run-task/fetch-content --help > /dev/null
