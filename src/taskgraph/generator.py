@@ -26,6 +26,7 @@ from .parameters import Parameters, parameters_loader
 from .task import Task
 from .taskgraph import TaskGraph
 from .transforms.base import TransformConfig, TransformSequence
+from .util.memory import gc_disabled
 from .util.python_path import find_object
 from .util.schema import SchemaValidationError
 from .util.verify import verifications
@@ -604,7 +605,11 @@ class TaskGraphGenerator:
     def _run_until(self, name):
         while name not in self._run_results:
             try:
-                k, v = next(self._run)  # type: ignore
+                # Generation creates millions of objects that stay alive, so
+                # collecting garbage meanwhile only traverses them for nothing.
+                # The callers' code runs with the collector in its usual state.
+                with gc_disabled():
+                    k, v = next(self._run)  # type: ignore
             except StopIteration:
                 raise AttributeError(f"No such run result {name}")
             self._run_results[k] = v
