@@ -30,6 +30,7 @@ from .parameters import Parameters, parameters_loader
 from .task import Task
 from .taskgraph import TaskGraph
 from .transforms.base import TransformConfig, TransformSequence
+from .util.memory import gc_disabled
 from .util.python_path import find_object
 from .util.schema import SchemaValidationError
 from .util.verify import verifications
@@ -487,21 +488,25 @@ class TaskGraphGenerator:
         """Fork a child process loading the tasks of `kind`, and return the
         pipe its result comes back through, and its pid."""
         reader, writer = multiprocessing.Pipe(duplex=False)
-        pid = os.fork()
-        if pid == 0:
-            # Never return into the caller's code in the child.
-            status = 1
-            try:
-                reader.close()
-                status = self._load_kind_in_child(
-                    kind, parameters, kind_dependencies_tasks, writer
-                )
-            finally:
+        # The child inherits the disabled garbage collector, so it doesn't
+        # write to every page it shares with us traversing the objects in them.
+        with gc_disabled():
+            pid = os.fork()
+            if pid == 0:
+                # Never leave this block, or return into the caller's code, in
+                # the child.
+                status = 1
                 try:
-                    sys.stdout.flush()
-                    sys.stderr.flush()
+                    reader.close()
+                    status = self._load_kind_in_child(
+                        kind, parameters, kind_dependencies_tasks, writer
+                    )
                 finally:
-                    os._exit(status)
+                    try:
+                        sys.stdout.flush()
+                        sys.stderr.flush()
+                    finally:
+                        os._exit(status)
         writer.close()
         return reader, pid
 
@@ -780,7 +785,11 @@ class TaskGraphGenerator:
     def _run_until(self, name):
         while name not in self._run_results:
             try:
-                k, v = next(self._run)  # type: ignore
+                # Generation creates millions of objects that stay alive, so
+                # collecting garbage meanwhile only traverses them for nothing.
+                # The callers' code runs with the collector in its usual state.
+                with gc_disabled():
+                    k, v = next(self._run)  # type: ignore
             except StopIteration:
                 raise AttributeError(f"No such run result {name}")
             self._run_results[k] = v
