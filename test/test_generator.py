@@ -5,10 +5,13 @@
 
 import os
 import platform
+import signal
+import time
 from concurrent.futures import ProcessPoolExecutor
 
 import pytest
 from pytest_taskgraph import WithFakeKind, fake_load_graph_config
+from pytest_taskgraph.fixtures.gen import FakeKind
 
 from taskgraph import generator, graph
 from taskgraph.generator import Kind, load_tasks_for_kind, load_tasks_for_kinds
@@ -27,14 +30,6 @@ threadsonly = pytest.mark.skipif(
 )
 
 
-class FakePPE(ProcessPoolExecutor):
-    loaded_kinds = []
-
-    def submit(self, kind_load_tasks, *args):
-        self.loaded_kinds.append(kind_load_tasks.__self__.name)
-        return super().submit(kind_load_tasks, *args)
-
-
 class FakeTPE(ProcessPoolExecutor):
     loaded_kinds = []
 
@@ -43,10 +38,39 @@ class FakeTPE(ProcessPoolExecutor):
         return super().submit(kind_load_tasks, *args)
 
 
+class RecordingKind(FakeKind):
+    """Records which process loaded it, and the kinds of the dependency
+    tasks it was given, in the file at `record_path`."""
+
+    record_path = None
+
+    def load_tasks(self, parameters, loaded_tasks, write_artifacts):
+        dep_kinds = sorted({t.kind for t in loaded_tasks.values()})
+        line = f"{self.name} {os.getpid()} {','.join(dep_kinds)}\n"
+        fd = os.open(self.record_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT)
+        try:
+            os.write(fd, line.encode())
+        finally:
+            os.close(fd)
+        return super().load_tasks(parameters, loaded_tasks, write_artifacts)
+
+
+def use_kind_class(tgg, cls):
+    """Make `tgg` load its kinds as instances of `cls`."""
+    load_kinds = tgg._load_kinds
+
+    def _load_kinds(graph_config, target_kinds=None):
+        for kind in load_kinds(graph_config, target_kinds):
+            yield cls(kind.name, kind.path, kind.config, kind.graph_config)
+
+    tgg._load_kinds = _load_kinds
+
+
 @linuxonly
-def test_kind_ordering_multiprocess(mocker, maketgg):
-    "When task kinds depend on each other, they are loaded in postorder"
-    mocked_ppe = mocker.patch.object(generator, "ProcessPoolExecutor", new=FakePPE)
+def test_kind_ordering_forked(monkeypatch, tmp_path, maketgg):
+    """Each kind is loaded in a child process, with its subclass' load_tasks,
+    after the kinds it depends on, and is given their tasks."""
+    monkeypatch.setattr(RecordingKind, "record_path", str(tmp_path / "record"))
     tgg = maketgg(
         kinds=[
             ("_fake3", {"kind-dependencies": ["_fake2", "_fake1"]}),
@@ -54,8 +78,124 @@ def test_kind_ordering_multiprocess(mocker, maketgg):
             ("_fake1", {"kind-dependencies": []}),
         ]
     )
+    use_kind_class(tgg, RecordingKind)
     tgg._run_until("full_task_set")
-    assert mocked_ppe.loaded_kinds == ["_fake1", "_fake2", "_fake3"]
+    assert len(tgg.full_task_set.tasks) == 9
+
+    records = [
+        line.split(" ") for line in (tmp_path / "record").read_text().splitlines()
+    ]
+    assert [(name, deps) for name, _, deps in records] == [
+        ("_fake1", ""),
+        ("_fake2", "_fake1"),
+        ("_fake3", "_fake1,_fake2"),
+    ]
+    pids = {int(pid) for _, pid, _ in records}
+    assert len(pids) == 3
+    assert os.getpid() not in pids
+
+
+@linuxonly
+def test_forked_max_workers(mocker, monkeypatch, tmp_path, maketgg):
+    "Independent kinds are all loaded when fewer can be loaded at once."
+    mocker.patch.object(generator, "_max_workers", return_value=1)
+    tgg = maketgg(kinds=[(f"_fake{i}", {}) for i in range(4)])
+    assert len(tgg.full_task_set.tasks) == 12
+
+
+class UnpicklableError(Exception):
+    def __init__(self, a, b):
+        super().__init__(f"{a} {b}")
+
+
+@linuxonly
+def test_forked_exception_traceback(mocker, caplog, maketgg):
+    """An exception raised loading a kind in a child is raised in the parent,
+    with the traceback from the child."""
+
+    def fail_in_child(self, *args, **kwargs):
+        raise UnpicklableError("not", "picklable")
+
+    mocker.patch.object(Kind, "load_tasks", fail_in_child)
+    tgg = maketgg()
+
+    with caplog.at_level("ERROR"):
+        with pytest.raises(Exception, match="UnpicklableError: not picklable") as e:
+            tgg._run_until("full_task_set")
+
+    assert "in fail_in_child" in str(e.value.__cause__)
+    records = [r for r in caplog.records if "Error loading tasks" in r.message]
+    assert len(records) == 1
+    assert records[0].message == "Error loading tasks for kind _fake:"
+    assert "in fail_in_child" in caplog.text
+
+
+@linuxonly
+@pytest.mark.parametrize(
+    "exit,expected",
+    (
+        pytest.param(lambda: os._exit(3), "exited with status 3", id="exit"),
+        pytest.param(
+            lambda: os.kill(os.getpid(), signal.SIGKILL),
+            "was killed by signal SIGKILL",
+            id="killed",
+        ),
+    ),
+)
+def test_forked_child_dies(mocker, maketgg, exit, expected):
+    "A child exiting without sending its tasks is reported as an error."
+
+    def die(self, *args, **kwargs):
+        exit()
+
+    mocker.patch.object(Kind, "load_tasks", die)
+    tgg = maketgg()
+    with pytest.raises(
+        Exception, match=f"Process loading tasks for kind _fake {expected}"
+    ):
+        tgg._run_until("full_task_set")
+
+
+@linuxonly
+def test_forked_unpicklable_result(mocker, maketgg):
+    "Tasks that can't be sent back are reported as an error loading the kind."
+
+    def unpicklable(self, *args, **kwargs):
+        return [lambda: None]
+
+    mocker.patch.object(Kind, "load_tasks", unpicklable)
+    tgg = maketgg()
+    with pytest.raises(
+        Exception, match="Could not send the tasks of kind _fake to the parent"
+    ):
+        tgg._run_until("full_task_set")
+
+
+@linuxonly
+def test_forked_children_killed_on_error(mocker, tmp_path, maketgg):
+    "When loading a kind fails, the children loading other kinds are killed."
+    pid_file = tmp_path / "pid"
+    load_tasks = Kind.load_tasks
+
+    def fail_or_hang(self, *args, **kwargs):
+        if self.name == "_fail":
+            # Wait for the other child to be running.
+            while not pid_file.exists():
+                time.sleep(0.01)
+            raise RuntimeError("failed")
+        if self.name == "_hang":
+            pid_file.write_text(str(os.getpid()))
+            time.sleep(60)
+        return load_tasks(self, *args, **kwargs)
+
+    mocker.patch.object(Kind, "load_tasks", fail_or_hang)
+    tgg = maketgg(kinds=[("_fail", {}), ("_hang", {})])
+    start = time.monotonic()
+    with pytest.raises(RuntimeError, match="failed"):
+        tgg._run_until("full_task_set")
+    assert time.monotonic() - start < 30
+    with pytest.raises(ProcessLookupError):
+        os.kill(int(pid_file.read_text()), 0)
 
 
 @threadsonly
