@@ -8,9 +8,11 @@ import bz2
 import concurrent.futures
 import contextlib
 import datetime
+import functools
 import gzip
 import hashlib
 import io
+import itertools
 import json
 import lzma
 import multiprocessing
@@ -42,6 +44,12 @@ except ImportError:
 
 
 CONCURRENCY = multiprocessing.cpu_count()
+
+# Whether to extract tar archives while they download, rather than writing
+# them to disk and reading them back. TASKGRAPH_FETCH_STREAM=0 disables it.
+DEFAULT_STREAMING = True
+
+CHUNK_SIZE = 1024 * 1024
 
 
 def log(msg):
@@ -219,7 +227,7 @@ def stream_download(url, sha256=None, size=None, headers=None):
                     size = content_length
 
         while True:
-            chunk = fh.read(65536)
+            chunk = fh.read(CHUNK_SIZE)
             if not chunk:
                 break
 
@@ -246,6 +254,13 @@ def stream_download(url, sha256=None, size=None, headers=None):
             raise IntegrityError(
                 f"sha256 mismatch on {url}: wanted {sha256}; got {digest}"
             )
+
+
+def streaming_enabled():
+    value = os.environ.get("TASKGRAPH_FETCH_STREAM", "").strip().lower()
+    if not value:
+        return DEFAULT_STREAMING
+    return value in ("1", "true", "yes")
 
 
 def download_to_path(url, path, sha256=None, size=None, headers=None):
@@ -336,12 +351,19 @@ class ArchiveTypeNotSupported(Exception):
         super(Exception, self).__init__(f"Archive type not supported for {path}")
 
 
+ZSTD_MAGIC = b"\x28\xb5\x2f\xfd"
+
+
 def open_stream(path: pathlib.Path):
     """Attempt to identify a path as an extractable archive by looking at its
     content."""
-    fh = path.open(mode="rb")
-    magic = fh.read(6)
-    fh.seek(0)
+    return open_fileobj(path.open(mode="rb"), path)
+
+
+def open_fileobj(fh, name):
+    """Like ``open_stream``, for a buffered file object that may not be
+    seekable."""
+    magic = fh.peek(6)[:6]
     if magic[:2] == b"PK":
         return "zip", fh
     if magic[:2] == b"\x1f\x8b":
@@ -350,7 +372,7 @@ def open_stream(path: pathlib.Path):
         fh = bz2.BZ2File(fh)
     elif magic == b"\xfd7zXZ\x00":
         fh = lzma.LZMAFile(fh)
-    elif magic[:4] == b"\x28\xb5\x2f\xfd":
+    elif magic[:4] == ZSTD_MAGIC:
         fh = ZstdDecompressor().stream_reader(fh)
     fh = io.BufferedReader(fh)
     try:
@@ -365,7 +387,12 @@ def open_stream(path: pathlib.Path):
             return "tar", fh
     except Exception:
         pass
-    raise ArchiveTypeNotSupported(path)
+    raise ArchiveTypeNotSupported(name)
+
+
+def is_zstd(path: pathlib.Path):
+    with path.open(mode="rb") as fh:
+        return fh.read(4) == ZSTD_MAGIC
 
 
 def archive_type(path: pathlib.Path):
@@ -466,6 +493,13 @@ def extract_archive(path, dest_dir):
             tar = TarFile.open(fileobj=ifh, mode="r|")
             tar.extractall(str(dest_dir))
             args = []
+        elif is_zstd(path) and shutil.which("zstd"):
+            # Decompressing in a separate process keeps it from competing
+            # with concurrent downloads for the GIL.
+            ifh.close()
+            ifh = open(os.devnull, "rb")
+            args = ["tar", "--use-compress-program=zstd", "-xf", str(path)]
+            pipe_stdin = False
         else:
             args = ["tar", "xf", "-"]
             pipe_stdin = True
@@ -478,23 +512,211 @@ def extract_archive(path, dest_dir):
         raise ValueError(f"unknown archive format: {path}")
 
     if args:
-        with ifh, subprocess.Popen(
-            args, cwd=str(dest_dir), bufsize=0, stdin=subprocess.PIPE
-        ) as p:
-            while True:
-                if not pipe_stdin:
-                    break
+        with ifh:
+            chunks = iter(functools.partial(ifh.read, 131072), b"")
+            run_pipeline([args], dest_dir, chunks if pipe_stdin else ())
 
-                chunk = ifh.read(131072)
-                if not chunk:
-                    break
+    log(f"{path} extracted in {time.time() - t0:.3f}s")
 
-                p.stdin.write(chunk)
 
+def run_pipeline(commands, cwd, chunks):
+    """Run ``commands`` in ``cwd``, each reading the output of the previous
+    one, and the first reading ``chunks``."""
+    procs = []
+    stdin = subprocess.PIPE
+    for i, args in enumerate(commands):
+        last = i == len(commands) - 1
+        p = subprocess.Popen(
+            args,
+            cwd=str(cwd),
+            bufsize=0,
+            stdin=stdin,
+            stdout=None if last else subprocess.PIPE,
+        )
+        if procs:
+            # Only the next process holds the pipe, so that the previous one
+            # gets SIGPIPE if it exits.
+            procs[-1].stdout.close()
+        stdin = p.stdout
+        procs.append(p)
+
+    try:
+        for chunk in chunks:
+            procs[0].stdin.write(chunk)
+    except BrokenPipeError:
+        # A process exited early; its exit status says why.
+        pass
+    finally:
+        try:
+            procs[0].stdin.close()
+        except BrokenPipeError:
+            pass
+        for p in procs:
+            p.wait()
+
+    for args, p in zip(commands, procs):
         if p.returncode:
             raise Exception(f"{args!r} exited {p.returncode}")
 
-    log(f"{path} extracted in {time.time() - t0:.3f}s")
+
+class IterReader(io.RawIOBase):
+    """A file object reading from an iterator of chunks.
+
+    Until ``iter_from_start`` or ``forget`` is called, it keeps what it has
+    read, so that the start of a stream can be inspected and then handed on
+    whole.
+    """
+
+    def __init__(self, chunks):
+        self._chunks = chunks
+        self._chunk = b""
+        self._pos = 0
+        self._recorded = []
+        # Whether reading from the iterator raised.
+        self.failed = False
+
+    def readable(self):
+        return True
+
+    def _next(self):
+        try:
+            chunk = next(self._chunks, b"")
+        except Exception:
+            self.failed = True
+            raise
+        if self._recorded is not None and chunk:
+            self._recorded.append(chunk)
+        return chunk
+
+    def readinto(self, b):
+        if self._pos == len(self._chunk):
+            self._chunk = memoryview(self._next())
+            self._pos = 0
+        n = min(len(b), len(self._chunk) - self._pos)
+        b[:n] = self._chunk[self._pos : self._pos + n]
+        self._pos += n
+        return n
+
+    def _rest(self):
+        while True:
+            chunk = self._next()
+            if not chunk:
+                return
+            yield chunk
+
+    def iter_from_start(self):
+        """Iterate over the whole stream, from the start."""
+        recorded, self._recorded = self._recorded, None
+        return itertools.chain(recorded, self._rest())
+
+    def forget(self):
+        """Stop keeping what has been read."""
+        self._recorded = None
+
+    def drain(self):
+        """Read the rest of the stream, discarding it."""
+        self.forget()
+        for _ in self._rest():
+            pass
+
+
+def extract_stream(reader, dest_dir):
+    """Extract the tar archive read from ``reader`` into ``dest_dir``.
+
+    Returns False, having only read the start of the stream, if it isn't a
+    tar archive. Otherwise reads the stream to the end, so that the download
+    it comes from gets verified.
+    """
+    fh = io.BufferedReader(reader, CHUNK_SIZE)
+    magic = fh.peek(4)[:4]
+    try:
+        typ, ifh = open_fileobj(fh, "stream")
+    except (ArchiveTypeNotSupported, ValueError):
+        # ValueError is a zstd archive without the zstandard module, which
+        # extract_archive will report.
+        return False
+    if typ != "tar":
+        return False
+
+    if sys.platform == "win32":
+        # See extract_archive.
+        reader.forget()
+        TarFile.open(fileobj=ifh, mode="r|").extractall(str(dest_dir))
+    elif magic == ZSTD_MAGIC and shutil.which("zstd"):
+        # Not tar --use-compress-program: when reading from stdin, tar relays
+        # it to the decompressor in small blocks, which is several times
+        # slower.
+        run_pipeline(
+            [["zstd", "-dcq"], ["tar", "xf", "-"]],
+            dest_dir,
+            reader.iter_from_start(),
+        )
+    else:
+        reader.forget()
+        run_pipeline(
+            [["tar", "xf", "-"]],
+            dest_dir,
+            iter(functools.partial(ifh.read1, CHUNK_SIZE), b""),
+        )
+    reader.drain()
+    return True
+
+
+def empty_directory(path):
+    """Remove everything in ``path``, including read-only directories."""
+    for root, dirs, _ in os.walk(path):
+        for d in dirs:
+            d = os.path.join(root, d)
+            if not os.path.islink(d):
+                os.chmod(d, stat.S_IRWXU)
+    for entry in os.scandir(path):
+        if entry.is_dir(follow_symlinks=False):
+            shutil.rmtree(entry.path)
+        else:
+            os.unlink(entry.path)
+
+
+def stream_and_extract(url, dest_path, dest_dir, sha256=None, size=None, headers=None):
+    """Download ``url`` and extract it into ``dest_dir`` as it arrives.
+
+    If it turns out not to be a tar archive, it is downloaded to
+    ``dest_path`` instead, and False is returned.
+
+    With ``sha256`` or ``size``, content is extracted before it can be
+    verified. That's fine as long as ``dest_dir`` is a staging directory that
+    is only merged once this returns: on a mismatch it is emptied, the same
+    as a download that fails verification is deleted.
+    """
+    for _ in retrier(attempts=5, sleeptime=60):
+        chunks = stream_download(url, sha256=sha256, size=size, headers=headers)
+        reader = IterReader(chunks)
+        try:
+            t0 = time.time()
+            if extract_stream(reader, dest_dir):
+                log(f"{url} extracted to {dest_dir} in {time.time() - t0:.3f}s")
+                return True
+            log(f"{url} is not a tar archive; downloading it to {dest_path}")
+            with rename_after_close(dest_path, "wb") as fh:
+                for chunk in reader.iter_from_start():
+                    fh.write(chunk)
+            return False
+        except Exception as e:
+            log(f"Download failed: {e}")
+            empty_directory(dest_dir)
+            if not reader.failed:
+                # The download didn't fail, so find out whether it is intact.
+                # If it is, the archive itself is broken and retrying won't
+                # help.
+                try:
+                    reader.drain()
+                except Exception:
+                    pass
+                else:
+                    raise
+        finally:
+            chunks.close()
+
+    raise Exception("Download failed, no more retries!")
 
 
 def should_repack_archive(
@@ -719,12 +941,20 @@ def fetch_and_extract(url, dest_dir, extract=True, sha256=None, size=None):
     If the downloaded URL is an archive, it is extracted automatically
     and the archive is deleted. Otherwise the file remains in place in
     the destination directory.
+
+    When extracting, ``dest_dir`` must be a staging directory: a failed
+    attempt empties it.
     """
 
     basename = urllib.parse.unquote(urllib.parse.urlparse(url).path.split("/")[-1])
     dest_path = dest_dir / basename
 
-    download_to_path(url, dest_path, sha256=sha256, size=size)
+    # Zip archives can't be streamed, so they keep going through a file.
+    if extract and streaming_enabled() and archive_type(dest_path) != "zip":
+        if stream_and_extract(url, dest_path, dest_dir, sha256=sha256, size=size):
+            return
+    else:
+        download_to_path(url, dest_path, sha256=sha256, size=size)
 
     if not extract:
         return
