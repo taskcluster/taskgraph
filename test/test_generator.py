@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
+import gc
 import os
 import platform
 import signal
@@ -399,6 +400,50 @@ def test_verifications(mocker, maketgg):
     tgg = maketgg(["_fake-t-2"], enable_verifications=False)
     tgg.morphed_task_graph
     m.assert_not_called()
+
+
+@pytest.mark.parametrize("enabled", (True, False))
+def test_gc_disabled_during_generation(mocker, maketgg, enabled):
+    """The garbage collector is disabled while generating each phase, and
+    restored to its previous state between phases."""
+    states = []
+    mocker.patch.object(
+        generator, "verifications", side_effect=lambda *a: states.append(gc.isenabled())
+    )
+    tgg = maketgg(["_fake-t-2"])
+    was_enabled = gc.isenabled()
+    if not enabled:
+        gc.disable()
+    try:
+        tgg.full_task_set
+        assert gc.isenabled() == enabled
+        tgg.morphed_task_graph
+        assert gc.isenabled() == enabled
+    finally:
+        if was_enabled:
+            gc.enable()
+    assert states and not any(states)
+
+
+@linuxonly
+def test_gc_disabled_in_forked_children(mocker, tmp_path, maketgg):
+    "Children loading kinds inherit the disabled garbage collector."
+    record = tmp_path / "gc"
+    load_tasks = Kind.load_tasks
+
+    def record_gc(self, *args, **kwargs):
+        record.write_text(str(gc.isenabled()))
+        return load_tasks(self, *args, **kwargs)
+
+    mocker.patch.object(Kind, "load_tasks", record_gc)
+    tgg = maketgg()
+    tgg._load_tasks_forked(
+        {k.name: k for k in tgg._load_kinds(tgg.graph_config)},
+        tgg.kind_graph,
+        tgg.parameters,
+    )
+    assert gc.isenabled()
+    assert record.read_text() == "False"
 
 
 def test_load_tasks_for_kind(monkeypatch):

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from .graph import Graph
 from .task import Task
+from .util.memory import gc_disabled
 
 
 @dataclass(frozen=True)
@@ -58,13 +59,14 @@ class TaskGraph:
         """
         tasks = {}
         edges = set()
-        for key, value in tasks_dict.items():
-            tasks[key] = Task.from_json(value)
-            if "task_id" in value:
-                tasks[key].task_id = value["task_id"]
-            for depname, dep in value["dependencies"].items():
-                # Task filtering can cause dependencies to be removed from the graph.
-                if dep in tasks_dict:
-                    edges.add((key, dep, depname))
+        with gc_disabled():
+            for key, value in tasks_dict.items():
+                tasks[key] = Task.from_json(value)
+                if "task_id" in value:
+                    tasks[key].task_id = value["task_id"]
+                for depname, dep in value["dependencies"].items():
+                    # Task filtering can cause dependencies to be removed from the graph.
+                    if dep in tasks_dict:
+                        edges.add((key, dep, depname))
         task_graph = cls(tasks, Graph(frozenset(tasks), edges))
         return tasks, task_graph
