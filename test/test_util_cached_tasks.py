@@ -107,6 +107,10 @@ def assert_pull_request_nocache(task):
     }
 
 
+def assert_issue_comment(task):
+    assert_pull_request(task)
+
+
 @pytest.mark.parametrize(
     "extra_params,extra_graph_config,digest,digest_data",
     (
@@ -175,6 +179,17 @@ def assert_pull_request_nocache(task):
             # digest_data
             None,
             id="pull_request_nocache",
+        ),
+        pytest.param(
+            # extra_params
+            {"tasks_for": "github-issue-comment"},
+            # extra_graph_config
+            None,
+            # digest
+            "abc",
+            # digest_data
+            None,
+            id="issue_comment",
         ),
     ),
 )
