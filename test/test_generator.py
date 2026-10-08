@@ -437,6 +437,31 @@ def test_kind_graph(maketgg):
     }
 
 
+def test_kind_graph_missing_kind(maketgg):
+    "A dependency on a kind that doesn't exist is an error"
+    tgg = maketgg(
+        kinds=[
+            ("_fake2", {"kind-dependencies": ["_missing"]}),
+            ("_fake1", {"kind-dependencies": []}),
+        ]
+    )
+    with pytest.raises(Exception, match='Could not find the kind "_missing"'):
+        tgg.kind_graph
+
+
+def test_kind_graph_dependency_loop(maketgg):
+    "A dependency loop between kinds is an error"
+    tgg = maketgg(
+        kinds=[
+            ("_fake3", {"kind-dependencies": ["_fake2"]}),
+            ("_fake2", {"kind-dependencies": ["_fake3"]}),
+            ("_fake1", {"kind-dependencies": []}),
+        ]
+    )
+    with pytest.raises(Exception, match="Dependency loop detected"):
+        tgg.kind_graph
+
+
 def test_kind_graph_with_target_kinds(maketgg):
     "The kind_graph property respects target_kinds parameter"
     tgg = maketgg(

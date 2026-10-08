@@ -446,12 +446,23 @@ class TaskGraphGenerator:
         for kind in kinds.values():
             for dep in kind.config.get("kind-dependencies", []):
                 edges.add((kind.name, dep, "kind-dependency"))
+        for _, dep, _ in edges:
+            if dep not in kinds:
+                message = f'Could not find the kind "{dep}"\nAvailable kinds:\n'
+                for k in sorted(kinds):
+                    message += f' - "{k}"\n'
+                raise Exception(message)
         kind_graph = Graph(frozenset(kinds), frozenset(edges))
 
         if target_kinds:
             kind_graph = kind_graph.transitive_closure(
                 set(target_kinds) | {"docker-image"}
             )
+
+        # The task loaders wait for each kind's dependencies to be loaded
+        # before loading it, so a dependency loop would hang them or silently
+        # leave kinds out. This raises if there is one.
+        kind_graph.visit_postorder()
 
         yield "kind_graph", kind_graph
 
