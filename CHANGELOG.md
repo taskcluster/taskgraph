@@ -1,5 +1,16 @@
 # Change Log
 
+## [24.4.1] - 2026-10-08
+
+### Fixed
+
+- `github-issue-comment` tasks now use the PR cache namespaces
+- perf: look up kind dependency tasks by kind in the generator (#1054)
+- perf: extract tar archives while they download in `fetch-content` (#1068)
+- perf: let tar decompress zstd archives in `fetch-content` (#1068)
+- perf: read downloads in 1MiB chunks in `fetch-content` (#1068)
+- perf: resolve each dependent's deadline only once in `optimize` (#1056)
+
 ## [24.4.0] - 2026-10-05
 
 ### Added
