@@ -11,6 +11,7 @@
 ### Changed
 
 - `taskgraph init` template and tutorial docs now default to the `public_restricted` PR policy
+- BREAKING CHANGE: `run-task` requires Python 3.8
 
 ### Fixed
 
