@@ -642,6 +642,10 @@ def extract_stream(reader, dest_dir):
         # See extract_archive.
         reader.forget()
         TarFile.open(fileobj=ifh, mode="r|").extractall(str(dest_dir))
+        # tarfile stops at the end-of-archive marker, which can leave the
+        # end of the compressed stream, and its checksum, unread.
+        while ifh.read(CHUNK_SIZE):
+            pass
     elif magic == ZSTD_MAGIC and shutil.which("zstd"):
         # Not tar --use-compress-program: when reading from stdin, tar relays
         # it to the decompressor in small blocks, which is several times
