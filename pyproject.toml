@@ -52,6 +52,7 @@ dev = [
   "sphinx-book-theme >=1.1.4",
   "sphinx-taskgraph>=0.1.0",
   "sphinxcontrib-mermaid>=1.0.0",
+  "vermin>=1.8.0",
   "zstandard>=0.25.0",
 ]
 
