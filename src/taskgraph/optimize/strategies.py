@@ -1,3 +1,4 @@
+import functools
 import logging
 from datetime import datetime
 
@@ -8,6 +9,13 @@ from taskgraph.util.path import match as match_path
 from taskgraph.util.taskcluster import find_task_id, status_task
 
 logger = logging.getLogger("optimization")
+
+
+@functools.cache
+def _parse_time(timestamp, fmt):
+    # Many tasks share the same deadline or replacement task, so avoid parsing
+    # the same timestamps over and over.
+    return datetime.strptime(timestamp, fmt)
 
 
 @register_strategy("index-search")
@@ -56,10 +64,10 @@ class IndexSearch(OptimizationStrategy):
                     )
                     continue
 
-                if deadline and datetime.strptime(
+                if deadline and _parse_time(
                     status["expires"],  # type: ignore
                     self.fmt,
-                ) < datetime.strptime(deadline, self.fmt):
+                ) < _parse_time(deadline, self.fmt):
                     logger.debug(
                         f"not replacing {task.label} with {task_id} because it expires before {deadline}"
                     )
