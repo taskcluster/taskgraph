@@ -457,3 +457,103 @@ def test_kind_graph_with_target_kinds(maketgg):
     # _fake3 and _other should not be included
     assert "_fake3" not in kind_graph.nodes
     assert "_other" not in kind_graph.nodes
+
+
+PHASES = [
+    "graph_config",
+    "parameters",
+    "kind_graph",
+    "full_task_set",
+    "full_task_graph",
+    "target_task_set",
+    "target_task_graph",
+    "optimized_task_graph",
+    "label_to_taskid",
+    "morphed_task_graph",
+]
+
+
+def test_phase_finished(monkeypatch, maketgg):
+    calls = []
+    monkeypatch.setattr(generator, "phase_finished", lambda *args: calls.append(args))
+    tgg = maketgg(["_fake-t-2"])
+    tgg.target_task_set
+    assert [name for name, _, _ in calls] == PHASES[
+        : PHASES.index("target_task_set") + 1
+    ]
+    tgg.target_task_set
+    tgg.morphed_task_graph
+    assert [name for name, _, _ in calls] == PHASES
+
+    prev_end = float("-inf")
+    for _, start, end in calls:
+        assert prev_end <= start <= end
+        prev_end = end
+
+
+def test_phase_finished_replaced_during_generation(monkeypatch, maketgg):
+    first_phase = []
+    register_phase = []
+    tgg = maketgg(["_fake-t-2"])
+
+    def load_graph_config(root_dir):
+        graph_config = fake_load_graph_config(root_dir)
+        monkeypatch.setattr(
+            generator, "phase_finished", lambda *args: first_phase.append(args[0])
+        )
+        monkeypatch.setattr(
+            type(graph_config),
+            "register",
+            lambda self: monkeypatch.setattr(
+                generator,
+                "phase_finished",
+                lambda *args: register_phase.append(args[0]),
+            ),
+        )
+        return graph_config
+
+    monkeypatch.setattr(generator, "load_graph_config", load_graph_config)
+    tgg.morphed_task_graph
+    assert first_phase == ["graph_config"]
+    assert register_phase == PHASES[1:]
+
+
+def test_phase_finished_on_error(monkeypatch, mocker, maketgg):
+    calls = []
+    monkeypatch.setattr(generator, "phase_finished", lambda *args: calls.append(args))
+    mocker.patch.object(Kind, "load_tasks", side_effect=RuntimeError("bug"))
+    tgg = maketgg()
+    with pytest.raises(RuntimeError):
+        tgg.full_task_set
+    assert [name for name, _, _ in calls] == [
+        "graph_config",
+        "parameters",
+        "kind_graph",
+        None,
+    ]
+    assert calls[-2][2] <= calls[-1][1] <= calls[-1][2]
+
+    with pytest.raises(AttributeError):
+        tgg.full_task_set
+    assert len(calls) == 4
+
+
+def test_phase_finished_default(caplog, maketgg):
+    tgg = maketgg(["_fake-t-2"])
+    with caplog.at_level("DEBUG", logger="taskgraph.generator"):
+        tgg.morphed_task_graph
+    messages = [r.getMessage() for r in caplog.records]
+    for phase in PHASES:
+        assert any(m.startswith(f"Generated {phase} in ") for m in messages)
+
+
+def test_phase_finished_default_on_error(caplog, mocker, maketgg):
+    mocker.patch.object(Kind, "load_tasks", side_effect=RuntimeError("bug"))
+    tgg = maketgg()
+    with caplog.at_level("DEBUG", logger="taskgraph.generator"):
+        with pytest.raises(RuntimeError):
+            tgg.full_task_set
+    assert any(
+        r.getMessage().startswith("Generation phase failed after ")
+        for r in caplog.records
+    )

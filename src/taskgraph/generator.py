@@ -8,6 +8,7 @@ import logging
 import multiprocessing
 import os
 import platform
+import time
 from concurrent.futures import (
     FIRST_COMPLETED,
     ProcessPoolExecutor,
@@ -32,6 +33,19 @@ from .util.verify import verifications
 from .util.yaml import load_yaml
 
 logger = logging.getLogger(__name__)
+
+
+def phase_finished(name, start, end):
+    """Called after each generation phase, with `time.monotonic()` values
+    taken around it. `name` is None if the phase raised an exception.
+
+    Projects can replace this from their `register` function; a replacement
+    made then also applies to the phase that is running.
+    """
+    if name is None:
+        logger.debug(f"Generation phase failed after {end - start:.2f}s")
+    else:
+        logger.debug(f"Generated {name} in {end - start:.2f}s")
 
 
 class KindNotFound(Exception):
@@ -603,10 +617,15 @@ class TaskGraphGenerator:
 
     def _run_until(self, name):
         while name not in self._run_results:
+            start = time.monotonic()
             try:
                 k, v = next(self._run)  # type: ignore
             except StopIteration:
                 raise AttributeError(f"No such run result {name}")
+            except BaseException:
+                phase_finished(None, start, time.monotonic())
+                raise
+            phase_finished(k, start, time.monotonic())
             self._run_results[k] = v
         return self._run_results[name]
 
