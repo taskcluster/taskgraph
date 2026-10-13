@@ -810,6 +810,99 @@ def test_no_pre_task_run_hook_is_noop(run_main):
     assert result == 0
 
 
+def test_startup_hook_sets_env(run_main, tmp_path):
+    hook = tmp_path / "hook.py"
+    hook.write_text("import os\nos.environ['HOOK_RAN'] = '1'\n")
+
+    result, env = run_main(env={"RUN_TASK_STARTUP_HOOK": str(hook)})
+
+    assert result == 0
+    assert env.get("HOOK_RAN") == "1"
+
+
+def test_startup_hook_runs_before_vcs_checkout(
+    mocker, run_main, run_task_mod, tmp_path
+):
+    hook = tmp_path / "hook.py"
+    hook.write_text("import os\nos.environ['HOOK_RAN'] = '1'\n")
+
+    seen = []
+    mocker.patch.object(
+        run_task_mod,
+        "vcs_checkout_from_args",
+        side_effect=lambda repo: seen.append(run_task_mod.os.environ.get("HOOK_RAN")),
+    )
+
+    result, env = run_main(env={"RUN_TASK_STARTUP_HOOK": str(hook)})
+
+    assert result == 0
+    assert seen == ["1"]
+
+
+@nowin
+def test_startup_hook_env_is_normalized(run_main, tmp_path):
+    hook = tmp_path / "hook.py"
+    hook.write_text("import os\nos.environ['UPLOAD_DIR'] = 'artifacts'\n")
+
+    result, env = run_main(env={"RUN_TASK_STARTUP_HOOK": str(hook)})
+
+    assert result == 0
+    assert env.get("UPLOAD_DIR") == "/builds/worker/artifacts"
+
+
+def test_startup_hook_failure_aborts_before_checkout(
+    mocker, run_main, run_task_mod, patch_run_command, tmp_path, capsys
+):
+    called_with = patch_run_command()
+    checkout = mocker.patch.object(run_task_mod, "vcs_checkout_from_args")
+    hook = tmp_path / "hook.py"
+    hook.write_text("raise RuntimeError('boom')")
+
+    with pytest.raises(SystemExit) as excinfo:
+        run_main(env={"RUN_TASK_STARTUP_HOOK": str(hook)})
+
+    assert excinfo.value.code == 1
+    assert called_with == []
+    checkout.assert_not_called()
+
+    output = capsys.readouterr().out
+    assert "script" in output and "failed" in output
+    assert "RuntimeError: boom" in output
+    assert "hook.py" in output and "line 1" in output
+
+
+def test_startup_hook_output_is_prefixed(run_main, tmp_path, capsys):
+    hook = tmp_path / "hook.py"
+    hook.write_text("print('hello')\nprint('world')\n")
+
+    result, env = run_main(env={"RUN_TASK_STARTUP_HOOK": str(hook)})
+    assert result == 0
+
+    lines = [
+        line
+        for line in capsys.readouterr().out.splitlines()
+        if line.startswith("[script ") and line.endswith(("] hello", "] world"))
+    ]
+    assert len(lines) == 2
+
+
+def test_startup_hook_runs_before_pre_command_hook(run_main, tmp_path):
+    startup = tmp_path / "startup.py"
+    startup.write_text("import os\nos.environ['ORDER'] = 'startup'\n")
+    pre_command = tmp_path / "pre_command.py"
+    pre_command.write_text("import os\nos.environ['ORDER'] += ',pre-command'\n")
+
+    result, env = run_main(
+        env={
+            "RUN_TASK_STARTUP_HOOK": str(startup),
+            "RUN_TASK_PRE_COMMAND_HOOK": str(pre_command),
+        }
+    )
+
+    assert result == 0
+    assert env.get("ORDER") == "startup,pre-command"
+
+
 SPARSE_REPO_FILES = [
     "a/deep/two.txt",
     "a/one.txt",

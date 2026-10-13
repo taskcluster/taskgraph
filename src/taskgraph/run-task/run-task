@@ -1720,6 +1720,9 @@ def main(args):
         os.setresgid(gid, gid, gid)
         os.setresuid(uid, uid, uid)
 
+    if hook_path := os.environ.get("RUN_TASK_STARTUP_HOOK"):
+        run_python_script(hook_path)
+
     for repo in repositories:
         vcs_checkout_from_args(repo)
 
