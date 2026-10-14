@@ -75,6 +75,11 @@ def cache_task(config, tasks):
         if task.get("worker", {}).get("chain-of-trust"):
             digest_data.append(str(task["worker"]["chain-of-trust"]))
 
+        # The worker type can affect the environment the task runs in (e.g
+        # platform or architecture), so it should influence the cache digest.
+        if task.get("worker-type"):
+            digest_data.append(task["worker-type"])
+
         add_optimization(
             config,
             task,

@@ -105,6 +105,13 @@ def assert_chain_of_trust_influences_digest(tasks):
     assert digest_0 != digest_1
 
 
+def assert_worker_type_influences_digest(tasks):
+    assert len(tasks) == 3
+    tasks = sorted(tasks, key=lambda t: t["label"])  # no-wt, wt-a, wt-b
+    digests = [t["attributes"]["cached_task"]["digest"] for t in tasks]
+    assert len(set(digests)) == 3
+
+
 @pytest.mark.parametrize(
     "tasks, kind_config, deps",
     (
@@ -232,6 +239,42 @@ def assert_chain_of_trust_influences_digest(tasks):
             # kind deps
             {},
             id="chain_of_trust_influences_digest",
+        ),
+        pytest.param(
+            # tasks
+            [
+                {
+                    "cache": {
+                        "type": "cached-task.v2",
+                        "name": "cache-foo",
+                        "digest-data": ["abc"],
+                    },
+                    "label": "no-wt",
+                },
+                {
+                    "cache": {
+                        "type": "cached-task.v2",
+                        "name": "cache-foo",
+                        "digest-data": ["abc"],
+                    },
+                    "label": "wt-a",
+                    "worker-type": "a",
+                },
+                {
+                    "cache": {
+                        "type": "cached-task.v2",
+                        "name": "cache-foo",
+                        "digest-data": ["abc"],
+                    },
+                    "label": "wt-b",
+                    "worker-type": "b",
+                },
+            ],
+            # kind config
+            {},
+            # kind deps
+            {},
+            id="worker_type_influences_digest",
         ),
     ),
 )
