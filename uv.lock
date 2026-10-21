@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.9"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -3594,7 +3594,7 @@ wheels = [
 
 [[package]]
 name = "taskcluster-taskgraph"
-version = "24.4.1"
+version = "24.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "appdirs" },

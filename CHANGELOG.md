@@ -1,5 +1,26 @@
 # Change Log
 
+## [24.5.0] - 2026-10-21
+
+### Added
+
+- `taskgraph.generator.phase_finished` function, which can be replaced by
+  consumers and is called as each generation phase ends (#1073)
+- Hook point in `run-task` at startup (#1077)
+
+### Changed
+
+- perf: on Linux, graph generation now uses a process per kind instead of a
+  process pool, to cut down on IPC overhead
+  (https://bugzilla.mozilla.org/show_bug.cgi?id=2079635)
+- perf: pause the garbage collector during graph generation
+  (https://bugzilla.mozilla.org/show_bug.cgi?id=2079640)
+
+### Fixed
+
+- On Windows, fetch-content now reads tarballs until EOF, to be able to check
+  the stream's integrity (#1074)
+
 ## [24.4.1] - 2026-10-08
 
 ### Fixed
