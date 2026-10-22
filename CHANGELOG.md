@@ -1,5 +1,12 @@
 # Change Log
 
+## [24.5.1] - 2026-10-22
+
+### Fixed
+
+- run garbage collection in `format_taskgraph_multiple`; fixes regression in
+  24.5.0
+
 ## [24.5.0] - 2026-10-21
 
 ### Added
