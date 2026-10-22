@@ -4,6 +4,7 @@
 
 import argparse
 import atexit
+import gc
 import logging
 import os
 import re
@@ -186,7 +187,10 @@ def format_taskgraph_multiple(*args, **kwargs):
     there's no advantage to spawning additional processes in the subprocesses.)"""
 
     os.environ["TASKGRAPH_SERIAL"] = "1"
-    return format_taskgraph(*args, **kwargs)
+    try:
+        return format_taskgraph(*args, **kwargs)
+    finally:
+        gc.collect()
 
 
 def dump_output(out, path=None, params_spec=None):
