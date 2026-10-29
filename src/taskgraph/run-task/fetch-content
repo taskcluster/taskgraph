@@ -57,6 +57,50 @@ def log(msg):
     sys.stderr.flush()
 
 
+def open_for_append(path):
+    """Open path for writes that are each appended atomically, even when
+    several processes append to it concurrently."""
+    if sys.platform != "win32":
+        return os.open(path, os.O_WRONLY | os.O_APPEND)
+
+    import _winapi
+    import msvcrt
+
+    # O_APPEND seeks to the end before each write on Windows, which isn't
+    # atomic. Writes through a handle that may only append go to the end of
+    # the file atomically.
+    FILE_APPEND_DATA = 0x4
+    FILE_SHARE_READ_WRITE_DELETE = 0x7
+    handle = _winapi.CreateFile(
+        path,
+        FILE_APPEND_DATA,
+        FILE_SHARE_READ_WRITE_DELETE,
+        0,
+        _winapi.OPEN_EXISTING,
+        0,
+        0,
+    )
+    return msvcrt.open_osfhandle(handle, 0)
+
+
+def record_marker(name, start, end, text):
+    """Add a marker to the profile of the resource monitor run-task runs, if
+    any, using the forwarding protocol of mozsystemmonitor."""
+    path = os.environ.get("MOZ_RESOURCE_MONITOR_FORWARD")
+    if not path:
+        return
+    # 2 is the "Tasks" category.
+    record = ["marker", name, start, end, {"type": "Text", "text": text}, 2]
+    try:
+        fd = open_for_append(path)
+        try:
+            os.write(fd, (json.dumps(record) + "\n").encode("utf-8"))
+        finally:
+            os.close(fd)
+    except OSError:
+        pass
+
+
 class IntegrityError(Exception):
     """Represents an integrity error when downloading a URL."""
 
@@ -971,6 +1015,14 @@ def fetch_and_extract(url, dest_dir, extract=True, sha256=None, size=None):
         pass
 
 
+def fetch_and_extract_with_marker(url, *args):
+    start = time.monotonic()
+    try:
+        fetch_and_extract(url, *args)
+    finally:
+        record_marker("fetch-content", start, time.monotonic(), url)
+
+
 def fetch_urls(downloads):
     """Fetch URLs pairs to a pathlib.Path.
 
@@ -984,7 +1036,7 @@ def fetch_urls(downloads):
         extractions = []
         for url, dest_dir, *rest in downloads:
             staging_dir = pathlib.Path(tempfile.mkdtemp(prefix=".fetch.", dir=dest_dir))
-            future = e.submit(fetch_and_extract, url, staging_dir, *rest)
+            future = e.submit(fetch_and_extract_with_marker, url, staging_dir, *rest)
             extractions.append((future, staging_dir, dest_dir))
 
         for future, staging_dir, dest_dir in extractions:
