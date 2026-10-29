@@ -379,6 +379,9 @@ def build_docker_worker_payload(config, task, task_def):
 
     if "max-run-time" in worker:
         payload["maxRunTime"] = worker["max-run-time"]
+        # Let run-task know how long the task may run, so that it can abort
+        # the task's processes shortly before the worker kills them.
+        payload["env"]["TASKCLUSTER_MAX_RUN_TIME"] = str(worker["max-run-time"])
 
     run_task = os.path.basename(payload.get("command", [""])[0]).startswith("run-task")
 
@@ -583,6 +586,9 @@ def build_generic_worker_payload(config, task, task_def):
         task_def["payload"]["onExitStatus"] = on_exit_status
 
     env = worker.get("env", {})
+    # Let run-task know how long the task may run, so that it can abort the
+    # task's processes shortly before the worker kills them.
+    env["TASKCLUSTER_MAX_RUN_TIME"] = str(worker["max-run-time"])
 
     if task.get("needs-sccache"):
         env["USE_SCCACHE"] = "1"
