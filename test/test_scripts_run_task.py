@@ -1,11 +1,14 @@
 import functools
 import json
 import os
+import signal
 import site
 import stat
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 from argparse import Namespace
 from importlib.machinery import SourceFileLoader
 from importlib.util import module_from_spec, spec_from_loader
@@ -1153,3 +1156,155 @@ def test_git_checkout_sparse_cone_converts_for_globs(
     after = materialized_files(destination)
     assert set(before) <= set(after)
     assert "c/four.md" in after
+
+
+@pytest.fixture
+def sigterm_handler():
+    previous = signal.getsignal(signal.SIGTERM)
+    yield previous
+    signal.signal(signal.SIGTERM, previous)
+
+
+def test_schedule_max_run_time_abort_without_env(monkeypatch, run_task_mod):
+    monkeypatch.delenv("TASKCLUSTER_MAX_RUN_TIME", raising=False)
+    assert run_task_mod.schedule_max_run_time_abort() is None
+
+
+@nowin
+@pytest.mark.parametrize("value", ("", "soon", "0", "-5"))
+def test_schedule_max_run_time_abort_invalid_value(
+    monkeypatch, run_task_mod, capsys, value
+):
+    monkeypatch.setenv("TASKCLUSTER_MAX_RUN_TIME", value)
+    assert run_task_mod.schedule_max_run_time_abort() is None
+    out = capsys.readouterr().out
+    assert ("ignoring invalid TASKCLUSTER_MAX_RUN_TIME" in out) == bool(value)
+
+
+@nowin
+@pytest.mark.parametrize(
+    "max_run_time,margin",
+    (
+        (3600, 60),
+        (1200, 60),
+        (600, 30),
+        (100, 5),
+        (20, 1),
+        (19, None),
+    ),
+)
+def test_schedule_max_run_time_abort_margin(
+    monkeypatch, run_task_mod, sigterm_handler, max_run_time, margin
+):
+    monkeypatch.setenv("TASKCLUSTER_MAX_RUN_TIME", str(max_run_time))
+    timer = run_task_mod.schedule_max_run_time_abort()
+    if margin is None:
+        assert timer is None
+        assert signal.getsignal(signal.SIGTERM) is sigterm_handler
+        return
+    try:
+        assert timer.interval == max_run_time - margin
+        assert timer.daemon
+        assert timer.args == (max_run_time, margin)
+        assert signal.getsignal(signal.SIGTERM) is run_task_mod.ignore_sigterm
+    finally:
+        timer.cancel()
+
+
+@nowin
+def test_ignore_sigterm_not_inherited(run_task_mod, sigterm_handler):
+    signal.signal(signal.SIGTERM, run_task_mod.ignore_sigterm)
+    os.kill(os.getpid(), signal.SIGTERM)
+    # Unlike SIG_IGN, the handler is not inherited across exec.
+    child = subprocess.run(["sh", "-c", "kill -TERM $$"])
+    assert child.returncode == -signal.SIGTERM
+
+
+@pytest.fixture
+def abort_flag(run_task_mod):
+    run_task_mod.max_run_time_abort.clear()
+    yield run_task_mod.max_run_time_abort
+    run_task_mod.max_run_time_abort.clear()
+
+
+@nowin
+def test_abort_task_processes_signals_process_group(
+    mocker, run_task_mod, abort_flag, capsys
+):
+    mocker.patch.object(run_task_mod.os, "getpgrp", return_value=1234)
+    killpg = mocker.patch.object(run_task_mod.os, "killpg")
+
+    run_task_mod.abort_task_processes(600, 30)
+
+    killpg.assert_called_once_with(1234, signal.SIGTERM)
+    assert abort_flag.is_set()
+    assert "maxRunTime of 600s" in capsys.readouterr().out
+
+
+@nowin
+def test_run_command_keeps_forwarding_output_after_abort(
+    mocker, mock_stdin, run_task_mod, abort_flag, capsys, tmp_path
+):
+    # Signal the command alone rather than the process group of the test
+    # runner.
+    pid_file = tmp_path / "pid"
+
+    def kill_command(pgid, sig):
+        for _ in range(100):
+            if pid_file.exists() and pid_file.read_text().strip():
+                break
+            time.sleep(0.05)
+        os.kill(int(pid_file.read_text()), sig)
+
+    mocker.patch.object(run_task_mod.os, "killpg", side_effect=kill_command)
+    timer = threading.Timer(0.5, run_task_mod.abort_task_processes, (20, 1))
+    timer.start()
+    try:
+        returncode = run_task_mod.run_command(
+            b"task",
+            [
+                "sh",
+                "-c",
+                f"echo $$ > '{pid_file}'; "
+                "trap 'echo got TERM; kill $!; exit 3' TERM; "
+                "sleep 30 >/dev/null 2>&1 & wait $!; echo not aborted",
+            ],
+        )
+    finally:
+        timer.cancel()
+
+    assert returncode == 1
+    assert abort_flag.is_set()
+    # Skip the line echoing the command itself.
+    output = capsys.readouterr().out.splitlines()[1:]
+    assert any("got TERM" in line for line in output)
+    assert any("exiting with code 1" in line for line in output)
+    assert not any("not aborted" in line for line in output)
+
+
+def test_run_command_not_started_after_abort(
+    run_task_mod, abort_flag, capsys, tmp_path
+):
+    abort_flag.set()
+    marker = tmp_path / "started"
+
+    returncode = run_task_mod.run_command(
+        b"task", [sys.executable, "-c", f"open({str(marker)!r}, 'w')"]
+    )
+
+    assert returncode == 1
+    assert not marker.exists()
+    assert "not executing" in capsys.readouterr().out
+
+
+def test_retry_required_command_not_retried_after_abort(
+    mocker, run_task_mod, abort_flag
+):
+    abort_flag.set()
+    sleep = mocker.patch.object(run_task_mod.time, "sleep")
+
+    with pytest.raises(SystemExit) as excinfo:
+        run_task_mod.retry_required_command(b"vcs", [sys.executable, "-c", "pass"])
+
+    assert excinfo.value.code == 1
+    sleep.assert_not_called()
