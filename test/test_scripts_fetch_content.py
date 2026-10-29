@@ -450,6 +450,32 @@ def test_fetch_urls_merges_staged_extractions(
     assert (dest / "tests" / "shared.txt").read_text() == "second"
 
 
+def test_fetch_urls_records_markers(
+    tmp_path, fetch_content_mod, mock_downloads, monkeypatch
+):
+    forward = tmp_path / "forward"
+    forward.touch()
+    monkeypatch.setenv("MOZ_RESOURCE_MONITOR_FORWARD", str(forward))
+    dest = tmp_path / "fetches"
+    dest.mkdir()
+    mock_downloads["a.txt"] = b"a"
+    mock_downloads["b.txt"] = b"b"
+    urls = ["https://example.com/a.txt", "https://example.com/b.txt"]
+
+    fetch_content_mod.fetch_urls([(url, dest, False, None) for url in urls])
+
+    records = [json.loads(line) for line in forward.read_text().splitlines()]
+    assert sorted(r[4]["text"] for r in records) == urls
+    for kind, name, start, end, data, category in records:
+        assert (kind, name, data["type"], category) == (
+            "marker",
+            "fetch-content",
+            "Text",
+            2,
+        )
+        assert start <= end
+
+
 def test_fetch_urls_places_unextracted_files(
     tmp_path, fetch_content_mod, mock_downloads
 ):
