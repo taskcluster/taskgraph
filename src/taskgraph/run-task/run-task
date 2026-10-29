@@ -24,6 +24,7 @@ import platform
 import re
 import runpy
 import shutil
+import signal
 import socket
 import stat
 import subprocess
@@ -177,6 +178,118 @@ def reap_zombies(main_subprocess):
                 main_subprocess._handle_exitstatus(status)
 
 
+# Shortly before a task exceeds its maxRunTime, run-task sends SIGTERM to the
+# task's processes, so that they can shut down and flush their logs before the
+# worker kills them. The SIGTERM is sent 5% of maxRunTime early, and at most
+# this many seconds early.
+MAX_RUN_TIME_ABORT_MARGIN = 60
+
+# Set once run-task has sent SIGTERM to the task's processes itself.
+max_run_time_abort = threading.Event()
+
+# The process currently run by run_command(), if any.
+current_child = None
+
+
+@contextlib.contextmanager
+def deferred_sigterm():
+    """Defers SIGTERM until the end of the context.
+
+    Shortly before a task exceeds its maxRunTime, run-task sends SIGTERM to all
+    of the task's processes, itself included, so that they can shut down before
+    the worker kills them. This lets the process run in the context shut down
+    while its output is still being forwarded.
+
+    If the SIGTERM was sent by run-task itself (see abort_task_processes()),
+    it is not re-raised afterwards, so that run-task exits normally with the
+    exit code of its command.
+    """
+    if not IS_POSIX or threading.current_thread() is not threading.main_thread():
+        yield
+        return
+    received = []
+    previous = signal.signal(signal.SIGTERM, lambda signum, frame: received.append(1))
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGTERM, previous)
+        if received and not max_run_time_abort.is_set():
+            os.kill(os.getpid(), signal.SIGTERM)
+
+
+def abort_task_processes(max_run_time, margin):
+    """Sends SIGTERM to the task's processes, so that they can shut down and
+    flush their logs before the worker kills them when the task exceeds its
+    maxRunTime.
+
+    The signal is sent to the process group of run-task, which is its leader
+    under generic-worker, and PID 1 in docker, where the signal then reaches
+    every process in the container except run-task itself. If run-task is
+    neither, e.g. when run through a shell, only its current command is
+    signalled, so that the shell keeps waiting for run-task.
+    """
+    max_run_time_abort.set()
+    print_line(
+        b"task",
+        b"run-task: the task is about to exceed its maxRunTime of %ds; sending "
+        b"SIGTERM to the task's processes %ds early so that they can shut down "
+        b"before the worker kills them\n" % (max_run_time, margin),
+    )
+    try:
+        if os.getpid() in (1, os.getpgrp()):
+            os.killpg(os.getpgrp(), signal.SIGTERM)
+        elif current_child is not None:
+            current_child.send_signal(signal.SIGTERM)
+    except OSError as e:
+        print_line(
+            b"task", b"run-task: could not send SIGTERM: %s\n" % str(e).encode("utf-8")
+        )
+
+
+def schedule_max_run_time_abort():
+    """Arranges for abort_task_processes() to be called shortly before the
+    task exceeds its maxRunTime, which taskgraph passes in the
+    TASKCLUSTER_MAX_RUN_TIME environment variable.
+
+    The abort happens 5% of maxRunTime early, at most MAX_RUN_TIME_ABORT_MARGIN
+    seconds early. That is measured from now, so this must be called as soon
+    as run-task starts, which is also when the worker starts counting.
+
+    On Windows, the task's processes are killed by the worker, as before.
+    """
+    value = os.environ.get("TASKCLUSTER_MAX_RUN_TIME")
+    if not value or not IS_POSIX:
+        return None
+    try:
+        max_run_time = int(value)
+    except ValueError:
+        max_run_time = 0
+    if max_run_time <= 0:
+        print_line(
+            b"setup",
+            b"ignoring invalid TASKCLUSTER_MAX_RUN_TIME: %s\n" % value.encode("utf-8"),
+        )
+        return None
+    margin = min(MAX_RUN_TIME_ABORT_MARGIN, max_run_time // 20)
+    if margin < 1:
+        return None
+    timer = threading.Timer(
+        max_run_time - margin, abort_task_processes, (max_run_time, margin)
+    )
+    timer.daemon = True
+    timer.start()
+    return timer
+
+
+def exit_code_after_abort(returncode):
+    """Returns the exit code of run-task after it aborted the task's processes
+    itself: the exit code of its command, reported as a shell would when the
+    command was killed by a signal, and never 0, since the task was aborted."""
+    if returncode < 0:
+        returncode = 128 - returncode
+    return returncode or 1
+
+
 def _call_windows_retry(func, args=(), retry_max=5, retry_delay=0.5):
     """
     It's possible to see spurious errors on Windows due to various things
@@ -298,11 +411,14 @@ def retry_required_command(prefix, args, *, extra_env=None, cwd=None, retries=2)
         time.sleep(backoff)
 
 
+@deferred_sigterm()
 def run_command(prefix, args, *, extra_env=None, cwd=None, stdin_data=None):
     """Runs a process and prefixes its output with the time.
 
     Returns the process exit code.
     """
+    global current_child
+
     print_line(prefix, b"executing %r\n" % args)
 
     env = dict(os.environ)
@@ -341,6 +457,8 @@ def run_command(prefix, args, *, extra_env=None, cwd=None, stdin_data=None):
     if stdin_file is not None:
         stdin_file.close()
 
+    current_child = p
+
     stdout = io.TextIOWrapper(p.stdout, encoding="latin1")
 
     if os.getpid() == 1:
@@ -360,7 +478,9 @@ def run_command(prefix, args, *, extra_env=None, cwd=None, stdin_data=None):
 
     if reaper_thread:
         reaper_thread.join()
-    return p.wait()
+    returncode = p.wait()
+    current_child = None
+    return returncode
 
 
 def run_python_script(path):
@@ -1513,6 +1633,7 @@ def main(args):
         b"setup",
         b"Invoked by command: %s\n" % " ".join(args).encode("utf-8"),
     )
+    schedule_max_run_time_abort()
     _display_python_versions()
     running_as_root = IS_POSIX and os.getuid() == 0
 
@@ -1760,7 +1881,16 @@ def main(args):
     if hook_path := os.environ.get("RUN_TASK_PRE_COMMAND_HOOK"):
         run_python_script(hook_path)
 
-    return run_command(b"task", task_args, cwd=args.task_cwd)
+    returncode = run_command(b"task", task_args, cwd=args.task_cwd)
+
+    if max_run_time_abort.is_set():
+        returncode = exit_code_after_abort(returncode)
+        print_line(
+            b"task",
+            b"run-task: the task was aborted for exceeding its maxRunTime, "
+            b"exiting with code %d\n" % returncode,
+        )
+    return returncode
 
 
 if __name__ == "__main__":
