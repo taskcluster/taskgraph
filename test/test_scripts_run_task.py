@@ -1,11 +1,13 @@
 import functools
 import json
 import os
+import signal
 import site
 import stat
 import subprocess
 import sys
 import tempfile
+import threading
 from argparse import Namespace
 from importlib.machinery import SourceFileLoader
 from importlib.util import module_from_spec, spec_from_loader
@@ -1153,3 +1155,124 @@ def test_git_checkout_sparse_cone_converts_for_globs(
     after = materialized_files(destination)
     assert set(before) <= set(after)
     assert "c/four.md" in after
+
+
+def test_schedule_max_run_time_abort_without_env(monkeypatch, run_task_mod):
+    monkeypatch.delenv("TASKCLUSTER_MAX_RUN_TIME", raising=False)
+    assert run_task_mod.schedule_max_run_time_abort() is None
+
+
+@nowin
+@pytest.mark.parametrize("value", ("", "soon", "0", "-5"))
+def test_schedule_max_run_time_abort_invalid_value(
+    monkeypatch, run_task_mod, capsys, value
+):
+    monkeypatch.setenv("TASKCLUSTER_MAX_RUN_TIME", value)
+    assert run_task_mod.schedule_max_run_time_abort() is None
+    out = capsys.readouterr().out
+    assert ("ignoring invalid TASKCLUSTER_MAX_RUN_TIME" in out) == bool(value)
+
+
+@nowin
+@pytest.mark.parametrize(
+    "max_run_time,margin",
+    (
+        (3600, 60),
+        (1200, 60),
+        (600, 30),
+        (100, 5),
+        (20, 1),
+        (19, None),
+    ),
+)
+def test_schedule_max_run_time_abort_margin(
+    monkeypatch, run_task_mod, max_run_time, margin
+):
+    monkeypatch.setenv("TASKCLUSTER_MAX_RUN_TIME", str(max_run_time))
+    timer = run_task_mod.schedule_max_run_time_abort()
+    if margin is None:
+        assert timer is None
+        return
+    try:
+        assert timer.interval == max_run_time - margin
+        assert timer.daemon
+        assert timer.args == (max_run_time, margin)
+    finally:
+        timer.cancel()
+
+
+@pytest.fixture
+def abort_flag(run_task_mod):
+    run_task_mod.max_run_time_abort.clear()
+    yield run_task_mod.max_run_time_abort
+    run_task_mod.max_run_time_abort.clear()
+
+
+@nowin
+def test_abort_task_processes_signals_process_group(
+    mocker, run_task_mod, abort_flag, capsys
+):
+    mocker.patch.object(run_task_mod.os, "getpid", return_value=1234)
+    mocker.patch.object(run_task_mod.os, "getpgrp", return_value=1234)
+    killpg = mocker.patch.object(run_task_mod.os, "killpg")
+
+    run_task_mod.abort_task_processes(600, 30)
+
+    killpg.assert_called_once_with(1234, signal.SIGTERM)
+    assert abort_flag.is_set()
+    assert "maxRunTime of 600s" in capsys.readouterr().out
+
+
+@nowin
+def test_abort_task_processes_signals_child_when_not_group_leader(
+    mocker, run_task_mod, abort_flag
+):
+    mocker.patch.object(run_task_mod.os, "getpid", return_value=1234)
+    mocker.patch.object(run_task_mod.os, "getpgrp", return_value=1000)
+    killpg = mocker.patch.object(run_task_mod.os, "killpg")
+    child = Mock()
+    mocker.patch.object(run_task_mod, "current_child", child)
+
+    run_task_mod.abort_task_processes(600, 30)
+
+    killpg.assert_not_called()
+    child.send_signal.assert_called_once_with(signal.SIGTERM)
+    assert abort_flag.is_set()
+
+
+@nowin
+def test_run_command_keeps_forwarding_output_after_abort(
+    mocker, mock_stdin, run_task_mod, abort_flag, capsys
+):
+    # Make abort_task_processes() signal only the child, so that the process
+    # group of the test runner is left alone.
+    mocker.patch.object(run_task_mod.os, "getpgrp", return_value=-1)
+    timer = threading.Timer(0.5, run_task_mod.abort_task_processes, (20, 1))
+    timer.start()
+    try:
+        returncode = run_task_mod.run_command(
+            b"task",
+            [
+                "sh",
+                "-c",
+                "trap 'echo got TERM; kill $!; exit 3' TERM; "
+                "sleep 30 >/dev/null 2>&1 & wait $!; echo not aborted",
+            ],
+        )
+    finally:
+        timer.cancel()
+
+    assert returncode == 3
+    assert abort_flag.is_set()
+    # Skip the line echoing the command itself.
+    output = capsys.readouterr().out.splitlines()[1:]
+    assert any("got TERM" in line for line in output)
+    assert not any("not aborted" in line for line in output)
+
+
+@pytest.mark.parametrize(
+    "returncode,expected",
+    ((0, 1), (3, 3), (-15, 143), (-9, 137)),
+)
+def test_exit_code_after_abort(run_task_mod, returncode, expected):
+    assert run_task_mod.exit_code_after_abort(returncode) == expected
