@@ -16,6 +16,7 @@ import urllib.request
 import zipfile
 from importlib.machinery import SourceFileLoader
 from importlib.util import module_from_spec, spec_from_loader
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -445,6 +446,170 @@ def test_fetch_urls_merges_staged_extractions(
         "tests/suite/b.txt",
     ]
     assert (dest / "tests" / "shared.txt").read_text() == "second"
+
+
+def test_open_for_append_preserves_existing_content(tmp_path, fetch_content_mod):
+    path = tmp_path / "forward"
+    path.write_bytes(b"existing\n")
+
+    fd = fetch_content_mod.open_for_append(str(path))
+    try:
+        os.write(fd, b"appended\n")
+    finally:
+        os.close(fd)
+
+    assert path.read_bytes() == b"existing\nappended\n"
+
+
+def test_open_for_append_windows(fetch_content_mod, monkeypatch, mocker):
+    winapi = SimpleNamespace(CreateFile=mocker.Mock(return_value=123), OPEN_EXISTING=3)
+    msvcrt = SimpleNamespace(open_osfhandle=mocker.Mock(return_value=456))
+    monkeypatch.setitem(sys.modules, "_winapi", winapi)
+    monkeypatch.setitem(sys.modules, "msvcrt", msvcrt)
+    monkeypatch.setattr(fetch_content_mod, "sys", SimpleNamespace(platform="win32"))
+
+    assert fetch_content_mod.open_for_append("forward") == 456
+
+    # Append-only access and shared read/write/delete are required for concurrent
+    # writers; the forward file must already exist.
+    winapi.CreateFile.assert_called_once_with("forward", 0x4, 0x7, 0, 3, 0, 0)
+    msvcrt.open_osfhandle.assert_called_once_with(123, 0)
+
+
+@pytest.mark.parametrize("forward", [None, ""])
+def test_record_marker_disabled(fetch_content_mod, monkeypatch, mocker, forward):
+    monkeypatch.delenv("MOZ_RESOURCE_MONITOR_FORWARD", raising=False)
+    if forward is not None:
+        monkeypatch.setenv("MOZ_RESOURCE_MONITOR_FORWARD", forward)
+    open_for_append = mocker.patch.object(fetch_content_mod, "open_for_append")
+
+    fetch_content_mod.record_marker("fetch-content", 1, 2, "url")
+
+    open_for_append.assert_not_called()
+
+
+@pytest.mark.parametrize("failure", ["open", "write"])
+def test_record_marker_ignores_io_errors(
+    fetch_content_mod, monkeypatch, mocker, failure
+):
+    monkeypatch.setenv("MOZ_RESOURCE_MONITOR_FORWARD", "forward")
+    open_for_append = mocker.patch.object(
+        fetch_content_mod, "open_for_append", return_value=123
+    )
+    write = mocker.patch.object(fetch_content_mod.os, "write")
+    close = mocker.patch.object(fetch_content_mod.os, "close")
+    if failure == "open":
+        open_for_append.side_effect = OSError("cannot open")
+    else:
+        write.side_effect = OSError("cannot write")
+
+    fetch_content_mod.record_marker("fetch-content", 1, 2, "url")
+
+    open_for_append.assert_called_once_with("forward")
+    if failure == "open":
+        write.assert_not_called()
+        close.assert_not_called()
+    else:
+        write.assert_called_once_with(
+            123,
+            b'["marker", "fetch-content", 1, 2, {"type": "Text", "text": "url"}, 2]\n',
+        )
+        close.assert_called_once_with(123)
+
+
+def test_fetch_and_extract_records_marker_on_failure(fetch_content_mod, mocker):
+    error = fetch_content_mod.IntegrityError("invalid checksum")
+    fetch = mocker.patch.object(
+        fetch_content_mod, "fetch_and_extract", side_effect=error
+    )
+    record_marker = mocker.patch.object(fetch_content_mod, "record_marker")
+    mocker.patch.object(fetch_content_mod.time, "monotonic", side_effect=[10, 20])
+
+    with pytest.raises(fetch_content_mod.IntegrityError) as exc:
+        fetch_content_mod.fetch_and_extract_with_marker("url", "dest", True, "sha", 42)
+
+    assert exc.value is error
+    fetch.assert_called_once_with("url", "dest", True, "sha", 42)
+    record_marker.assert_called_once_with("fetch-content", 10, 20, "url")
+
+
+@pytest.mark.parametrize("command", ["static-url", "git-checkout-archive"])
+@pytest.mark.parametrize("fail", [False, True], ids=["success", "failure"])
+def test_fetch_commands_record_markers(
+    tmp_path, fetch_content_mod, monkeypatch, mocker, command, fail
+):
+    forward = tmp_path / "forward"
+    forward.touch()
+    monkeypatch.setenv("MOZ_RESOURCE_MONITOR_FORWARD", str(forward))
+    dest = tmp_path / "fetches" / "archive.tar.zst"
+    url = (
+        "https://example.com/repo"
+        if command == "git-checkout-archive"
+        else "https://example.com/archive.tar.gz"
+    )
+    error = RuntimeError("fetch failed")
+
+    def finish(*args, **kwargs):
+        # The marker must cover the final archive creation, not just the download.
+        assert forward.read_bytes() == b""
+        if fail:
+            raise error
+        dest.write_bytes(b"archive")
+
+    if command == "git-checkout-archive":
+        args = SimpleNamespace(
+            dest=str(dest),
+            repo=url,
+            commit="revision",
+            path_prefix="repo",
+            ssh_key_secret=None,
+            include_dot_git=False,
+        )
+
+        def checkout(path, *args, **kwargs):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"partial archive")
+            finish()
+
+        mocker.patch.object(
+            fetch_content_mod, "git_checkout_archive", side_effect=checkout
+        )
+        run = fetch_content_mod.command_git_checkout_archive
+    else:
+        args = SimpleNamespace(
+            dest=str(dest),
+            url=url,
+            sha256="sha",
+            size=42,
+            headers=[],
+            gpg_sig_url=None,
+            gpg_key_env=None,
+            force_archive=False,
+            strip_components=0,
+            add_prefix="",
+        )
+
+        def download(url, path, **kwargs):
+            path.write_bytes(b"download")
+
+        mocker.patch.object(fetch_content_mod, "download_to_path", side_effect=download)
+        mocker.patch.object(fetch_content_mod, "repack_archive", side_effect=finish)
+        run = fetch_content_mod.command_static_url
+
+    mocker.patch.object(fetch_content_mod.time, "monotonic", side_effect=[10, 20])
+    if fail:
+        with pytest.raises(RuntimeError) as exc:
+            run(args)
+        assert exc.value is error
+        assert not dest.exists()
+    else:
+        run(args)
+        assert dest.read_bytes() == b"archive"
+
+    assert list(dest.parent.iterdir()) == ([] if fail else [dest])
+    assert [json.loads(line) for line in forward.read_text().splitlines()] == [
+        ["marker", "fetch-content", 10, 20, {"type": "Text", "text": url}, 2]
+    ]
 
 
 def test_fetch_urls_records_markers(

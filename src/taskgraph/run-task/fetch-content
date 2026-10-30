@@ -1015,12 +1015,19 @@ def fetch_and_extract(url, dest_dir, extract=True, sha256=None, size=None):
         pass
 
 
-def fetch_and_extract_with_marker(url, *args):
+@contextlib.contextmanager
+def fetch_marker(url):
+    """Record the duration of a fetch, including failures."""
     start = time.monotonic()
     try:
-        fetch_and_extract(url, *args)
+        yield
     finally:
         record_marker("fetch-content", start, time.monotonic(), url)
+
+
+def fetch_and_extract_with_marker(url, *args):
+    with fetch_marker(url):
+        fetch_and_extract(url, *args)
 
 
 def fetch_urls(downloads):
@@ -1206,80 +1213,82 @@ def git_checkout_archive(
 
 
 def command_git_checkout_archive(args):
-    dest = pathlib.Path(args.dest)
+    with fetch_marker(args.repo):
+        dest = pathlib.Path(args.dest)
 
-    try:
-        git_checkout_archive(
-            dest,
-            args.repo,
-            args.commit,
-            prefix=args.path_prefix,
-            ssh_key=args.ssh_key_secret,
-            include_dot_git=args.include_dot_git,
-        )
-    except Exception:
         try:
-            dest.unlink()
-        except FileNotFoundError:
-            pass
+            git_checkout_archive(
+                dest,
+                args.repo,
+                args.commit,
+                prefix=args.path_prefix,
+                ssh_key=args.ssh_key_secret,
+                include_dot_git=args.include_dot_git,
+            )
+        except Exception:
+            try:
+                dest.unlink()
+            except FileNotFoundError:
+                pass
 
-        raise
+            raise
 
 
 def command_static_url(args):
-    gpg_sig_url = args.gpg_sig_url
-    gpg_env_key = args.gpg_key_env
+    with fetch_marker(args.url):
+        gpg_sig_url = args.gpg_sig_url
+        gpg_env_key = args.gpg_key_env
 
-    if bool(gpg_sig_url) != bool(gpg_env_key):
-        print("--gpg-sig-url and --gpg-key-env must both be defined")
-        return 1
-
-    if gpg_sig_url:
-        gpg_signature = b"".join(stream_download(gpg_sig_url))
-        gpg_key = os.environb[gpg_env_key.encode("ascii")]
-
-    dest = pathlib.Path(args.dest)
-    dest.parent.mkdir(parents=True, exist_ok=True)
-
-    basename = urllib.parse.urlparse(args.url).path.split("/")[-1]
-    if basename.endswith("".join(dest.suffixes)):
-        dl_dest = dest
-    else:
-        dl_dest = dest.parent / basename
-
-    try:
-        download_to_path(
-            args.url, dl_dest, sha256=args.sha256, size=args.size, headers=args.headers
-        )
+        if bool(gpg_sig_url) != bool(gpg_env_key):
+            print("--gpg-sig-url and --gpg-key-env must both be defined")
+            return 1
 
         if gpg_sig_url:
-            gpg_verify_path(dl_dest, gpg_key, gpg_signature)
+            gpg_signature = b"".join(stream_download(gpg_sig_url))
+            gpg_key = os.environb[gpg_env_key.encode("ascii")]
 
-        if args.force_archive or should_repack_archive(
-            dl_dest, dest, args.strip_components, args.add_prefix
-        ):
-            repack_archive(
-                dl_dest,
-                dest,
-                args.strip_components,
-                args.add_prefix,
-                args.force_archive,
-            )
-        elif dl_dest != dest:
-            log(f"Renaming {dl_dest} to {dest}")
-            dl_dest.rename(dest)
+        dest = pathlib.Path(args.dest)
+        dest.parent.mkdir(parents=True, exist_ok=True)
 
-    except Exception:
+        basename = urllib.parse.urlparse(args.url).path.split("/")[-1]
+        if basename.endswith("".join(dest.suffixes)):
+            dl_dest = dest
+        else:
+            dl_dest = dest.parent / basename
+
         try:
+            download_to_path(
+                args.url, dl_dest, sha256=args.sha256, size=args.size, headers=args.headers
+            )
+
+            if gpg_sig_url:
+                gpg_verify_path(dl_dest, gpg_key, gpg_signature)
+
+            if args.force_archive or should_repack_archive(
+                dl_dest, dest, args.strip_components, args.add_prefix
+            ):
+                repack_archive(
+                    dl_dest,
+                    dest,
+                    args.strip_components,
+                    args.add_prefix,
+                    args.force_archive,
+                )
+            elif dl_dest != dest:
+                log(f"Renaming {dl_dest} to {dest}")
+                dl_dest.rename(dest)
+
+        except Exception:
+            try:
+                dl_dest.unlink()
+            except FileNotFoundError:
+                pass
+
+            raise
+
+        if dl_dest != dest and dl_dest.exists():
+            log(f"Removing {dl_dest}")
             dl_dest.unlink()
-        except FileNotFoundError:
-            pass
-
-        raise
-
-    if dl_dest != dest and dl_dest.exists():
-        log(f"Removing {dl_dest}")
-        dl_dest.unlink()
 
 
 def api(root_url, service, version, path):
