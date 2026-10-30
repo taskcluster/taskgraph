@@ -1,5 +1,14 @@
 # Change Log
 
+## [24.6.0] - 2026-10-30
+
+### Added
+
+- `fetch-mode` option for `git` fetch tasks, and `--fetch-mode` for
+  `fetch-content git-checkout-archive`, to fetch only the pinned revision on
+  git servers that reject full clones, such as HuggingFace (#1046,
+  https://bugzilla.mozilla.org/show_bug.cgi?id=2047876)
+
 ## [24.5.1] - 2026-10-22
 
 ### Fixed
