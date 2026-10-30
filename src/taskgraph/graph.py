@@ -50,32 +50,39 @@ class Graph(_Graph):
                       |
                       `-------> d
 
-        transitive_closure([b]).nodes == set([a, b])
-        transitive_closure([c]).nodes == set([c, b, a])
-        transitive_closure([c], reverse=True).nodes == set([c])
-        transitive_closure([b], reverse=True).nodes == set([b, c, d])
+        transitive_closure([b]).nodes == set([b, c, d])
+        transitive_closure([c]).nodes == set([c])
+        transitive_closure([c], reverse=True).nodes == set([c, b, a])
+        transitive_closure([b], reverse=True).nodes == set([b, a])
         """
-        assert isinstance(nodes, set)
+        assert isinstance(nodes, (set, frozenset))
         if not (nodes <= self.nodes):
             raise Exception(
                 f"Unknown nodes in transitive closure: {nodes - self.nodes}"
             )
 
-        # Build an adjacency map keyed by the node to expand from. This reduces
-        # traversal below from O(V·E) -> O(V+E).
-        adjacency = collections.defaultdict(list)
+        # An empty closure reaches nothing, and the adjacency map below costs
+        # O(E) to build.
+        if not nodes:
+            return Graph(set(), set())
+
+        # Index the edges by the endpoint the traversal expands from, keeping the
+        # traversal O(V+E). `src` is the endpoint an edge is looked up by, `dst`
+        # the one it expands to.
+        src, dst = (1, 0) if reverse else (0, 1)
+        adjacency = {}
         for edge in self.edges:
-            left, right, _ = edge
-            adjacency[right if reverse else left].append(edge)
+            adjacency.setdefault(edge[src], []).append(edge)
 
         new_nodes = set(nodes)
         new_edges = set()
         queue = collections.deque(nodes)
         while queue:
             node = queue.popleft()
+            # Nodes with no edges to expand from have no entry in the map.
             for edge in adjacency.get(node, ()):
                 new_edges.add(edge)
-                neighbor = edge[0] if reverse else edge[1]
+                neighbor = edge[dst]
                 if neighbor not in new_nodes:
                     new_nodes.add(neighbor)
                     queue.append(neighbor)
