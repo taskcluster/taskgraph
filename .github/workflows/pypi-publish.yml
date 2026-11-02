@@ -13,9 +13,9 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
-          python-version: '3.14'
+          python-version: '3.15'
           cache: 'pip'
       - name: Build taskcluster-taskgraph package distributions
         run: |
@@ -28,7 +28,7 @@ jobs:
       #       Renovate offsets that by bumping the pinned SHA (tracked via the
       #       trailing `# vX.Y.Z` comment), so merge those bump PRs promptly.
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # v1.14.2
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086  # v1.14.3
   pypi-publish-pytest-taskgraph:
     name: upload release to PyPI
     if: startsWith(github.ref, 'refs/tags/pytest-taskgraph')
@@ -39,9 +39,9 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
-          python-version: '3.14'
+          python-version: '3.15'
           cache: 'pip'
       - name: Build pytest-taskgraph package distributions
         working-directory: packages/pytest-taskgraph
@@ -49,7 +49,7 @@ jobs:
           pip install build
           python -m build
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # v1.14.2
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086  # v1.14.3
         with:
           packages-dir: packages/pytest-taskgraph/dist
   pypi-publish-sphinx-taskgraph:
@@ -62,9 +62,9 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
-          python-version: '3.14'
+          python-version: '3.15'
           cache: 'pip'
       - name: Build sphinx-taskgraph package distributions
         working-directory: packages/sphinx-taskgraph
@@ -72,6 +72,6 @@ jobs:
           pip install build
           python -m build
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # v1.14.2
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086  # v1.14.3
         with:
           packages-dir: packages/sphinx-taskgraph/dist
