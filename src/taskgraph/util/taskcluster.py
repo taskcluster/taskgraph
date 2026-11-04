@@ -130,6 +130,16 @@ def get_session():
     return requests_retry_session(retries=5)
 
 
+def _reset_sessions_in_child():
+    # Connections pooled before a fork would be shared with the parent.
+    get_session.cache_clear()
+    get_taskcluster_client.cache_clear()
+
+
+if hasattr(os, "register_at_fork"):
+    os.register_at_fork(after_in_child=_reset_sessions_in_child)
+
+
 def get_artifact_url(task_id, path, use_proxy=False):
     url = get_root_url(block_proxy=not use_proxy)
     artifact_tmpl = liburls.api(url, "queue", "v1", "task/{}/artifacts/{}")

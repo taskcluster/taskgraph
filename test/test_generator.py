@@ -17,6 +17,7 @@ from pytest_taskgraph.fixtures.gen import FakeKind
 from taskgraph import generator, graph
 from taskgraph.generator import Kind, load_tasks_for_kind, load_tasks_for_kinds
 from taskgraph.loader.default import loader as default_loader
+from taskgraph.util import taskcluster as tc_util
 from taskgraph.util.schema import SchemaValidationError
 
 linuxonly = pytest.mark.skipif(
@@ -444,6 +445,39 @@ def test_gc_disabled_in_forked_children(mocker, tmp_path, maketgg):
     )
     assert gc.isenabled()
     assert record.read_text() == "False"
+
+
+@linuxonly
+def test_forked_children_get_fresh_sessions(mocker, tmp_path, maketgg):
+    "Children loading kinds don't share the parent's HTTP sessions."
+    record = tmp_path / "sessions"
+    load_tasks = Kind.load_tasks
+    session = tc_util.get_session()
+    queue = tc_util.get_taskcluster_client("queue")
+
+    def record_sessions(self, *args, **kwargs):
+        record.write_text(
+            repr(
+                (
+                    tc_util.get_session.cache_info().currsize,
+                    tc_util.get_taskcluster_client.cache_info().currsize,
+                    tc_util.get_session() is session,
+                    tc_util.get_taskcluster_client("queue") is queue,
+                )
+            )
+        )
+        return load_tasks(self, *args, **kwargs)
+
+    mocker.patch.object(Kind, "load_tasks", record_sessions)
+    tgg = maketgg()
+    tgg._load_tasks_forked(
+        {k.name: k for k in tgg._load_kinds(tgg.graph_config)},
+        tgg.kind_graph,
+        tgg.parameters,
+    )
+    assert record.read_text() == repr((0, 0, False, False))
+    assert tc_util.get_session() is session
+    assert tc_util.get_taskcluster_client("queue") is queue
 
 
 def test_load_tasks_for_kind(monkeypatch):
