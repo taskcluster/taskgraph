@@ -48,7 +48,8 @@ unit:
         symbol: unit(py{matrix[python]})
     run:
         command: >-
-            uv run coverage run --data-file /builds/worker/artifacts/coverage --context=py{matrix[python]} -m pytest -vv
+            uv run coverage run --data-file /builds/worker/artifacts/coverage --context=py{matrix[python]} -m pytest -vv &&
+            uv run coverage combine --data-file /builds/worker/artifacts/coverage
 
 unit-multithread:
     description: "Run unit tests with py{matrix[python]} on Linux with multithreading enabled"
@@ -68,7 +69,8 @@ unit-multithread:
         symbol: unit-multithread(py{matrix[python]})
     run:
         command: >-
-            uv run coverage run --data-file /builds/worker/artifacts/coverage --context=py{matrix[python]} -m pytest -vv
+            uv run coverage run --data-file /builds/worker/artifacts/coverage --context=py{matrix[python]} -m pytest -vv &&
+            uv run coverage combine --data-file /builds/worker/artifacts/coverage
 
 unit-serial:
     description: "Run unit tests with py{matrix[python]} on Linux in serial mode"
@@ -88,7 +90,8 @@ unit-serial:
         symbol: unit-serial(py{matrix[python]})
     run:
         command: >-
-            uv run coverage run --data-file /builds/worker/artifacts/coverage --context=py{matrix[python]} -m pytest -vv
+            uv run coverage run --data-file /builds/worker/artifacts/coverage --context=py{matrix[python]} -m pytest -vv &&
+            uv run coverage combine --data-file /builds/worker/artifacts/coverage
 
 integration:
     description: "Run unit tests with py{matrix[python]} on Linux with resolution {matrix[resolution]}"
