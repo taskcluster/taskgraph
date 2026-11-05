@@ -92,6 +92,8 @@ xfail_strict = true
 [tool.coverage.run]
 branch = true
 source = ["src/taskgraph/", "src/taskgraph/run-task/", "packages", "test"]
+parallel = true
+patch = ["_exit"]
 
 ### Lint and Format
 [tool.ruff]
