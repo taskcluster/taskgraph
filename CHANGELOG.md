@@ -1,5 +1,15 @@
 # Change Log
 
+## [24.7.0] - 2026-11-06
+
+### Fixed
+
+- don't reuse the parent's HTTP connections in forked children (bug 2088960) (#1095)
+
+### Added
+
+- fetch-content: record a profiler marker for each fetched file (#1083)
+
 ## [24.6.0] - 2026-10-30
 
 ### Added
