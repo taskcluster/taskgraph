@@ -48,3 +48,21 @@ token. The same happens when the auth service rejects the request, such as for
 an unknown ``app`` or invalid ``permissions``. Invalid JSON, an unknown ``type``
 or key, or a ``repo`` that isn't on GitHub fails the task. Installation tokens
 expire after an hour.
+
+.. _run-task-base-revisions:
+
+GitHub base revisions
+---------------------
+
+GitHub often reports the wrong base revision: the null revision for a new
+branch, the orphaned old tip for a force push, and the target's current tip for
+a pull request. For a GitHub git checkout that sets ``<PREFIX>_HEAD_REV`` and
+either ``<PREFIX>_BASE_REV`` or ``<PREFIX>_BASE_REF``, ``run-task`` uses GitHub's
+compare API to find the right base. It then fetches that commit and exports it
+as ``<PREFIX>_BASE_REV``. The requests are authenticated with a
+``github-repo-token`` for the repository from :ref:`run-task-secrets` if there
+is one, or else with ``GITHUB_TOKEN`` if it is set. If the lookup fails, the
+reported base is kept.
+
+Every task that sets ``<PREFIX>_BASE_REV`` or ``<PREFIX>_BASE_REF`` on a GitHub
+repository makes these compare requests implicitly.

@@ -28,6 +28,9 @@ base_rev
 ~~~~~~~~
    The previous revision before ``head_rev`` got merged into. This can be a short revision string.
 
+   For ``github-push`` and ``github-pull-request`` tasks_for, ``run-task`` can replace the
+   reported base with the merge base. See :ref:`run-task-base-revisions`.
+
 head_rev
 ~~~~~~~~
    The revision to check out, this can be a short revision string.
