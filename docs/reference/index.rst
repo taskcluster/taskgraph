@@ -6,6 +6,7 @@ Reference
 
    cli
    parameters
+   run-task
    transforms/index
    optimization-strategies
    source/modules
