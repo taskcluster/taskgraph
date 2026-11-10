@@ -177,6 +177,7 @@ def test_install_pip_requirements_with_uv(
                 "REPOSITORY_TYPE": "git",
                 "HEAD_REPOSITORY": "https://github.com/test/repo.git",
                 "HEAD_REV": "abc123",
+                "BASE_REF": "refs/heads/main",
             },
             {"shallow-clone": True},
             id="git_with_shallow_clone",
@@ -217,6 +218,7 @@ def test_collect_vcs_options(
     expected = {
         "base-repo": env.get("BASE_REPOSITORY"),
         "base-rev": env.get("BASE_REV"),
+        "base-ref": env.get("BASE_REF"),
         "checkout": os.path.join(os.getcwd(), "checkout"),
         "env-prefix": name.upper(),
         "head-repo": env.get("HEAD_REPOSITORY"),
@@ -1297,3 +1299,285 @@ def test_main_exports_secrets(run_main, mocker, run_task_mod, github_tokens):
 
     assert result == 0
     assert env["GITHUB_TOKEN"] == "t1"
+
+
+@pytest.mark.parametrize(
+    "minted,env,expected",
+    [
+        (None, None, None),
+        (None, "from-env", "from-env"),
+        ("minted", None, "minted"),
+        ("minted", "from-env", "minted"),
+    ],
+)
+def test_github_compare(
+    run_task_mod, monkeypatch, mocker, github_tokens, minted, env, expected
+):
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    if env:
+        monkeypatch.setenv("GITHUB_TOKEN", env)
+    if minted:
+        github_tokens[("owner", "repo")] = minted
+    sha = "a" * 40
+    response = mocker.MagicMock()
+    response.__enter__.return_value.read.return_value = json.dumps(
+        {"status": "diverged", "merge_base_commit": {"sha": sha}}
+    ).encode()
+    urlopen = mocker.patch("urllib.request.urlopen", return_value=response)
+    assert run_task_mod.github_compare("owner", "repo", "refs/heads/main", "abc") == (
+        "diverged",
+        sha,
+    )
+    request = urlopen.call_args.args[0]
+    assert (
+        request.full_url
+        == "https://api.github.com/repos/owner/repo/compare/refs%2Fheads%2Fmain...abc?per_page=1"
+    )
+    assert request.get_method() == "GET"
+    assert request.get_header("Authorization") == (
+        f"Bearer {expected}" if expected else None
+    )
+    assert urlopen.call_args.kwargs == {"timeout": 10}
+    urlopen.side_effect = urllib.error.URLError("unavailable")
+    assert run_task_mod.github_compare("owner", "repo", "main", "abc") is None
+
+
+@pytest.mark.parametrize(
+    "base_rev,base_ref,head_ref,fork,comparisons,expected,bases,default_calls",
+    [
+        ("old", "main", "feature", False, [("ahead", "old")], None, ["old"], 0),
+        (
+            "old",
+            "main",
+            "feature",
+            False,
+            [("diverged", "merge")],
+            "merge",
+            ["old"],
+            0,
+        ),
+        (
+            "old",
+            "main",
+            "main",
+            True,
+            [("diverged", "merge")],
+            "merge",
+            ["old"],
+            0,
+        ),
+        ("old", "feature", "feature", False, [("ahead", "old")], None, ["old"], 0),
+        (
+            "old",
+            "refs/heads/feature",
+            "feature",
+            False,
+            [("diverged", "old-base"), ("ahead", "merge")],
+            "merge",
+            ["old", "main"],
+            1,
+        ),
+        (
+            "old",
+            "main",
+            "refs/heads/main",
+            False,
+            [("diverged", "old-base")],
+            "old-base",
+            ["old"],
+            1,
+        ),
+        (
+            "0" * 40,
+            "source",
+            "feature",
+            False,
+            [("ahead", "merge")],
+            "merge",
+            ["source"],
+            0,
+        ),
+        ("0" * 40, None, "feature", False, [("ahead", "merge")], "merge", ["main"], 1),
+        ("old", "main", "refs/tags/v1", False, [], None, [], 0),
+        ("old", "feature", "feature", False, [None], None, ["old"], 0),
+        (None, "main", "feature", False, [None], None, ["main"], 0),
+        ("old", "main", "feature", False, [("identical", "old")], None, ["old"], 0),
+        (None, None, "main", False, [], None, [], 1),
+    ],
+)
+def test_derive_base_rev(
+    run_task_mod,
+    mocker,
+    base_rev,
+    base_ref,
+    head_ref,
+    fork,
+    comparisons,
+    expected,
+    bases,
+    default_calls,
+):
+    compare = mocker.patch.object(
+        run_task_mod, "github_compare", side_effect=comparisons
+    )
+    default = mocker.patch.object(run_task_mod, "_default_branch", return_value="main")
+    base_repo = "https://github.com/owner/repo"
+    head_repo = "https://github.com/fork/repo" if fork else base_repo
+    assert (
+        run_task_mod.derive_base_rev(
+            ("owner", "repo"),
+            base_repo,
+            head_repo,
+            base_rev,
+            base_ref,
+            head_ref,
+            "head",
+        )
+        == expected
+    )
+    assert compare.call_args_list == [
+        mocker.call("owner", "repo", base, "head") for base in bases
+    ]
+    assert default.call_count == default_calls
+
+
+@pytest.mark.parametrize(
+    "output,expected",
+    [("ref: refs/heads/main\tHEAD\nabc\tHEAD\n", "main"), ("abc\tHEAD\n", None)],
+)
+def test_default_branch(run_task_mod, mocker, output, expected):
+    check = mocker.patch("subprocess.check_output", return_value=output)
+    assert run_task_mod._default_branch("https://github.com/owner/repo") == expected
+    check.assert_called_once_with(
+        ["git", "ls-remote", "--symref", "https://github.com/owner/repo", "HEAD"],
+        universal_newlines=True,
+        timeout=60,
+    )
+    check.side_effect = subprocess.TimeoutExpired("git", 60)
+    assert run_task_mod._default_branch("https://github.com/owner/repo") is None
+
+
+@pytest.mark.parametrize(
+    "repo_type,repo,base_rev,base_ref,expected",
+    [
+        ("git", "https://example.com/owner/repo", "old", "main", False),
+        ("hg", "https://github.com/owner/repo", "old", "main", False),
+        ("git", "https://github.com/owner/repo", None, None, False),
+        ("git", "https://github.com/owner/repo", "old", None, True),
+        ("git", "https://github.com/owner/repo", None, "main", True),
+    ],
+)
+def test_vcs_checkout_derive_gating(
+    run_task_mod,
+    monkeypatch,
+    mocker,
+    tmp_path,
+    repo_type,
+    repo,
+    base_rev,
+    base_ref,
+    expected,
+):
+    monkeypatch.setattr(os, "environ", {})
+    options = run_task_mod.collect_vcs_options(
+        Namespace(myrepo_checkout=str(tmp_path), myrepo_shallow_clone=False),
+        "myrepo",
+        "myrepo",
+    )
+    options.update(
+        {
+            "repo-type": repo_type,
+            "head-repo": repo,
+            "head-rev": "head",
+            "base-rev": base_rev,
+            "base-ref": base_ref,
+        }
+    )
+    derive = mocker.patch.object(run_task_mod, "derive_base_rev", return_value=None)
+    compare = mocker.patch.object(run_task_mod, "github_compare")
+    mocker.patch.object(run_task_mod, "git_checkout", return_value="head")
+    mocker.patch.object(run_task_mod, "hg_checkout", return_value="head")
+    run_task_mod.vcs_checkout_from_args(options)
+    assert derive.call_count == int(expected)
+    compare.assert_not_called()
+    if expected:
+        assert os.environ["MYREPO_BASE_REV"] == (base_rev or "")
+    else:
+        assert "MYREPO_BASE_REV" not in os.environ
+
+
+def test_vcs_checkout_derived_base_fetched(
+    run_task_mod, monkeypatch, mocker, mock_git_repo, mock_stdin, tmp_path
+):
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(tmp_path / "gitconfig"))
+    repo_url = "https://github.com/owner/repo"
+    # Keep the GitHub URL for derivation, but route checkout to the local fixture.
+    monkeypatch.setenv("GIT_CONFIG_COUNT", "1")
+    monkeypatch.setenv(
+        "GIT_CONFIG_KEY_0", f"url.file://{mock_git_repo['path']}.insteadOf"
+    )
+    monkeypatch.setenv("GIT_CONFIG_VALUE_0", repo_url)
+    monkeypatch.setenv("GIT_ALLOW_PROTOCOL", "file")
+    derived = mock_git_repo["branch"][-1]
+    options = run_task_mod.collect_vcs_options(
+        Namespace(
+            myrepo_checkout=str(tmp_path / "checkout"), myrepo_shallow_clone=True
+        ),
+        "myrepo",
+        "myrepo",
+    )
+    options.update(
+        {
+            "repo-type": "git",
+            "base-repo": repo_url,
+            "head-repo": repo_url,
+            "base-rev": "0" * 40,
+            "head-rev": mock_git_repo["main"][-1],
+            "head-ref": "refs/heads/main",
+        }
+    )
+    derive = mocker.patch.object(run_task_mod, "derive_base_rev", return_value=derived)
+    run_task_mod.vcs_checkout_from_args(options)
+    derive.assert_called_once()
+    assert options["base-rev"] == derived
+    assert os.environ["MYREPO_BASE_REV"] == derived
+    assert (
+        subprocess.check_output(
+            ["git", "cat-file", "-t", derived], cwd=options["checkout"], text=True
+        ).strip()
+        == "commit"
+    )
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        b"invalid JSON",
+        b"{}",
+        b"null",
+        b'{"status": "ahead", "merge_base_commit": {"sha": "invalid"}}',
+    ],
+)
+def test_github_compare_invalid_response(run_task_mod, mocker, payload):
+    response = mocker.MagicMock()
+    response.__enter__.return_value.read.return_value = payload
+    mocker.patch("urllib.request.urlopen", return_value=response)
+    assert run_task_mod.github_compare("owner", "repo", "main", "head") is None
+
+
+def test_derive_base_rev_default_branch_failure(run_task_mod, mocker):
+    mocker.patch.object(run_task_mod, "_default_branch", return_value=None)
+    compare = mocker.patch.object(run_task_mod, "github_compare")
+    assert (
+        run_task_mod.derive_base_rev(
+            ("owner", "repo"),
+            "https://github.com/owner/repo",
+            "https://github.com/owner/repo",
+            None,
+            None,
+            "feature",
+            "head",
+        )
+        is None
+    )
+    compare.assert_not_called()

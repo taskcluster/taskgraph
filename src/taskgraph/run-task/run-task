@@ -33,6 +33,7 @@ import threading
 import time
 import traceback
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Dict, List, Literal, NamedTuple, Optional
@@ -1243,6 +1244,96 @@ def fetch_secrets():
             )
 
 
+def github_compare(owner, repo, base, head):
+    """Return GitHub's comparison status and merge base, or None on failure."""
+    base = urllib.parse.quote(base, safe="")
+    head = urllib.parse.quote(head, safe="")
+    request = urllib.request.Request(
+        f"https://api.github.com/repos/{owner}/{repo}/compare/{base}...{head}?per_page=1"
+    )
+    # Prefer a token minted for this repository from RUN_TASK_SECRETS, wherever
+    # it was exported to, then one the task provides.
+    token = GITHUB_TOKENS.get((owner.lower(), repo.lower())) or os.environ.get(
+        "GITHUB_TOKEN"
+    )
+    if token:
+        request.add_header("Authorization", f"Bearer {token}")
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            comparison = json.load(response)
+        status = comparison["status"]
+        merge_base = comparison["merge_base_commit"]["sha"]
+        if status not in (
+            "ahead",
+            "behind",
+            "diverged",
+            "identical",
+        ) or not re.fullmatch(r"[a-f0-9]{40}", merge_base):
+            raise ValueError("Invalid GitHub comparison")
+        return status, merge_base
+    except (urllib.error.URLError, OSError, ValueError, KeyError, TypeError):
+        print_line(
+            b"vcs",
+            b"warning: GitHub comparison failed; keeping reported base revision\n",
+        )
+        return None
+
+
+def _default_branch(repo_url):
+    """Resolve the remote's default branch without a GitHub API request."""
+    try:
+        output = subprocess.check_output(
+            ["git", "ls-remote", "--symref", repo_url, "HEAD"],
+            universal_newlines=True,
+            timeout=60,
+        )
+        match = re.search(r"ref:\s+refs/heads/(?P<branch_name>\S+)\s+HEAD", output)
+        if match:
+            return match.group("branch_name")
+    except (OSError, subprocess.SubprocessError):
+        pass
+    print_line(
+        b"vcs",
+        b"warning: unable to resolve default branch; keeping reported base revision\n",
+    )
+    return None
+
+
+def derive_base_rev(
+    github_repo, base_repo, head_repo, base_rev, base_ref, head_ref, head_rev
+):
+    """Find the base of the pushed or proposed changes using GitHub comparisons.
+
+    ``github_repo`` is the ``(owner, name)`` of the repository to compare in.
+    """
+    if head_ref and head_ref.startswith("refs/tags/"):
+        return None
+
+    comparison = None
+    if base_rev and base_rev != NULL_REVISION:
+        comparison = github_compare(*github_repo, base_rev, head_rev)
+        if comparison is None or comparison[0] in ("ahead", "identical"):
+            return None
+
+    same_repo = base_repo == head_repo
+    target = base_ref
+    if target and not (same_repo and shortref(target) == shortref(head_ref or "")):
+        # The reported base is the tip of base_ref, as for a pull request, so
+        # the comparison above already found the merge base with the target.
+        if comparison:
+            return comparison[1]
+    else:
+        target = _default_branch(base_repo or head_repo)
+        if not target:
+            return None
+
+    if same_repo and shortref(target) == shortref(head_ref or ""):
+        return comparison[1] if comparison else None
+
+    comparison = github_compare(*github_repo, target, head_rev)
+    return comparison[1] if comparison else None
+
+
 def fetch_ssh_secret(secret_name):
     """Retrieves the private ssh key, and returns it as a StringIO object"""
     secret_url = SECRET_BASEURL_TPL.format(secret_name)
@@ -1400,6 +1491,9 @@ def collect_vcs_options(args, project, name):
     repo_type = os.environ.get(f"{env_prefix}_REPOSITORY_TYPE")
     base_repo = os.environ.get(f"{env_prefix}_BASE_REPOSITORY")
     base_rev = os.environ.get(f"{env_prefix}_BASE_REV")
+    # Only used to pick the branch to compare against when deriving base_rev.
+    # base_ref is deliberately never fetched or checked out.
+    base_ref = os.environ.get(f"{env_prefix}_BASE_REF")
     head_repo = os.environ.get(f"{env_prefix}_HEAD_REPOSITORY")
     head_ref = os.environ.get(f"{env_prefix}_HEAD_REF")
     head_rev = os.environ.get(f"{env_prefix}_HEAD_REV")
@@ -1431,6 +1525,7 @@ def collect_vcs_options(args, project, name):
         "checkout": checkout,
         "base-repo": base_repo,
         "base-rev": base_rev,
+        "base-ref": base_ref,
         "head-repo": head_repo,
         "head-ref": head_ref,
         "head-rev": head_rev,
@@ -1453,6 +1548,32 @@ def vcs_checkout_from_args(options):
                 f"--{options['project']}-sparse-profile needs --{options['project']}-checkout"
             )
         return
+
+    github_repo = _github_owner_repo(options["base-repo"]) or _github_owner_repo(
+        options["head-repo"]
+    )
+    derive_base = (
+        options["repo-type"] == "git"
+        and github_repo
+        and options["head-rev"]
+        and (options["base-rev"] or options.get("base-ref"))
+    )
+    if derive_base:
+        base_rev = derive_base_rev(
+            github_repo,
+            options["base-repo"],
+            options["head-repo"],
+            options["base-rev"],
+            options.get("base-ref"),
+            options["head-ref"],
+            options["head-rev"],
+        )
+        if base_rev:
+            print_line(
+                b"vcs",
+                f"derived base revision: {options['base-rev']} -> {base_rev}\n".encode(),
+            )
+            options["base-rev"] = base_rev
 
     head_ref = options["head-ref"]
     head_rev = options["head-rev"]
@@ -1525,6 +1646,8 @@ def vcs_checkout_from_args(options):
             pass
 
     os.environ["{}_HEAD_REV".format(options["env-prefix"])] = revision
+    if derive_base:
+        os.environ[f"{options['env-prefix']}_BASE_REV"] = options["base-rev"] or ""
 
 
 def install_pip_requirements(repositories):
