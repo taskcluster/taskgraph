@@ -224,6 +224,11 @@ tasks:
                                 TASKGRAPH_HEAD_REF: '${head_ref}'
                                 TASKGRAPH_HEAD_REV: '${head_sha}'
                                 TASKGRAPH_REPOSITORY_TYPE: git
+                                RUN_TASK_SECRETS:
+                                    $json:
+                                        - type: github-repo-token
+                                          app: read
+                                          repo: '${baseRepoUrl}'
                                 REPOSITORIES: {$json: {taskgraph: Taskgraph}}
                               - $if: 'isPullRequest'
                                 then:

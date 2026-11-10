@@ -37,9 +37,10 @@ import urllib.request
 from pathlib import Path
 from typing import Dict, List, Literal, NamedTuple, Optional
 
-SECRET_BASEURL_TPL = "{}/secrets/v1/secret/{{}}".format(
-    os.environ.get("TASKCLUSTER_PROXY_URL", "http://taskcluster").rstrip("/")
-)
+TASKCLUSTER_PROXY_URL = os.environ.get(
+    "TASKCLUSTER_PROXY_URL", "http://taskcluster"
+).rstrip("/")
+SECRET_BASEURL_TPL = TASKCLUSTER_PROXY_URL + "/secrets/v1/secret/{}"
 
 GITHUB_SSH_FINGERPRINT = (
     b"github.com ssh-ed25519 "
@@ -1156,6 +1157,92 @@ def git_checkout(
     return commit_hash
 
 
+def _github_owner_repo(url):
+    """Return the owner and repository for a github.com HTTPS or SSH URL."""
+    match = re.fullmatch(
+        r"(?:https?://github\.com/|ssh://git@github\.com/|git@github\.com:)"
+        r"([^/]+)/([^/]+?)(?:\.git)?/?",
+        url or "",
+    )
+    return match.groups() if match else None
+
+
+# GitHub tokens minted from RUN_TASK_SECRETS, keyed by lowercase (owner, repo),
+# so run-task can authenticate its own GitHub requests wherever the task asked
+# for the token to go.
+GITHUB_TOKENS: Dict[tuple, str] = {}
+
+
+def fetch_github_token(app, owner, repo, permissions):
+    """Request a GitHub installation token through the task proxy."""
+    request = urllib.request.Request(
+        f"{TASKCLUSTER_PROXY_URL}/api/auth/v1/github/{app}/{owner}/repo-token",
+        data=json.dumps({"repositories": [repo], "permissions": permissions}).encode(
+            "utf-8"
+        ),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            return json.load(response)["token"]
+    except (urllib.error.URLError, OSError, ValueError, KeyError, TypeError):
+        print_line(
+            b"secrets",
+            b"warning: unable to retrieve GitHub token; continuing unauthenticated\n",
+        )
+        return None
+
+
+def fetch_secrets():
+    """Fetch the secrets listed in RUN_TASK_SECRETS and export them."""
+    if not (raw := os.environ.get("RUN_TASK_SECRETS")):
+        return
+    try:
+        entries = json.loads(raw)
+    except ValueError as e:
+        raise RuntimeError(f"RUN_TASK_SECRETS is not valid JSON: {e}") from None
+    if not isinstance(entries, list) or not all(isinstance(e, dict) for e in entries):
+        raise RuntimeError("RUN_TASK_SECRETS must be a JSON list of objects")
+
+    for entry in entries:
+        if entry.get("type") == "github-repo-token":
+            unknown = set(entry) - {"type", "app", "repo", "permissions", "env"}
+            if unknown:
+                raise RuntimeError(f"RUN_TASK_SECRETS: unknown keys {sorted(unknown)}")
+
+            repo = entry.get("repo")
+            github_repo = isinstance(repo, str) and _github_owner_repo(repo)
+            if not github_repo:
+                raise RuntimeError("RUN_TASK_SECRETS: 'repo' must be a GitHub repository")
+
+            owner, name = github_repo
+            envvar = entry.get("env", "GITHUB_TOKEN")
+            token = fetch_github_token(
+                entry.get("app"),
+                owner,
+                name,
+                entry.get("permissions", {"contents": "read"}),
+            )
+            if not token:
+                continue
+            GITHUB_TOKENS.setdefault((owner.lower(), name.lower()), token)
+            print_line(
+                b"secrets", f"fetched github-repo-token for {owner}/{name}\n".encode()
+            )
+            if envvar in os.environ:
+                print_line(
+                    b"secrets",
+                    f"{envvar} is already set; not replacing it\n".encode(),
+                )
+            else:
+                os.environ[envvar] = token
+        else:
+            raise RuntimeError(
+                f"RUN_TASK_SECRETS: unsupported type {entry.get('type')!r}"
+            )
+
+
 def fetch_ssh_secret(secret_name):
     """Retrieves the private ssh key, and returns it as a StringIO object"""
     secret_url = SECRET_BASEURL_TPL.format(secret_name)
@@ -1719,6 +1806,9 @@ def main(args):
         os.umask(0o22)
         os.setresgid(gid, gid, gid)
         os.setresuid(uid, uid, uid)
+
+    # Fetch secrets before checkout, so the checkout can use them.
+    fetch_secrets()
 
     if hook_path := os.environ.get("RUN_TASK_STARTUP_HOOK"):
         run_python_script(hook_path)

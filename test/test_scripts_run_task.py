@@ -6,6 +6,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import urllib.error
 from argparse import Namespace
 from importlib.machinery import SourceFileLoader
 from importlib.util import module_from_spec, spec_from_loader
@@ -1153,3 +1154,146 @@ def test_git_checkout_sparse_cone_converts_for_globs(
     after = materialized_files(destination)
     assert set(before) <= set(after)
     assert "c/four.md" in after
+
+
+@pytest.mark.parametrize(
+    "url,expected",
+    [
+        ("https://github.com/owner/repo.git", ("owner", "repo")),
+        ("https://github.com/owner/repo/", ("owner", "repo")),
+        ("git@github.com:owner/repo.git", ("owner", "repo")),
+        ("ssh://git@github.com/owner/repo", ("owner", "repo")),
+        ("https://github.com.evil/owner/repo", None),
+        ("https://example.com/owner/repo", None),
+        (None, None),
+    ],
+)
+def test_github_owner_repo(run_task_mod, url, expected):
+    assert run_task_mod._github_owner_repo(url) == expected
+
+
+def test_fetch_github_token(run_task_mod, mocker):
+    response = mocker.MagicMock()
+    response.__enter__.return_value.read.return_value = b'{"token": "secret"}'
+    urlopen = mocker.patch("urllib.request.urlopen", return_value=response)
+    permissions = {"contents": "read"}
+    assert (
+        run_task_mod.fetch_github_token("read", "owner", "repo", permissions)
+        == "secret"
+    )
+    request = urlopen.call_args.args[0]
+    assert (
+        request.full_url
+        == f"{run_task_mod.TASKCLUSTER_PROXY_URL}/api/auth/v1/github/read/owner/repo-token"
+    )
+    assert request.method == "POST"
+    assert json.loads(request.data) == {
+        "repositories": ["repo"],
+        "permissions": {"contents": "read"},
+    }
+    assert urlopen.call_args.kwargs == {"timeout": 10}
+    urlopen.side_effect = urllib.error.URLError("denied")
+    assert run_task_mod.fetch_github_token("read", "owner", "repo", permissions) is None
+
+
+GITHUB_SECRET = {
+    "type": "github-repo-token",
+    "app": "read",
+    "repo": "https://github.com/Owner/Repo",
+}
+
+
+@pytest.fixture
+def github_tokens(run_task_mod, monkeypatch):
+    tokens = {}
+    monkeypatch.setattr(run_task_mod, "GITHUB_TOKENS", tokens)
+    return tokens
+
+
+def test_fetch_secrets_unset(run_task_mod, monkeypatch, mocker):
+    monkeypatch.setattr(os, "environ", {})
+    fetch = mocker.patch.object(run_task_mod, "fetch_github_token")
+    run_task_mod.fetch_secrets()
+    fetch.assert_not_called()
+    assert os.environ == {}
+
+
+@pytest.mark.parametrize(
+    "value,error",
+    [
+        pytest.param("not json", "not valid JSON", id="invalid_json"),
+        pytest.param({"type": "github-repo-token"}, "list of objects", id="not_list"),
+        pytest.param(["string"], "list of objects", id="not_objects"),
+        pytest.param([{**GITHUB_SECRET, "type": "secret"}], "unsupported type"),
+        pytest.param([{**GITHUB_SECRET, "extra": 1}], "unknown keys"),
+        pytest.param(
+            [{**GITHUB_SECRET, "repo": "https://example.com/o/r"}], "GitHub repository"
+        ),
+        pytest.param(
+            [{**GITHUB_SECRET, "repo": 1}], "GitHub repository", id="repo_type"
+        ),
+        pytest.param(
+            [{k: v for k, v in GITHUB_SECRET.items() if k != "repo"}],
+            "GitHub repository",
+            id="no_repo",
+        ),
+        pytest.param([{**GITHUB_SECRET, "file": "token"}], "unknown keys", id="file"),
+    ],
+)
+def test_fetch_secrets_invalid(run_task_mod, monkeypatch, mocker, value, error):
+    if not isinstance(value, str):
+        value = json.dumps(value)
+    monkeypatch.setattr(os, "environ", {"RUN_TASK_SECRETS": value})
+    fetch = mocker.patch.object(run_task_mod, "fetch_github_token")
+    with pytest.raises(RuntimeError, match=error):
+        run_task_mod.fetch_secrets()
+    fetch.assert_not_called()
+
+
+def test_fetch_secrets(run_task_mod, monkeypatch, mocker, capsys, github_tokens):
+    entries = [
+        # Defaults to read access to contents, exported as GITHUB_TOKEN.
+        GITHUB_SECRET,
+        {
+            **GITHUB_SECRET,
+            "repo": "https://github.com/owner/other",
+            "permissions": {"pull_requests": "write"},
+            "env": "EXISTING",
+        },
+        {**GITHUB_SECRET, "env": "FAILED"},
+    ]
+    # fetch_secrets sets variables, so keep them out of the real environment.
+    monkeypatch.setattr(
+        os,
+        "environ",
+        {"RUN_TASK_SECRETS": json.dumps(entries), "EXISTING": "explicit"},
+    )
+    fetch = mocker.patch.object(
+        run_task_mod, "fetch_github_token", side_effect=["t1", "t2", None]
+    )
+
+    run_task_mod.fetch_secrets()
+
+    assert fetch.call_args_list == [
+        mocker.call("read", "Owner", "Repo", {"contents": "read"}),
+        mocker.call("read", "owner", "other", {"pull_requests": "write"}),
+        mocker.call("read", "Owner", "Repo", {"contents": "read"}),
+    ]
+    assert {k: v for k, v in os.environ.items() if k != "RUN_TASK_SECRETS"} == {
+        "GITHUB_TOKEN": "t1",
+        "EXISTING": "explicit",
+    }
+    assert github_tokens == {("owner", "repo"): "t1", ("owner", "other"): "t2"}
+    out = capsys.readouterr().out
+    assert out.count("fetched github-repo-token for Owner/Repo") == 1
+    assert out.count("fetched github-repo-token for owner/other") == 1
+    assert "t1" not in out and "t2" not in out
+
+
+def test_main_exports_secrets(run_main, mocker, run_task_mod, github_tokens):
+    mocker.patch.object(run_task_mod, "fetch_github_token", return_value="t1")
+
+    result, env = run_main(env={"RUN_TASK_SECRETS": json.dumps([GITHUB_SECRET])})
+
+    assert result == 0
+    assert env["GITHUB_TOKEN"] == "t1"
