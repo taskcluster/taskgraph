@@ -13,6 +13,7 @@ A collection of how-to guides.
    define-schemas
    resolve-keyed-by
    use-fetches
+   use-secrets
    docker
    create-actions
    send-notifications
