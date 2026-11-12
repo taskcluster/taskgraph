@@ -5,19 +5,27 @@
 Sphinx extension for rendering taskgraph schemas using autodoc with custom formatting.
 """
 
+from importlib.metadata import version
+
 
 def setup(app):
     """
     Entry point for the Sphinx extension.
     """
-    from .autoschema import SchemaDocumenter  # noqa: PLC0415
+    from .autoschema import (  # noqa: PLC0415
+        process_docstring,
+        process_signature,
+        skip_member,
+    )
 
-    # Register the custom autodocumenter.
-    app.add_autodocumenter(SchemaDocumenter)
+    app.setup_extension("sphinx.ext.autodoc")
+    app.connect("autodoc-process-docstring", process_docstring)
+    app.connect("autodoc-process-signature", process_signature)
+    app.connect("autodoc-skip-member", skip_member)
 
     # Return metadata about the extension.
     return {
-        "version": "1.0",
+        "version": version("sphinx-taskgraph"),
         "parallel_read_safe": True,
         "parallel_write_safe": True,
     }
