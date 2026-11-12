@@ -96,7 +96,7 @@ class NotifyConfig(Schema):
 
 
 class LegacyNotificationsConfig(Schema):
-    # Continue supporting the legacy schema for backwards compat.
+    #: Continue supporting the legacy schema for backwards compat.
     emails: optionally_keyed_by("project", "level", list[str], use_msgspec=True)  # type: ignore
     subject: str
     message: Optional[str] = None

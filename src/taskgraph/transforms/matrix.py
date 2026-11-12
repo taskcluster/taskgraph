@@ -16,22 +16,22 @@ from taskgraph.util.templates import substitute_task_fields
 
 
 class MatrixConfig(Schema, forbid_unknown_fields=False, kw_only=True):
-    # Exclude the specified combination(s) of matrix values from the
-    # final list of tasks.
-    #
-    # If only a subset of the possible rows are present in the
-    # exclusion rule, then *all* combinations including that subset
-    # subset will be excluded.
+    #: Exclude the specified combination(s) of matrix values from the
+    #: final list of tasks.
+    #:
+    #: If only a subset of the possible rows are present in the
+    #: exclusion rule, then *all* combinations including that subset
+    #: subset will be excluded.
     exclude: Optional[list[dict[str, str]]] = None
-    # Sets the task name to the specified format string.
-    #
-    # Useful for cases where the default of joining matrix values by
-    # a dash is not desired.
+    #: Sets the task name to the specified format string.
+    #:
+    #: Useful for cases where the default of joining matrix values by
+    #: a dash is not desired.
     set_name: Optional[str] = None
-    # List of fields in the task definition to substitute matrix values into.
-    #
-    # If not specified, all fields in the task definition will be
-    # substituted.
+    #: List of fields in the task definition to substitute matrix values into.
+    #:
+    #: If not specified, all fields in the task definition will be
+    #: substituted.
     substitution_fields: Optional[list[str]] = None
     # Extra dimension keys (e.g. "platform": ["linux", "win"]) allowed
     # via forbid_unknown_fields=False
