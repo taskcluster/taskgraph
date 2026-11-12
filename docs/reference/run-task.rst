@@ -33,6 +33,10 @@ Each entry has a ``type``, which decides its other keys. An unknown ``type`` or
 key, or invalid JSON, fails the task. A variable that is already set is never
 replaced.
 
+Rather than setting ``RUN_TASK_SECRETS`` by hand, tasks using the
+:mod:`~taskgraph.transforms.run` transforms can list secrets in their
+``secrets`` key. See :doc:`/howto/use-secrets`.
+
 github-repo-token
 ~~~~~~~~~~~~~~~~~
 
