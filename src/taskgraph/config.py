@@ -32,7 +32,7 @@ class WorkersConfig(Schema):
 
 
 class RunConfig(Schema):
-    # List of caches to enable, or a boolean to enable/disable all of them.
+    #: List of caches to enable, or a boolean to enable/disable all of them.
     use_caches: Optional[Union[bool, list[CacheType]]] = None
 
 
@@ -45,20 +45,20 @@ class RepositoryConfig(Schema, forbid_unknown_fields=False, kw_only=True):
 
 class TaskgraphConfig(Schema):
     repositories: dict[str, RepositoryConfig]
-    # Python function to call to register extensions.
+    #: Python function to call to register extensions.
     register: Optional[str] = None
     decision_parameters: Optional[str] = None
-    # The taskcluster index prefix to use for caching tasks.
-    # Defaults to `trust-domain`.
+    #: The taskcluster index prefix to use for caching tasks.
+    #: Defaults to `trust-domain`.
     cached_task_prefix: Optional[str] = None
-    # Should tasks from pull requests populate the cache
+    #: Should tasks from pull requests populate the cache
     cache_pull_requests: Optional[bool] = None
-    # Regular expressions matching index paths to be summarized.
+    #: Regular expressions matching index paths to be summarized.
     index_path_regexes: Optional[list[str]] = None
-    # Configuration related to the 'run' transforms.
+    #: Configuration related to the 'run' transforms.
     run: Optional[RunConfig] = None
-    # List of action `cb_name`s to omit from `actions.json`,
-    # e.g. `["retrigger", "retrigger-disabled", "rerun"]`.
+    #: List of action `cb_name`s to omit from `actions.json`,
+    #: e.g. `["retrigger", "retrigger-disabled", "rerun"]`.
     disabled_actions: Optional[list[str]] = None
 
     def __post_init__(self):
@@ -69,21 +69,21 @@ class TaskgraphConfig(Schema):
 
 #: Schema for the graph config
 class GraphConfigSchema(Schema, forbid_unknown_fields=False, kw_only=True):
-    # The trust-domain for this graph.
+    #: The trust-domain for this graph.
     trust_domain: str
     task_priority: optionally_keyed_by(  # type: ignore
         "project", "level", TaskPriority, use_msgspec=True
     )
     workers: WorkersConfig
     taskgraph: TaskgraphConfig
-    # Name of the docker image kind (default: docker-image)
+    #: Name of the docker image kind (default: docker-image)
     docker_image_kind: Optional[str] = None
-    # Default 'deadline' for tasks, in relative date format. Eg: '1 week'
+    #: Default 'deadline' for tasks, in relative date format. Eg: '1 week'
     task_deadline_after: Optional[
         optionally_keyed_by("project", str, use_msgspec=True)  # type: ignore
     ] = None
-    # Default 'expires-after' for level 1 tasks, in relative date format.
-    # Eg: '90 days'
+    #: Default 'expires-after' for level 1 tasks, in relative date format.
+    #: Eg: '90 days'
     task_expires_after: Optional[str] = None
 
 

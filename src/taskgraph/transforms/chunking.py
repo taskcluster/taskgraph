@@ -10,18 +10,18 @@ from taskgraph.util.templates import substitute
 
 
 class ChunkConfig(Schema):
-    # The total number of chunks to split the task into.
+    #: The total number of chunks to split the task into.
     total_chunks: int
-    # A list of fields that need to have `{this_chunk}` and/or
-    # `{total_chunks}` replaced in them.
+    #: A list of fields that need to have `{this_chunk}` and/or
+    #: `{total_chunks}` replaced in them.
     substitution_fields: list[str] = []
 
 
 #: Schema for chunking transforms
 class ChunkSchema(Schema, forbid_unknown_fields=False, kw_only=True):
-    # `chunk` can be used to split one task into `total-chunks`
-    # tasks, substituting `this_chunk` and `total_chunks` into any
-    # fields in `substitution-fields`.
+    #: `chunk` can be used to split one task into `total-chunks`
+    #: tasks, substituting `this_chunk` and `total_chunks` into any
+    #: fields in `substitution-fields`.
     chunk: Optional[ChunkConfig] = None
 
 

@@ -22,6 +22,7 @@ from taskgraph.util.dependencies import GROUP_BY_MAP, get_dependencies
 from taskgraph.util.schema import Schema, validate_schema
 from taskgraph.util.set_name import SET_NAME_MAP
 
+#: Schema for from_deps transforms
 FROM_DEPS_SCHEMA = Schema.from_dict(
     {
         "from-deps": Schema.from_dict(

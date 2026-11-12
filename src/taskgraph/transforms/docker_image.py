@@ -30,24 +30,24 @@ transforms = TransformSequence()
 
 #: Schema for docker_image transforms
 class DockerImageSchema(Schema):
-    # Name of the docker image.
+    #: Name of the docker image.
     name: str
-    # Name of the parent docker image.
+    #: Name of the parent docker image.
     parent: Optional[str] = None
-    # Treeherder symbol.
+    #: Treeherder symbol.
     symbol: Optional[str] = None
-    # Relative path (from config.path) to the file the docker image was defined in.
+    #: Relative path (from config.path) to the file the docker image was defined in.
     task_from: Optional[str] = None
-    # Arguments to use for the Dockerfile.
+    #: Arguments to use for the Dockerfile.
     args: Optional[dict[str, str]] = None
-    # Name of the docker image definition under taskcluster/docker, when
-    # different from the docker image name.
+    #: Name of the docker image definition under taskcluster/docker, when
+    #: different from the docker image name.
     definition: Optional[str] = None
-    # List of package tasks this docker image depends on.
+    #: List of package tasks this docker image depends on.
     packages: Optional[list[str]] = None
-    # Information for indexing this build so its artifacts can be discovered.
+    #: Information for indexing this build so its artifacts can be discovered.
     index: Optional[IndexSchema] = None
-    # Whether this image should be cached based on inputs.
+    #: Whether this image should be cached based on inputs.
     cache: Optional[bool] = None
 
 

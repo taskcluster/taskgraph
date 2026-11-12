@@ -20,8 +20,8 @@ transforms = TransformSequence()
 #: Schema for run.using index-search
 class IndexSearchRunSchema(Schema):
     using: Literal["index-search"]
-    # A list of indexes in decreasing order of priority at which to lookup for this
-    # task. This is interpolated with the graph parameters.
+    #: A list of indexes in decreasing order of priority at which to lookup for this
+    #: task. This is interpolated with the graph parameters.
     index_search: list[str]
 
 

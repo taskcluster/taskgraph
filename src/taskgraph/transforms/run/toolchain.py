@@ -24,24 +24,24 @@ CACHE_TYPE = "toolchains.v3"
 
 #: Schema for run.using toolchain
 class ToolchainRunSchema(Schema, forbid_unknown_fields=False, kw_only=True):
-    # Specifies the run type. Must be "toolchain-script".
+    #: Specifies the run type. Must be "toolchain-script".
     using: Literal["toolchain-script"]
-    # The script (in taskcluster/scripts/misc) to run.
+    #: The script (in taskcluster/scripts/misc) to run.
     script: str
-    # Path to the artifact produced by the toolchain task.
+    #: Path to the artifact produced by the toolchain task.
     toolchain_artifact: str
-    # Base work directory used to set up the task.
+    #: Base work directory used to set up the task.
     workdir: str
-    # Arguments to pass to the script.
+    #: Arguments to pass to the script.
     arguments: Optional[list[str]] = None
-    # Paths/patterns pointing to files that influence the outcome of
-    # a toolchain build.
+    #: Paths/patterns pointing to files that influence the outcome of
+    #: a toolchain build.
     resources: Optional[list[str]] = None
-    # An alias that can be used instead of the real toolchain task name in
-    # fetch stanzas for tasks.
+    #: An alias that can be used instead of the real toolchain task name in
+    #: fetch stanzas for tasks.
     toolchain_alias: Optional[Union[str, list[str]]] = None
-    # Additional env variables to add to the worker when using this
-    # toolchain.
+    #: Additional env variables to add to the worker when using this
+    #: toolchain.
     toolchain_env: Optional[dict[str, object]] = None
 
 

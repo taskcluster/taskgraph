@@ -475,33 +475,33 @@ class Schema(
 
 
 class IndexSchema(Schema):
-    # the name of the product this build produces
+    #: the name of the product this build produces
     product: Optional[str] = None
-    # the names to use for this task in the TaskCluster index
+    #: the names to use for this task in the TaskCluster index
     job_name: Optional[str] = None
-    # Type of gecko v2 index to use
+    #: Type of gecko v2 index to use
     type: str = "generic"
-    # The rank that the task will receive in the TaskCluster
-    # index.  A newly completed task supersedes the currently
-    # indexed task iff it has a higher rank.  If unspecified,
-    # 'by-tier' behavior will be used.
+    #: The rank that the task will receive in the TaskCluster
+    #: index.  A newly completed task supersedes the currently
+    #: indexed task iff it has a higher rank.  If unspecified,
+    #: 'by-tier' behavior will be used.
     rank: Union[Literal["by-tier", "build_date"], int] = "by-tier"
 
 
 class TreeherderConfig(Schema):
-    # Either a bare symbol, or 'grp(sym)'. Defaults to the
-    # uppercased first letter of each section of the kind
-    # (delimited by '-') all smooshed together.
+    #: Either a bare symbol, or 'grp(sym)'. Defaults to the
+    #: uppercased first letter of each section of the kind
+    #: (delimited by '-') all smooshed together.
     symbol: Optional[str] = None
-    # The task kind. Defaults to 'build', 'test', or 'other'
-    # based on the kind name.
+    #: The task kind. Defaults to 'build', 'test', or 'other'
+    #: based on the kind name.
     kind: Optional[Literal["build", "test", "other"]] = None
-    # Tier for this task. Defaults to 1.
+    #: Tier for this task. Defaults to 1.
     tier: Optional[int] = None
-    # Task platform in the form platform/collection, used to
-    # set treeherder.machine.platform and
-    # treeherder.collection or treeherder.labels Defaults to
-    # 'default/opt'.
+    #: Task platform in the form platform/collection, used to
+    #: set treeherder.machine.platform and
+    #: treeherder.collection or treeherder.labels Defaults to
+    #: 'default/opt'.
     platform: Optional[str] = None
 
 
