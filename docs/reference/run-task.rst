@@ -24,10 +24,20 @@ the task can both use them. List them as JSON in ``RUN_TASK_SECRETS``:
                    - type: github-repo-token
                      app: read
                      repo: https://github.com/myorg/myrepo
+                   - type: secret
+                     name: project/myproject/level-3/deploy
+                     key: token
+                     env: DEPLOY_TOKEN
 
-The only type so far is ``github-repo-token``. It asks Taskcluster's auth service
-for an installation token of the GitHub App ``app``, scoped to ``repo``. Its
-keys are:
+Each entry has a ``type``, which decides its other keys. An unknown ``type`` or
+key, or invalid JSON, fails the task. A variable that is already set is never
+replaced.
+
+github-repo-token
+~~~~~~~~~~~~~~~~~
+
+Asks Taskcluster's auth service for an installation token of the GitHub App
+``app``, scoped to ``repo``. Its keys are:
 
 ``app`` (required)
    The name of the GitHub App registered with Taskcluster.
@@ -37,7 +47,7 @@ keys are:
    The token's permissions. Defaults to ``{"contents": "read"}``.
 ``env``
    The environment variable to export the token in. Defaults to
-   ``GITHUB_TOKEN``. A variable that is already set is never replaced.
+   ``GITHUB_TOKEN``.
 
 ``run-task`` also keeps the token for its own GitHub requests. The task needs
 the ``taskclusterProxy`` feature and an
@@ -45,9 +55,33 @@ the ``taskclusterProxy`` feature and an
 each permission. If a request fails, for example because a pull request from a
 fork lacks the scope, ``run-task`` logs a warning and carries on without the
 token. The same happens when the auth service rejects the request, such as for
-an unknown ``app`` or invalid ``permissions``. Invalid JSON, an unknown ``type``
-or key, or a ``repo`` that isn't on GitHub fails the task. Installation tokens
-expire after an hour.
+an unknown ``app`` or invalid ``permissions``. A ``repo`` that isn't on GitHub
+fails the task. Installation tokens expire after an hour.
+
+secret
+~~~~~~
+
+Fetches a secret from Taskcluster's secrets service. Its keys are:
+
+``name`` (required)
+   The name of the secret.
+``env``
+   The environment variable to export the secret in.
+``file``
+   The file to write the secret to. Relative paths are relative to the
+   task's working directory. Missing parent directories are created, and on
+   POSIX systems only the task's user can read the file. An existing file is
+   never replaced.
+``key``
+   A key of the secret to export, rather than the whole secret. Dots select
+   keys of nested objects, so ``foo.bar`` exports ``secret["foo"]["bar"]``.
+
+Exactly one of ``env`` or ``file`` is required. A string value is written as
+is, and any other value as JSON. If the variable is already set or the file
+already exists, the secret isn't fetched. The task needs
+the ``taskclusterProxy`` feature and a ``secrets:get:<name>`` scope. Unlike
+``github-repo-token``, a failure to fetch the secret, or a missing ``key``,
+fails the task.
 
 .. _run-task-base-revisions:
 
