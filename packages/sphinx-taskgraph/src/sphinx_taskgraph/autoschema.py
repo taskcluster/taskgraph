@@ -3,177 +3,301 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """
-Custom autodoc integration for rendering `taskgraph.util.schema.Schema` instances.
+Autodoc integration for rendering msgspec based `taskgraph.util.schema.Schema`
+classes.
+
+Rather than relying on autodoc's default rendering (which shows Python
+attribute names and the generated ``__init__`` signature), each schema class
+gets a list of its fields as they would be written in YAML, along with their
+types, defaults and descriptions.
+
+Field descriptions are taken from ``#:`` comments (or attribute docstrings)
+preceding each field, which Sphinx extracts from the source.
 """
 
+import json
+import sys
+import types
 import typing as t
+from functools import cache
 from textwrap import dedent
-from types import FunctionType, NoneType
 
-from sphinx.ext.autodoc import ClassDocumenter
-from voluptuous import All, Any, Exclusive, Length, Marker, Schema
+import msgspec
+import sphinx.ext.autodoc as autodoc
+from sphinx.errors import PycodeError
+from sphinx.pycode import ModuleAnalyzer
 
-if t.TYPE_CHECKING:
-    from docutils.statemachine import StringList
+try:
+    from sphinx.ext.autodoc import _sentinels
+except ImportError:  # Sphinx < 9
+    _sentinels = None
 
-
-def name(item: t.Any) -> str:
-    if isinstance(item, (bool, int, str, NoneType)):
-        return str(item)
-
-    if isinstance(item, (type, FunctionType)):
-        return item.__name__
-
-    if isinstance(item, Length):
-        return repr(item)
-
-    return item.__class__.__name__
-
-
-def get_type_str(obj: t.Any) -> tuple[str, bool]:
-    # Handle simple subtypes for lists and dicts so that we display
-    # `type: dict[str, Any]` inline rather than expanded out at the
-    # bottom.
-    subtype_str = ""
-    if isinstance(obj, (list, Any)):
-        items = obj
-        if isinstance(items, Any):
-            items = items.validators
-
-        if all(not isinstance(i, (list, dict, Any)) for i in items):
-            subtype_str = f"[{' | '.join(name(i) for i in items)}]"
-
-    elif isinstance(obj, dict):
-        if all(not isinstance(k, (Marker, Any)) for k in obj.keys()) and all(
-            not isinstance(v, (list, dict, Any, All)) for v in obj.values()
-        ):
-            subtype_str = f"[{' | '.join(name(k) for k in obj.keys())}, {' | '.join({name(v) for v in obj.values()})}]"
-
-    return (
-        f"{name(obj)}{subtype_str}",
-        bool(subtype_str),
+# Placeholders autodoc passes to `autodoc-skip-member` in place of slotted
+# attributes (like Struct fields), depending on the Sphinx version and whether
+# the legacy class based implementation is in use.
+SLOTS_SENTINELS = tuple(
+    obj
+    for obj in (
+        getattr(_sentinels, "SLOTS_ATTR", None),
+        getattr(autodoc, "SLOTSATTR", None),
     )
+    if obj is not None
+)
 
 
-def iter_schema_lines(obj: t.Any, indent: int = 0) -> t.Generator[str, None, None]:
+# `types.UnionType` (PEP 604 `X | Y` unions) only exists on Python 3.10+.
+UNION_TYPES = (t.Union, getattr(types, "UnionType", t.Union))
+
+
+def is_keyed_by(meta: t.Any) -> bool:
+    """Return True if `meta` is a `taskgraph.util.schema.OptionallyKeyedBy`.
+
+    Duck-typed to avoid depending on taskgraph itself.
+    """
+    return hasattr(meta, "fields") and hasattr(meta, "wrapped_type")
+
+
+def is_struct(obj: t.Any) -> bool:
+    return isinstance(obj, type) and issubclass(obj, msgspec.Struct)
+
+
+def is_canonical(cls: type) -> bool:
+    """Return True if `cls` can be referenced by its own name.
+
+    Classes created dynamically (e.g. via `Schema.from_dict`) are typically
+    not importable under their `__name__`, so they can't be cross-referenced
+    and need to be rendered inline instead.
+    """
+    module = sys.modules.get(cls.__module__)
+    return module is not None and getattr(module, cls.__qualname__, None) is cls
+
+
+@cache
+def _attr_docs(modname: str) -> dict[tuple[str, str], list[str]]:
+    try:
+        analyzer = ModuleAnalyzer.for_module(modname)
+        return analyzer.find_attr_docs()
+    except PycodeError:
+        return {}
+
+
+def field_description(cls: type, name: str) -> list[str]:
+    """Return the doc comment lines for field `name` on `cls`.
+
+    Fields may be inherited, so look up the comment on the class that
+    actually defines the annotation.
+    """
+    for base in cls.__mro__:
+        if name in base.__dict__.get("__annotations__", {}):
+            docs = _attr_docs(base.__module__).get((base.__qualname__, name))
+            if docs:
+                return dedent("\n".join(docs)).strip("\n").splitlines()
+            return []
+    return []
+
+
+def _literal(value: t.Any) -> str:
+    try:
+        text = json.dumps(value)
+    except (TypeError, ValueError):
+        text = repr(value)
+    return f"``{text}``"
+
+
+def _class_ref(cls: type) -> str:
+    return f":class:`~{cls.__module__}.{cls.__qualname__}`"
+
+
+class TypeFormatter:
+    """Formats a type annotation as reStructuredText.
+
+    Structs which can't be cross-referenced are collected in `inline` so
+    their fields can be rendered beneath the type line.
+    """
+
+    def __init__(self):
+        self.inline: list[type] = []
+
+    def __call__(self, tp: t.Any) -> str:
+        origin = t.get_origin(tp)
+        args = t.get_args(tp)
+
+        if origin is t.Annotated:
+            inner, *metadata = args
+            for meta in metadata:
+                if is_keyed_by(meta):
+                    fields = ", ".join(sorted(f[3:] for f in meta.fields))
+                    return f"optionally-keyed-by({fields}; {self(meta.wrapped_type)})"
+            return self(inner)
+
+        if origin in UNION_TYPES:
+            return " | ".join(self(a) for a in args)
+
+        if origin is t.Literal:
+            return " | ".join(_literal(a) for a in args)
+
+        if origin is not None:
+            name = getattr(origin, "__name__", str(origin))
+            if not args:
+                return name
+            return f"{name}[{', '.join(self(a) for a in args)}]"
+
+        if tp is type(None) or tp is None:
+            return "null"
+
+        if tp in (t.Any, object):
+            return "any"
+
+        if is_struct(tp):
+            if is_canonical(tp):
+                return _class_ref(tp)
+            if tp not in self.inline:
+                self.inline.append(tp)
+            return "dict"
+
+        if isinstance(tp, type):
+            return tp.__name__
+
+        return str(tp)
+
+
+def _strip_optional(tp: t.Any) -> t.Any:
+    """Remove `None` from a union type."""
+    if t.get_origin(tp) in UNION_TYPES:
+        args = [a for a in t.get_args(tp) if a is not type(None)]
+        if len(args) == 1:
+            return args[0]
+        return t.Union[tuple(args)]  # noqa: UP007
+    return tp
+
+
+def _keyed_by(tp: t.Any) -> t.Any:
+    if t.get_origin(tp) is t.Annotated:
+        for meta in t.get_args(tp)[1:]:
+            if is_keyed_by(meta):
+                return meta
+    return None
+
+
+def _get_default(field: msgspec.structs.FieldInfo) -> t.Any:
+    if field.default is not msgspec.NODEFAULT:
+        return field.default
+    if field.default_factory is not msgspec.NODEFAULT:
+        return field.default_factory()
+    return msgspec.NODEFAULT
+
+
+def iter_struct_lines(
+    cls: type, indent: int = 0, seen: tuple[type, ...] = ()
+) -> t.Generator[str, None, None]:
     prefix = " " * indent
-    arg_prefix = " " * (indent + 2)
+    arg_prefix = prefix + "   "
+    seen = seen + (cls,)
 
-    if isinstance(obj, Schema):
-        # Display whether extra keys are allowed
-        extra = obj._extra_to_name[obj.extra].split("_")[0].lower()
-        yield f"{prefix}extra keys: {extra}{'d' if extra[-1] == 'e' else 'ed'}"
+    config = cls.__struct_config__
+    extra = "forbidden" if config.forbid_unknown_fields else "allowed"
+    yield f"{prefix}*extra keys: {extra}*"
+    yield ""
+
+    fields = msgspec.structs.fields(cls)
+    encode_names = {f.name: f.encode_name for f in fields}
+
+    for group in getattr(cls, "exclusive", None) or ():
+        names = ", ".join(f"``{encode_names.get(f, f)}``" for f in group)
+        yield f"{prefix}**mutually exclusive**: {names}"
         yield ""
-        yield from iter_schema_lines(obj.schema, indent)
+
+    for field in fields:
+        tp = field.type
+        default = _get_default(field)
+
+        # Don't display `None` as a valid type if it's just the default.
+        if default is None:
+            tp = _strip_optional(tp)
+
+        fmt = TypeFormatter()
+        if keyed_by := _keyed_by(tp):
+            type_str = fmt(keyed_by.wrapped_type)
+        else:
+            type_str = fmt(tp)
+
+        status = "required" if field.required else "optional"
+        yield f"{prefix}``{field.encode_name}`` ({status})"
+        yield f"{arg_prefix}**type**: {type_str}"
+
+        if keyed_by:
+            fields_str = ", ".join(f"``{f[3:]}``" for f in sorted(keyed_by.fields))
+            yield ""
+            yield f"{arg_prefix}**optionally keyed by**: {fields_str}"
+
+        if default not in (msgspec.NODEFAULT, None):
+            yield ""
+            yield f"{arg_prefix}**default**: {_literal(default)}"
+
+        if desc := field_description(cls, field.name):
+            yield ""
+            for line in desc:
+                yield f"{arg_prefix}{line}" if line else ""
+
+        yield ""
+
+        for sub in fmt.inline:
+            if sub in seen:
+                continue
+            yield from iter_struct_lines(sub, indent + 3, seen)
+
+    yield ""
+
+
+# Names of fields belonging to schema classes in the module currently being
+# documented. In Sphinx 9+, slotted members (like Struct fields) are passed to
+# `autodoc-skip-member` as a sentinel without any reference to the class they
+# belong to, and only after every class in the module has been processed.
+_module_fields: set[str] = set()
+
+
+def process_docstring(app, what, name, obj, options, lines):
+    if what == "module":
+        _module_fields.clear()
+
+    if what not in ("class", "data", "attribute") or not is_struct(obj):
         return
 
-    if isinstance(obj, dict):
-        for i, (key, value) in enumerate(obj.items()):
-            subtypes_handled = False
+    if what == "class":
+        _module_fields.update(obj.__struct_fields__)
 
-            # Handle optionally_keyed_by
-            keyed_by_str = ""
-            if isinstance(value, FunctionType):
-                keyed_by_str = ", ".join(getattr(value, "fields", ""))
-                value = getattr(value, "schema", value)
+    # Aliases of documented classes (e.g. `CHUNK_SCHEMA = ChunkSchema`) just
+    # link to the class.
+    if name.rsplit(".", 1)[-1] != obj.__name__ and is_canonical(obj):
+        return
 
-            # If the key is a marker (aka Required, Optional, Exclusive),
-            # display additional information if available, like the
-            # description.
-            if isinstance(key, Marker):
-                # Add marker name and group for Exclusive.
-                marker_str = f"{name(key).lower()}"
-                if isinstance(key, Exclusive):
-                    marker_str += f"={key.group_of_exclusion}"
+    # Don't inherit the docstring of the `Schema` base class.
+    if not obj.__dict__.get("__doc__"):
+        lines.clear()
+    elif lines and lines[-1]:
+        lines.append("")
 
-                # Make it clear if an allowed value must be constant.
-                type_ = "type"
-                if isinstance(obj, (bool, int, str, NoneType)):
-                    type_ = "constant"
-
-                # Create the key header + type lines.
-                yield f"{prefix}{key.schema} ({marker_str})"
-                type_str, subtypes_handled = get_type_str(value)
-                yield f"{arg_prefix}{type_}: {type_str}"
-
-                # Create the keyed-by line if needed.
-                if keyed_by_str:
-                    yield ""
-                    yield f"{arg_prefix}optionally keyed by: {keyed_by_str}"
-
-                # Create the description if needed.
-                if desc := getattr(key, "description", None):
-                    yield ""
-                    yield arg_prefix + f"\n{arg_prefix}".join(
-                        dedent(l) for l in desc.splitlines()
-                    )
-
-            elif isinstance(key, Any):
-                type_str, subtypes_handled = get_type_str(key)
-                yield f"{prefix}{type_str}: {name(value)}"
-
-            else:
-                # If not a marker, simply create a `key: value` line.
-                yield f"{prefix}{name(key)}: {name(value)}"
-
-            yield ""
-
-            # Recurse into values that contain additional schema, unless the
-            # types for said containers are simple and we handled them in the
-            # type line.
-            if isinstance(value, (list, dict, All, Any)) and not subtypes_handled:
-                yield from iter_schema_lines(value, indent + 2)
-
-    elif isinstance(obj, (list, All, Any)):
-        # Recurse into list, All and Any markers.
-        op = "or" if isinstance(obj, (list, Any)) else "and"
-        if isinstance(obj, (All, Any)):
-            obj = obj.validators
-
-        for i, item in enumerate(obj):
-            if i != 0:
-                yield ""
-                yield f"{prefix}{op}"
-                yield ""
-
-            type_, subtypes_handled = get_type_str(item)
-            yield f"{arg_prefix}{type_}"
-            yield ""
-
-            if isinstance(item, (list, dict, All, Any)) and not subtypes_handled:
-                yield from iter_schema_lines(item, indent + 2)
-    else:
-        # Create line for leaf values.
-        yield prefix + name(obj)
-        yield ""
+    lines.extend(iter_struct_lines(obj))
 
 
-class SchemaDocumenter(ClassDocumenter):
-    """
-    Custom Sphinx autodocumenter for instances of `Schema`.
-    """
+def process_signature(app, what, name, obj, options, signature, return_annotation):
+    # Hide the generated `__init__` signature, as schemas are never
+    # instantiated directly.
+    if what == "class" and is_struct(obj):
+        return "", return_annotation
+    return None
 
-    # Document only `Schema` instances.
-    objtype = "schema"
-    directivetype = "class"
-    content_indent = "   "
 
-    # Priority over the default ClassDocumenter.
-    priority = 10
+def skip_member(app, what, name, obj, skip, options):
+    # Fields are rendered as part of the class docstring.
+    if what != "class":
+        return None
 
-    @classmethod
-    def can_document_member(
-        cls, member: object, membername: str, isattr: bool, parent: object
-    ) -> bool:
-        return isinstance(member, Schema)
+    # Legacy class based autodoc passes the slot descriptor.
+    objclass = getattr(obj, "__objclass__", None)
+    if isinstance(obj, types.MemberDescriptorType) and is_struct(objclass):
+        return name in objclass.__struct_fields__ or None  # type: ignore[union-attr]
 
-    def add_directive_header(self, sig: str) -> None:
-        super().add_directive_header(sig)
-
-    def add_content(
-        self, more_content: t.Union["StringList", None], no_docstring: bool = False
-    ) -> None:
-        # Format schema rules recursively.
-        for line in iter_schema_lines(self.object):
-            self.add_line(line, "")
-        self.add_line("", "")
+    if any(obj is s for s in SLOTS_SENTINELS) and name in _module_fields:
+        return True
+    return None
