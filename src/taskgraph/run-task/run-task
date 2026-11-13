@@ -1195,6 +1195,117 @@ def fetch_github_token(app, owner, repo, permissions):
         return None
 
 
+def fetch_taskcluster_secret(name):
+    """Return the value of a secret from Taskcluster's secrets service."""
+    try:
+        with urllib.request.urlopen(SECRET_BASEURL_TPL.format(name), timeout=10) as res:
+            return json.load(res)["secret"]
+    except (urllib.error.URLError, OSError, ValueError, KeyError, TypeError) as e:
+        raise RuntimeError(
+            f"RUN_TASK_SECRETS: unable to fetch secret {name!r}: {e}"
+        ) from None
+
+
+def _export_secret(envvar, value):
+    if envvar in os.environ:
+        print_line(b"secrets", f"{envvar} is already set; not replacing it\n".encode())
+    else:
+        os.environ[envvar] = value
+
+
+def _check_secret_keys(entry, allowed):
+    unknown = set(entry) - {"type"} - allowed
+    if unknown:
+        raise RuntimeError(f"RUN_TASK_SECRETS: unknown keys {sorted(unknown)}")
+
+
+def _fetch_github_repo_token(entry):
+    _check_secret_keys(entry, {"app", "repo", "permissions", "env"})
+
+    repo = entry.get("repo")
+    github_repo = isinstance(repo, str) and _github_owner_repo(repo)
+    if not github_repo:
+        raise RuntimeError("RUN_TASK_SECRETS: 'repo' must be a GitHub repository")
+
+    owner, name = github_repo
+    token = fetch_github_token(
+        entry.get("app"),
+        owner,
+        name,
+        entry.get("permissions", {"contents": "read"}),
+    )
+    if not token:
+        return
+    GITHUB_TOKENS.setdefault((owner.lower(), name.lower()), token)
+    print_line(b"secrets", f"fetched github-repo-token for {owner}/{name}\n".encode())
+    _export_secret(entry.get("env", "GITHUB_TOKEN"), token)
+
+
+def _write_secret_file(path, value):
+    """Write a secret to a new file only the task user can read (on POSIX)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w") as fh:
+        fh.write(value)
+
+
+def _fetch_secret(entry):
+    _check_secret_keys(entry, {"name", "key", "env", "file"})
+
+    name = entry.get("name")
+    envvar = entry.get("env")
+    path = entry.get("file")
+    key = entry.get("key")
+    if not isinstance(name, str) or not name:
+        raise RuntimeError("RUN_TASK_SECRETS: 'name' must be a secret name")
+    if (envvar is None) == (path is None):
+        raise RuntimeError("RUN_TASK_SECRETS: exactly one of 'env' or 'file' is required")
+    if envvar is not None and (not isinstance(envvar, str) or not envvar):
+        raise RuntimeError("RUN_TASK_SECRETS: 'env' must be a variable name")
+    if path is not None and (not isinstance(path, str) or not path):
+        raise RuntimeError("RUN_TASK_SECRETS: 'file' must be a path")
+    if key is not None and not isinstance(key, str):
+        raise RuntimeError("RUN_TASK_SECRETS: 'key' must be a string")
+
+    # Relative paths are relative to the task's working directory.
+    if path is not None:
+        path = Path(os.path.abspath(os.path.expanduser(path)))
+
+    # Don't fetch a value that wouldn't be used.
+    if envvar is not None and envvar in os.environ:
+        print_line(
+            b"secrets", f"{envvar} is already set; not fetching {name}\n".encode()
+        )
+        return
+    if path is not None and path.exists():
+        print_line(
+            b"secrets", f"{path} already exists; not fetching {name}\n".encode()
+        )
+        return
+
+    value = fetch_taskcluster_secret(name)
+    if key is not None:
+        # Dots separate the keys of nested objects, e.g. "foo.bar".
+        for part in key.split("."):
+            if not isinstance(value, dict) or part not in value:
+                raise RuntimeError(
+                    f"RUN_TASK_SECRETS: secret {name!r} has no key {key!r}"
+                )
+            value = value[part]
+    print_line(b"secrets", f"fetched secret {name}\n".encode())
+    value = value if isinstance(value, str) else json.dumps(value)
+    if path is not None:
+        _write_secret_file(path, value)
+    else:
+        _export_secret(envvar, value)
+
+
+SECRET_FETCHERS = {
+    "github-repo-token": _fetch_github_repo_token,
+    "secret": _fetch_secret,
+}
+
+
 def fetch_secrets():
     """Fetch the secrets listed in RUN_TASK_SECRETS and export them."""
     if not (raw := os.environ.get("RUN_TASK_SECRETS")):
@@ -1207,41 +1318,12 @@ def fetch_secrets():
         raise RuntimeError("RUN_TASK_SECRETS must be a JSON list of objects")
 
     for entry in entries:
-        if entry.get("type") == "github-repo-token":
-            unknown = set(entry) - {"type", "app", "repo", "permissions", "env"}
-            if unknown:
-                raise RuntimeError(f"RUN_TASK_SECRETS: unknown keys {sorted(unknown)}")
-
-            repo = entry.get("repo")
-            github_repo = isinstance(repo, str) and _github_owner_repo(repo)
-            if not github_repo:
-                raise RuntimeError("RUN_TASK_SECRETS: 'repo' must be a GitHub repository")
-
-            owner, name = github_repo
-            envvar = entry.get("env", "GITHUB_TOKEN")
-            token = fetch_github_token(
-                entry.get("app"),
-                owner,
-                name,
-                entry.get("permissions", {"contents": "read"}),
-            )
-            if not token:
-                continue
-            GITHUB_TOKENS.setdefault((owner.lower(), name.lower()), token)
-            print_line(
-                b"secrets", f"fetched github-repo-token for {owner}/{name}\n".encode()
-            )
-            if envvar in os.environ:
-                print_line(
-                    b"secrets",
-                    f"{envvar} is already set; not replacing it\n".encode(),
-                )
-            else:
-                os.environ[envvar] = token
-        else:
+        fetcher = SECRET_FETCHERS.get(entry.get("type"))
+        if not fetcher:
             raise RuntimeError(
                 f"RUN_TASK_SECRETS: unsupported type {entry.get('type')!r}"
             )
+        fetcher(entry)
 
 
 def github_compare(owner, repo, base, head):

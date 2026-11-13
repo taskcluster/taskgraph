@@ -1205,6 +1205,13 @@ GITHUB_SECRET = {
 }
 
 
+TC_SECRET = {
+    "type": "secret",
+    "name": "project/foo/bar",
+    "env": "BAR",
+}
+
+
 @pytest.fixture
 def github_tokens(run_task_mod, monkeypatch):
     tokens = {}
@@ -1226,7 +1233,7 @@ def test_fetch_secrets_unset(run_task_mod, monkeypatch, mocker):
         pytest.param("not json", "not valid JSON", id="invalid_json"),
         pytest.param({"type": "github-repo-token"}, "list of objects", id="not_list"),
         pytest.param(["string"], "list of objects", id="not_objects"),
-        pytest.param([{**GITHUB_SECRET, "type": "secret"}], "unsupported type"),
+        pytest.param([{**GITHUB_SECRET, "type": "bogus"}], "unsupported type"),
         pytest.param([{**GITHUB_SECRET, "extra": 1}], "unknown keys"),
         pytest.param(
             [{**GITHUB_SECRET, "repo": "https://example.com/o/r"}], "GitHub repository"
@@ -1240,6 +1247,23 @@ def test_fetch_secrets_unset(run_task_mod, monkeypatch, mocker):
             id="no_repo",
         ),
         pytest.param([{**GITHUB_SECRET, "file": "token"}], "unknown keys", id="file"),
+        pytest.param([{**TC_SECRET, "app": "read"}], "unknown keys", id="secret_keys"),
+        pytest.param([{**TC_SECRET, "name": ""}], "secret name", id="secret_name"),
+        pytest.param(
+            [{k: v for k, v in TC_SECRET.items() if k != "env"}],
+            "exactly one of 'env' or 'file'",
+            id="secret_no_env_or_file",
+        ),
+        pytest.param(
+            [{**TC_SECRET, "file": "secret.json"}],
+            "exactly one of 'env' or 'file'",
+            id="secret_env_and_file",
+        ),
+        pytest.param([{**TC_SECRET, "env": ""}], "variable name", id="secret_env"),
+        pytest.param(
+            [{"type": "secret", "name": "a", "file": 1}], "be a path", id="secret_file"
+        ),
+        pytest.param([{**TC_SECRET, "key": 1}], "'key'", id="secret_key_type"),
     ],
 )
 def test_fetch_secrets_invalid(run_task_mod, monkeypatch, mocker, value, error):
@@ -1247,9 +1271,11 @@ def test_fetch_secrets_invalid(run_task_mod, monkeypatch, mocker, value, error):
         value = json.dumps(value)
     monkeypatch.setattr(os, "environ", {"RUN_TASK_SECRETS": value})
     fetch = mocker.patch.object(run_task_mod, "fetch_github_token")
+    fetch_secret = mocker.patch.object(run_task_mod, "fetch_taskcluster_secret")
     with pytest.raises(RuntimeError, match=error):
         run_task_mod.fetch_secrets()
     fetch.assert_not_called()
+    fetch_secret.assert_not_called()
 
 
 def test_fetch_secrets(run_task_mod, monkeypatch, mocker, capsys, github_tokens):
@@ -1581,3 +1607,125 @@ def test_derive_base_rev_default_branch_failure(run_task_mod, mocker):
         is None
     )
     compare.assert_not_called()
+
+
+def test_fetch_taskcluster_secret(run_task_mod, mocker):
+    response = mocker.MagicMock()
+    response.__enter__.return_value.read.return_value = (
+        b'{"secret": {"token": "s"}, "expires": "2030-01-01T00:00:00.000Z"}'
+    )
+    urlopen = mocker.patch("urllib.request.urlopen", return_value=response)
+    assert run_task_mod.fetch_taskcluster_secret("project/foo") == {"token": "s"}
+    assert urlopen.call_args.args == (
+        f"{run_task_mod.TASKCLUSTER_PROXY_URL}/secrets/v1/secret/project/foo",
+    )
+    assert urlopen.call_args.kwargs == {"timeout": 10}
+
+    urlopen.side_effect = urllib.error.HTTPError(
+        "url",
+        404,
+        "Not Found",
+        None,  # type: ignore
+        None,
+    )
+    with pytest.raises(RuntimeError, match="unable to fetch secret 'project/foo'"):
+        run_task_mod.fetch_taskcluster_secret("project/foo")
+
+
+def test_fetch_secrets_taskcluster(run_task_mod, monkeypatch, mocker, capsys):
+    entries = [
+        # The whole secret, JSON encoded.
+        TC_SECRET,
+        # A string value is exported as is.
+        {**TC_SECRET, "key": "token", "env": "TOKEN"},
+        # Any other value is JSON encoded.
+        {**TC_SECRET, "key": "config", "env": "CONFIG"},
+        # Dots select keys of nested objects.
+        {**TC_SECRET, "key": "config.b.c", "env": "NESTED"},
+        # An existing variable is left alone, and the secret isn't fetched.
+        {**TC_SECRET, "name": "project/other", "env": "EXISTING"},
+    ]
+    monkeypatch.setattr(
+        os,
+        "environ",
+        {"RUN_TASK_SECRETS": json.dumps(entries), "EXISTING": "explicit"},
+    )
+    value = {"token": "hunter2", "config": {"a": 1, "b": {"c": "deep"}}}
+    fetch = mocker.patch.object(
+        run_task_mod, "fetch_taskcluster_secret", return_value=value
+    )
+
+    run_task_mod.fetch_secrets()
+
+    assert fetch.call_args_list == [mocker.call("project/foo/bar")] * 4
+    assert {k: v for k, v in os.environ.items() if k != "RUN_TASK_SECRETS"} == {
+        "BAR": json.dumps(value),
+        "TOKEN": "hunter2",
+        "CONFIG": '{"a": 1, "b": {"c": "deep"}}',
+        "NESTED": "deep",
+        "EXISTING": "explicit",
+    }
+    out = capsys.readouterr().out
+    assert out.count("fetched secret project/foo/bar") == 4
+    assert "EXISTING is already set; not fetching project/other" in out
+    assert "hunter2" not in out
+
+
+@pytest.mark.parametrize(
+    "key,value",
+    [
+        ("token", {"other": "x"}),
+        ("token", "string"),
+        ("token.inner", {"token": {"other": "x"}}),
+        ("token.inner", {"token": "string"}),
+    ],
+)
+def test_fetch_secrets_taskcluster_missing_key(
+    run_task_mod, monkeypatch, mocker, key, value
+):
+    entries = [{**TC_SECRET, "key": key}]
+    monkeypatch.setattr(os, "environ", {"RUN_TASK_SECRETS": json.dumps(entries)})
+    mocker.patch.object(run_task_mod, "fetch_taskcluster_secret", return_value=value)
+    with pytest.raises(RuntimeError, match=f"has no key '{key}'"):
+        run_task_mod.fetch_secrets()
+    assert "BAR" not in os.environ
+
+
+def test_fetch_secrets_taskcluster_file(
+    run_task_mod, monkeypatch, mocker, capsys, tmp_path
+):
+    existing = tmp_path / "existing"
+    existing.write_text("explicit")
+    entries = [
+        {"type": "secret", "name": "project/foo", "file": str(tmp_path / "a/b.json")},
+        # Relative paths are relative to the working directory.
+        {"type": "secret", "name": "project/foo", "file": "rel.json"},
+        # An existing file is left alone, and the secret isn't fetched.
+        {"type": "secret", "name": "project/other", "file": str(existing)},
+        # A string key is written as is, and any other value as JSON.
+        {"type": "secret", "name": "project/foo", "key": "token", "file": "token"},
+        {"type": "secret", "name": "project/foo", "key": "cfg", "file": "cfg.json"},
+    ]
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(os, "environ", {"RUN_TASK_SECRETS": json.dumps(entries)})
+    value = {"token": "hunter2", "cfg": {"a": 1}}
+    fetch = mocker.patch.object(
+        run_task_mod, "fetch_taskcluster_secret", return_value=value
+    )
+
+    run_task_mod.fetch_secrets()
+
+    assert fetch.call_args_list == [mocker.call("project/foo")] * 4
+    for path in (tmp_path / "a/b.json", tmp_path / "rel.json"):
+        assert json.loads(path.read_text()) == value
+    assert (tmp_path / "token").read_text() == "hunter2"
+    assert (tmp_path / "cfg.json").read_text() == '{"a": 1}'
+    # Windows has no POSIX permissions to check.
+    if os.name != "nt":
+        for path in ("a/b.json", "rel.json", "token", "cfg.json"):
+            assert stat.S_IMODE((tmp_path / path).stat().st_mode) == 0o600
+    assert existing.read_text() == "explicit"
+    assert os.environ == {"RUN_TASK_SECRETS": json.dumps(entries)}
+    out = capsys.readouterr().out
+    assert f"{existing} already exists; not fetching project/other" in out
+    assert "hunter2" not in out

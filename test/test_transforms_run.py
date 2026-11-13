@@ -8,6 +8,7 @@ Tests for the 'run' transform subsystem.
 
 import json
 import os
+import re
 from copy import deepcopy
 from pprint import pprint
 from unittest.mock import patch
@@ -194,3 +195,164 @@ def test_use_fetches(
     param_id = request.node.callspec.id
     assert_func = globals()[f"assert_use_fetches_{param_id}"]
     assert_func(result)
+
+
+GITHUB_PARAMS = {"base_repository": "https://github.com/Owner/Repo"}
+
+
+def test_use_secrets(run_transform):
+    task = merge(
+        TASK_DEFAULTS,
+        {
+            "scopes": ["secrets:get:project/foo"],
+            "worker": {"env": {"FOO": "1"}},
+            "secrets": [
+                {"type": "github-repo-token", "app": "read"},
+                {
+                    "type": "github-repo-token",
+                    "app": "write",
+                    "repo": "git@github.com:owner/other.git",
+                    "permissions": {"pull_requests": "write", "contents": "read"},
+                    "env": "OTHER_TOKEN",
+                },
+                {"type": "secret", "name": "project/foo", "env": "FOO_SECRET"},
+                {
+                    "type": "secret",
+                    "name": "project/bar",
+                    "key": "token",
+                    "env": "BAR_TOKEN",
+                },
+                # Neither an env nor a file collides with a namesake of the other.
+                {"type": "secret", "name": "project/foo", "file": "FOO_SECRET"},
+            ],
+        },
+    )
+    result = run_transform(run.use_secrets, task, extra_params=GITHUB_PARAMS)[0]
+
+    assert "secrets" not in result
+    assert result["worker"]["taskcluster-proxy"] is True
+    assert result["scopes"] == [
+        "secrets:get:project/foo",
+        "auth:github-repo-token:read/Owner/Repo:contents:read",
+        "auth:github-repo-token:write/owner/other:contents:read",
+        "auth:github-repo-token:write/owner/other:pull_requests:write",
+        "secrets:get:project/bar",
+    ]
+    env = result["worker"]["env"]
+    assert env["FOO"] == "1"
+    assert json.loads(env["RUN_TASK_SECRETS"]) == [
+        {
+            "type": "github-repo-token",
+            "app": "read",
+            "repo": "https://github.com/Owner/Repo",
+        },
+        {
+            "type": "github-repo-token",
+            "app": "write",
+            "repo": "git@github.com:owner/other.git",
+            "permissions": {"pull_requests": "write", "contents": "read"},
+            "env": "OTHER_TOKEN",
+        },
+        {"type": "secret", "name": "project/foo", "env": "FOO_SECRET"},
+        {"type": "secret", "name": "project/bar", "key": "token", "env": "BAR_TOKEN"},
+        {"type": "secret", "name": "project/foo", "file": "FOO_SECRET"},
+    ]
+
+
+def test_use_secrets_none(run_transform):
+    task = deepcopy(TASK_DEFAULTS)
+    assert run_transform(run.use_secrets, task)[0] == TASK_DEFAULTS
+
+
+@pytest.mark.parametrize(
+    "task,error",
+    (
+        pytest.param(
+            {
+                "secrets": [{"type": "secret", "name": "a", "env": "FOO"}],
+                "worker": {"env": {"RUN_TASK_SECRETS": "[]"}},
+            },
+            "not both",
+            id="explicit_env",
+        ),
+        pytest.param(
+            {"secrets": [{"type": "github-repo-token", "app": "read"}]},
+            "is not a GitHub repository",
+            id="not_github",
+        ),
+        pytest.param(
+            {
+                "secrets": [
+                    {"type": "secret", "name": "a", "env": "GITHUB_TOKEN"},
+                    {
+                        "type": "github-repo-token",
+                        "app": "read",
+                        "repo": "https://github.com/o/r",
+                    },
+                ]
+            },
+            "more than one secret is exported to env GITHUB_TOKEN",
+            id="duplicate_env",
+        ),
+        pytest.param(
+            {
+                "secrets": [
+                    {"type": "secret", "name": "a", "file": "a.json"},
+                    {"type": "secret", "name": "b", "file": "a.json"},
+                ]
+            },
+            "more than one secret is exported to file a.json",
+            id="duplicate_file",
+        ),
+    ),
+)
+def test_use_secrets_invalid(run_transform, task, error):
+    task = merge(TASK_DEFAULTS, task)
+    with pytest.raises(Exception, match=error):
+        run_transform(run.use_secrets, task)
+
+
+@pytest.mark.parametrize(
+    "secret,error",
+    (
+        pytest.param({"type": "bogus"}, "", id="unknown_type"),
+        pytest.param(
+            {"type": "secret", "name": "a"},
+            "exactly one of 'env' or 'file'",
+            id="missing_env_and_file",
+        ),
+        pytest.param(
+            {"type": "secret", "name": "a", "env": "A", "file": "a"},
+            "exactly one of 'env' or 'file'",
+            id="env_and_file",
+        ),
+        pytest.param({"type": "github-repo-token"}, "", id="missing_app"),
+        pytest.param(
+            {"type": "github-repo-token", "app": "read", "file": "a"},
+            "",
+            id="github_file",
+        ),
+        pytest.param(
+            {"type": "secret", "name": "a", "env": "A", "app": "read"},
+            "",
+            id="unknown_key",
+        ),
+    ),
+)
+def test_use_secrets_schema(transform, secret, error):
+    with pytest.raises(Exception, match=rf"(?s){re.escape(error)}.*\$\.secrets\[0\]"):
+        transform({"worker-type": "t-linux", "secrets": [secret]})
+
+
+def test_use_secrets_run_transforms(transform):
+    taskdesc = transform(
+        {
+            "worker-type": "t-linux",
+            "secrets": [{"type": "secret", "name": "project/foo", "env": "FOO"}],
+        },
+    )[2]
+    assert "secrets" not in taskdesc
+    assert "secrets:get:project/foo" in taskdesc["scopes"]
+    assert json.loads(taskdesc["worker"]["env"]["RUN_TASK_SECRETS"]) == [
+        {"type": "secret", "name": "project/foo", "env": "FOO"}
+    ]

@@ -12,17 +12,13 @@ test $VCS_HEAD_REV
 
 function cleanup() {
     echo "=== Clean up ==="
-    rm -rf $HOME/.docker
+    rm -rf $HOME/.docker $HOME/.dockercfg
 }
 trap cleanup EXIT
 
-echo "=== Generating dockercfg ==="
-PASSWORD_URL="http://taskcluster/secrets/v1/secret/project/taskgraph/level-3/dockerhub"
-install -m 600 /dev/null $HOME/.dockercfg
-# Note: If there's a scoping error, this will not fail, causing the skopeo copy command to fail
-curl $PASSWORD_URL | jq '.secret.dockercfg' > $HOME/.dockercfg
-
+# run-task writes the Docker Hub credentials to $HOME/.dockercfg.
 export REGISTRY_AUTH_FILE=$HOME/.dockercfg
+test -s $REGISTRY_AUTH_FILE
 
 cd $MOZ_FETCHES_DIR
 unzstd image.tar.zst
