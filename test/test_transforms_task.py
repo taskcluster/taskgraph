@@ -1000,3 +1000,44 @@ def test_dict_schema_accepts_valid_payload(dict_schema_builder, payload):
 def test_dict_schema_rejects_invalid_payload(dict_schema_builder, payload):
     with pytest.raises(voluptuous.MultipleInvalid):
         dict_schema_builder(payload)
+
+
+@pytest.mark.parametrize(
+    "worker_type,worker",
+    (
+        pytest.param(
+            "t-linux",
+            {
+                "docker-image": "fake-image-name",
+                "max-run-time": 1800,
+                "command": ["run-task"],
+            },
+            id="docker-worker",
+        ),
+        pytest.param(
+            "t-win",
+            {
+                "max-run-time": 1800,
+                "command": ["run-task"],
+            },
+            id="generic-worker",
+        ),
+    ),
+)
+def test_max_run_time_passed_to_task_env(
+    run_transform, make_transform_config, worker_type, worker
+):
+    """run-task is told the maxRunTime of the task through its environment."""
+    task_def = {
+        "description": "fake description",
+        "name": "fake-task-name",
+        "worker-type": worker_type,
+        "worker": worker,
+    }
+
+    task_dict = run_transform(
+        task.transforms, task_def, config=make_transform_config()
+    )[0]
+    payload = task_dict["task"]["payload"]
+    assert payload["maxRunTime"] == 1800
+    assert payload["env"]["TASKCLUSTER_MAX_RUN_TIME"] == "1800"
