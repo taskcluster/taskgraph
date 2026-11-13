@@ -6,21 +6,8 @@ import stat
 import subprocess
 from pathlib import Path
 
-import requests
-
+# run-task exports the upload token in CODECOV_TOKEN, which the uploader reads.
 FETCHES_DIR = Path(os.environ["MOZ_FETCHES_DIR"])
-SECRET_BASEURL_TPL = "http://taskcluster/secrets/v1/secret/{}"
-
-
-def fetch_secret(secret_name):
-    """Retrieves the given taskcluster secret"""
-    secret_url = SECRET_BASEURL_TPL.format(secret_name)
-    r = requests.get(secret_url)
-    r.raise_for_status()
-    return r.json()["secret"]
-
-
-token = fetch_secret("project/releng/taskgraph/ci")["codecov_api_token"]
 uploader = FETCHES_DIR / "codecov"
 uploader.chmod(uploader.stat().st_mode | stat.S_IEXEC)
 subprocess.run(
@@ -29,8 +16,6 @@ subprocess.run(
         "--verbose",
         "upload-process",
         "--fail-on-error",
-        "--token",
-        token,
         "-f",
         str(FETCHES_DIR / "coverage.xml"),
     ],
