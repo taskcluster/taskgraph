@@ -5,6 +5,7 @@
 loader: taskgraph.loader.transform:loader
 
 transforms:
+    - self_taskgraph.transforms.python_versions
     - taskgraph.transforms.docker_image:transforms
     - taskgraph.transforms.cached_tasks:transforms
     - self_taskgraph.transforms.add_pr_route
@@ -27,10 +28,12 @@ tasks:
         symbol: I(py)
         parent: run-task
         args:
-            PYTHON_VERSIONS: "3.14t 3.14 3.13 3.12 3.11 3.10 3.9 3.8"
+            # 3.8 is the minimum version supported by run-task / fetch-content,
+            # see the `check-scripts-min-python` task.
+            PYTHON_VERSIONS: "maxt max..min 3.8"
     run-task:
         symbol: I(rt)
         args:
-            UV_VERSION: "0.9.3"
+            UV_VERSION: "0.13.8"
     skopeo:
         symbol: I(skopeo)

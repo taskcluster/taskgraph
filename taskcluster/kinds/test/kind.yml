@@ -6,6 +6,7 @@
 loader: taskgraph.loader.transform:loader
 
 transforms:
+    - self_taskgraph.transforms.python_versions
     - taskgraph.transforms.matrix
     - taskgraph.transforms.run
     - taskgraph.transforms.task
