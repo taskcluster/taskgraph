@@ -42,17 +42,18 @@ Useful Arguments
 Here are some useful arguments accepted by most ``taskgraph`` subcommands. For
 a full reference, see :doc:`/reference/cli`.
 
-``-J/--json``
-+++++++++++++
+``--format``
+++++++++++++
 
-By default only the task labels are displayed as output, but when ``-J/--json``
-is used, the full JSON representation of all task definitions are displayed.
+By default only the task labels are displayed as output, but when
+``--format json`` is used, the full JSON representation of all task definitions
+are displayed.
 
 .. note::
 
-   Using ``-J/--json`` can often result in a massive amount of output. Consider
-   using the ``--tasks`` and/or ``--target-kind`` flags in conjunction to
-   filter the result down to a manageable level.
+   Using ``--format json`` can often result in a massive amount of output.
+   Consider using the ``--tasks`` and/or ``--target-kind`` flags in conjunction
+   to filter the result down to a manageable level.
 
 ``--tasks/--tasks-regex``
 +++++++++++++++++++++++++
@@ -126,7 +127,7 @@ Validating Changes to Task Definitions
 
 If you're only modifying the definition of tasks, then you want to generate the
 ``full_task_graph``. This is because task definitions are frozen (with minor
-exceptions) after this phase. You'll also want to use the ``-J/--json`` flag and
+exceptions) after this phase. You'll also want to use ``--format json`` and
 likely also the ``--tasks`` flag to filter down the result.
 
 For example, let's say you modify a task called ``build-android``. Then you
@@ -134,7 +135,7 @@ would run the following command:
 
 .. code-block:: shell
 
-   taskgraph full -J --tasks "build-android"
+   taskgraph full --format json --tasks "build-android"
 
 Then you can inspect the resulting task definition and validate that everything
 is configured as you expect.
@@ -148,7 +149,7 @@ If you're modifying *where* a task runs, e.g by changing a key that impacts the
 ``target_task_graph`` phase.
 
 Unlike when modifying the definition, we don't care about the contents of the
-task so passing the ``-J/--json`` flag is unnecessary. Instead, we can simply
+task so passing ``--format json`` is unnecessary. Instead, we can simply
 inspect whether the label exists or not. However it *is* important to make sure
 we're generating under the appropriate context(s) via the ``-p/--parameters``
 flag.
