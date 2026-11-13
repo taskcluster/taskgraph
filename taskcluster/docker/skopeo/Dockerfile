@@ -35,7 +35,7 @@ MAINTAINER Release Engineering <release@mozilla.com>
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -qq \
     && apt-get dist-upgrade -y \
-    && apt-get install -y jq zstd python3-minimal curl \
+    && apt-get install -y jq zstd python3-minimal \
     && apt-get clean
 
 COPY push_image.sh /usr/local/bin/

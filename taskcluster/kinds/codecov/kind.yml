@@ -39,8 +39,11 @@ tasks:
             platform: tests/opt
             tier: 1
             symbol: codecov
-        scopes:
-            - secrets:get:project/releng/taskgraph/ci
+        secrets:
+            - type: secret
+              name: project/releng/taskgraph/ci
+              key: codecov_api_token
+              env: CODECOV_TOKEN
         fetches:
             fetch:
                 - codecov-uploader
