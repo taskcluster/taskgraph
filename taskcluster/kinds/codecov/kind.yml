@@ -5,6 +5,7 @@
 loader: taskgraph.loader.transform:loader
 
 transforms:
+    - self_taskgraph.transforms.python_versions
     - taskgraph.transforms.from_deps
     - taskgraph.transforms.run
     - taskgraph.transforms.task
@@ -23,11 +24,11 @@ tasks:
             set-name: null
             with-attributes:
                 # exclude free-threaded python until it is officially supported
-                python: ["314", "313", "312", "311", "310", "39"]
+                python: [max..min]
                 resolution: default
             fetches:
                 test:
-                    - artifact: coverage.py{matrix[python]}
+                    - artifact: "{coverage_artifact}"
         worker-type: t-linux
         worker:
             docker-image: {in-tree: python}
