@@ -34,6 +34,6 @@ tasks:
     run-task:
         symbol: I(rt)
         args:
-            UV_VERSION: "0.9.3"
+            UV_VERSION: "0.13.8"
     skopeo:
         symbol: I(skopeo)
