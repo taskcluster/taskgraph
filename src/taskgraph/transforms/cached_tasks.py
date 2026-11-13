@@ -12,17 +12,35 @@ transforms = TransformSequence()
 
 
 def order_tasks(config, tasks):
-    """Iterate image tasks in an order where parent tasks come first."""
+    """Iterate tasks within a kind in an order where parent tasks come first."""
     kind_prefix = config.kind + "-"
-    pending = {task["label"]: task for task in tasks}
-    nodes = set(pending)
+    pending = {}
+    pending_deps = {}
+    # first, yield tasks with no dependencies
+    for task in tasks:
+        deps = [
+            dep
+            for dep in task.get("dependencies", {}).values()
+            if dep.startswith(kind_prefix)
+        ]
+        if not deps:
+            yield task
+            continue
+        label = task["label"]
+        pending[label] = task
+        pending_deps[label] = deps
+
+    if not pending:
+        return
+
+    # now sort the remaining tasks
     edges = {
         (label, dep, "")
         for label in pending
-        for dep in pending[label].get("dependencies", {}).values()
-        if dep.startswith(kind_prefix)
+        for dep in pending_deps[label]
+        if dep in pending
     }
-    graph = Graph(nodes, edges)
+    graph = Graph(pending.keys(), edges)
 
     for label in graph.visit_postorder():
         yield pending.pop(label)
