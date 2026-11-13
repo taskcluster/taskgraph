@@ -8,32 +8,32 @@ from taskgraph.util.yaml import load_yaml
 
 
 class ResolveKeyedByConfigOptions(Schema):
-    # forwarded to `resolve_keyed_by`; see that function for details
+    #: forwarded to `resolve_keyed_by`; see that function for details
     defer: Optional[list[str]] = None
     enforce_single_match: Optional[bool] = None
 
 
 class TaskContextConfig(Schema):
-    # A list of fields in the task to substitute the provided values
-    # into and/or resolve keys in.
+    #: A list of fields in the task to substitute the provided values
+    #: into and/or resolve keys in.
     substitution_fields: list[str]
-    # Retrieve task context values from parameters. A single
-    # parameter may be provided or a list of parameters in
-    # priority order. The latter can be useful in implementing a
-    # "default" value if some other parameter is not provided.
+    #: Retrieve task context values from parameters. A single
+    #: parameter may be provided or a list of parameters in
+    #: priority order. The latter can be useful in implementing a
+    #: "default" value if some other parameter is not provided.
     from_parameters: Optional[dict[str, Union[list[str], str]]] = None
-    # Retrieve task context values from a yaml file. The provided
-    # file should usually only contain top level keys and values
-    # (eg: nested objects will not be interpolated - they will be
-    # substituted as text representations of the object).
+    #: Retrieve task context values from a yaml file. The provided
+    #: file should usually only contain top level keys and values
+    #: (eg: nested objects will not be interpolated - they will be
+    #: substituted as text representations of the object).
     from_file: Optional[str] = None
-    # Key/value pairs to be used as task context
+    #: Key/value pairs to be used as task context
     from_object: Optional[object] = None
-    # Retrieve task context values from registered custom providers. Each
-    # entry is the name of a provider registered via
-    # ``taskgraph.util.task_context.custom_context``. Providers are called
-    # with the ``TransformConfig`` and the task being rendered, and must
-    # return a dict of key/value pairs to add to the context.
+    #: Retrieve task context values from registered custom providers. Each
+    #: entry is the name of a provider registered via
+    #: ``taskgraph.util.task_context.custom_context``. Providers are called
+    #: with the ``TransformConfig`` and the task being rendered, and must
+    #: return a dict of key/value pairs to add to the context.
     from_custom: Optional[list[str]] = None
     resolve_keyed_by_options: Optional[ResolveKeyedByConfigOptions] = None
 
@@ -41,30 +41,31 @@ class TaskContextConfig(Schema):
 #: Schema for the task_context transforms
 class TaskContextSchema(Schema, forbid_unknown_fields=False, kw_only=True):
     name: Optional[str] = None
-    # `task-context` can be used to substitute values into any field or resolve
-    # keys in a field in a task with data that is not known until `taskgraph`
-    # runs.
-    #
-    # This data can be provided via `from-parameters` or `from-file`,
-    # which can pull in values from parameters and a defined yml file
-    # respectively.
-    #
-    # Data may also be provided directly in the `from-object` section of
-    # `task-context`. This can be useful in `kinds` that define most of
-    # their contents in `task-defaults`, but have some values that may
-    # differ for various concrete `tasks` in the `kind`.
-    #
-    # If the same key is found in multiple places the order of precedence
-    # is as follows:
-    #   - Parameters
-    #   - `from-object` keys
-    #   - Custom providers (`from-custom`)
-    #   - File
-    #
-    # That is to say: parameters will always override anything else.
-    #
-    # Each entry in `substitution-fields` will first have `resolved_keyed_by`
-    # called on it, and then substitutions will be performed.
+    #: `task-context` can be used to substitute values into any field or resolve
+    #: keys in a field in a task with data that is not known until `taskgraph`
+    #: runs.
+    #:
+    #: This data can be provided via `from-parameters` or `from-file`,
+    #: which can pull in values from parameters and a defined yml file
+    #: respectively.
+    #:
+    #: Data may also be provided directly in the `from-object` section of
+    #: `task-context`. This can be useful in `kinds` that define most of
+    #: their contents in `task-defaults`, but have some values that may
+    #: differ for various concrete `tasks` in the `kind`.
+    #:
+    #: If the same key is found in multiple places the order of precedence
+    #: is as follows:
+    #:
+    #:   - Parameters
+    #:   - `from-object` keys
+    #:   - Custom providers (`from-custom`)
+    #:   - File
+    #:
+    #: That is to say: parameters will always override anything else.
+    #:
+    #: Each entry in `substitution-fields` will first have `resolved_keyed_by`
+    #: called on it, and then substitutions will be performed.
     task_context: Optional[TaskContextConfig] = None
 
 

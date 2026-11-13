@@ -41,34 +41,34 @@ class FetchesEntrySchema(Schema):
 
 
 class WhenConfig(Schema):
-    # This task only needs to be run if a file matching one of the given
-    # patterns has changed in the push. The patterns use the mozpack
-    # match function (python/mozbuild/mozpack/path.py).
+    #: This task only needs to be run if a file matching one of the given
+    #: patterns has changed in the push. The patterns use the mozpack
+    #: match function (python/mozbuild/mozpack/path.py).
     files_changed: Optional[list[str]] = None
 
 
 class RunConfig(Schema, forbid_unknown_fields=False, kw_only=True):
-    # The key to a run implementation in a peer module to this one.
+    #: The key to a run implementation in a peer module to this one.
     using: str
-    # Base work directory used to set up the task.
+    #: Base work directory used to set up the task.
     workdir: Optional[str] = None
 
 
 #: Schema for a run transforms
 class RunDescriptionSchema(Schema, forbid_unknown_fields=False, kw_only=True):
-    # A description of how to run this task.
+    #: A description of how to run this task.
     run: RunConfig
-    # The name of the task. At least one of 'name' or 'label' must be
-    # specified. If 'label' is not provided, it will be generated from
-    # the 'name' by prepending the kind.
+    #: The name of the task. At least one of 'name' or 'label' must be
+    #: specified. If 'label' is not provided, it will be generated from
+    #: the 'name' by prepending the kind.
     name: Optional[str] = None
-    # The label of the task. At least one of 'name' or 'label' must be
-    # specified. If 'label' is not provided, it will be generated from
-    # the 'name' by prepending the kind.
+    #: The label of the task. At least one of 'name' or 'label' must be
+    #: specified. If 'label' is not provided, it will be generated from
+    #: the 'name' by prepending the kind.
     label: Optional[str] = None
-    # the following fields are passed directly through to the task description,
-    # possibly modified by the run implementation. See
-    # taskcluster/taskgraph/transforms/task.py for the schema details.
+    #: the following fields are passed directly through to the task description,
+    #: possibly modified by the run implementation. See
+    #: taskcluster/taskgraph/transforms/task.py for the schema details.
     description: TaskDescriptionSchema.__annotations__["description"]  # type: ignore  # noqa: F821
     worker_type: TaskDescriptionSchema.__annotations__["worker_type"]  # type: ignore  # noqa: F821
     priority: TaskDescriptionSchema.__annotations__["priority"] = None  # type: ignore
@@ -95,15 +95,15 @@ class RunDescriptionSchema(Schema, forbid_unknown_fields=False, kw_only=True):
     always_target: Optional[bool] = None
     optimization: Optional[OptimizationType] = None
     needs_sccache: Optional[bool] = None
-    # The "when" section contains descriptions of the circumstances under
-    # which this task should be included in the task graph. This will be
-    # converted into an optimization, so it cannot be specified in a run
-    # description that also gives 'optimization'.
+    #: The "when" section contains descriptions of the circumstances under
+    #: which this task should be included in the task graph. This will be
+    #: converted into an optimization, so it cannot be specified in a run
+    #: description that also gives 'optimization'.
     when: Optional[WhenConfig] = None
-    # A list of artifacts to install from 'fetch' tasks.
+    #: A list of artifacts to install from 'fetch' tasks.
     fetches: Optional[dict[str, list[Union[str, FetchesEntrySchema]]]] = None
-    # This object will be passed through to the task description, with additions
-    # provided by the task's run-using function.
+    #: This object will be passed through to the task description, with additions
+    #: provided by the task's run-using function.
     worker: Optional[dict] = None
 
     def __post_init__(self):
