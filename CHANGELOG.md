@@ -1,5 +1,12 @@
 # Change Log
 
+## [24.8.0] - 2026-11-12
+
+### Added
+
+- run-task: fetch Github repo tokens listed in `RUN_TASK_SECRETS` env
+- run-task: use GitHub's compare API to fix up `<PREFIX>_BASE_REV`
+
 ## [24.7.0] - 2026-11-06
 
 ### Fixed
