@@ -1,5 +1,14 @@
 # Change Log
 
+## [24.9.0] - 2026-11-16
+
+### Added
+
+- run-task: fetch Taskcluster secrets listed in `RUN_TASK_SECRETS` env, into
+  an env or a file
+- `secrets` key in run descriptions, which sets `RUN_TASK_SECRETS` and adds
+  the required scopes and `taskcluster-proxy` feature
+
 ## [24.8.0] - 2026-11-12
 
 ### Added
