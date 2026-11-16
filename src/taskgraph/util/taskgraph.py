@@ -21,11 +21,12 @@ def find_decision_task(parameters, graph_config):
             )
         )
     elif parameters["repository_type"] == "git":
+        head_rev_param = "{}head_rev".format(graph_config["project-repo-param-prefix"])
         return find_task_id(
             "{}.v2.{}.revision.{}.taskgraph.decision".format(
                 graph_config["trust-domain"],
                 parameters["project"],
-                parameters["head_rev"],
+                parameters[head_rev_param],
             )
         )
     else:
