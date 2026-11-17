@@ -37,7 +37,9 @@ unit:
     matrix:
         set-name: "unit-py{matrix[python]}"
         substitution-fields: [description, run.command, treeherder, worker, attributes]
-        python: ["314t", "314", "313", "312", "311", "310", "39"]
+        python: [maxt, max..min]
+    attributes:
+        coverage_artifact: "coverage.py{matrix[python]}"
     worker:
         docker-image: {in-tree: python}
         artifacts:
@@ -56,7 +58,9 @@ unit-multithread:
     matrix:
         set-name: "unit-multithread-py{matrix[python]}"
         substitution-fields: [description, run.command, treeherder, worker, attributes]
-        python: ["314t"]
+        python: [maxt]
+    attributes:
+        coverage_artifact: "coverage.py{matrix[python]}"
     worker:
         docker-image: {in-tree: python}
         env:
@@ -77,7 +81,9 @@ unit-serial:
     matrix:
         set-name: "unit-serial-py{matrix[python]}"
         substitution-fields: [description, run.command, treeherder, worker, attributes]
-        python: ["314"]
+        python: [max]
+    attributes:
+        coverage_artifact: "coverage.serial-py{matrix[python]}"
     worker:
         docker-image: {in-tree: python}
         env:
@@ -85,7 +91,7 @@ unit-serial:
         artifacts:
             - type: file
               path: "/builds/worker/artifacts/coverage"
-              name: "public/coverage.py{matrix[python]}"
+              name: "public/coverage.serial-py{matrix[python]}"
     treeherder:
         symbol: unit-serial(py{matrix[python]})
     run:
@@ -99,12 +105,12 @@ integration:
         resolution: "{matrix[resolution]}"
     matrix:
         set-name: "integration-py{matrix[python]}-deps-{matrix[resolution]}"
-        python: ["314", "39"]
+        python: [max, min]
         resolution: ["highest", "lowest-direct"]
         exclude:
-            - python: "314"
+            - python: max
               resolution: "lowest-direct"
-            - python: "39"
+            - python: min
               resolution: "highest"
 
     treeherder:

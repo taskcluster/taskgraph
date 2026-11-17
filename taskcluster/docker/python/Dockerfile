@@ -15,4 +15,4 @@ RUN apt-get update \
 ENV PATH=/builds/worker/.local/bin:$PATH
 
 # %ARG PYTHON_VERSIONS
-RUN uv python install $PYTHON_VERSIONS
+RUN uv python install --no-cache $PYTHON_VERSIONS
