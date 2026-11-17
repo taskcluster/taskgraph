@@ -25,7 +25,7 @@ from taskgraph.util.yaml import load_yaml
 
 logger = logging.getLogger(__name__)
 
-ARTIFACTS_DIR = Path(os.environ.get("MOZ_UPLOAD_DIR", "artifacts"))
+ARTIFACTS_DIR = Path("artifacts")
 
 
 # For each project, this gives a set of parameters specific to the project.
