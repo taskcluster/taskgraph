@@ -25,7 +25,7 @@ from taskgraph.util.yaml import load_yaml
 
 logger = logging.getLogger(__name__)
 
-ARTIFACTS_DIR = Path("artifacts")
+ARTIFACTS_DIR = Path(os.environ.get("MOZ_UPLOAD_DIR", "artifacts"))
 
 
 # For each project, this gives a set of parameters specific to the project.
@@ -309,7 +309,13 @@ def write_artifact(filename, data):
         import gzip  # noqa: PLC0415
 
         with gzip.open(path, "wb") as f:
-            f.write(json.dumps(data))  # type: ignore
+            if filename.endsWith(".json.gz"):
+                f.write(json.dumps(data).encode("utf-8"))  # type: ignore
+            else:
+                f.write(json.dumps(data))  # type: ignore
+    elif filename.endswith(".mm"):
+        with open(path, "w") as f:
+            f.write(data)
     else:
         raise TypeError(f"Don't know how to write to {filename}")
 
