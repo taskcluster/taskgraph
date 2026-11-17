@@ -309,7 +309,7 @@ def write_artifact(filename, data):
         import gzip  # noqa: PLC0415
 
         with gzip.open(path, "wb") as f:
-            if filename.endsWith(".json.gz"):
+            if filename.endswith(".json.gz"):
                 f.write(json.dumps(data).encode("utf-8"))  # type: ignore
             else:
                 f.write(json.dumps(data))  # type: ignore
