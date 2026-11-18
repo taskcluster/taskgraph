@@ -436,6 +436,7 @@ def test_optionally_keyed_by_from_dict():
     "fields_dict, data, attr, expected",
     [
         ({"name": str}, {"name": "foo"}, "name", "foo"),
+        ({"count": int | None}, {}, "count", None),
         ({"count": Optional[int]}, {}, "count", None),
         ({"tags": (list, [])}, {}, "tags", []),
         ({"my-field": str}, {"my-field": "bar"}, "my_field", "bar"),

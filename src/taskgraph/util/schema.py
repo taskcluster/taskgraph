@@ -6,6 +6,7 @@ import inspect
 import pprint
 import re
 import threading
+import types
 from collections.abc import Mapping
 from typing import Annotated, Any, Literal, Optional, Union, get_args, get_origin
 
@@ -446,7 +447,8 @@ class Schema(
                 typ, default = field_spec
             else:
                 typ = field_spec
-                if get_origin(typ) is Union and type(None) in get_args(typ):
+                is_union = get_origin(typ) in (Union, types.UnionType)
+                if is_union and type(None) in get_args(typ):
                     default = None
                 else:
                     default = msgspec.NODEFAULT
