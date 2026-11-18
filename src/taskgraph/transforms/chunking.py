@@ -2,7 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 import copy
-from typing import Optional
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.schema import Schema
@@ -22,7 +21,7 @@ class ChunkSchema(Schema, forbid_unknown_fields=False, kw_only=True):
     #: `chunk` can be used to split one task into `total-chunks`
     #: tasks, substituting `this_chunk` and `total_chunks` into any
     #: fields in `substitution-fields`.
-    chunk: Optional[ChunkConfig] = None
+    chunk: ChunkConfig | None = None
 
 
 CHUNK_SCHEMA = ChunkSchema

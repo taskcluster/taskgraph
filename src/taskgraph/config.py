@@ -8,7 +8,7 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Optional, Union
+from typing import Literal
 
 from .util.python_path import find_object
 from .util.schema import Schema, TaskPriority, optionally_keyed_by, validate_schema
@@ -33,33 +33,33 @@ class WorkersConfig(Schema):
 
 class RunConfig(Schema):
     #: List of caches to enable, or a boolean to enable/disable all of them.
-    use_caches: Optional[Union[bool, list[CacheType]]] = None
+    use_caches: bool | list[CacheType] | None = None
 
 
 class RepositoryConfig(Schema, forbid_unknown_fields=False, kw_only=True):
     name: str
-    project_regex: Optional[str] = None
-    ssh_secret_name: Optional[str] = None
+    project_regex: str | None = None
+    ssh_secret_name: str | None = None
     # FIXME: Extra keys allowed via forbid_unknown_fields=False
 
 
 class TaskgraphConfig(Schema):
     repositories: dict[str, RepositoryConfig]
     #: Python function to call to register extensions.
-    register: Optional[str] = None
-    decision_parameters: Optional[str] = None
+    register: str | None = None
+    decision_parameters: str | None = None
     #: The taskcluster index prefix to use for caching tasks.
     #: Defaults to `trust-domain`.
-    cached_task_prefix: Optional[str] = None
+    cached_task_prefix: str | None = None
     #: Should tasks from pull requests populate the cache
-    cache_pull_requests: Optional[bool] = None
+    cache_pull_requests: bool | None = None
     #: Regular expressions matching index paths to be summarized.
-    index_path_regexes: Optional[list[str]] = None
+    index_path_regexes: list[str] | None = None
     #: Configuration related to the 'run' transforms.
-    run: Optional[RunConfig] = None
+    run: RunConfig | None = None
     #: List of action `cb_name`s to omit from `actions.json`,
     #: e.g. `["retrigger", "retrigger-disabled", "rerun"]`.
-    disabled_actions: Optional[list[str]] = None
+    disabled_actions: list[str] | None = None
 
     def __post_init__(self):
         # Validate repositories has at least 1 entry (was All(..., Length(min=1)))
@@ -77,14 +77,14 @@ class GraphConfigSchema(Schema, forbid_unknown_fields=False, kw_only=True):
     workers: WorkersConfig
     taskgraph: TaskgraphConfig
     #: Name of the docker image kind (default: docker-image)
-    docker_image_kind: Optional[str] = None
+    docker_image_kind: str | None = None
     #: Default 'deadline' for tasks, in relative date format. Eg: '1 week'
-    task_deadline_after: Optional[
-        optionally_keyed_by("project", str, use_msgspec=True)  # type: ignore
-    ] = None
+    task_deadline_after: (
+        optionally_keyed_by("project", str, use_msgspec=True) | None  # type: ignore
+    ) = None
     #: Default 'expires-after' for level 1 tasks, in relative date format.
     #: Eg: '90 days'
-    task_expires_after: Optional[str] = None
+    task_expires_after: str | None = None
 
 
 graph_config_schema = GraphConfigSchema

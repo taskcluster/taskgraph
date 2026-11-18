@@ -9,8 +9,8 @@ import re
 import sys
 import warnings
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable, Union
 
 from taskgraph import MAX_DEPENDENCIES
 from taskgraph.config import GraphConfig
@@ -50,7 +50,7 @@ class GraphConfigVerification(Verification):
 class GraphVerification(Verification):
     """Verification for a TaskGraph object."""
 
-    run_on_projects: Union[list, None] = field(default=None)
+    run_on_projects: list | None = field(default=None)
 
     def verify(
         self, graph: TaskGraph, graph_config: GraphConfig, parameters: Parameters

@@ -8,7 +8,6 @@ matrix defined in the definition.
 """
 
 from copy import deepcopy
-from typing import Optional
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.schema import Schema
@@ -22,17 +21,17 @@ class MatrixConfig(Schema, forbid_unknown_fields=False, kw_only=True):
     #: If only a subset of the possible rows are present in the
     #: exclusion rule, then *all* combinations including that subset
     #: subset will be excluded.
-    exclude: Optional[list[dict[str, str]]] = None
+    exclude: list[dict[str, str]] | None = None
     #: Sets the task name to the specified format string.
     #:
     #: Useful for cases where the default of joining matrix values by
     #: a dash is not desired.
-    set_name: Optional[str] = None
+    set_name: str | None = None
     #: List of fields in the task definition to substitute matrix values into.
     #:
     #: If not specified, all fields in the task definition will be
     #: substituted.
-    substitution_fields: Optional[list[str]] = None
+    substitution_fields: list[str] | None = None
     # Extra dimension keys (e.g. "platform": ["linux", "win"]) allowed
     # via forbid_unknown_fields=False
 
@@ -40,7 +39,7 @@ class MatrixConfig(Schema, forbid_unknown_fields=False, kw_only=True):
 #: Schema for matrix transforms
 class MatrixSchema(Schema, forbid_unknown_fields=False, kw_only=True):
     name: str
-    matrix: Optional[MatrixConfig] = None
+    matrix: MatrixConfig | None = None
 
 
 MATRIX_SCHEMA = MatrixSchema

@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from dataclasses import dataclass, field
-from typing import Any, Union
+from typing import Any
 
 
 @dataclass
@@ -36,8 +36,8 @@ class Task:
     attributes: dict
     task: dict
     description: str = ""
-    task_id: Union[str, None] = field(default=None, init=False)
-    optimization: Union[dict[str, Any], None] = field(default=None)
+    task_id: str | None = field(default=None, init=False)
+    optimization: dict[str, Any] | None = field(default=None)
     dependencies: dict = field(default_factory=dict)
     soft_dependencies: list = field(default_factory=list)
     if_dependencies: list = field(default_factory=list)

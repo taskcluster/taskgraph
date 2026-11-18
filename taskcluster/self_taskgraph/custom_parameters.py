@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import os
-from typing import Annotated, Optional
+from typing import Annotated
 
 import msgspec
 
@@ -18,7 +18,7 @@ def get_defaults(repo_root):
 
 
 CustomParametersSchema = Schema.from_dict(
-    {"pull_request_number": Optional[Annotated[int, msgspec.Meta(ge=1)]]},
+    {"pull_request_number": Annotated[int, msgspec.Meta(ge=1)] | None},
     name="CustomParametersSchema",
 )
 

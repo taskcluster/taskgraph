@@ -7,7 +7,6 @@ import datetime
 import gzip
 import os
 from base64 import b64decode
-from typing import Optional
 from unittest import TestCase, mock
 
 import mozilla_repo_urls
@@ -276,7 +275,7 @@ def test_parameters_format_spec(spec, expected):
 
 def test_extend_parameters_schema(monkeypatch):
     FooSchema = Schema.from_dict({"foo": str}, name="FooSchema")
-    BarSchema = Schema.from_dict({"bar": Optional[bool]}, name="BarSchema")
+    BarSchema = Schema.from_dict({"bar": bool | None}, name="BarSchema")
 
     monkeypatch.setattr(parameters, "base_schema", FooSchema)
     monkeypatch.setattr(
