@@ -37,7 +37,7 @@ unit:
     matrix:
         set-name: "unit-py{matrix[python]}"
         substitution-fields: [description, run.command, treeherder, worker, attributes]
-        python: ["314t", "314", "313", "312", "311", "310", "39"]
+        python: ["314t", "314", "313", "312", "311", "310"]
     worker:
         docker-image: {in-tree: python}
         artifacts:
@@ -99,12 +99,12 @@ integration:
         resolution: "{matrix[resolution]}"
     matrix:
         set-name: "integration-py{matrix[python]}-deps-{matrix[resolution]}"
-        python: ["314", "39"]
+        python: ["314", "310"]
         resolution: ["highest", "lowest-direct"]
         exclude:
             - python: "314"
               resolution: "lowest-direct"
-            - python: "39"
+            - python: "310"
               resolution: "highest"
 
     treeherder:
