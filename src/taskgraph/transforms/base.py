@@ -6,7 +6,6 @@
 import functools
 import re
 from dataclasses import dataclass, field
-from typing import Union
 
 from taskgraph.task import Task
 
@@ -24,8 +23,8 @@ class RepoConfig:
     head_ref: str
     type: str
     path: str = ""
-    head_rev: Union[str, None] = None
-    ssh_secret_name: Union[str, None] = None
+    head_rev: str | None = None
+    ssh_secret_name: str | None = None
 
 
 @dataclass(frozen=True, eq=False)

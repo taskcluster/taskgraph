@@ -7,7 +7,7 @@ worker implementation they operate on, and take the same three parameters, for
 consistency.
 """
 
-from typing import Any, Union
+from typing import Any
 
 from taskgraph.transforms.base import TransformConfig
 from taskgraph.util import json, path
@@ -139,7 +139,7 @@ def support_vcs_checkout(config, task, taskdesc, repo_configs):
 
 def should_use_cache(
     name: str,
-    use_caches: Union[bool, list[str]],
+    use_caches: bool | list[str],
     has_checkout: bool,
 ) -> bool:
     # Never enable the checkout cache if there's no clone. This allows

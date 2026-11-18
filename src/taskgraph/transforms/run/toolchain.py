@@ -5,7 +5,7 @@
 Support for running toolchain-building tasks via dedicated scripts
 """
 
-from typing import Literal, Optional, Union
+from typing import Literal
 
 import taskgraph
 from taskgraph.transforms.run import configure_taskdesc_for_run, run_task_using
@@ -33,16 +33,16 @@ class ToolchainRunSchema(Schema, forbid_unknown_fields=False, kw_only=True):
     #: Base work directory used to set up the task.
     workdir: str
     #: Arguments to pass to the script.
-    arguments: Optional[list[str]] = None
+    arguments: list[str] | None = None
     #: Paths/patterns pointing to files that influence the outcome of
     #: a toolchain build.
-    resources: Optional[list[str]] = None
+    resources: list[str] | None = None
     #: An alias that can be used instead of the real toolchain task name in
     #: fetch stanzas for tasks.
-    toolchain_alias: Optional[Union[str, list[str]]] = None
+    toolchain_alias: str | list[str] | None = None
     #: Additional env variables to add to the worker when using this
     #: toolchain.
-    toolchain_env: Optional[dict[str, object]] = None
+    toolchain_env: dict[str, object] | None = None
 
 
 toolchain_run_schema = ToolchainRunSchema

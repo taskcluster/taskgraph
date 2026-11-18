@@ -9,7 +9,7 @@ import functools
 import io
 import logging
 import os
-from typing import Any, Union
+from typing import Any
 
 import requests
 import taskcluster_urls as liburls
@@ -479,7 +479,7 @@ def _get_deps(task_ids):
     return upstream_tasks
 
 
-def get_ancestors(task_ids: Union[list[str], str]) -> dict[str, str]:
+def get_ancestors(task_ids: list[str] | str) -> dict[str, str]:
     """Gets the ancestor tasks of the given task_ids as a dictionary of taskid -> label.
 
     Args:

@@ -8,7 +8,7 @@ import re
 import threading
 import types
 from collections.abc import Mapping
-from typing import Annotated, Any, Literal, Optional, Union, get_args, get_origin
+from typing import Annotated, Any, Literal, Union, get_args, get_origin
 
 import msgspec
 import voluptuous
@@ -409,21 +409,21 @@ class Schema(
     def from_dict(
         cls,
         fields_dict: dict[str, Any],
-        name: Optional[str] = None,
+        name: str | None = None,
         optional: bool = False,
         **kwargs,
-    ) -> Union[type[msgspec.Struct], type[Optional[msgspec.Struct]]]:
+    ) -> type[msgspec.Struct] | type[msgspec.Struct | None]:
         """Create a Schema subclass dynamically from a dict of field definitions.
 
         Each key is a field name and each value is either a type annotation or a
-        ``(type, default)`` tuple.  Fields typed as ``Optional[...]`` automatically
+        ``(type, default)`` tuple.  Fields typed as ``... | None`` automatically
         receive a default of ``None`` when no explicit default is provided.
 
         Usage::
 
             Schema.from_dict("MySchema", {
                 "required_field": str,
-                "optional_field": Optional[int],         # default None inferred
+                "optional_field": int | None,            # default None inferred
                 "explicit_default": (list[str], []),     # explicit default
             })
 
@@ -466,7 +466,7 @@ class Schema(
         result = msgspec.defstruct(name or "Schema", fields, bases=(cls,), **kwargs)
         if exclusive:
             result.exclusive = exclusive  # type: ignore[attr-defined]
-        return Optional[result] if optional else result  # type: ignore[valid-type]
+        return result | None if optional else result  # type: ignore[valid-type]
 
     @classmethod
     def validate(cls, data):
@@ -478,33 +478,33 @@ class Schema(
 
 class IndexSchema(Schema):
     #: the name of the product this build produces
-    product: Optional[str] = None
+    product: str | None = None
     #: the names to use for this task in the TaskCluster index
-    job_name: Optional[str] = None
+    job_name: str | None = None
     #: Type of gecko v2 index to use
     type: str = "generic"
     #: The rank that the task will receive in the TaskCluster
     #: index.  A newly completed task supersedes the currently
     #: indexed task iff it has a higher rank.  If unspecified,
     #: 'by-tier' behavior will be used.
-    rank: Union[Literal["by-tier", "build_date"], int] = "by-tier"
+    rank: Literal["by-tier", "build_date"] | int = "by-tier"
 
 
 class TreeherderConfig(Schema):
     #: Either a bare symbol, or 'grp(sym)'. Defaults to the
     #: uppercased first letter of each section of the kind
     #: (delimited by '-') all smooshed together.
-    symbol: Optional[str] = None
+    symbol: str | None = None
     #: The task kind. Defaults to 'build', 'test', or 'other'
     #: based on the kind name.
-    kind: Optional[Literal["build", "test", "other"]] = None
+    kind: Literal["build", "test", "other"] | None = None
     #: Tier for this task. Defaults to 1.
-    tier: Optional[int] = None
+    tier: int | None = None
     #: Task platform in the form platform/collection, used to
     #: set treeherder.machine.platform and
     #: treeherder.collection or treeherder.labels Defaults to
     #: 'default/opt'.
-    platform: Optional[str] = None
+    platform: str | None = None
 
 
 class IndexSearchOptimizationSchema(Schema):
@@ -523,8 +523,8 @@ class SkipUnlessChangedOptimizationSchema(Schema):
 class OptimizationTypeSchema(Schema, forbid_unknown_fields=False, kw_only=True):
     """Schema that accepts various optimization configurations."""
 
-    index_search: Optional[list[str]] = None
-    skip_unless_changed: Optional[list[str]] = None
+    index_search: list[str] | None = None
+    skip_unless_changed: list[str] | None = None
 
     def __post_init__(self):
         """Ensure at least one optimization type is provided."""
@@ -533,7 +533,7 @@ class OptimizationTypeSchema(Schema, forbid_unknown_fields=False, kw_only=True):
             pass
 
 
-OptimizationType = Union[None, OptimizationTypeSchema]
+OptimizationType = None | OptimizationTypeSchema
 
 
 # Task reference types using msgspec
@@ -552,8 +552,8 @@ class ArtifactReferenceSchema(Schema):
 class TaskRefTypeSchema(Schema, forbid_unknown_fields=False, kw_only=True):
     """Schema that accepts either task-reference or artifact-reference (msgspec version)."""
 
-    task_reference: Optional[str] = None
-    artifact_reference: Optional[str] = None
+    task_reference: str | None = None
+    artifact_reference: str | None = None
 
     def __post_init__(self):
         """Ensure exactly one reference type is provided."""
@@ -563,7 +563,7 @@ class TaskRefTypeSchema(Schema, forbid_unknown_fields=False, kw_only=True):
             raise ValueError("Must have either task-reference or artifact-reference")
 
 
-taskref_or_string_msgspec = Union[str, TaskRefTypeSchema]
+taskref_or_string_msgspec = str | TaskRefTypeSchema
 
 OptimizationSchema = voluptuous.Any(
     # always run this task (default)

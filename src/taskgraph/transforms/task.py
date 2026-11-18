@@ -12,9 +12,10 @@ import functools
 import hashlib
 import os
 import time
+from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Callable, Literal, Optional, Union
+from typing import Literal
 
 import voluptuous
 
@@ -79,62 +80,62 @@ class TaskDescriptionSchema(Schema):
     #: Whether the task should use sccache compiler caching.
     needs_sccache: bool
     #: Attributes for this task.
-    attributes: Optional[dict[str, object]] = None
+    attributes: dict[str, object] | None = None
     #: Relative path (from config.path) to the file task was defined in.
-    task_from: Optional[str] = None
+    task_from: str | None = None
     #: Dependencies of this task, keyed by name; these are passed through
     #: verbatim and subject to the interpretation of the Task's
     #: get_dependencies method.
-    dependencies: Optional[dict[str, object]] = None
+    dependencies: dict[str, object] | None = None
     #: Priority of the task.
-    priority: Optional[TaskPriority] = None
+    priority: TaskPriority | None = None
     #: Soft dependencies of this task, as a list of task labels.
-    soft_dependencies: Optional[list[str]] = None
+    soft_dependencies: list[str] | None = None
     #: Dependencies that must be scheduled in order for this task to run.
-    if_dependencies: Optional[list[str]] = None
+    if_dependencies: list[str] | None = None
     #: Specifies the condition for task execution.
-    requires: Optional[Literal["all-completed", "all-resolved"]] = None
+    requires: Literal["all-completed", "all-resolved"] | None = None
     #: Expiration time relative to task creation, with units (e.g.,
     #: '14 days'). Defaults are set based on the project.
-    expires_after: Optional[str] = None
+    expires_after: str | None = None
     #: Deadline time relative to task creation, with units (e.g.,
     #: '14 days'). Defaults are set based on the project.
-    deadline_after: Optional[str] = None
+    deadline_after: str | None = None
     #: Custom routes for this task; the default treeherder routes will
     #: be added automatically.
-    routes: Optional[list[str]] = None
+    routes: list[str] | None = None
     #: Custom scopes for this task; any scopes required for the worker
     #: will be added automatically. The following parameters will be
     #: substituted in each scope:
     #:
     #: * ``{level}`` -- the scm level of this push
     #: * ``{project}`` -- the project of this push.
-    scopes: Optional[list[str]] = None
+    scopes: list[str] | None = None
     #: Tags for this task.
-    tags: Optional[dict[str, str]] = None
+    tags: dict[str, str] | None = None
     #: Custom 'task.extra' content.
-    extra: Optional[dict[str, object]] = None
+    extra: dict[str, object] | None = None
     #: Treeherder-related information. Can be a simple `true` to
     #: auto-generate information or a dictionary with specific keys.
-    treeherder: Optional[Union[bool, TreeherderConfig]] = None
+    treeherder: bool | TreeherderConfig | None = None
     #: Information for indexing this build so its artifacts can be
     #: discovered. If omitted, the build will not be indexed.
-    index: Optional[IndexSchema] = None
+    index: IndexSchema | None = None
     #: The `run_on_projects` attribute, defaulting to 'all'. Dictates
     #: the projects on which this task should be included in the
     #: target task set. See the attributes documentation for details.
-    run_on_projects: Optional[
-        optionally_keyed_by("build-platform", list[str], use_msgspec=True)  # type: ignore
-    ] = None
+    run_on_projects: (
+        optionally_keyed_by("build-platform", list[str], use_msgspec=True) | None  # type: ignore
+    ) = None
     #: Specifies tasks for which this task should run.
-    run_on_tasks_for: Optional[list[str]] = None
+    run_on_tasks_for: list[str] | None = None
     #: Specifies git branches for which this task should run.
-    run_on_git_branches: Optional[list[str]] = None
+    run_on_git_branches: list[str] | None = None
     #: The `shipping_phase` attribute, defaulting to None. Specifies
     #: the release promotion phase that this task belongs to.
-    shipping_phase: Optional[Literal["build", "promote", "push", "ship"]] = None
+    shipping_phase: Literal["build", "promote", "push", "ship"] | None = None
     #: Information specific to the worker implementation that will run this task.
-    worker: Optional[WorkerSchema] = None
+    worker: WorkerSchema | None = None
 
     def __post_init__(self):
         if self.dependencies:
@@ -238,27 +239,27 @@ def verify_index(config, index):
         raise Exception(UNSUPPORTED_INDEX_PRODUCT_ERROR.format(product=product))
 
 
-DockerImage = Union[str, dict[str, str]]
+DockerImage = str | dict[str, str]
 
 
 class DockerWorkerCacheEntry(Schema):
     #: only one type is supported by any of the workers right now
     type: Literal["persistent"] = "persistent"
     #: name of the cache, allowing reuse by subsequent tasks naming the same cache
-    name: Optional[str] = None
+    name: str | None = None
     #: location in the task image where the cache will be mounted
-    mount_point: Optional[str] = None
+    mount_point: str | None = None
     #: Whether the cache is not used in untrusted environments (like the Try repo).
-    skip_untrusted: Optional[bool] = None
+    skip_untrusted: bool | None = None
 
 
 class DockerWorkerArtifact(Schema):
     #: type of artifact -- simple file, or recursive directory, or a volume mounted directory.
-    type: Optional[Literal["file", "directory", "volume"]] = None
+    type: Literal["file", "directory", "volume"] | None = None
     #: task image path from which to read artifact
-    path: Optional[str] = None
+    path: str | None = None
     #: name of the produced artifact (root of the names for type=directory)
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class DockerWorkerPayloadSchema(Schema, forbid_unknown_fields=False, kw_only=True):
@@ -277,21 +278,21 @@ class DockerWorkerPayloadSchema(Schema, forbid_unknown_fields=False, kw_only=Tru
     #: the maximum time to run, in seconds
     max_run_time: int
     #: Paths to Docker volumes.
-    volumes: Optional[list[str]] = None
+    volumes: list[str] | None = None
     #: caches to set up for the task
-    caches: Optional[list[DockerWorkerCacheEntry]] = None
+    caches: list[DockerWorkerCacheEntry] | None = None
     #: artifacts to extract from the task image after completion
-    artifacts: Optional[list[DockerWorkerArtifact]] = None
+    artifacts: list[DockerWorkerArtifact] | None = None
     #: the command to run; if not given, docker-worker will default to the
     #: command in the docker image
-    command: Optional[list[taskref_or_string_msgspec]] = None
+    command: list[taskref_or_string_msgspec] | None = None
     #: the exit status code(s) that indicates the task should be retried
-    retry_exit_status: Optional[list[int]] = None
+    retry_exit_status: list[int] | None = None
     #: the exit status code(s) that indicates the caches used by the task
     #: should be purged
-    purge_caches_exit_status: Optional[list[int]] = None
+    purge_caches_exit_status: list[int] | None = None
     #: Whether any artifacts are assigned to this worker
-    skip_artifacts: Optional[bool] = None
+    skip_artifacts: bool | None = None
 
 
 @payload_builder("docker-worker", schema=DockerWorkerPayloadSchema)
@@ -500,30 +501,30 @@ class GenericWorkerArtifact(Schema):
     #: filesystem path from which to read artifact
     path: str
     #: if not specified, path is used for artifact name
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class MountContentSchema(Schema):
     #: Artifact name that contains the content.
-    artifact: Optional[str] = None
+    artifact: str | None = None
     #: Task ID that has the artifact that contains the content.
-    task_id: Optional[taskref_or_string_msgspec] = None
+    task_id: taskref_or_string_msgspec | None = None
     #: URL that supplies the content in response to an unauthenticated GET request.
-    url: Optional[str] = None
+    url: str | None = None
 
 
 class MountSchema(Schema):
     #: A unique name for the cache volume.
-    cache_name: Optional[str] = None
+    cache_name: str | None = None
     #: Optional content for pre-loading cache, or mandatory content for
     #: read-only file or directory.
-    content: Optional[MountContentSchema] = None
+    content: MountContentSchema | None = None
     #: If mounting a cache or read-only directory.
-    directory: Optional[str] = None
+    directory: str | None = None
     #: If mounting a file.
-    file: Optional[str] = None
+    file: str | None = None
     #: Archive format of the content.
-    format: Optional[Literal["rar", "tar.bz2", "tar.gz", "zip"]] = None
+    format: Literal["rar", "tar.bz2", "tar.gz", "zip"] | None = None
 
 
 class GenericWorkerPayloadSchema(Schema, forbid_unknown_fields=False, kw_only=True):
@@ -539,24 +540,24 @@ class GenericWorkerPayloadSchema(Schema, forbid_unknown_fields=False, kw_only=Tr
     #: optional features
     chain_of_trust: bool
     #: artifacts to extract from the task image after completion
-    artifacts: Optional[list[GenericWorkerArtifact]] = None
+    artifacts: list[GenericWorkerArtifact] | None = None
     #: Directories and/or files to be mounted.
-    mounts: Optional[list[MountSchema]] = None
+    mounts: list[MountSchema] | None = None
     #: the exit status code(s) that indicates the task should be retried
-    retry_exit_status: Optional[list[int]] = None
+    retry_exit_status: list[int] | None = None
     #: the exit status code(s) that indicates the caches used by the task
     #: should be purged
-    purge_caches_exit_status: Optional[list[int]] = None
+    purge_caches_exit_status: list[int] | None = None
     #: os user groups for test task workers
-    os_groups: Optional[list[str]] = None
+    os_groups: list[str] | None = None
     #: feature for test task to run as administrator
-    run_as_administrator: Optional[bool] = None
+    run_as_administrator: bool | None = None
     #: feature for task to run as current OS user
-    run_task_as_current_user: Optional[bool] = None
-    taskcluster_proxy: Optional[bool] = None
-    hide_cmd_window: Optional[bool] = None
+    run_task_as_current_user: bool | None = None
+    taskcluster_proxy: bool | None = None
+    hide_cmd_window: bool | None = None
     #: Whether any artifacts are assigned to this worker
-    skip_artifacts: Optional[bool] = None
+    skip_artifacts: bool | None = None
 
 
 @payload_builder("generic-worker", schema=GenericWorkerPayloadSchema)
@@ -678,12 +679,12 @@ def build_generic_worker_payload(config, task, task_def):
 
 
 class ReleaseProperties(Schema):
-    app_name: Optional[str] = None
-    app_version: Optional[str] = None
-    branch: Optional[str] = None
-    build_id: Optional[str] = None
-    hash_type: Optional[str] = None
-    platform: Optional[str] = None
+    app_name: str | None = None
+    app_version: str | None = None
+    branch: str | None = None
+    build_id: str | None = None
+    hash_type: str | None = None
+    platform: str | None = None
 
 
 class UpstreamArtifact(Schema, rename="camel"):
@@ -706,9 +707,9 @@ class BeetmoverPayloadSchema(Schema, forbid_unknown_fields=False, kw_only=True):
     #: list of artifact URLs for the artifacts that should be beetmoved
     upstream_artifacts: list[UpstreamArtifact]
     #: locale key, if this is a locale beetmover task
-    locale: Optional[str] = None
-    partner_public: Optional[bool] = None
-    artifact_map: Optional[object] = None
+    locale: str | None = None
+    partner_public: bool | None = None
+    artifact_map: object | None = None
 
 
 @payload_builder("beetmover", schema=BeetmoverPayloadSchema)
