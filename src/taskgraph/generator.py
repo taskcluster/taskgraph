@@ -14,13 +14,14 @@ import signal
 import sys
 import time
 import traceback
+from collections.abc import Callable
 from concurrent.futures import (
     FIRST_COMPLETED,
     ThreadPoolExecutor,
     wait,
 )
 from dataclasses import dataclass
-from typing import Callable, Optional, Union, cast
+from typing import cast
 
 from . import filter_tasks
 from .config import GraphConfig, load_graph_config
@@ -176,8 +177,8 @@ class TaskGraphGenerator:
 
     def __init__(
         self,
-        root_dir: Optional[str],
-        parameters: Union[Parameters, Callable[[GraphConfig], Parameters]],
+        root_dir: str | None,
+        parameters: Parameters | Callable[[GraphConfig], Parameters],
         decision_task_id: str = "DECISION-TASK",
         write_artifacts: bool = False,
         enable_verifications: bool = True,

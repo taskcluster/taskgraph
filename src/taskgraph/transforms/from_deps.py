@@ -13,7 +13,6 @@ after each build task, whatever builds may exist.
 
 from copy import deepcopy
 from textwrap import dedent
-from typing import Optional, Union
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.transforms.run import FetchesEntrySchema
@@ -33,30 +32,30 @@ FROM_DEPS_SCHEMA = Schema.from_dict(
                 # The first kind in the list is the "primary" kind. The
                 # dependency of this kind will be used to derive the label
                 # and copy attributes (if `copy-attributes` is True).
-                "kinds": Optional[list[str]],
+                "kinds": list[str] | None,
                 # Set-name function (dynamic: validated at runtime against SET_NAME_MAP).
-                "set-name": Optional[Union[bool, str, dict[str, object]]],
+                "set-name": bool | str | dict[str, object] | None,
                 # Limit dependencies to tasks whose attributes match
                 # using :func:`~taskgraph.util.attributes.attrmatch`.
-                "with-attributes": Optional[dict[str, Union[list, str]]],
+                "with-attributes": dict[str, list | str] | None,
                 # Group cross-kind dependencies using the given group-by
                 # function. One task will be created for each group. If not
                 # specified, the 'single' function will be used which creates
                 # a new task for each individual dependency.
-                "group-by": Optional[Union[str, dict[str, object]]],
+                "group-by": str | dict[str, object] | None,
                 # If True, copy attributes from the dependency matching the
                 # first kind in the `kinds` list (whether specified explicitly
                 # or taken from `kind-dependencies`).
-                "copy-attributes": Optional[bool],
+                "copy-attributes": bool | None,
                 # If true (the default), there must be only a single unique task
                 # for each kind in a dependency group. Setting this to false
                 # disables that requirement.
-                "unique-kinds": Optional[bool],
+                "unique-kinds": bool | None,
                 # If present, a `fetches` entry will be added for each task
                 # dependency. Attributes of the upstream task may be used as
                 # substitution values in the `artifact` or `dest` values of the
                 # `fetches` entry.
-                "fetches": Optional[dict[str, list[FetchesEntrySchema]]],
+                "fetches": dict[str, list[FetchesEntrySchema]] | None,
             },
         ),
     },

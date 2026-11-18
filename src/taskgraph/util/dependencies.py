@@ -3,7 +3,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from collections.abc import Iterator
-from typing import Optional
 
 from taskgraph.task import Task
 from taskgraph.transforms.base import TransformConfig
@@ -67,7 +66,7 @@ def get_dependencies(config: TransformConfig, task: dict) -> Iterator[Task]:
             yield dep
 
 
-def get_primary_dependency(config: TransformConfig, task: dict) -> Optional[Task]:
+def get_primary_dependency(config: TransformConfig, task: dict) -> Task | None:
     """Return the ``Task`` object associated with the primary dependency,
     which is assumed to be available in the ``primary-dependency`` attribute.
     (Which is always the case for tasks created with ``from_deps``.)

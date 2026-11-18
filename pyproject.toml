@@ -96,7 +96,6 @@ patch = ["_exit"]
 
 ### Lint and Format
 [tool.ruff]
-target-version = "py39"
 extend-exclude = [
   "src/taskgraph/run-task/robustcheckout.py"
 ]

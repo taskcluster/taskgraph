@@ -8,7 +8,6 @@ import hashlib
 import io
 import os
 import re
-from typing import Optional
 
 from taskgraph.util.archive import create_tar_from_files, gzip_compressor
 
@@ -17,7 +16,7 @@ IMAGE_DIR = os.path.join(".", "taskcluster", "docker")
 from .yaml import load_yaml
 
 
-def docker_image(name: str, by_tag: bool = False) -> Optional[str]:
+def docker_image(name: str, by_tag: bool = False) -> str | None:
     """
     Resolve in-tree prebuilt docker image to ``<registry>/<repository>@sha256:<digest>``,
     or ``<registry>/<repository>:<tag>`` if `by_tag` is `True`.

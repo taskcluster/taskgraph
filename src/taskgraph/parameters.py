@@ -10,7 +10,6 @@ from datetime import datetime
 from io import BytesIO
 from pprint import pformat
 from subprocess import CalledProcessError
-from typing import Optional, Union
 from unittest.mock import Mock
 from urllib.parse import urlparse
 from urllib.request import urlopen
@@ -34,12 +33,12 @@ class ParameterMismatch(Exception):
 base_schema = Schema.from_dict(
     {
         "base_repository": str,
-        "base_ref": Optional[str],
+        "base_ref": str | None,
         "base_rev": str,
         "build_date": int,
         "build_number": int,
         "do_not_optimize": list[str],
-        "enable_always_target": Union[bool, list[str]],
+        "enable_always_target": bool | list[str],
         "existing_tasks": dict[str, str],
         "files_changed": list[str],
         "filters": list[str],
@@ -49,8 +48,8 @@ base_schema = Schema.from_dict(
         "head_tag": str,
         "level": str,
         "moz_build_date": str,
-        "next_version": Optional[str],
-        "optimize_strategies": Optional[str],
+        "next_version": str | None,
+        "optimize_strategies": str | None,
         "optimize_target_tasks": bool,
         "owner": str,
         "project": str,
@@ -61,7 +60,7 @@ base_schema = Schema.from_dict(
         # used at run-time
         "target_tasks_method": str,
         "tasks_for": str,
-        "version": Optional[str],
+        "version": str | None,
         "code-review": Schema.from_dict(
             {"phabricator-build-target": str},
             name="CodeReviewConfig",

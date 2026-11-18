@@ -9,7 +9,6 @@ import re
 import subprocess
 from abc import ABC, abstractmethod
 from shutil import which
-from typing import Optional
 
 from taskgraph.util.path import ancestors
 
@@ -74,7 +73,7 @@ class Repository(ABC):
 
     @property
     @abstractmethod
-    def branch(self) -> Optional[str]:
+    def branch(self) -> str | None:
         """Current branch or bookmark the checkout has active."""
 
     @property
@@ -123,15 +122,15 @@ class Repository(ABC):
         """Name of the default branch."""
 
     @abstractmethod
-    def get_url(self, remote: Optional[str]) -> str:
+    def get_url(self, remote: str | None) -> str:
         """Get URL of the upstream repository."""
 
     @abstractmethod
-    def get_commit_message(self, revision: Optional[str]) -> str:
+    def get_commit_message(self, revision: str | None) -> str:
         """Commit message of specified revision or current commit."""
 
     @abstractmethod
-    def get_tracked_files(self, *paths: str, rev: Optional[str] = None) -> list[str]:
+    def get_tracked_files(self, *paths: str, rev: str | None = None) -> list[str]:
         """Return list of tracked files.
 
         ``*paths`` are path specifiers to limit results to.
@@ -142,10 +141,10 @@ class Repository(ABC):
     @abstractmethod
     def get_changed_files(
         self,
-        diff_filter: Optional[str],
-        mode: Optional[str],
-        rev: Optional[str],
-        base: Optional[str],
+        diff_filter: str | None,
+        mode: str | None,
+        rev: str | None,
+        base: str | None,
     ) -> list[str]:
         """Return a list of files that are changed in:
          * either this repository's working copy,
@@ -184,7 +183,7 @@ class Repository(ABC):
 
     @abstractmethod
     def working_directory_clean(
-        self, untracked: Optional[bool] = False, ignored: Optional[bool] = False
+        self, untracked: bool | None = False, ignored: bool | None = False
     ) -> bool:
         """Determine if the working directory is free of modifications.
 
@@ -219,8 +218,8 @@ class Repository(ABC):
         self,
         note: str,
         remote: str,
-        revision: Optional[str] = None,
-    ) -> Optional[str]:
+        revision: str | None = None,
+    ) -> str | None:
         """Read a note attached to the given revision (defaults to HEAD).
 
         The notes ref is fetched from ``remote`` first; a missing ref on the
@@ -606,8 +605,8 @@ class GitRepository(Repository):
         self,
         note: str,
         remote: str,
-        revision: Optional[str] = None,
-    ) -> Optional[str]:
+        revision: str | None = None,
+    ) -> str | None:
         if not note.startswith("refs/notes/"):
             note = f"refs/notes/{note}"
 
