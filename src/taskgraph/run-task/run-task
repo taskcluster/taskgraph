@@ -1051,6 +1051,8 @@ def git_checkout(
         # abort if transfer speed is lower than 1kB/s for 1 minute
         "GIT_HTTP_LOW_SPEED_LIMIT": "1024",
         "GIT_HTTP_LOW_SPEED_TIME": "60",
+        # Don't hang forever on a credentials prompt
+        "GIT_TERMINAL_PROMPT": "0",
         "PYTHONUNBUFFERED": "1",
     }
 
