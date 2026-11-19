@@ -293,11 +293,11 @@ def set_try_config(parameters, task_config_file):
         )
 
 
-def write_artifact(filename, data):
+def write_artifact(filename, data, *, artifact_dir=None):
     logger.info(f"writing artifact file `{filename}`")
-    if not os.path.isdir(ARTIFACTS_DIR):
-        os.mkdir(ARTIFACTS_DIR)
-    path = ARTIFACTS_DIR / filename
+    directory = ARTIFACTS_DIR if artifact_dir is None else Path(artifact_dir)
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / filename
     if filename.endswith(".yml"):
         with open(path, "w") as f:
             yaml.safe_dump(data, f, allow_unicode=True, default_flow_style=False)
@@ -313,10 +313,11 @@ def write_artifact(filename, data):
         raise TypeError(f"Don't know how to write to {filename}")
 
 
-def read_artifact(filename):
-    path = ARTIFACTS_DIR / filename
+def read_artifact(filename, *, artifact_dir=None):
+    directory = ARTIFACTS_DIR if artifact_dir is None else Path(artifact_dir)
+    path = directory / filename
     if filename.endswith(".yml"):
-        return load_yaml(path, filename)
+        return load_yaml(path)
     elif filename.endswith(".json"):
         with open(path) as f:
             return json.load(f)
@@ -329,5 +330,6 @@ def read_artifact(filename):
         raise TypeError(f"Don't know how to read {filename}")
 
 
-def rename_artifact(src, dest):
-    os.rename(ARTIFACTS_DIR / src, ARTIFACTS_DIR / dest)
+def rename_artifact(src, dest, *, artifact_dir=None):
+    directory = ARTIFACTS_DIR if artifact_dir is None else Path(artifact_dir)
+    os.rename(directory / src, directory / dest)
