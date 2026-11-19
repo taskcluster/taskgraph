@@ -5,6 +5,7 @@
 
 import logging
 import sys
+from collections import defaultdict
 from concurrent import futures
 
 from slugid import nice as slugid
@@ -57,78 +58,66 @@ def create_tasks(graph_config, taskgraph, label_to_taskid, params, decision_task
         task_def["taskGroupId"] = decision_task_id
         task_def["schedulerId"] = scheduler_id
 
+    # We can't submit a task until its dependencies have been created. So
+    # track, for each task, how many of its dependencies within this graph are
+    # still pending, and submit it once that number drops to zero. Tasks
+    # depending (directly or not) on a task that failed to be created are never
+    # submitted, as their creation would fail anyway.
+    pending_deps = {}
+    dependents = defaultdict(list)
+    for task_id in taskgraph.graph.nodes:
+        # Some dependencies aren't in our graph, so make sure to filter those
+        # out.
+        deps = {
+            d
+            for d in taskgraph.tasks[task_id].task.get("dependencies", [])
+            if d in taskgraph.tasks
+        }
+        pending_deps[task_id] = len(deps)
+        for dep in deps:
+            dependents[dep].append(task_id)
+
     # If `testing` is True, then run without parallelization
     concurrency = CONCURRENCY if not testing else 1
     session = get_session()
     with futures.ThreadPoolExecutor(concurrency) as e:
-        fs = {}
+        # Maps each future to the task it is creating, and whether it is the
+        # primary creation of that task (as opposed to a duplicate).
         fs_to_task = {}
-        skipped = set()
+        in_flight = set()
 
-        # We can't submit a task until its dependencies have been submitted.
-        # So our strategy is to walk the graph and submit tasks once all
-        # their dependencies have been submitted.
-        tasklist = set(taskgraph.graph.visit_postorder())
-        alltasks = tasklist.copy()
+        def submit(task_id):
+            task = taskgraph.tasks[task_id]
+            label = taskid_to_label[task_id]
+            # Schedule tasks as many times as task_duplicates indicates. We
+            # use slugid() for duplicates since we want a distinct task id.
+            for i in range(task.attributes.get("task_duplicates", 1)):
+                fut_task_id = task_id if i == 0 else slugid()
+                fut = e.submit(create_task, session, fut_task_id, label, task.task)
+                fs_to_task[fut] = (task_id, label, i == 0)
+                in_flight.add(fut)
 
-        def schedule_tasks():
-            to_remove = set()
-            new = set()
+        for task_id, count in pending_deps.items():
+            if count == 0:
+                submit(task_id)
 
-            def submit(task_id, label, task_def):
-                fut = e.submit(create_task, session, task_id, label, task_def)
-                new.add(fut)
-                fs[task_id] = fut
-                fs_to_task[fut] = (task_id, label)
-
-                def mark_failed_as_skipped(fut):
-                    if fut.exception():
-                        task_id, _ = fs_to_task[fut]
-                        skipped.add(task_id)
-
-                fut.add_done_callback(mark_failed_as_skipped)
-
-            for task_id in tasklist:
-                task_def = taskgraph.tasks[task_id].task
-                # Some dependencies aren't in our graph, so make sure to filter
-                # those out
-                deps = set(task_def.get("dependencies", [])) & alltasks
-
-                # If one of the dependencies didn't get created, then
-                # don't attempt to submit as it would fail.
-                if any(d in skipped for d in deps):
-                    skipped.add(task_id)
-                    to_remove.add(task_id)
+        # As each of those futures complete, schedule the tasks that were
+        # waiting on them.
+        while in_flight:
+            done, _ = futures.wait(in_flight, return_when=futures.FIRST_COMPLETED)
+            for fut in done:
+                in_flight.remove(fut)
+                task_id, _, primary = fs_to_task[fut]
+                if not primary or fut.exception():
                     continue
-
-                # If we haven't finished submitting all our dependencies yet,
-                # come back to this later.
-                if any((d not in fs or not fs[d].done()) for d in deps):
-                    continue
-
-                submit(task_id, taskid_to_label[task_id], task_def)
-                to_remove.add(task_id)
-
-                # Schedule tasks as many times as task_duplicates indicates
-                attributes = taskgraph.tasks[task_id].attributes
-                for i in range(1, attributes.get("task_duplicates", 1)):
-                    # We use slugid() since we want a distinct task id
-                    submit(slugid(), taskid_to_label[task_id], task_def)
-            tasklist.difference_update(to_remove)
-
-            # As each of those futures complete, try to schedule more tasks.
-            for f in futures.as_completed(new):
-                schedule_tasks()
-
-        # Start scheduling tasks and run until everything is scheduled.
-        schedule_tasks()
-
-        # Wait for all futures to complete.
-        futures.wait(fs.values())
+                for dependent in dependents[task_id]:
+                    pending_deps[dependent] -= 1
+                    if pending_deps[dependent] == 0:
+                        submit(dependent)
 
         # Collect errors.
         errors = {}
-        for fut, (task_id, label) in fs_to_task.items():
+        for fut, (_, label, _) in fs_to_task.items():
             if exc := fut.exception():
                 errors[label] = exc
 
