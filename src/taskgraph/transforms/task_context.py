@@ -1,5 +1,3 @@
-from typing import Optional, Union
-
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.schema import Schema, resolve_keyed_by
 from taskgraph.util.task_context import CUSTOM_CONTEXT_MAP
@@ -9,8 +7,8 @@ from taskgraph.util.yaml import load_yaml
 
 class ResolveKeyedByConfigOptions(Schema):
     #: forwarded to `resolve_keyed_by`; see that function for details
-    defer: Optional[list[str]] = None
-    enforce_single_match: Optional[bool] = None
+    defer: list[str] | None = None
+    enforce_single_match: bool | None = None
 
 
 class TaskContextConfig(Schema):
@@ -21,26 +19,26 @@ class TaskContextConfig(Schema):
     #: parameter may be provided or a list of parameters in
     #: priority order. The latter can be useful in implementing a
     #: "default" value if some other parameter is not provided.
-    from_parameters: Optional[dict[str, Union[list[str], str]]] = None
+    from_parameters: dict[str, list[str] | str] | None = None
     #: Retrieve task context values from a yaml file. The provided
     #: file should usually only contain top level keys and values
     #: (eg: nested objects will not be interpolated - they will be
     #: substituted as text representations of the object).
-    from_file: Optional[str] = None
+    from_file: str | None = None
     #: Key/value pairs to be used as task context
-    from_object: Optional[object] = None
+    from_object: object | None = None
     #: Retrieve task context values from registered custom providers. Each
     #: entry is the name of a provider registered via
     #: ``taskgraph.util.task_context.custom_context``. Providers are called
     #: with the ``TransformConfig`` and the task being rendered, and must
     #: return a dict of key/value pairs to add to the context.
-    from_custom: Optional[list[str]] = None
-    resolve_keyed_by_options: Optional[ResolveKeyedByConfigOptions] = None
+    from_custom: list[str] | None = None
+    resolve_keyed_by_options: ResolveKeyedByConfigOptions | None = None
 
 
 #: Schema for the task_context transforms
 class TaskContextSchema(Schema, forbid_unknown_fields=False, kw_only=True):
-    name: Optional[str] = None
+    name: str | None = None
     #: `task-context` can be used to substitute values into any field or resolve
     #: keys in a field in a task with data that is not known until `taskgraph`
     #: runs.
@@ -66,7 +64,7 @@ class TaskContextSchema(Schema, forbid_unknown_fields=False, kw_only=True):
     #:
     #: Each entry in `substitution-fields` will first have `resolved_keyed_by`
     #: called on it, and then substitutions will be performed.
-    task_context: Optional[TaskContextConfig] = None
+    task_context: TaskContextConfig | None = None
 
 
 SCHEMA = TaskContextSchema

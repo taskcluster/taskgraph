@@ -9,7 +9,6 @@ import pathlib
 import shutil
 import time
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
@@ -40,7 +39,7 @@ PER_PROJECT_PARAMETERS = {
 
 #: Schema for try_task_config.json version 2
 class TryTaskConfigSchemaV2(Schema, forbid_unknown_fields=True):
-    parameters: Optional[dict[str, object]] = None
+    parameters: dict[str, object] | None = None
 
 
 try_task_config_schema_v2 = TryTaskConfigSchemaV2

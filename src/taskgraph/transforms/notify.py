@@ -8,7 +8,7 @@ See https://docs.taskcluster.net/docs/reference/core/notify/usage for
 more information.
 """
 
-from typing import Literal, Optional, Union
+from typing import Literal
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.util.schema import Schema, optionally_keyed_by, resolve_keyed_by
@@ -26,29 +26,29 @@ StatusType = Literal[
 
 class EmailRecipient(Schema, tag_field="type", tag="email", kw_only=True):
     address: optionally_keyed_by("project", "level", str, use_msgspec=True)  # type: ignore
-    status_type: Optional[StatusType] = None
+    status_type: StatusType | None = None
 
 
 class MatrixRoomRecipient(Schema, tag_field="type", tag="matrix-room", kw_only=True):
     room_id: str
-    status_type: Optional[StatusType] = None
+    status_type: StatusType | None = None
 
 
 class PulseRecipient(Schema, tag_field="type", tag="pulse", kw_only=True):
     routing_key: str
-    status_type: Optional[StatusType] = None
+    status_type: StatusType | None = None
 
 
 class SlackChannelRecipient(
     Schema, tag_field="type", tag="slack-channel", kw_only=True
 ):
     channel_id: str
-    status_type: Optional[StatusType] = None
+    status_type: StatusType | None = None
 
 
-Recipient = Union[
-    EmailRecipient, MatrixRoomRecipient, PulseRecipient, SlackChannelRecipient
-]
+Recipient = (
+    EmailRecipient | MatrixRoomRecipient | PulseRecipient | SlackChannelRecipient
+)
 
 
 _route_keys = {
@@ -66,47 +66,47 @@ class EmailLinkContent(Schema):
 
 
 class EmailContent(Schema):
-    subject: Optional[str] = None
-    content: Optional[str] = None
-    link: Optional[EmailLinkContent] = None
+    subject: str | None = None
+    content: str | None = None
+    link: EmailLinkContent | None = None
 
 
 class MatrixContent(Schema):
-    body: Optional[str] = None
-    formatted_body: Optional[str] = None
-    format: Optional[str] = None
-    msg_type: Optional[str] = None
+    body: str | None = None
+    formatted_body: str | None = None
+    format: str | None = None
+    msg_type: str | None = None
 
 
 class SlackContent(Schema):
-    text: Optional[str] = None
-    blocks: Optional[list] = None
-    attachments: Optional[list] = None
+    text: str | None = None
+    blocks: list | None = None
+    attachments: list | None = None
 
 
 class NotifyContentConfig(Schema):
-    email: Optional[EmailContent] = None
-    matrix: Optional[MatrixContent] = None
-    slack: Optional[SlackContent] = None
+    email: EmailContent | None = None
+    matrix: MatrixContent | None = None
+    slack: SlackContent | None = None
 
 
 class NotifyConfig(Schema):
     recipients: list[Recipient]
-    content: Optional[NotifyContentConfig] = None
+    content: NotifyContentConfig | None = None
 
 
 class LegacyNotificationsConfig(Schema):
     #: Continue supporting the legacy schema for backwards compat.
     emails: optionally_keyed_by("project", "level", list[str], use_msgspec=True)  # type: ignore
     subject: str
-    message: Optional[str] = None
-    status_types: Optional[list[StatusType]] = None
+    message: str | None = None
+    status_types: list[StatusType] | None = None
 
 
 #: Schema for notify transforms
 class NotifySchema(Schema, forbid_unknown_fields=False, kw_only=True):
-    notify: Optional[NotifyConfig] = None
-    notifications: Optional[LegacyNotificationsConfig] = None
+    notify: NotifyConfig | None = None
+    notifications: LegacyNotificationsConfig | None = None
 
     def __post_init__(self):
         if self.notify is not None and self.notifications is not None:

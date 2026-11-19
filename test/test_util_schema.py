@@ -392,7 +392,7 @@ def test_optionally_keyed_by_per_class():
 
     class IntSchema(Schema):
         field: optionally_keyed_by("bar", int, use_msgspec=True)  # type: ignore
-        other: Optional[str] = None
+        other: str | None = None
 
     for _ in range(2):
         StrSchema.validate({"field": {"by-foo": {"a": "b"}}})
@@ -436,7 +436,8 @@ def test_optionally_keyed_by_from_dict():
     "fields_dict, data, attr, expected",
     [
         ({"name": str}, {"name": "foo"}, "name", "foo"),
-        ({"count": Optional[int]}, {}, "count", None),
+        ({"count": int | None}, {}, "count", None),
+        ({"count": Optional[int]}, {}, "count", None),  # noqa: UP045
         ({"tags": (list, [])}, {}, "tags", []),
         ({"my-field": str}, {"my-field": "bar"}, "my_field", "bar"),
     ],
@@ -470,7 +471,7 @@ def test_from_dict_invalid(fields_dict, data):
 )
 def test_exclusive(data, raises):
     S = Schema.from_dict(
-        {"a": Optional[str], "b": Optional[str]},
+        {"a": str | None, "b": str | None},
         exclusive=[["a", "b"]],
     )
     if raises:

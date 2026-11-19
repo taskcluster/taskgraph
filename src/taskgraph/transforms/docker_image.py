@@ -5,7 +5,6 @@
 import logging
 import os
 import re
-from typing import Optional
 
 import taskgraph
 from taskgraph.transforms.base import TransformSequence
@@ -33,22 +32,22 @@ class DockerImageSchema(Schema):
     #: Name of the docker image.
     name: str
     #: Name of the parent docker image.
-    parent: Optional[str] = None
+    parent: str | None = None
     #: Treeherder symbol.
-    symbol: Optional[str] = None
+    symbol: str | None = None
     #: Relative path (from config.path) to the file the docker image was defined in.
-    task_from: Optional[str] = None
+    task_from: str | None = None
     #: Arguments to use for the Dockerfile.
-    args: Optional[dict[str, str]] = None
+    args: dict[str, str] | None = None
     #: Name of the docker image definition under taskcluster/docker, when
     #: different from the docker image name.
-    definition: Optional[str] = None
+    definition: str | None = None
     #: List of package tasks this docker image depends on.
-    packages: Optional[list[str]] = None
+    packages: list[str] | None = None
     #: Information for indexing this build so its artifacts can be discovered.
-    index: Optional[IndexSchema] = None
+    index: IndexSchema | None = None
     #: Whether this image should be cached based on inputs.
-    cache: Optional[bool] = None
+    cache: bool | None = None
 
 
 docker_image_schema = DockerImageSchema

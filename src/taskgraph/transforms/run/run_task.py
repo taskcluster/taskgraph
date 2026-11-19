@@ -7,7 +7,7 @@ Support for running tasks that are invoked via the `run-task` script.
 
 import dataclasses
 import os
-from typing import Literal, Optional, Union
+from typing import Literal
 
 from taskgraph.transforms.run import run_task_using
 from taskgraph.transforms.run.common import (
@@ -33,27 +33,27 @@ class RunTaskRunSchema(Schema, forbid_unknown_fields=False, kw_only=True):
     #: The command arguments to pass to the `run-task` script, after the checkout
     #: arguments. If a list, it will be passed directly; otherwise it will be
     #: included in a single argument to the command specified by `exec-with`.
-    command: Union[list[taskref_or_string_msgspec], taskref_or_string_msgspec]
+    command: list[taskref_or_string_msgspec] | taskref_or_string_msgspec
     #: If true (the default), perform a checkout on the worker. Can also be a
     #: dictionary specifying explicit checkouts.
-    checkout: Union[bool, dict[str, dict]]
+    checkout: bool | dict[str, dict]
     #: Base work directory used to set up the task.
     workdir: str
     #: Specifies which caches to use. May take a boolean in which case either all
     #: (True) or no (False) caches will be used. Alternatively, it can accept a
     #: list of caches to enable. Defaults to only the checkout cache enabled.
-    use_caches: Optional[Union[bool, list[CacheType]]] = None
+    use_caches: bool | list[CacheType] | None = None
     #: Path to run command in. If a checkout is present, the path to the checkout
     #: will be interpolated with the key `checkout`.
-    cwd: Optional[str] = None
+    cwd: str | None = None
     #: Specifies what to execute the command with in the event the command is a
     #: string.
-    exec_with: Optional[ExecWith] = None
+    exec_with: ExecWith | None = None
     #: Command used to invoke the `run-task` script. Can be used if the script
     #: or Python installation is in a non-standard location on the workers.
-    run_task_command: Optional[list] = None
+    run_task_command: list | None = None
     #: Whether to run as root. Defaults to False.
-    run_as_root: Optional[bool] = None
+    run_as_root: bool | None = None
 
 
 run_task_schema = RunTaskRunSchema

@@ -12,7 +12,7 @@ run-using handlers in `taskcluster/taskgraph/transforms/run`.
 import copy
 import logging
 import re
-from typing import Literal, Optional, Union
+from typing import Literal
 
 from taskgraph.transforms.base import TransformSequence
 from taskgraph.transforms.cached_tasks import order_tasks
@@ -36,9 +36,9 @@ logger = logging.getLogger(__name__)
 # the schema and avoid duplication.
 class FetchesEntrySchema(Schema):
     artifact: str
-    dest: Optional[str] = None
-    extract: Optional[bool] = None
-    verify_hash: Optional[bool] = None
+    dest: str | None = None
+    extract: bool | None = None
+    verify_hash: bool | None = None
 
 
 class GithubRepoTokenSecret(
@@ -48,47 +48,47 @@ class GithubRepoTokenSecret(
     app: str
     #: The GitHub repository the token is for. Defaults to the
     #: `base_repository` parameter.
-    repo: Optional[str] = None
+    repo: str | None = None
     #: The token's permissions, mapping a permission to its level. Defaults to
     #: `{"contents": "read"}`.
-    permissions: Optional[dict[str, str]] = None
+    permissions: dict[str, str] | None = None
     #: The environment variable to export the token in. Defaults to
     #: `GITHUB_TOKEN`.
-    env: Optional[str] = None
+    env: str | None = None
 
 
 class TaskclusterSecret(Schema, tag_field="type", tag="secret", kw_only=True):
     #: The name of the secret in Taskcluster's secrets service.
     name: str
     #: The environment variable to export the secret in. Exclusive with `file`.
-    env: Optional[str] = None
+    env: str | None = None
     #: The file to write the secret to, relative to the task's working
     #: directory. Exclusive with `env`.
-    file: Optional[str] = None
+    file: str | None = None
     #: A key of the secret to export, rather than the whole secret. Dots select
     #: keys of nested objects, e.g. `foo.bar`.
-    key: Optional[str] = None
+    key: str | None = None
 
     def __post_init__(self):
         if (self.env is None) == (self.file is None):
             raise ValueError("exactly one of 'env' or 'file' is required")
 
 
-SecretsEntrySchema = Union[GithubRepoTokenSecret, TaskclusterSecret]
+SecretsEntrySchema = GithubRepoTokenSecret | TaskclusterSecret
 
 
 class WhenConfig(Schema):
     #: This task only needs to be run if a file matching one of the given
     #: patterns has changed in the push. The patterns use the mozpack
     #: match function (python/mozbuild/mozpack/path.py).
-    files_changed: Optional[list[str]] = None
+    files_changed: list[str] | None = None
 
 
 class RunConfig(Schema, forbid_unknown_fields=False, kw_only=True):
     #: The key to a run implementation in a peer module to this one.
     using: str
     #: Base work directory used to set up the task.
-    workdir: Optional[str] = None
+    workdir: str | None = None
 
 
 #: Schema for a run transforms
@@ -98,11 +98,11 @@ class RunDescriptionSchema(Schema, forbid_unknown_fields=False, kw_only=True):
     #: The name of the task. At least one of 'name' or 'label' must be
     #: specified. If 'label' is not provided, it will be generated from
     #: the 'name' by prepending the kind.
-    name: Optional[str] = None
+    name: str | None = None
     #: The label of the task. At least one of 'name' or 'label' must be
     #: specified. If 'label' is not provided, it will be generated from
     #: the 'name' by prepending the kind.
-    label: Optional[str] = None
+    label: str | None = None
     #: the following fields are passed directly through to the task description,
     #: possibly modified by the run implementation. See
     #: taskcluster/taskgraph/transforms/task.py for the schema details.
@@ -129,21 +129,21 @@ class RunDescriptionSchema(Schema, forbid_unknown_fields=False, kw_only=True):
         "run_on_git_branches"  # type: ignore
     ] = None
     shipping_phase: TaskDescriptionSchema.__annotations__["shipping_phase"] = None  # type: ignore
-    always_target: Optional[bool] = None
-    optimization: Optional[OptimizationType] = None
-    needs_sccache: Optional[bool] = None
+    always_target: bool | None = None
+    optimization: OptimizationType | None = None
+    needs_sccache: bool | None = None
     #: The "when" section contains descriptions of the circumstances under
     #: which this task should be included in the task graph. This will be
     #: converted into an optimization, so it cannot be specified in a run
     #: description that also gives 'optimization'.
-    when: Optional[WhenConfig] = None
+    when: WhenConfig | None = None
     #: A list of artifacts to install from 'fetch' tasks.
-    fetches: Optional[dict[str, list[Union[str, FetchesEntrySchema]]]] = None
+    fetches: dict[str, list[str | FetchesEntrySchema]] | None = None
     #: A list of secrets for run-task to fetch before running the task.
-    secrets: Optional[list[SecretsEntrySchema]] = None
+    secrets: list[SecretsEntrySchema] | None = None
     #: This object will be passed through to the task description, with additions
     #: provided by the task's run-using function.
-    worker: Optional[dict] = None
+    worker: dict | None = None
 
     def __post_init__(self):
         # Exclusive: optimization and when are mutually exclusive

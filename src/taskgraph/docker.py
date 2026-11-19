@@ -15,7 +15,7 @@ from collections.abc import Generator
 from io import BytesIO
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, Optional, Union
+from typing import Any
 
 from taskcluster.exceptions import TaskclusterRestFailure
 
@@ -64,7 +64,7 @@ def get_image_digest(image_name: str) -> str:
     return task.attributes["cached_task"]["digest"]
 
 
-def load_image_by_name(image_name: str, tag: Optional[str] = None) -> Optional[str]:
+def load_image_by_name(image_name: str, tag: str | None = None) -> str | None:
     """Load a docker image by its name.
 
     Finds the appropriate docker image task by name and loads it from
@@ -106,7 +106,7 @@ def load_image_by_name(image_name: str, tag: Optional[str] = None) -> Optional[s
     return load_image_by_task_id(task_id, tag)
 
 
-def load_image_by_task_id(task_id: str, tag: Optional[str] = None) -> str:
+def load_image_by_task_id(task_id: str, tag: str | None = None) -> str:
     """Load a docker image from a task's artifacts.
 
     Downloads and loads a docker image from the specified task's
@@ -134,8 +134,8 @@ def load_image_by_task_id(task_id: str, tag: Optional[str] = None) -> str:
 def build_image(
     graph_config: GraphConfig,
     name: str,
-    context_file: Optional[str] = None,
-    save_image: Optional[str] = None,
+    context_file: str | None = None,
+    save_image: str | None = None,
 ) -> str:
     """Build a Docker image of specified name.
 
@@ -251,7 +251,7 @@ def build_image(
 
 
 def load_image(
-    url: str, imageName: Optional[str] = None, imageTag: Optional[str] = None
+    url: str, imageName: str | None = None, imageTag: str | None = None
 ) -> dict[str, str]:
     """Load docker image from URL as imageName:tag.
 
@@ -383,14 +383,14 @@ def load_image(
     return info
 
 
-def _index(l: list, s: str) -> Optional[int]:
+def _index(l: list, s: str) -> int | None:
     try:
         return l.index(s)
     except ValueError:
         pass
 
 
-def _extract_arg(cmd: list[str], arg: str) -> Optional[str]:
+def _extract_arg(cmd: list[str], arg: str) -> str | None:
     if index := _index(cmd, arg):
         return cmd[index + 1]
 
@@ -411,7 +411,7 @@ def _delete_arg(cmd: list[str], arg: str) -> bool:
     return False
 
 
-def _resolve_image(image: Union[str, dict[str, str]], graph_config: GraphConfig) -> str:
+def _resolve_image(image: str | dict[str, str], graph_config: GraphConfig) -> str:
     image_task_id = None
 
     # Standard case, image comes from the task definition.
@@ -451,12 +451,12 @@ def _is_run_task(task_def: dict[str, str]):
 
 def load_task(
     graph_config: GraphConfig,
-    task: Union[str, dict[str, Any]],
+    task: str | dict[str, Any],
     remove: bool = True,
-    user: Optional[str] = None,
-    custom_image: Optional[str] = None,
-    interactive: Optional[bool] = False,
-    volumes: Optional[list[tuple[str, str]]] = None,
+    user: str | None = None,
+    custom_image: str | None = None,
+    interactive: bool | None = False,
+    volumes: list[tuple[str, str]] | None = None,
     develop: bool = False,
 ) -> int:
     """Load and run a task interactively in a Docker container.

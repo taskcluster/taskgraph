@@ -3,6 +3,11 @@ Migration Guide
 
 This page can help when migrating Taskgraph across major versions.
 
+24.x -> 25.x
+------------
+
+* Upgrade to Python 3.10 or above.
+
 23.x -> 24.x
 ------------
 

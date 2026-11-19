@@ -1,7 +1,7 @@
 ### Project
 [project]
 name = "taskcluster-taskgraph"
-version = "24.9.0"
+version = "25.0.0"
 description = "Build taskcluster taskgraphs"
 readme = "README.rst"
 authors = [
@@ -11,7 +11,6 @@ classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Environment :: Console",
   "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -19,7 +18,7 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
   "Topic :: Software Development",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
   "appdirs>=1.4",
   "cookiecutter~=2.1",
