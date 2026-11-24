@@ -293,9 +293,9 @@ def set_try_config(parameters, task_config_file):
         )
 
 
-def write_artifact(filename, data, *, artifact_dir=None):
+def write_artifact(filename, data, *, artifact_dir: Path | None = None):
     logger.info(f"writing artifact file `{filename}`")
-    directory = ARTIFACTS_DIR if artifact_dir is None else Path(artifact_dir)
+    directory = ARTIFACTS_DIR if artifact_dir is None else artifact_dir
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / filename
     if filename.endswith(".yml"):
@@ -313,8 +313,8 @@ def write_artifact(filename, data, *, artifact_dir=None):
         raise TypeError(f"Don't know how to write to {filename}")
 
 
-def read_artifact(filename, *, artifact_dir=None):
-    directory = ARTIFACTS_DIR if artifact_dir is None else Path(artifact_dir)
+def read_artifact(filename, *, artifact_dir: Path | None = None):
+    directory = ARTIFACTS_DIR if artifact_dir is None else artifact_dir
     path = directory / filename
     if filename.endswith(".yml"):
         return load_yaml(path)
@@ -330,6 +330,6 @@ def read_artifact(filename, *, artifact_dir=None):
         raise TypeError(f"Don't know how to read {filename}")
 
 
-def rename_artifact(src, dest, *, artifact_dir=None):
-    directory = ARTIFACTS_DIR if artifact_dir is None else Path(artifact_dir)
+def rename_artifact(src, dest, *, artifact_dir: Path | None = None):
+    directory = ARTIFACTS_DIR if artifact_dir is None else artifact_dir
     os.rename(directory / src, directory / dest)
