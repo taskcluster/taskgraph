@@ -1,5 +1,19 @@
 # Change Log
 
+## [25.0.0] - 2026-11-18
+
+### Changed
+
+- run-task: send SIGTERM to the task's processes shortly before maxRunTime
+
+### Fixed
+
+- run-task: don't let git hang if prompted for credentials (bug 2094225)
+
+### Removed
+
+- BREAKING CHANGE: Dropped support for Python 3.9
+
 ## [24.9.0] - 2026-11-16
 
 ### Added
