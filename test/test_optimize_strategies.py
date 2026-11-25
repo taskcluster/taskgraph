@@ -7,7 +7,7 @@ from datetime import datetime
 from time import mktime
 
 import pytest
-from pytest_taskgraph import make_task
+from pytest_taskgraph import make_graph, make_task
 
 from taskgraph.optimize.strategies import IndexSearch, SkipUnlessChanged
 from taskgraph.util import taskcluster as tc
@@ -84,30 +84,34 @@ def test_index_search(caplog, monkeypatch, params, state, expires, expected, log
 
     monkeypatch.setattr(tc, "get_taskcluster_client", mock_client)
 
-    label_to_taskid = {index_path: taskid}
-    taskid_to_status = {
-        taskid: {
-            "state": state,
-            "expires": expires,
-        }
-    }
+    mock_index.findTasksAtIndex.side_effect = lambda payload, paginationHandler: (
+        paginationHandler({"tasks": [{"namespace": index_path, "taskId": taskid}]})
+    )
+    mock_queue.statuses.side_effect = lambda payload, paginationHandler: (
+        paginationHandler(
+            {
+                "statuses": [
+                    {"taskId": taskid, "status": {"state": state, "expires": expires}}
+                ]
+            }
+        )
+    )
 
+    task = make_task("task-label")
     opt = IndexSearch()
     deadline = "2021-06-07T19:03:20.482Z"
-    assert (
-        opt.should_replace_task(
-            make_task("task-label"),
-            params,
-            deadline,
-            ([index_path], label_to_taskid, taskid_to_status),
-        )
-        == expected
-    )
+    assert opt.should_replace_tasks(
+        make_graph(task),
+        ["task-label"],
+        params,
+        {"task-label": deadline},
+        {"task-label": [index_path]},
+    ) == ({"task-label": expected} if expected else {})
+    mock_index.findTasksAtIndex.assert_called_once()
+    mock_queue.statuses.assert_called_once()
+
     # test the non-batched variant as well
-    assert (
-        opt.should_replace_task(make_task("task-label"), params, deadline, [index_path])
-        == expected
-    )
+    assert opt.should_replace_task(task, params, deadline, [index_path]) == expected
 
     if logs:
         log_records = [

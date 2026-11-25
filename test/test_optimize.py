@@ -285,9 +285,7 @@ def test_remove_tasks(monkeypatch, graph, kwargs, exp_removed):
                 t1={"replace": "e1"},
                 t3={"replace": "e3"},
             ),
-            {
-                "index_to_taskid": {"t1": "e1"},
-            },
+            {},
             # expectations
             {"t1"},
             set(),
@@ -302,7 +300,6 @@ def test_remove_tasks(monkeypatch, graph, kwargs, exp_removed):
             ),
             {
                 "do_not_optimize": {"t2"},
-                "index_to_taskid": {"t1": "e1"},
             },
             # expectations
             {"t1"},
@@ -325,9 +322,7 @@ def test_remove_tasks(monkeypatch, graph, kwargs, exp_removed):
                 t2={"replace": "e2"},
                 t3={"replace": "e3"},
             ),
-            {
-                "index_to_taskid": {"t1": "e1", "t2": "e2", "t3": "e3"},
-            },
+            {},
             # expectations
             {"t1", "t2", "t3"},
             set(),
@@ -340,9 +335,7 @@ def test_remove_tasks(monkeypatch, graph, kwargs, exp_removed):
                 t2={"replace": True},
                 t3={"replace": True},
             ),
-            {
-                "index_to_taskid": {"t1": "e1"},
-            },
+            {},
             # expectations
             {"t1"},
             {"t2", "t3"},
@@ -388,8 +381,6 @@ def test_replace_tasks(
     kwargs.setdefault("params", {})
     kwargs.setdefault("do_not_optimize", set())
     kwargs.setdefault("label_to_taskid", {})
-    kwargs.setdefault("index_to_taskid", {})
-    kwargs.setdefault("taskid_to_status", {})
     kwargs.setdefault("removed_tasks", set())
     kwargs.setdefault("existing_tasks", {})
 
@@ -687,8 +678,6 @@ def run_replace_tasks(graph, strategies, do_not_optimize=(), existing_tasks=None
         label_to_taskid=label_to_taskid,
         removed_tasks=set(),
         existing_tasks=existing_tasks or {},
-        index_to_taskid={},
-        taskid_to_status={},
     )
     return replaced, label_to_taskid
 
