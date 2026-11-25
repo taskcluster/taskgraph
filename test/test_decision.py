@@ -46,6 +46,23 @@ class TestDecision(unittest.TestCase):
             decision.ARTIFACTS_DIR = Path("artifacts")
 
 
+@pytest.mark.parametrize("extension", (".json", ".yml"))
+@pytest.mark.parametrize("artifact_dir", (None, Path("custom/uploads")))
+def test_artifact_round_trip(tmp_path, monkeypatch, extension, artifact_dir):
+    monkeypatch.chdir(tmp_path)
+    directory = Path("artifacts") if artifact_dir is None else artifact_dir
+    filename = f"artifact{extension}"
+    renamed = f"renamed{extension}"
+    data = {"test": [1, 2]}
+
+    decision.write_artifact(filename, data, artifact_dir=artifact_dir)
+    assert (directory / filename).is_file()
+
+    decision.rename_artifact(filename, renamed, artifact_dir=artifact_dir)
+    assert not (directory / filename).exists()
+    assert decision.read_artifact(renamed, artifact_dir=artifact_dir) == data
+
+
 @unittest.mock.patch.object(
     GitRepository,
     "get_changed_files",
