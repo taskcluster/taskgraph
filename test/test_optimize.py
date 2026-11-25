@@ -665,3 +665,192 @@ def test_custom_composite_uses_per_task_reduce():
     graph = make_leaves(1, "composite")
     strategy = Majority("always", "always", "never")
     assert strategy.should_remove_tasks(graph, ["t1"], {}, {"t1": None}) == {"t1"}
+
+
+class RecordingReplace(OptimizationStrategy):
+    def __init__(self, replacements=None):
+        self.replacements = replacements or {}
+        self.calls = []
+
+    def should_replace_tasks(self, graph, labels, params, deadlines, args):
+        self.calls.append((list(labels), dict(deadlines)))
+        return {l: self.replacements[l] for l in labels if l in self.replacements}
+
+
+def run_replace_tasks(graph, strategies, do_not_optimize=(), existing_tasks=None):
+    label_to_taskid = {}
+    replaced = optimize_mod.replace_tasks(
+        target_task_graph=graph,
+        params={},
+        task_strategies=optimize_mod.resolve_task_strategies(graph, strategies),
+        do_not_optimize=set(do_not_optimize),
+        label_to_taskid=label_to_taskid,
+        removed_tasks=set(),
+        existing_tasks=existing_tasks or {},
+        index_to_taskid={},
+        taskid_to_status={},
+    )
+    return replaced, label_to_taskid
+
+
+def test_replace_tasks_batches_candidates_per_strategy():
+    graph = make_graph(
+        make_task("t1", optimization={"rec": None}),
+        make_task("t2", optimization={"rec": None}),
+        make_task("t3", optimization={"rec": None}),
+        make_task("t4", optimization={"rec": None}),
+        ("t2", "t1", "dep"),
+    )
+    rec = RecordingReplace({"t1": "e1", "t2": "e2", "t3": "e3", "t4": "e4"})
+    strategies = default_strategies()
+    strategies["rec"] = rec
+
+    replaced, label_to_taskid = run_replace_tasks(
+        graph, strategies, do_not_optimize={"t3"}, existing_tasks={"t4": "x4"}
+    )
+
+    assert len(rec.calls) == 1
+    labels, deadlines = rec.calls[0]
+    assert labels == ["t1", "t2"]
+    assert deadlines["t2"] is None
+    assert deadlines["t1"] is not None
+    assert replaced == {"t1", "t2", "t4"}
+    assert label_to_taskid == {"t1": "e1", "t2": "e2", "t4": "x4"}
+
+
+def test_replace_tasks_ignores_replacements_of_tasks_with_kept_dependencies():
+    graph = make_graph(
+        make_task("t1"),
+        make_task("t2", optimization={"rec": None}),
+        ("t2", "t1", "dep"),
+    )
+    rec = RecordingReplace({"t2": "e2"})
+    strategies = default_strategies()
+    strategies["rec"] = rec
+
+    replaced, _ = run_replace_tasks(graph, strategies)
+    assert rec.calls[0][0] == ["t2"]
+    assert replaced == set()
+
+
+@pytest.mark.parametrize(
+    "make_composite,first,second,exp_second_sees,exp_replaced",
+    (
+        pytest.param(
+            Any,
+            {"t1": "e1"},
+            {"t1": "x1", "t2": "e2"},
+            ["t2", "t3"],
+            {"t1": "e1", "t2": "e2"},
+            id="any",
+        ),
+        pytest.param(
+            All,
+            {"t1": "e1", "t2": "e2"},
+            {"t2": "x2", "t3": "x3"},
+            ["t1", "t2"],
+            {"t2": True},
+            id="all",
+        ),
+    ),
+)
+def test_composite_replace_short_circuits(
+    make_composite, first, second, exp_second_sees, exp_replaced
+):
+    graph = make_leaves(3, "composite")
+    first = RecordingReplace(first)
+    second = RecordingReplace(second)
+    labels = ["t1", "t2", "t3"]
+    result = make_composite(first, second).should_replace_tasks(
+        graph, labels, {}, dict.fromkeys(labels), dict.fromkeys(labels)
+    )
+    assert result == exp_replaced
+    assert [call[0] for call in second.calls] == [exp_second_sees]
+
+
+def test_not_and_alias_replace():
+    graph = make_leaves(2, "composite")
+    labels = ["t1", "t2"]
+    deadlines = dict.fromkeys(labels)
+    args = dict.fromkeys(labels)
+    inner = RecordingReplace({"t1": "e1"})
+    assert Not(inner).should_replace_tasks(graph, labels, {}, deadlines, args) == {
+        "t2": True
+    }
+    assert Alias(inner).should_replace_tasks(graph, labels, {}, deadlines, args) == {
+        "t1": "e1"
+    }
+
+
+def test_composite_replace_matches_per_task_results():
+    graph = make_leaves(4, "composite")
+    labels = ["t1", "t2", "t3", "t4"]
+    values = {"t1": ("e1", False), "t2": (False, "e2"), "t3": ("e3", "x3")}
+
+    class PerTask(OptimizationStrategy):
+        def __init__(self, index):
+            self.index = index
+
+        def should_replace_task(self, task, params, deadline, arg):
+            return values.get(task.label, (False, False))[self.index]
+
+    for composite in (
+        Any(PerTask(0), PerTask(1)),
+        All(PerTask(0), PerTask(1)),
+        Not(PerTask(0)),
+        Alias(PerTask(1)),
+    ):
+        expected = {}
+        for label in labels:
+            repl = composite.should_replace_task(graph.tasks[label], {}, None, None)
+            if repl:
+                expected[label] = repl
+        assert (
+            composite.should_replace_tasks(
+                graph, labels, {}, dict.fromkeys(labels), dict.fromkeys(labels)
+            )
+            == expected
+        )
+
+
+def short_split(arg, substrategies):
+    return [arg] * (1 if arg == "short" else len(substrategies))
+
+
+@pytest.mark.parametrize(
+    "make_composite,exp_removed",
+    (
+        pytest.param(Any, {"t1", "t2"}, id="any"),
+        pytest.param(All, {"t1"}, id="all"),
+    ),
+)
+def test_composite_remove_with_fewer_split_args(make_composite, exp_removed):
+    graph = make_leaves(2, "composite")
+    first = RecordingRemove(remove={"t1", "t2"})
+    second = RecordingRemove(remove=set())
+    composite = make_composite(first, second, split_args=short_split)
+    removed = composite.should_remove_tasks(
+        graph, ["t1", "t2"], {}, {"t1": "short", "t2": "full"}
+    )
+    assert removed == exp_removed
+    assert all("t1" not in labels for labels in second.calls)
+
+
+@pytest.mark.parametrize(
+    "make_composite,exp_replaced",
+    (
+        pytest.param(Any, {"t1": "e1", "t2": "e2"}, id="any"),
+        pytest.param(All, {"t1": True}, id="all"),
+    ),
+)
+def test_composite_replace_with_fewer_split_args(make_composite, exp_replaced):
+    graph = make_leaves(2, "composite")
+    labels = ["t1", "t2"]
+    first = RecordingReplace({"t1": "e1", "t2": "e2"})
+    second = RecordingReplace()
+    composite = make_composite(first, second, split_args=short_split)
+    replaced = composite.should_replace_tasks(
+        graph, labels, {}, dict.fromkeys(labels), {"t1": "short", "t2": "full"}
+    )
+    assert replaced == exp_replaced
+    assert all("t1" not in call[0] for call in second.calls)
