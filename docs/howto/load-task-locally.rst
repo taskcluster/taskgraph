@@ -55,7 +55,7 @@ For example, you can run:
 
 .. code-block:: shell
 
-   taskgraph morphed -J --tasks test-unit-py | jq -r 'to_entries | first | .value.task' | taskgraph load-task -
+   taskgraph morphed --format json --tasks test-unit-py | jq -r 'to_entries | first | .value.task' | taskgraph load-task -
 
 In this example, we're piping the definition of the task named ``test-unit-py``
 into ``taskgraph load-task``. This allows you to quickly iterate on the task
@@ -63,7 +63,7 @@ and test that it runs as expected.
 
 .. note::
 
-   The output of ``taskgraph morphed -J`` looks something like:
+   The output of ``taskgraph morphed --format json`` looks something like:
 
    ``{ "<task id>": { "task": { <task definition> }}}``
 
@@ -103,7 +103,7 @@ by combining passing in a custom image locally, and piping a task definition via
 
 .. code-block:: shell
 
-   taskgraph morphed -J --tasks test-unit-py | jq -r 'to_entries | first | .value.task' | taskgraph load-task --image python -
+   taskgraph morphed --format json --tasks test-unit-py | jq -r 'to_entries | first | .value.task' | taskgraph load-task --image python -
 
 Developing in the Container
 ---------------------------

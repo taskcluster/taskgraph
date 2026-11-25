@@ -202,9 +202,9 @@ Now run:
 
 .. code-block:: bash
 
- taskgraph morphed -J
+ taskgraph morphed --format json
 
-The ``-J/--json`` flag will display the full JSON definition of your task.
+The ``--format json`` flag will display the full JSON definition of your task.
 Morphed is the final phase of :ref:`graph generation <graph generation>`, so
 represents your task's final form before it would get submitted to Taskcluster.
 In fact, if we hadn't made up the trust domain and worker pool in
