@@ -269,7 +269,7 @@ def test_remove_tasks(monkeypatch, graph, kwargs, exp_removed):
 
     got_removed = optimize_mod.remove_tasks(
         target_task_graph=graph,
-        optimizations=optimize_mod._get_optimizations(graph, strategies),
+        task_strategies=optimize_mod.resolve_task_strategies(graph, strategies),
         **kwargs,
     )
     assert got_removed == exp_removed
@@ -394,7 +394,9 @@ def test_replace_tasks(
 
     got_replaced = optimize_mod.replace_tasks(
         target_task_graph=graph,
-        optimizations=optimize_mod._get_optimizations(graph, default_strategies()),
+        task_strategies=optimize_mod.resolve_task_strategies(
+            graph, default_strategies()
+        ),
         **kwargs,
     )
     assert got_replaced == exp_replaced
@@ -487,3 +489,17 @@ def test_register_strategy(mocker):
     func = register_strategy("foo", args=("one", "two"), kwargs={"n": 1})
     func(m)
     m.assert_called_with("one", "two", n=1)
+
+
+def test_resolve_task_strategies():
+    strategies = default_strategies()
+    strategies["any"] = Any("never", "always")
+    graph = make_graph(
+        make_task("t1", optimization={"remove": ["a"]}),
+        make_task("t2", optimization={"any": None}),
+        make_task("t3"),
+    )
+    resolved = optimize_mod.resolve_task_strategies(graph, strategies)
+    assert resolved["t1"] == ("remove", strategies["remove"], ["a"])
+    assert resolved["t2"] == ("any (never-or-always)", strategies["any"], None)
+    assert resolved["t3"] == ("never", strategies["never"], None)

@@ -15,6 +15,8 @@ import datetime
 import logging
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
+from typing import Any as AnyType
+from typing import NamedTuple
 
 from slugid import nice as slugid
 
@@ -66,12 +68,15 @@ def optimize_task_graph(
     if strategy_override:
         strategies.update(strategy_override)
 
-    optimizations = _get_optimizations(target_task_graph, strategies)
+    # Map task labels -> TaskStrategy. This is done once, upfront, to make
+    # things easier for `remove_tasks` and `replace_tasks`, and ensure that
+    # we don't do this work differently in different places.
+    task_strategies = resolve_task_strategies(target_task_graph, strategies)
 
     removed_tasks = remove_tasks(
         target_task_graph=target_task_graph,
         requested_tasks=requested_tasks,
-        optimizations=optimizations,
+        task_strategies=task_strategies,
         params=params,
         do_not_optimize=do_not_optimize,
     )
@@ -81,7 +86,7 @@ def optimize_task_graph(
     for label in target_task_graph.tasks:
         if label in do_not_optimize:
             continue
-        _, strategy, arg = optimizations(label)
+        _, strategy, arg = task_strategies[label]
         if isinstance(strategy, IndexSearch) and arg is not None:
             indexes.update(arg)
 
@@ -95,7 +100,7 @@ def optimize_task_graph(
 
     replaced_tasks = replace_tasks(
         target_task_graph=target_task_graph,
-        optimizations=optimizations,
+        task_strategies=task_strategies,
         params=params,
         do_not_optimize=do_not_optimize,
         label_to_taskid=label_to_taskid,
@@ -117,19 +122,24 @@ def optimize_task_graph(
     )
 
 
-def _get_optimizations(target_task_graph, strategies):
-    def optimizations(label):
-        task = target_task_graph.tasks[label]
-        if task.optimization:
-            opt_by, arg = list(task.optimization.items())[0]
-            strategy = strategies[opt_by]
-            if hasattr(strategy, "description"):
-                opt_by += f" ({strategy.description})"
-            return (opt_by, strategy, arg)
-        else:
-            return ("never", strategies["never"], None)
+class TaskStrategy(NamedTuple):
+    name: str
+    strategy: "OptimizationStrategy"
+    arg: AnyType
 
-    return optimizations
+
+def resolve_task_strategies(target_task_graph, strategies):
+    task_strategies = {}
+    for label, task in target_task_graph.tasks.items():
+        if task.optimization:
+            name, arg = next(iter(task.optimization.items()))
+            strategy = strategies[name]
+            if hasattr(strategy, "description"):
+                name += f" ({strategy.description})"
+            task_strategies[label] = TaskStrategy(name, strategy, arg)
+        else:
+            task_strategies[label] = TaskStrategy("never", strategies["never"], None)
+    return task_strategies
 
 
 def _log_optimization(verb, opt_counts, opt_reasons=None):
@@ -149,7 +159,7 @@ def _log_optimization(verb, opt_counts, opt_reasons=None):
 
 
 def remove_tasks(
-    target_task_graph, requested_tasks, params, optimizations, do_not_optimize
+    target_task_graph, requested_tasks, params, task_strategies, do_not_optimize
 ):
     """
     Implement the "Removing Tasks" phase, returning a set of task labels of all removed tasks.
@@ -238,7 +248,7 @@ def remove_tasks(
 
         # Call the optimization strategy.
         task = tasks[label]
-        opt_by, opt, arg = optimizations(label)
+        opt_by, opt, arg = task_strategies[label]
         if opt.should_remove_task(task, params, arg):
             _remove(opt_by)
             continue
@@ -279,7 +289,7 @@ def remove_tasks(
 def replace_tasks(
     target_task_graph,
     params,
-    optimizations,
+    task_strategies,
     do_not_optimize,
     label_to_taskid,
     removed_tasks,
@@ -340,7 +350,7 @@ def replace_tasks(
 
         # call the optimization strategy
         task = target_task_graph.tasks[label]
-        opt_by, opt, arg = optimizations(label)
+        opt_by, opt, arg = task_strategies[label]
 
         # compute latest deadline of dependents (if any)
         deadline = None
