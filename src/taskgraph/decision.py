@@ -307,8 +307,11 @@ def write_artifact(filename, data, *, artifact_dir: Path | None = None):
     elif filename.endswith(".gz"):
         import gzip  # noqa: PLC0415
 
-        with gzip.open(path, "wb") as f:
-            f.write(json.dumps(data))  # type: ignore
+        with gzip.open(path, "wt", encoding="utf-8") as f:
+            json.dump(data, f)
+    elif isinstance(data, str):
+        with open(path, "w") as f:
+            f.write(data)
     else:
         raise TypeError(f"Don't know how to write to {filename}")
 
