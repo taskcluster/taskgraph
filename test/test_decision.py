@@ -215,3 +215,56 @@ def test_decision_parameters_note_invalid_json(mock_files_changed, mock_get_note
         Exception, match="Failed to parse refs/notes/decision-parameters as JSON"
     ):
         decision.get_decision_parameters(FAKE_GRAPH_CONFIG, options)
+
+
+@pytest.mark.parametrize(
+    ("config_file", "expected_build_number"), ((None, 2), ("custom.json", 3))
+)
+def test_apply_parameter_overrides_prefers_config_file(
+    tmp_path, monkeypatch, config_file, expected_build_number
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "try_task_config.json").write_text('{"build_number": 2}')
+    (tmp_path / "custom.json").write_text('{"build_number": 3}')
+    parameters = {
+        "head_repository": _BASE_OPTIONS["head_repository"],
+        "build_number": 1,
+    }
+    repo = unittest.mock.Mock()
+    repo.get_note.return_value = '{"build_number": 99}'
+
+    def load_config(parameters, filename):
+        parameters.update(json.loads(Path(filename).read_text()))
+
+    assert decision.apply_parameter_overrides(
+        parameters, repo, config_file=config_file, load_config=load_config
+    )
+    assert parameters["build_number"] == expected_build_number
+    repo.get_note.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("note", "expected_build_number"), ((None, 1), ('{"build_number": 99}', 99))
+)
+def test_apply_parameter_overrides_falls_back_to_note(
+    tmp_path, monkeypatch, note, expected_build_number
+):
+    monkeypatch.chdir(tmp_path)
+    parameters = {
+        "head_repository": _BASE_OPTIONS["head_repository"],
+        "build_number": 1,
+    }
+    repo = unittest.mock.Mock()
+    repo.get_note.return_value = note
+    load_config = unittest.mock.Mock()
+
+    applied = decision.apply_parameter_overrides(
+        parameters, repo, load_config=load_config
+    )
+
+    assert applied is (note is not None)
+    assert parameters["build_number"] == expected_build_number
+    repo.get_note.assert_called_once_with(
+        "refs/notes/decision-parameters", _BASE_OPTIONS["head_repository"]
+    )
+    load_config.assert_not_called()

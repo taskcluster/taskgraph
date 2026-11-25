@@ -247,31 +247,41 @@ def get_decision_parameters(graph_config, options):
         assert callable(decision_params)
         decision_params(graph_config, parameters)
 
-    # load extra parameters from file or vcs note if able
     if options.get("allow_parameter_override"):
-        note_ref = "refs/notes/decision-parameters"
-        if options.get("try_task_config_file"):
-            task_config_file = os.path.abspath(options.get("try_task_config_file"))
-        else:
-            # if try_task_config.json is present, load it
-            task_config_file = os.path.join(os.getcwd(), "try_task_config.json")
-
-        if os.path.isfile(task_config_file):
-            set_try_config(parameters, task_config_file)
-
-        elif note_params := repo.get_note(note_ref, parameters["head_repository"]):
-            try:
-                note_params = json.loads(note_params)
-                logger.info(
-                    f"Overriding parameters from {note_ref}:\n{json.dumps(note_params, indent=2)}"
-                )
-                parameters.update(note_params)
-            except ValueError as e:
-                raise Exception(f"Failed to parse {note_ref} as JSON: {e}") from e
+        apply_parameter_overrides(
+            parameters,
+            repo,
+            config_file=options.get("try_task_config_file"),
+            load_config=set_try_config,
+        )
 
     result = Parameters(**parameters)
     result.check()
     return result
+
+
+def apply_parameter_overrides(parameters, repo, *, config_file=None, load_config):
+    """Apply overrides from a config file or Git note and return whether one was applied."""
+    config_file = os.path.abspath(config_file or "try_task_config.json")
+    if os.path.isfile(config_file):
+        load_config(parameters, config_file)
+        return True
+
+    note_ref = "refs/notes/decision-parameters"
+    note = repo.get_note(note_ref, parameters["head_repository"])
+    if not note:
+        return False
+
+    try:
+        note_params = json.loads(note)
+        logger.info(
+            f"Overriding parameters from {note_ref}:\n{json.dumps(note_params, indent=2)}"
+        )
+        parameters.update(note_params)
+    except ValueError as e:
+        raise Exception(f"Failed to parse {note_ref} as JSON: {e}") from e
+
+    return True
 
 
 def set_try_config(parameters, task_config_file):
