@@ -6,7 +6,12 @@ from taskcluster.exceptions import TaskclusterRestFailure
 
 from taskgraph.optimize.base import OptimizationStrategy, register_strategy
 from taskgraph.util.path import match as match_path
-from taskgraph.util.taskcluster import find_task_id, status_task
+from taskgraph.util.taskcluster import (
+    find_task_id,
+    find_task_id_batched,
+    status_task,
+    status_task_batched,
+)
 
 logger = logging.getLogger("optimization")
 
@@ -34,28 +39,40 @@ class IndexSearch(OptimizationStrategy):
 
     def should_replace_task(self, task, params, deadline, arg):
         "Look for a task with one of the given index paths"
-        batched = False
-        # Appease static checker that doesn't understand that this is not needed
-        label_to_taskid = {}
-        taskid_to_status = {}
 
-        if isinstance(arg, tuple) and len(arg) == 3:
-            # allow for a batched call optimization instead of two queries
-            # per index path
-            index_paths, label_to_taskid, taskid_to_status = arg
-            batched = True
-        else:
-            index_paths = arg
+        def lookup(index_path):
+            # 404 is raised as `KeyError`
+            task_id = find_task_id(index_path)
+            return task_id, status_task(task_id)
 
-        for index_path in index_paths:
+        return self._find_replacement(task, arg, deadline, lookup)
+
+    def should_replace_tasks(self, graph, labels, params, deadlines, args):
+        index_paths = sorted({path for label in labels for path in args[label] or ()})
+        if not index_paths:
+            return {}
+
+        # Find their respective status using TC index/queue batch APIs
+        index_to_taskid = find_task_id_batched(index_paths)
+        taskid_to_status = status_task_batched(list(index_to_taskid.values()))
+
+        def lookup(index_path):
+            task_id = index_to_taskid[index_path]
+            return task_id, taskid_to_status[task_id]
+
+        replacements = {}
+        for label in labels:
+            repl = self._find_replacement(
+                graph.tasks[label], args[label], deadlines[label], lookup
+            )
+            if repl:
+                replacements[label] = repl
+        return replacements
+
+    def _find_replacement(self, task, index_paths, deadline, lookup):
+        for index_path in index_paths or ():
             try:
-                if batched:
-                    task_id = label_to_taskid[index_path]
-                    status = taskid_to_status[task_id]
-                else:
-                    # 404 is raised as `KeyError` also end up here
-                    task_id = find_task_id(index_path)
-                    status = status_task(task_id)
+                task_id, status = lookup(index_path)
                 # status can be `None` if we're in `testing` mode
                 # (e.g. test-action-callback)
                 if not status or status.get("state") in ("exception", "failed"):  # type: ignore

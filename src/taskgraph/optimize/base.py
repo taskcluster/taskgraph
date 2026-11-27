@@ -12,9 +12,12 @@ See ``taskcluster/docs/optimization.rst`` for more information.
 """
 
 import datetime
+import functools
 import logging
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
+from typing import Any as AnyType
+from typing import NamedTuple, cast
 
 from slugid import nice as slugid
 
@@ -22,7 +25,6 @@ from taskgraph.graph import Graph
 from taskgraph.taskgraph import TaskGraph
 from taskgraph.util.parameterization import resolve_task_references, resolve_timestamps
 from taskgraph.util.python_path import import_sibling_modules
-from taskgraph.util.taskcluster import find_task_id_batched, status_task_batched
 
 logger = logging.getLogger("optimization")
 registry = {}
@@ -54,9 +56,6 @@ def optimize_task_graph(
     Perform task optimization, returning a taskgraph and a map from label to
     assigned taskId, including replacement tasks.
     """
-    # avoid circular import
-    from taskgraph.optimize.strategies import IndexSearch  # noqa: PLC0415
-
     label_to_taskid = {}
     if not existing_tasks:
         existing_tasks = {}
@@ -66,43 +65,27 @@ def optimize_task_graph(
     if strategy_override:
         strategies.update(strategy_override)
 
-    optimizations = _get_optimizations(target_task_graph, strategies)
+    # Map task labels -> TaskStrategy. This is done once, upfront, to make
+    # things easier for `remove_tasks` and `replace_tasks`, and ensure that
+    # we don't do this work differently in different places.
+    task_strategies = resolve_task_strategies(target_task_graph, strategies)
 
     removed_tasks = remove_tasks(
         target_task_graph=target_task_graph,
         requested_tasks=requested_tasks,
-        optimizations=optimizations,
+        task_strategies=task_strategies,
         params=params,
         do_not_optimize=do_not_optimize,
     )
 
-    # Gather each relevant task's index
-    indexes = set()
-    for label in target_task_graph.tasks:
-        if label in do_not_optimize:
-            continue
-        _, strategy, arg = optimizations(label)
-        if isinstance(strategy, IndexSearch) and arg is not None:
-            indexes.update(arg)
-
-    index_to_taskid = {}
-    taskid_to_status = {}
-    if indexes:
-        # Find their respective status using TC index/queue batch APIs
-        indexes = list(indexes)
-        index_to_taskid = find_task_id_batched(indexes)
-        taskid_to_status = status_task_batched(list(index_to_taskid.values()))
-
     replaced_tasks = replace_tasks(
         target_task_graph=target_task_graph,
-        optimizations=optimizations,
+        task_strategies=task_strategies,
         params=params,
         do_not_optimize=do_not_optimize,
         label_to_taskid=label_to_taskid,
         existing_tasks=existing_tasks,
         removed_tasks=removed_tasks,
-        index_to_taskid=index_to_taskid,
-        taskid_to_status=taskid_to_status,
     )
 
     return (
@@ -117,19 +100,34 @@ def optimize_task_graph(
     )
 
 
-def _get_optimizations(target_task_graph, strategies):
-    def optimizations(label):
-        task = target_task_graph.tasks[label]
-        if task.optimization:
-            opt_by, arg = list(task.optimization.items())[0]
-            strategy = strategies[opt_by]
-            if hasattr(strategy, "description"):
-                opt_by += f" ({strategy.description})"
-            return (opt_by, strategy, arg)
-        else:
-            return ("never", strategies["never"], None)
+class TaskStrategy(NamedTuple):
+    name: str
+    strategy: "OptimizationStrategy"
+    arg: AnyType
 
-    return optimizations
+
+def resolve_task_strategies(target_task_graph, strategies):
+    task_strategies = {}
+    for label, task in target_task_graph.tasks.items():
+        if task.optimization:
+            name, arg = next(iter(task.optimization.items()))
+            strategy = strategies[name]
+            if hasattr(strategy, "description"):
+                name += f" ({strategy.description})"
+            task_strategies[label] = TaskStrategy(name, strategy, arg)
+        else:
+            task_strategies[label] = TaskStrategy("never", strategies["never"], None)
+    return task_strategies
+
+
+def _group_by_strategy(labels, task_strategies):
+    groups = {}
+    for label in labels:
+        _, strategy, arg = task_strategies[label]
+        _, group_labels, args = groups.setdefault(id(strategy), (strategy, [], {}))
+        group_labels.append(label)
+        args[label] = arg
+    return groups.values()
 
 
 def _log_optimization(verb, opt_counts, opt_reasons=None):
@@ -149,21 +147,38 @@ def _log_optimization(verb, opt_counts, opt_reasons=None):
 
 
 def remove_tasks(
-    target_task_graph, requested_tasks, params, optimizations, do_not_optimize
+    target_task_graph, requested_tasks, params, task_strategies, do_not_optimize
 ):
     """
     Implement the "Removing Tasks" phase, returning a set of task labels of all removed tasks.
     """
     opt_counts = defaultdict(int)
     opt_reasons = {}
-    removed = set()
     _, dependents_of = target_task_graph.graph.links_and_reverse_links_dict()
     tasks = target_task_graph.tasks
+
+    # Generate an ordered list of tasks that optimization strategies need to
+    # be called. Traverse the graph so dependents (child nodes) are guaranteed
+    # to be process first.
+    order = list(target_task_graph.graph.visit_preorder())
+    # Only tasks that are both requested for removal _and_ not in
+    # `do_not_optimize` are candidates for explicit removal.
+    candidates = [l for l in order if l in requested_tasks and l not in do_not_optimize]
+
+    # Find the tasks that would be removed by any strategy.
+    strategy_removes = set()
+    for strategy, labels, args in _group_by_strategy(candidates, task_strategies):
+        strategy_removes |= strategy.should_remove_tasks(
+            target_task_graph, labels, params, args
+        )
+
+    removed = set()
     prune_candidates = set()
 
-    # Traverse graph so dependents (child nodes) are guaranteed to be processed
-    # first.
-    for label in target_task_graph.graph.visit_preorder():
+    # Now that we have all of the necessary information, find tasks that can
+    # definitely be removed, and those that are candidates for removal (subject
+    # to additional conditions that cannot be evaluated in this loop).
+    for label in order:
         # Dependents that can be pruned away (shouldn't cause this task to run).
         # Only dependents that either:
         #   A) Explicitly reference this task in their 'if_dependencies' list, or
@@ -236,22 +251,23 @@ def remove_tasks(
             _remove("dependents optimized")
             continue
 
-        # Call the optimization strategy.
-        task = tasks[label]
-        opt_by, opt, arg = optimizations(label)
-        if opt.should_remove_task(task, params, arg):
+        opt_by = task_strategies[label].name
+        # The task is not in `do_not_optimize`, not required for a descendent
+        # task that was kept, and explicitly requested for removal: remove it.
+        if label in strategy_removes:
             _remove(opt_by)
             continue
 
         # Some tasks should only run if their dependency was also run. Since we
         # haven't processed dependencies yet, we add them to a list of
         # candidate tasks for pruning.
-        if task.if_dependencies:
+        if tasks[label].if_dependencies:
             opt_reasons[label] = ("kept", opt_by)
             prune_candidates.add(label)
         else:
             _keep(opt_by)
 
+    # Add any `prune_candidates` that qualify to `removed`.
     if prune_candidates:
         reason = "if-dependencies pruning"
         for label in prune_candidates:
@@ -279,22 +295,17 @@ def remove_tasks(
 def replace_tasks(
     target_task_graph,
     params,
-    optimizations,
+    task_strategies,
     do_not_optimize,
     label_to_taskid,
     removed_tasks,
     existing_tasks,
-    index_to_taskid,
-    taskid_to_status,
 ):
     """
     Implement the "Replacing Tasks" phase, returning a set of task labels of
     all replaced tasks. The replacement taskIds are added to label_to_taskid as
     a side-effect.
     """
-    # avoid circular import
-    from taskgraph.optimize.strategies import IndexSearch  # noqa: PLC0415
-
     opt_counts = defaultdict(int)
     replaced = set()
     dependencies_of, dependents_of = (
@@ -304,16 +315,35 @@ def replace_tasks(
     # Many tasks share dependents (e.g. docker images or toolchains), so
     # resolve the deadline of each dependent only once.
     now = datetime.datetime.now(datetime.timezone.utc)
-    deadlines = {}
 
-    def get_deadline(label):
-        if label not in deadlines:
-            deadlines[label] = resolve_timestamps(
-                now, target_task_graph.tasks[label].task["deadline"]
+    @functools.cache
+    def get_deadline(label) -> str:
+        return cast(
+            str,
+            resolve_timestamps(now, target_task_graph.tasks[label].task["deadline"]),
+        )
+
+    order = list(target_task_graph.graph.visit_postorder())
+    candidates = [
+        l for l in order if l not in do_not_optimize and not existing_tasks.get(l)
+    ]
+    deadlines = {
+        label: (
+            max(get_deadline(l) for l in dependents_of[label])
+            if dependents_of[label]
+            else None
+        )
+        for label in candidates
+    }
+    replacements = {}
+    for strategy, labels, args in _group_by_strategy(candidates, task_strategies):
+        replacements.update(
+            strategy.should_replace_tasks(
+                target_task_graph, labels, params, deadlines, args
             )
-        return deadlines[label]
+        )
 
-    for label in target_task_graph.graph.visit_postorder():
+    for label in order:
         logger.debug(f"replace_tasks: {label}")
         # if we're not allowed to optimize, that's easy..
         if label in do_not_optimize:
@@ -338,19 +368,8 @@ def replace_tasks(
             logger.debug(f"replace_tasks: {label} replaced from existing_tasks")
             continue
 
-        # call the optimization strategy
-        task = target_task_graph.tasks[label]
-        opt_by, opt, arg = optimizations(label)
-
-        # compute latest deadline of dependents (if any)
-        deadline = None
-        if dependents_of[label]:
-            deadline = max(get_deadline(l) for l in dependents_of[label])
-
-        if isinstance(opt, IndexSearch):
-            arg = arg, index_to_taskid, taskid_to_status
-
-        repl = opt.should_replace_task(task, params, deadline, arg)
+        opt_by = task_strategies[label].name
+        repl = replacements.get(label)
         if repl:
             if repl is True:
                 logger.debug(f"replace_tasks: {label} removed by optimization strategy")
@@ -478,6 +497,37 @@ class OptimizationStrategy:
         keep the task."""
         return False
 
+    def should_remove_tasks(self, graph, labels, params, args):
+        """Determine which of the tasks in `labels` should be removed, returning
+        the set of labels to remove. This default implementation simply calls
+        `self.should_remove_task` for each task. Subclasses that only make the
+        removal decision based on task data should override that method.
+        Subclasses that need to evaluate all of their tasks at once to
+        determine what to remove should override _this_ method."""
+        tasks = graph.tasks
+        return {
+            label
+            for label in labels
+            if self.should_remove_task(tasks[label], params, args[label])
+        }
+
+    def should_replace_tasks(self, graph, labels, params, deadlines, args):
+        """Determine which of the tasks in `labels` should be replaced with
+        an existing task. The default implementation simply calls
+        `self.should_replace_task` for each task. Subclasses that only make
+        the replacement decision based on task data should override that
+        method. Subclasses that need to evaluate all of their tasks at once
+        to determine what to replace should override _this_ method."""
+        tasks = graph.tasks
+        replacements = {}
+        for label in labels:
+            repl = self.should_replace_task(
+                tasks[label], params, deadlines[label], args[label]
+            )
+            if repl:
+                replacements[label] = repl
+        return replacements
+
 
 @register_strategy("always")
 class Always(OptimizationStrategy):
@@ -536,6 +586,17 @@ class CompositeStrategy(OptimizationStrategy, metaclass=ABCMeta):
         results = self._generate_results("should_replace_task", *args)
         return self.reduce(results)
 
+    def _split_args(self, labels, args):
+        """Return the args for all strategies and all labels."""
+        splits = {
+            label: list(self.split_args(args[label], self.substrategies))
+            for label in labels
+        }
+        return [
+            {label: split[i] for label, split in splits.items() if i < len(split)}
+            for i in range(len(self.substrategies))
+        ]
+
 
 class Any(CompositeStrategy):
     """Given one or more optimization strategies, remove or replace a task if any of them
@@ -554,6 +615,33 @@ class Any(CompositeStrategy):
             if rv:
                 return rv
         return False
+
+    def should_remove_tasks(self, graph, labels, params, args):
+        removed = set()
+        remaining = labels
+        for sub, sub_args in zip(self.substrategies, self._split_args(labels, args)):
+            sub_labels = [l for l in remaining if l in sub_args]
+            if sub_labels:
+                removed |= sub.should_remove_tasks(graph, sub_labels, params, sub_args)
+                remaining = [l for l in remaining if l not in removed]
+            if not remaining:
+                break
+        return removed
+
+    def should_replace_tasks(self, graph, labels, params, deadlines, args):
+        replacements = {}
+        remaining = labels
+        for sub, sub_args in zip(self.substrategies, self._split_args(labels, args)):
+            sub_labels = [l for l in remaining if l in sub_args]
+            if sub_labels:
+                result = sub.should_replace_tasks(
+                    graph, sub_labels, params, deadlines, sub_args
+                )
+                replacements.update((l, r) for l, r in result.items() if r)
+                remaining = [l for l in remaining if l not in replacements]
+            if not remaining:
+                break
+        return replacements
 
 
 class All(CompositeStrategy):
@@ -576,6 +664,34 @@ class All(CompositeStrategy):
                 return rv
         return True
 
+    def should_remove_tasks(self, graph, labels, params, args):
+        candidates = labels
+        for sub, sub_args in zip(self.substrategies, self._split_args(labels, args)):
+            sub_labels = [l for l in candidates if l in sub_args]
+            if sub_labels:
+                removed = sub.should_remove_tasks(graph, sub_labels, params, sub_args)
+                candidates = [
+                    l for l in candidates if l not in sub_args or l in removed
+                ]
+            if not candidates:
+                break
+        return set(candidates)
+
+    def should_replace_tasks(self, graph, labels, params, deadlines, args):
+        candidates = labels
+        for sub, sub_args in zip(self.substrategies, self._split_args(labels, args)):
+            sub_labels = [l for l in candidates if l in sub_args]
+            if sub_labels:
+                result = sub.should_replace_tasks(
+                    graph, sub_labels, params, deadlines, sub_args
+                )
+                candidates = [
+                    l for l in candidates if l not in sub_args or result.get(l)
+                ]
+            if not candidates:
+                break
+        return dict.fromkeys(candidates, True)
+
 
 class Alias(CompositeStrategy):
     """Provides an alias to an existing strategy.
@@ -594,6 +710,14 @@ class Alias(CompositeStrategy):
     def reduce(self, results):
         return next(results)
 
+    def should_remove_tasks(self, graph, labels, params, args):
+        return self.substrategies[0].should_remove_tasks(graph, labels, params, args)
+
+    def should_replace_tasks(self, graph, labels, params, deadlines, args):
+        return self.substrategies[0].should_replace_tasks(
+            graph, labels, params, deadlines, args
+        )
+
 
 class Not(CompositeStrategy):
     """Given a strategy, returns the opposite."""
@@ -607,6 +731,16 @@ class Not(CompositeStrategy):
 
     def reduce(self, results):
         return not next(results)
+
+    def should_remove_tasks(self, graph, labels, params, args):
+        removed = self.substrategies[0].should_remove_tasks(graph, labels, params, args)
+        return {l for l in labels if l not in removed}
+
+    def should_replace_tasks(self, graph, labels, params, deadlines, args):
+        result = self.substrategies[0].should_replace_tasks(
+            graph, labels, params, deadlines, args
+        )
+        return {l: True for l in labels if not result.get(l)}
 
 
 # Trigger registration in sibling modules.
