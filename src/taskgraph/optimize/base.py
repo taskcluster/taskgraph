@@ -571,10 +571,22 @@ class All(CompositeStrategy):
 
     @classmethod
     def reduce(cls, results):
+        # Use an iterate to collect results so we can bail as soon as one
+        # result gives us a decision.
+        results = iter(results)
+        # We need to keep track of the first result specifically, because in
+        # the case of replacement, we need to return that value specifically.
+        first = next(results, True)
+        # First result says no? Bail.
+        if not first:
+            return first
+        # Check the remaining results
         for rv in results:
+            # If a result says no, bail.
             if not rv:
                 return rv
-        return True
+        # If no result says no, return the first result.
+        return first
 
 
 class Alias(CompositeStrategy):

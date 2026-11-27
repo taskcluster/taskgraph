@@ -487,3 +487,29 @@ def test_register_strategy(mocker):
     func = register_strategy("foo", args=("one", "two"), kwargs={"n": 1})
     func(m)
     m.assert_called_with("one", "two", n=1)
+
+
+def test_all_replaces_with_first_substrategy_value():
+    graph = make_graph(make_task("t1", optimization={"all": "e1"}))
+    strategies = default_strategies()
+    strategies["all"] = All(
+        Replace(), Replace(), split_args=lambda arg, substrategies: [arg, "e2"]
+    )
+    label_to_taskid = {}
+    removed_tasks = set()
+
+    replaced = optimize_mod.replace_tasks(
+        target_task_graph=graph,
+        params={},
+        optimizations=optimize_mod._get_optimizations(graph, strategies),
+        do_not_optimize=set(),
+        label_to_taskid=label_to_taskid,
+        removed_tasks=removed_tasks,
+        existing_tasks={},
+        index_to_taskid={},
+        taskid_to_status={},
+    )
+
+    assert removed_tasks == set()
+    assert replaced == {"t1"}
+    assert label_to_taskid == {"t1": "e1"}
